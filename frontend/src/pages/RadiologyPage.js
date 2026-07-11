@@ -1,0 +1,231 @@
+/* eslint-disable no-unused-vars */
+import React, { useState, useMemo } from 'react';
+import usePagination from '../hooks/usePagination';
+import Pagination from '../components/Pagination';
+import { useApp } from '../contexts/AppContext';
+
+const MODALITIES = {
+  xray:      { ar:'أشعة سينية',         en:'X-Ray',       icon:'📡', color:'#1a6bab' },
+  ultrasound:{ ar:'سونار',              en:'Ultrasound',  icon:'〰️', color:'#10b981' },
+  ct:        { ar:'مفراس (CT)',          en:'CT Scan',     icon:'🌀', color:'#f59e0b' },
+  mri:       { ar:'رنين مغناطيسي (MRI)', en:'MRI',         icon:'🧲', color:'#8b5cf6' },
+  mammogram: { ar:'تصوير ثدي',          en:'Mammogram',   icon:'🔬', color:'#ec4899' },
+  other:     { ar:'أخرى',              en:'Other',       icon:'📷', color:'#6b7280' },
+};
+const STATUSES = {
+  pending:   { ar:'بانتظار الموعد', en:'Pending', color:'#6b7280', bg:'#f3f4f6' },
+  scheduled: { ar:'مجدول',          en:'Scheduled',          color:'#1a6bab', bg:'#dbeafe' },
+  examined:  { ar:'تم الفحص',       en:'Examined',       color:'#f59e0b', bg:'#fef3c7' },
+  reported:  { ar:'مُبلَّغ عنه',    en:'Reported',    color:'#10b981', bg:'#d1fae5' },
+  cancelled: { ar:'ملغي',           en:'Cancelled',           color:'#ef4444', bg:'#fee2e2' },
+};
+const EMPTY = { reqNo:'', patientName:'', patientId:'', doctorName:'', modality:'xray', bodyPart:'', requestDate:'', examDate:'', reportDate:'', status:'pending', priority:'normal', technician:'', radiologist:'', findings:'', impression:'', images:0 };
+
+export default function RadiologyPage() {
+  const { radiology, setRadiology, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const L = (ar, en) => lang === 'ar' ? ar : en;
+  const [search, setSearch] = useState('');
+  const [modFilter, setModFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showModal, setShowModal] = useState(false);
+  const [showReport, setShowReport] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState(EMPTY);
+  const [findings, setFindings] = useState('');
+  const [impression, setImpression] = useState('');
+
+  const filtered = useMemo(() => radiology.filter(r => {
+    const q = search.toLowerCase();
+    return (!q || r.patientName.includes(q) || r.reqNo.toLowerCase().includes(q))
+      && (modFilter === 'all' || r.modality === modFilter)
+      && (statusFilter === 'all' || r.status === statusFilter);
+  }), [radiology, search, modFilter, statusFilter]);
+  const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
+
+  const stats = useMemo(() => ({
+    total: radiology.length,
+    pending: radiology.filter(r=>r.status==='pending'||r.status==='scheduled').length,
+    examined: radiology.filter(r=>r.status==='examined').length,
+    reported: radiology.filter(r=>r.status==='reported').length,
+    byModality: Object.keys(MODALITIES).map(m=>({ m, count: radiology.filter(r=>r.modality===m).length })).filter(x=>x.count>0),
+  }), [radiology]);
+
+  const openAdd = () => {
+    const n = `RAD-${new Date().getFullYear()}-${String(radiology.length+1).padStart(4,'0')}`;
+    setForm({...EMPTY, reqNo:n, requestDate:new Date().toISOString().split('T')[0]});
+    setEditId(null); setShowModal(true);
+  };
+  const save = () => {
+    if (!form.patientName || !form.modality) { showToast(L('يرجى تعبئة بيانات المريض','Please fill patient data'),'error'); return; }
+    if (editId) {
+      const ur = {...form,id:editId};
+      setRadiology(p=>p.map(r=>r.id===editId?{...r,...ur}:r));
+      syncToServer('radiology','update',ur);
+      showToast(L('تم التحديث','Updated'),'success');
+    } else {
+      const nr = {...form,id:Date.now()};
+      setRadiology(p=>[...p,nr]);
+      syncToServer('radiology','create',nr);
+      showToast(L('تمت إضافة الطلب','Request added'),'success');
+    }
+    setShowModal(false);
+  };
+  const updateStatus = (id, status) => {
+    const now = new Date().toISOString().split('T')[0];
+    setRadiology(p => {
+      const updated = p.map(r=>r.id===id?{...r,status,...(status==='examined'?{examDate:now}:{})}:r);
+      const changed = updated.find(r => r.id === id);
+      if (changed) syncToServer('radiology','update',changed);
+      return updated;
+    });
+    showToast(L('تم التحديث','Updated'),'success');
+  };
+  const saveReport = () => {
+    setRadiology(p => {
+      const updated = p.map(r=>r.id===showReport.id?{...r,status:'reported',reportDate:new Date().toISOString().split('T')[0],findings,findingsEn:findings,impression,impressionEn:impression}:r);
+      const changed = updated.find(r => r.id === showReport.id);
+      if (changed) syncToServer('radiology','update',changed);
+      return updated;
+    });
+    showToast(L('تم حفظ التقرير الإشعاعي','Radiology report saved'),'success'); setShowReport(null);
+  };
+
+  const S = {
+    page:{padding:24,direction:dir},
+    stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:20},
+    card:(c)=>({background:'var(--bg-secondary)',borderRadius:12,padding:'14px 18px',borderTop:`3px solid ${c}`}),
+    tb:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'},
+    inp:{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-secondary)',color:'var(--text-primary)',fontSize:13},
+    btn:(c='#1a6bab')=>({padding:'7px 14px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
+    table:{width:'100%',borderCollapse:'collapse',background:'var(--bg-secondary)',borderRadius:12,overflow:'hidden'},
+    th:{padding:'10px 12px',textAlign:dir==='rtl'?'right':'left',background:'var(--bg-tertiary)',fontSize:11,fontWeight:600,color:'var(--text-secondary)',borderBottom:'1px solid var(--border)'},
+    td:{padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:12,color:'var(--text-primary)'},
+    badge:(c,bg)=>({display:'inline-block',padding:'2px 8px',borderRadius:20,fontSize:10,fontWeight:600,color:c,background:bg}),
+    modal:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999},
+    mbox:{background:'var(--bg-primary)',borderRadius:16,padding:28,width:'100%',maxWidth:540,maxHeight:'90vh',overflowY:'auto',direction:dir},
+    g2:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12},
+    fl:{display:'block',fontSize:12,color:'var(--text-secondary)',marginBottom:4},
+    fi:{width:'100%',padding:'7px 10px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-secondary)',color:'var(--text-primary)',fontSize:13,boxSizing:'border-box'},
+  };
+
+  return (
+    <div style={S.page}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div>
+          <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>{lang==='ar'?'📡 الأشعة والتصوير الطبي':'📡 Radiology & Medical Imaging'}</h1>
+          <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة الأشعة السينية • السونار • المفراس (CT) • الرنين المغناطيسي (MRI)':'Manage X-Ray • Ultrasound • CT Scan • MRI'}</p>
+        </div>
+        <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تصوير جديد':'+ New Imaging Request'}</button>
+      </div>
+
+      <div style={S.stats}>
+        {[[lang==='ar'?'إجمالي الطلبات':'Total Requests',stats.total,'#1a6bab'],[lang==='ar'?'بانتظار الفحص':'Pending Exam',stats.pending,'#6b7280'],[lang==='ar'?'تم الفحص':'Examined',stats.examined,'#f59e0b'],[lang==='ar'?'مكتمل التقرير':'Report Ready',stats.reported,'#10b981']].map(([l,v,c],i)=>(
+          <div key={i} style={S.card(c)}><div style={{fontSize:22,fontWeight:700,color:'var(--text-primary)'}}>{v}</div><div style={{fontSize:11,color:'var(--text-secondary)',marginTop:3}}>{l}</div></div>
+        ))}
+        {/* Modality breakdown */}
+        {stats.byModality.map(({m,count})=>{ const mod=MODALITIES[m]; return (
+          <div key={m} style={S.card(mod.color)}>
+            <div style={{fontSize:18,marginBottom:2}}>{mod.icon}</div>
+            <div style={{fontSize:18,fontWeight:700,color:'var(--text-primary)'}}>{count}</div>
+            <div style={{fontSize:10,color:'var(--text-secondary)',marginTop:2}}>{lang==='ar'?mod.ar:mod.en}</div>
+          </div>
+        );})}
+      </div>
+
+      <div style={S.tb}>
+        <input style={{...S.inp,minWidth:200}} placeholder={L('🔍 بحث...','🔍 Search...')} value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={S.inp} value={modFilter} onChange={e=>setModFilter(e.target.value)}>
+          <option value="all">{L('كل أنواع التصوير','All Modalities')}</option>
+          {Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.ar}</option>)}
+        </select>
+        <select style={S.inp} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+          <option value="all">{L('كل الحالات','All Status')}</option>
+          {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{v.ar}</option>)}
+        </select>
+      </div>
+
+      <table style={S.table}>
+        <thead>
+          <tr>{lang==='ar'?lang==='ar'?['رقم الطلب','المريض','نوع التصوير','منطقة الجسم','تاريخ الطلب','الحالة','الأولوية','الصور','التقرير','إجراء']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action'].map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {pageItems.map(r=>{
+            const st=STATUSES[r.status]||STATUSES.pending;
+            const mod=MODALITIES[r.modality]||MODALITIES.other;
+            return (
+              <tr key={r.id}>
+                <td style={S.td}><code style={{fontSize:10,background:'var(--bg-tertiary)',padding:'2px 6px',borderRadius:4}}>{r.reqNo}</code></td>
+                <td style={S.td}><div style={{fontWeight:600}}>{r.patientName}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.patientId}</div></td>
+                <td style={S.td}><span style={S.badge(mod.color,mod.color+'22')}>{mod.icon} {lang==='ar'?mod.ar:mod.en}</span></td>
+                <td style={S.td}>{lang==='ar'?(r.bodyPart||'—'):(r.bodyPartEn||r.bodyPart||'—')}</td>
+                <td style={{...S.td,fontSize:11,color:'var(--text-secondary)'}}>{r.requestDate}</td>
+                <td style={S.td}><span style={S.badge(st.color,st.bg)}>{lang==='ar'?st.ar:st.en}</span></td>
+                <td style={S.td}>{r.priority==='urgent'?<span style={{color:'#ef4444',fontWeight:700,fontSize:11}}>⚡ عاجل</span>:<span style={{fontSize:11,color:'var(--text-secondary)'}}>{L('عادي','Normal')}</span>}</td>
+                <td style={{...S.td,textAlign:'center'}}>{r.images>0?<span style={{background:'#dbeafe',color:'#1a6bab',borderRadius:12,padding:'2px 8px',fontSize:11,fontWeight:600}}>{r.images} {lang==='ar'?'صورة':'images'}</span>:'—'}</td>
+                <td style={S.td}>{r.status==='reported'?<div><div style={{fontSize:11,fontWeight:600,color:'#10b981'}}>{lang==='ar'?L('✓ مكتمل','✓ Complete'):'✓ Complete'}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.reportDate}</div></div>:'—'}</td>
+                <td style={S.td}>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                    {r.status==='scheduled'&&<button onClick={()=>updateStatus(r.id,'examined')} style={{...S.btn('#f59e0b'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'تم الفحص':'Examined'}</button>}
+                    {r.status==='examined'&&<button onClick={()=>{setShowReport(r);setFindings(r.findings||'');setImpression(r.impression||'');}} style={{...S.btn('#10b981'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'كتابة تقرير':'Write Report'}</button>}
+                    {r.status==='pending'&&<button onClick={()=>updateStatus(r.id,'scheduled')} style={{...S.btn('#1a6bab'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'جدولة':'Schedule'}</button>}
+                    <button onClick={()=>{setForm({...r});setEditId(r.id);setShowModal(true);}} style={{...S.btn('#6b7280'),padding:'3px 7px',fontSize:10}}>✏️</button>
+                    <button onClick={()=>{setRadiology(p=>p.filter(x=>x.id!==r.id));syncToServer('radiology','delete',{id:r.id});showToast('تم الحذف','info');}} style={{...S.btn('#ef4444'),padding:'3px 7px',fontSize:10}}>🗑</button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+          {filtered.length===0&&<tr><td colSpan={10} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
+        </tbody>
+      </table>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
+
+      {showModal&&(
+        <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
+          <div style={S.mbox}>
+            <h3 style={{margin:'0 0 18px',color:'var(--text-primary)'}}>{editId?L('✏️ تعديل','✏️ Edit'):L('📡 طلب تصوير جديد','📡 New Imaging Request')}</h3>
+            <div style={S.g2}>
+              <label>{L('رقم الطلب','Request No')}<input style={S.fi} value={form.reqNo||''} onChange={e=>setForm(p=>({...p,reqNo:e.target.value}))}/></label>
+              <label>{L('تاريخ الطلب','Request Date')}<input type="date" style={S.fi} value={form.requestDate||''} onChange={e=>setForm(p=>({...p,requestDate:e.target.value}))}/></label>
+              <label style={{gridColumn:'span 2'}}>{L('اسم المريض','Patient Name')}<input style={S.fi} value={form.patientName||''} onChange={e=>setForm(p=>({...p,patientName:e.target.value}))}/></label>
+              <label>{L('رقم المريض','Patient ID')}<input style={S.fi} value={form.patientId||''} onChange={e=>setForm(p=>({...p,patientId:e.target.value}))}/></label>
+              <label>{L('الطبيب المحول','Referring Doctor')}<input style={S.fi} value={form.doctorName||''} onChange={e=>setForm(p=>({...p,doctorName:e.target.value}))}/></label>
+              <label>{L('نوع التصوير','Modality')}<select style={S.fi} value={form.modality} onChange={e=>setForm(p=>({...p,modality:e.target.value}))}>{Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.ar}</option>)}</select></label>
+              {multiHospitalEnabled && (
+                <label>{L('المنشأة','Facility')}<select style={S.fi} value={form.hospitalId||''} onChange={e=>setForm(p=>({...p,hospitalId:e.target.value}))}>
+                  <option value="">—</option>
+                  {hospitals.map(h=><option key={h.id} value={h.id}>{h.name_ar}</option>)}
+                </select></label>
+              )}
+              <label>{L('منطقة الجسم','Body Part')}<input style={S.fi} value={form.bodyPart||''} onChange={e=>setForm(p=>({...p,bodyPart:e.target.value}))}/></label>
+              <label>{L('الأولوية','Priority')}<select style={S.fi} value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}><option value="normal">{L('عادي','Normal')}</option><option value="urgent">{L('عاجل','Urgent')}</option></select></label>
+              <label>{L('عدد الصور','Images Count')}<input type="number" style={S.fi} value={form.images||0} onChange={e=>setForm(p=>({...p,images:+e.target.value}))}/></label>
+              <label>{L('الفني','Technician')}<input style={S.fi} value={form.technician||''} onChange={e=>setForm(p=>({...p,technician:e.target.value}))}/></label>
+              <label>{L('الطبيب الإشعاعي','Radiologist')}<input style={S.fi} value={form.radiologist||''} onChange={e=>setForm(p=>({...p,radiologist:e.target.value}))}/></label>
+            </div>
+            <div style={{display:'flex',gap:10,marginTop:18,justifyContent:'flex-end'}}>
+              <button style={S.btn('#6b7280')} onClick={()=>setShowModal(false)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
+              <button style={S.btn()} onClick={save}>{lang==='ar'?'💾 حفظ':'💾 Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReport&&(
+        <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowReport(null)}>
+          <div style={{...S.mbox,maxWidth:500}}>
+            <h3 style={{margin:'0 0 8px',color:'var(--text-primary)'}}>📋 التقرير الإشعاعي</h3>
+            <p style={{fontSize:13,color:'var(--text-secondary)',margin:'0 0 16px'}}>{MODALITIES[showReport.modality]?.ar} — {showReport.bodyPart} — {showReport.patientName}</p>
+            <label style={{display:'block',marginBottom:12}}><span style={S.fl}>المشاهدات (Findings)</span><textarea style={{...S.fi,minHeight:90,resize:'vertical'}} value={findings} onChange={e=>setFindings(e.target.value)} placeholder={L('وصف ما يُشاهَد في الصور...','Describe what is observed...')}/></label>
+            <label style={{display:'block',marginBottom:16}}><span style={S.fl}>الاستنتاج (Impression)</span><textarea style={{...S.fi,minHeight:70,resize:'vertical'}} value={impression} onChange={e=>setImpression(e.target.value)} placeholder={L('التشخيص الإشعاعي والتوصيات...','Radiological diagnosis and recommendations...')}/></label>
+            <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+              <button style={S.btn('#6b7280')} onClick={()=>setShowReport(null)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
+              <button style={S.btn('#10b981')} onClick={saveReport}>{lang==='ar'?'✅ حفظ التقرير':'✅ Save Report'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

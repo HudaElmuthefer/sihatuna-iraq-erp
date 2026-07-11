@@ -1,0 +1,1844 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-07-09T08:49:51.146Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-07-09T08:49:51.170Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض تجريبي",
+      "phone": "07701234567",
+      "status": "active",
+      "id": 1
+    }
+  },
+  {
+    "id": 3,
+    "timestamp": "2026-07-09T08:49:51.638Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 4,
+    "timestamp": "2026-07-09T08:49:51.643Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض الفوترة",
+      "phone": "07709998877",
+      "id": 1
+    }
+  },
+  {
+    "id": 5,
+    "timestamp": "2026-07-09T08:49:51.662Z",
+    "module": "invoices",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "patientId": 1,
+      "items": [
+        {
+          "description": "كشفية",
+          "price": 25000,
+          "qty": 1
+        }
+      ],
+      "total": 25000,
+      "id": 1
+    }
+  },
+  {
+    "id": 6,
+    "timestamp": "2026-07-09T08:49:52.040Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 7,
+    "timestamp": "2026-07-09T08:49:52.127Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 8,
+    "timestamp": "2026-07-09T08:49:52.131Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 9,
+    "timestamp": "2026-07-09T09:04:47.383Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 10,
+    "timestamp": "2026-07-09T09:04:47.409Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض تجريبي",
+      "phone": "07701234567",
+      "status": "active",
+      "id": 1
+    }
+  },
+  {
+    "id": 11,
+    "timestamp": "2026-07-09T09:04:47.768Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 12,
+    "timestamp": "2026-07-09T09:04:47.774Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض الفوترة",
+      "phone": "07709998877",
+      "id": 1
+    }
+  },
+  {
+    "id": 13,
+    "timestamp": "2026-07-09T09:04:47.797Z",
+    "module": "invoices",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "patientId": 1,
+      "items": [
+        {
+          "description": "كشفية",
+          "price": 25000,
+          "qty": 1
+        }
+      ],
+      "total": 25000,
+      "id": 1
+    }
+  },
+  {
+    "id": 14,
+    "timestamp": "2026-07-09T09:04:48.162Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 15,
+    "timestamp": "2026-07-09T09:04:48.248Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 16,
+    "timestamp": "2026-07-09T09:04:48.252Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 17,
+    "timestamp": "2026-07-09T09:04:48.689Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 18,
+    "timestamp": "2026-07-09T09:04:48.695Z",
+    "module": "appointments",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "patient": "مريض تجريبي",
+      "doctor": "د. أحمد",
+      "department": "باطنية",
+      "date": "2026-07-15",
+      "time": "09:00",
+      "status": "pending",
+      "type": "checkup",
+      "id": 1
+    }
+  },
+  {
+    "id": 19,
+    "timestamp": "2026-07-09T09:24:17.551Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 20,
+    "timestamp": "2026-07-09T09:24:17.577Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض برقم قصير",
+      "phone": "123",
+      "id": 1
+    }
+  },
+  {
+    "id": 21,
+    "timestamp": "2026-07-09T09:24:17.584Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 2,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض تجريبي",
+      "phone": "07701234567",
+      "status": "active",
+      "id": 2
+    }
+  },
+  {
+    "id": 22,
+    "timestamp": "2026-07-09T09:24:17.962Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 23,
+    "timestamp": "2026-07-09T09:24:18.050Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 24,
+    "timestamp": "2026-07-09T09:24:18.055Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 25,
+    "timestamp": "2026-07-09T09:24:18.534Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 26,
+    "timestamp": "2026-07-09T09:24:18.540Z",
+    "module": "appointments",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "patient": "مريض تجريبي",
+      "doctor": "د. أحمد",
+      "department": "باطنية",
+      "date": "2026-07-15",
+      "time": "09:00",
+      "status": "pending",
+      "type": "checkup",
+      "id": 1
+    }
+  },
+  {
+    "id": 27,
+    "timestamp": "2026-07-09T09:24:18.873Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 28,
+    "timestamp": "2026-07-09T09:24:18.895Z",
+    "module": "patients",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "name": "مريض الفوترة",
+      "phone": "07709998877",
+      "id": 1
+    }
+  },
+  {
+    "id": 29,
+    "timestamp": "2026-07-09T09:24:18.910Z",
+    "module": "invoices",
+    "action": "create",
+    "recordId": 1,
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "patientId": 1,
+      "items": [
+        {
+          "description": "كشفية",
+          "price": 25000,
+          "qty": 1
+        }
+      ],
+      "total": 25000,
+      "id": 1
+    }
+  },
+  {
+    "id": 30,
+    "timestamp": "2026-07-10T07:13:16.852Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 31,
+    "timestamp": "2026-07-10T07:13:17.332Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 32,
+    "timestamp": "2026-07-10T07:13:17.716Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 33,
+    "timestamp": "2026-07-10T07:13:17.811Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 34,
+    "timestamp": "2026-07-10T07:13:17.816Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 35,
+    "timestamp": "2026-07-10T07:13:18.135Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 36,
+    "timestamp": "2026-07-10T07:15:47.548Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 37,
+    "timestamp": "2026-07-10T07:15:47.953Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 38,
+    "timestamp": "2026-07-10T07:15:48.045Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 39,
+    "timestamp": "2026-07-10T07:15:48.050Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 40,
+    "timestamp": "2026-07-10T07:15:48.489Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 41,
+    "timestamp": "2026-07-10T07:15:48.816Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 42,
+    "timestamp": "2026-07-10T07:19:20.709Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 43,
+    "timestamp": "2026-07-10T07:19:21.109Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 44,
+    "timestamp": "2026-07-10T07:19:21.501Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 45,
+    "timestamp": "2026-07-10T07:19:21.594Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 46,
+    "timestamp": "2026-07-10T07:19:21.599Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 47,
+    "timestamp": "2026-07-10T07:19:22.054Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 48,
+    "timestamp": "2026-07-10T07:32:56.834Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 49,
+    "timestamp": "2026-07-10T07:32:57.242Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 50,
+    "timestamp": "2026-07-10T07:32:57.337Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 51,
+    "timestamp": "2026-07-10T07:32:57.341Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 52,
+    "timestamp": "2026-07-10T07:32:57.797Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 53,
+    "timestamp": "2026-07-10T07:32:58.155Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 54,
+    "timestamp": "2026-07-10T07:48:35.650Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 55,
+    "timestamp": "2026-07-10T07:48:36.184Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 56,
+    "timestamp": "2026-07-10T07:48:36.822Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 57,
+    "timestamp": "2026-07-10T07:48:36.915Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 58,
+    "timestamp": "2026-07-10T07:48:36.920Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 59,
+    "timestamp": "2026-07-10T07:48:37.339Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 60,
+    "timestamp": "2026-07-10T08:03:14.973Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 61,
+    "timestamp": "2026-07-10T08:03:15.450Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 62,
+    "timestamp": "2026-07-10T08:03:15.557Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 63,
+    "timestamp": "2026-07-10T08:03:15.563Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 64,
+    "timestamp": "2026-07-10T08:03:16.080Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 65,
+    "timestamp": "2026-07-10T08:03:16.520Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 66,
+    "timestamp": "2026-07-10T09:09:09.435Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 67,
+    "timestamp": "2026-07-10T09:09:09.826Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 68,
+    "timestamp": "2026-07-10T09:09:09.909Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 69,
+    "timestamp": "2026-07-10T09:09:09.913Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 70,
+    "timestamp": "2026-07-10T09:09:10.328Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 71,
+    "timestamp": "2026-07-10T09:09:10.657Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 72,
+    "timestamp": "2026-07-10T09:09:45.508Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 73,
+    "timestamp": "2026-07-10T09:09:55.136Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 74,
+    "timestamp": "2026-07-10T09:09:55.526Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 75,
+    "timestamp": "2026-07-10T09:09:55.911Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 76,
+    "timestamp": "2026-07-10T09:09:56.338Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 77,
+    "timestamp": "2026-07-10T09:09:56.421Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 78,
+    "timestamp": "2026-07-10T09:09:56.426Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 79,
+    "timestamp": "2026-07-10T09:09:56.802Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 80,
+    "timestamp": "2026-07-10T09:37:12.215Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 81,
+    "timestamp": "2026-07-10T09:37:12.629Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 82,
+    "timestamp": "2026-07-10T09:37:12.798Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 83,
+    "timestamp": "2026-07-10T09:37:12.804Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 84,
+    "timestamp": "2026-07-10T09:37:13.183Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 85,
+    "timestamp": "2026-07-10T09:37:13.548Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 86,
+    "timestamp": "2026-07-10T09:37:14.159Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 87,
+    "timestamp": "2026-07-10T10:03:49.529Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 88,
+    "timestamp": "2026-07-10T10:03:49.953Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 89,
+    "timestamp": "2026-07-10T10:03:50.743Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 90,
+    "timestamp": "2026-07-10T10:03:50.830Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 91,
+    "timestamp": "2026-07-10T10:03:50.835Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 92,
+    "timestamp": "2026-07-10T10:03:51.198Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 93,
+    "timestamp": "2026-07-10T10:03:51.661Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 94,
+    "timestamp": "2026-07-10T11:18:55.236Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 95,
+    "timestamp": "2026-07-10T11:18:55.641Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 96,
+    "timestamp": "2026-07-10T11:18:55.752Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 97,
+    "timestamp": "2026-07-10T11:18:55.758Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 98,
+    "timestamp": "2026-07-10T11:18:56.140Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 99,
+    "timestamp": "2026-07-10T11:18:56.605Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 100,
+    "timestamp": "2026-07-10T11:18:57.019Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 101,
+    "timestamp": "2026-07-10T11:29:20.612Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 102,
+    "timestamp": "2026-07-10T11:29:21.095Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 103,
+    "timestamp": "2026-07-10T11:29:21.211Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 104,
+    "timestamp": "2026-07-10T11:29:21.218Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 105,
+    "timestamp": "2026-07-10T11:29:21.842Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 106,
+    "timestamp": "2026-07-10T11:29:22.269Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 107,
+    "timestamp": "2026-07-10T11:29:22.751Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 108,
+    "timestamp": "2026-07-10T11:38:11.943Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 109,
+    "timestamp": "2026-07-10T11:38:12.440Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 110,
+    "timestamp": "2026-07-10T11:38:13.024Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 111,
+    "timestamp": "2026-07-10T11:38:13.116Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 112,
+    "timestamp": "2026-07-10T11:38:13.122Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 113,
+    "timestamp": "2026-07-10T11:38:13.545Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 114,
+    "timestamp": "2026-07-10T11:38:14.058Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 115,
+    "timestamp": "2026-07-10T11:59:31.205Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 116,
+    "timestamp": "2026-07-10T11:59:31.625Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 117,
+    "timestamp": "2026-07-10T11:59:31.715Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 118,
+    "timestamp": "2026-07-10T11:59:31.720Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 119,
+    "timestamp": "2026-07-10T11:59:32.095Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 120,
+    "timestamp": "2026-07-10T11:59:32.749Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 121,
+    "timestamp": "2026-07-10T11:59:33.196Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 122,
+    "timestamp": "2026-07-10T13:07:12.654Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 123,
+    "timestamp": "2026-07-10T13:07:13.175Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 124,
+    "timestamp": "2026-07-10T13:07:13.671Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 125,
+    "timestamp": "2026-07-10T13:07:13.773Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 126,
+    "timestamp": "2026-07-10T13:07:13.779Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 127,
+    "timestamp": "2026-07-10T13:07:14.201Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 128,
+    "timestamp": "2026-07-10T13:07:14.596Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 129,
+    "timestamp": "2026-07-10T13:28:07.960Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 130,
+    "timestamp": "2026-07-10T13:28:08.059Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 131,
+    "timestamp": "2026-07-10T13:28:08.065Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 132,
+    "timestamp": "2026-07-10T13:28:14.989Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 133,
+    "timestamp": "2026-07-10T13:28:15.412Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 134,
+    "timestamp": "2026-07-10T13:28:15.939Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 135,
+    "timestamp": "2026-07-10T13:28:16.349Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 136,
+    "timestamp": "2026-07-10T13:28:16.762Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 137,
+    "timestamp": "2026-07-10T13:28:16.857Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 138,
+    "timestamp": "2026-07-10T13:28:16.861Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 139,
+    "timestamp": "2026-07-10T13:35:23.369Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 140,
+    "timestamp": "2026-07-10T13:35:23.850Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 141,
+    "timestamp": "2026-07-10T13:35:24.385Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 142,
+    "timestamp": "2026-07-10T13:35:24.482Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 143,
+    "timestamp": "2026-07-10T13:35:24.488Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 144,
+    "timestamp": "2026-07-10T13:35:24.865Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 145,
+    "timestamp": "2026-07-10T13:35:25.301Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 146,
+    "timestamp": "2026-07-11T07:10:53.851Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 147,
+    "timestamp": "2026-07-11T07:10:54.214Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 148,
+    "timestamp": "2026-07-11T07:10:54.299Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 149,
+    "timestamp": "2026-07-11T07:10:54.304Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 150,
+    "timestamp": "2026-07-11T07:10:54.734Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 151,
+    "timestamp": "2026-07-11T07:10:55.065Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 152,
+    "timestamp": "2026-07-11T07:10:55.449Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 153,
+    "timestamp": "2026-07-11T07:29:42.690Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 154,
+    "timestamp": "2026-07-11T07:29:43.053Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 155,
+    "timestamp": "2026-07-11T07:29:43.501Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 156,
+    "timestamp": "2026-07-11T07:29:43.584Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 157,
+    "timestamp": "2026-07-11T07:29:43.588Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 158,
+    "timestamp": "2026-07-11T07:29:43.889Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 159,
+    "timestamp": "2026-07-11T07:29:44.261Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 160,
+    "timestamp": "2026-07-11T07:36:32.498Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 161,
+    "timestamp": "2026-07-11T07:36:32.862Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 162,
+    "timestamp": "2026-07-11T07:36:32.946Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 163,
+    "timestamp": "2026-07-11T07:36:32.952Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 164,
+    "timestamp": "2026-07-11T07:36:33.295Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 165,
+    "timestamp": "2026-07-11T07:36:33.698Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 166,
+    "timestamp": "2026-07-11T07:36:34.072Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 167,
+    "timestamp": "2026-07-11T07:37:24.987Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 168,
+    "timestamp": "2026-07-11T08:30:23.751Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 169,
+    "timestamp": "2026-07-11T08:30:24.120Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 170,
+    "timestamp": "2026-07-11T08:30:24.204Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 171,
+    "timestamp": "2026-07-11T08:30:24.208Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 172,
+    "timestamp": "2026-07-11T08:30:24.543Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 173,
+    "timestamp": "2026-07-11T08:30:24.928Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 174,
+    "timestamp": "2026-07-11T08:30:25.281Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 175,
+    "timestamp": "2026-07-11T09:29:23.760Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 176,
+    "timestamp": "2026-07-11T09:29:24.305Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 177,
+    "timestamp": "2026-07-11T09:29:24.391Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 178,
+    "timestamp": "2026-07-11T09:29:24.396Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 179,
+    "timestamp": "2026-07-11T09:29:24.974Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 180,
+    "timestamp": "2026-07-11T09:29:25.582Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 181,
+    "timestamp": "2026-07-11T09:29:26.108Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 182,
+    "timestamp": "2026-07-11T09:30:46.215Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 183,
+    "timestamp": "2026-07-11T09:31:36.950Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 184,
+    "timestamp": "2026-07-11T09:31:50.326Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 185,
+    "timestamp": "2026-07-11T09:31:50.688Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 186,
+    "timestamp": "2026-07-11T09:31:51.078Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 187,
+    "timestamp": "2026-07-11T09:31:51.147Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "testadmin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 188,
+    "timestamp": "2026-07-11T09:31:51.153Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "no-such-user",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 189,
+    "timestamp": "2026-07-11T09:31:51.748Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 190,
+    "timestamp": "2026-07-11T09:31:52.226Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  }
+]

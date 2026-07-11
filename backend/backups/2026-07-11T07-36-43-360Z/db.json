@@ -1,0 +1,360 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "مدير النظام",
+      "username": "admin",
+      "password": "$2a$10$qiBpvNPGkdpcFIhbbJv58.bS5rHRqx0JAWiKzDd14IkdiVg1zuwPG",
+      "email": "admin@sihatuna.iq",
+      "role": "admin",
+      "jobTitle": "مدير النظام",
+      "avatar": "م",
+      "color": "#1a6bab",
+      "permissions": [
+        "accounts",
+        "ai-diagnosis",
+        "ambulance",
+        "appointments",
+        "assets",
+        "billing",
+        "crm",
+        "dashboard",
+        "departments",
+        "doctors",
+        "drug-interactions",
+        "hr",
+        "inventory",
+        "laboratory",
+        "medical-leave",
+        "patients",
+        "payment-settings",
+        "pharmacy",
+        "procurement",
+        "projects",
+        "quality",
+        "radiology",
+        "services",
+        "settings",
+        "smart-reports",
+        "vaccinations"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "د. أحمد سالم",
+      "username": "doctor",
+      "password": "$2a$10$ZCHupM1U.4Vbz4i5wnfEPuhkqYbZqANA7anx1e/MBil1/xy6dc/Tm",
+      "email": "doctor@sihatuna.iq",
+      "role": "doctor",
+      "jobTitle": "طبيب اختصاص",
+      "avatar": "أ",
+      "color": "#10b981",
+      "permissions": [
+        "dashboard",
+        "services",
+        "patients",
+        "appointments",
+        "medical-leave",
+        "vaccinations"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "سارة قاسم",
+      "username": "nurse",
+      "password": "$2a$10$Pyd5xSocVfG.x9SCn1V4ke.S45Hvixa1fN6djWG3a53hu7yD.nMOu",
+      "email": "nurse@sihatuna.iq",
+      "role": "nurse",
+      "jobTitle": "ممرضة",
+      "avatar": "س",
+      "color": "#8b5cf6",
+      "permissions": [
+        "dashboard",
+        "patients",
+        "appointments",
+        "vaccinations",
+        "medical-leave"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "علي المحاسب",
+      "username": "accountant",
+      "password": "$2a$10$hq2iV7eXK1Tcm/FKA0J/UeTJ9bwg7.UrGMs2NeF7ebKqEC0pTOEHm",
+      "email": "accounts@sihatuna.iq",
+      "role": "accountant",
+      "jobTitle": "محاسب",
+      "avatar": "ع",
+      "color": "#f59e0b",
+      "permissions": [
+        "dashboard",
+        "accounts",
+        "smart-reports"
+      ]
+    }
+  ],
+  "patients": [
+    {
+      "id": 1,
+      "name": "حسن محمود الزبيدي",
+      "age": 45,
+      "gender": "male",
+      "phone": "07711234567",
+      "bloodType": "A+",
+      "status": "active",
+      "lastVisit": "2026-06-10",
+      "patientId": "PT-0001",
+      "avatar": "ح",
+      "color": "#1a6bab"
+    },
+    {
+      "id": 2,
+      "name": "مريم علي الحسناوي",
+      "age": 32,
+      "gender": "female",
+      "phone": "07722345678",
+      "bloodType": "O+",
+      "status": "active",
+      "lastVisit": "2026-06-12",
+      "patientId": "PT-0002",
+      "avatar": "م",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": 3,
+      "name": "سعد أحمد المشهداني",
+      "age": 58,
+      "gender": "male",
+      "phone": "07733456789",
+      "bloodType": "B+",
+      "status": "active",
+      "lastVisit": "2026-06-08",
+      "patientId": "PT-0003",
+      "avatar": "س",
+      "color": "#10b981"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "د. أحمد سالم الراشدي",
+      "specialization": "باطنية وصدرية",
+      "deptId": 1,
+      "experience": 15,
+      "phone": "07701234567",
+      "status": "active",
+      "rating": 4.8,
+      "patients": 1240,
+      "gender": "male",
+      "avatar": "أ",
+      "color": "#1a6bab",
+      "bio": "خبرة 15 سنة في الباطنية",
+      "availableDays": [
+        "السبت",
+        "الأحد",
+        "الاثنين"
+      ],
+      "workHours": "8:00 - 14:00",
+      "fee": 25000
+    },
+    {
+      "id": 2,
+      "name": "د. فاطمة حسن العبيدي",
+      "specialization": "نسائية وتوليد",
+      "deptId": 5,
+      "experience": 12,
+      "phone": "07702345678",
+      "status": "active",
+      "rating": 4.9,
+      "patients": 980,
+      "gender": "female",
+      "avatar": "ف",
+      "color": "#8b5cf6",
+      "bio": "متخصصة في صحة المرأة",
+      "availableDays": [
+        "الأحد",
+        "الاثنين",
+        "الأربعاء"
+      ],
+      "workHours": "9:00 - 15:00",
+      "fee": 35000
+    }
+  ],
+  "departments": [
+    {
+      "id": 1,
+      "name": "الفحوصات الطبية",
+      "icon": "🔬",
+      "doctorIds": [
+        1,
+        3
+      ],
+      "patients": 245,
+      "status": "active",
+      "head": "د. أحمد سالم",
+      "color": "#1a6bab"
+    },
+    {
+      "id": 2,
+      "name": "التحاليل",
+      "icon": "🧪",
+      "doctorIds": [
+        6
+      ],
+      "patients": 180,
+      "status": "active",
+      "head": "د. علي الكريم",
+      "color": "#10b981"
+    },
+    {
+      "id": 3,
+      "name": "الأشعة",
+      "icon": "📡",
+      "doctorIds": [
+        4
+      ],
+      "patients": 120,
+      "status": "active",
+      "head": "د. سمر ياسر",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": 4,
+      "name": "السونار",
+      "icon": "📱",
+      "doctorIds": [],
+      "patients": 98,
+      "status": "active",
+      "head": "د. ريم أحمد",
+      "color": "#f59e0b"
+    },
+    {
+      "id": 5,
+      "name": "طب النسائية",
+      "icon": "👩‍⚕️",
+      "doctorIds": [
+        2
+      ],
+      "patients": 310,
+      "status": "active",
+      "head": "د. فاطمة حسن",
+      "color": "#ec4899"
+    },
+    {
+      "id": 6,
+      "name": "عيادات العيون",
+      "icon": "👁️",
+      "doctorIds": [
+        5
+      ],
+      "patients": 156,
+      "status": "active",
+      "head": "د. نور محمد",
+      "color": "#06b6d4"
+    }
+  ],
+  "appointments": [
+    {
+      "id": 1,
+      "patient": "حسن محمود الزبيدي",
+      "doctorId": 1,
+      "doctor": "د. أحمد سالم الراشدي",
+      "department": "الفحوصات الطبية",
+      "date": "2026-06-17",
+      "time": "09:00",
+      "status": "confirmed",
+      "type": "كشف",
+      "notes": "مراجعة دورية"
+    },
+    {
+      "id": 2,
+      "patient": "مريم علي الحسناوي",
+      "doctorId": 2,
+      "doctor": "د. فاطمة حسن العبيدي",
+      "department": "طب النسائية",
+      "date": "2026-06-17",
+      "time": "10:30",
+      "status": "pending",
+      "type": "متابعة",
+      "notes": ""
+    }
+  ],
+  "employees": [
+    {
+      "id": 1,
+      "name": "د. أحمد سالم الراشدي",
+      "jobTitle": "طبيب اختصاص",
+      "dept": "الباطنية",
+      "grade": "الرابعة",
+      "step": 3,
+      "salary": 850000,
+      "hireDate": "2018-03-15",
+      "birthDate": "1982-05-14",
+      "phone": "07701234567",
+      "status": "نشط",
+      "lastPromotion": "2022-03-15",
+      "lastAllowance": "2024-01-01",
+      "retirementDate": "2042-05-14",
+      "notes": ""
+    },
+    {
+      "id": 2,
+      "name": "سارة قاسم الزيدي",
+      "jobTitle": "ممرضة أولى",
+      "dept": "الجراحة",
+      "grade": "الثالثة",
+      "step": 2,
+      "salary": 650000,
+      "hireDate": "2020-07-01",
+      "birthDate": "1990-07-01",
+      "phone": "07711111111",
+      "status": "نشط",
+      "lastPromotion": "2023-07-01",
+      "lastAllowance": "2024-07-01",
+      "retirementDate": "2050-07-01",
+      "notes": ""
+    }
+  ],
+  "retired": [
+    {
+      "id": 1,
+      "name": "كاظم محمد العبادي",
+      "jobTitle": "رئيس قسم",
+      "dept": "الباطنية",
+      "retireDate": "2024-01-01",
+      "retireSalary": 1200000,
+      "pensionNo": "P-2024-001",
+      "phone": "07799999999",
+      "notes": "تمت إجراءات التسوية بالكامل"
+    }
+  ],
+  "retiredDossiers": {},
+  "outgoing": [
+    {
+      "id": 1,
+      "ref": "ص-2026-001",
+      "title": "طلب توفير مستلزمات طبية",
+      "to": "مديرية الصحة",
+      "date": "2026-06-01",
+      "subject": "توفير مستلزمات طوارئ",
+      "status": "مُرسَل",
+      "notes": ""
+    }
+  ],
+  "incoming": [
+    {
+      "id": 1,
+      "ref": "و-2026-001",
+      "incomingRef": "م.ص/2026/441",
+      "title": "قرار ترفيع طاقم التمريض",
+      "from": "وزارة الصحة",
+      "date": "2026-05-28",
+      "subject": "ترفيع درجة وظيفية",
+      "status": "مُستلَم",
+      "notes": ""
+    }
+  ],
+  "vaccinations": [],
+  "medicalLeaves": [],
+  "dossiers": []
+}

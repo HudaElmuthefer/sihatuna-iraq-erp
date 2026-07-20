@@ -10,12 +10,11 @@
 // الآن اتصالاً حقيقياً بقاعدة PostgreSQL. إن تعذّر، يُتجاوز بأمان مع تحذير
 // واضح بدل فشل مربك لا يوضح السبب.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
 let token;
-let pgAvailable = true;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('appointments');
@@ -27,10 +26,7 @@ beforeAll(async () => {
   token = loginRes.body.token;
 
   const probe = await request(app).get('/api/appointments').set('Authorization', `Bearer ${token}`);
-  if (probe.status !== 200) {
-    pgAvailable = false;
-    console.warn('⚠️  تعذّر الاتصال بـ PostgreSQL — تم تجاوز اختبارات المواعيد. تأكد من إعدادات .env وأن PostgreSQL يعمل فعلياً.');
-  }
+  assertPgAvailable(probe, 'المواعيد');
 });
 
 afterAll(() => {
@@ -39,7 +35,6 @@ afterAll(() => {
 
 describe('POST /api/appointments — حفظ موعد جديد', () => {
   test('حفظ موعد بالبنية الفعلية المطابقة لـ AppointmentsPage.js ينجح فعلياً', async () => {
-    if (!pgAvailable) return;
     const res = await request(app)
       .post('/api/appointments')
       .set('Authorization', `Bearer ${token}`)

@@ -1,0 +1,101 @@
+name: تشغيل الاختبارات تلقائياً
+
+# ── لماذا هذا الملف ────────────────────────────────────────────────────────
+# قبل هذا، الاختبارات (70 اختبار Jest) موجودة لكن ما فيه شي يشغّلها تلقائياً —
+# لازم تتذكرين تشغّلينها يدوياً (npm test) قبل كل رفع للكود. لو نسيتِ، ممكن
+# تدفعين تعديلاً يكسر شيء بدون ما تنتبهين. الآن: كل مرة تدفعين كود لـ GitHub
+# (أو يفتح أحد Pull Request)، GitHub تلقائياً تجهّز بيئة نظيفة، تثبّت الحزم،
+# وتشغّل كل الاختبارات — وتعطيج ✅ أو ❌ واضحة بصفحة المستودع مباشرة.
+#
+# ملاحظة مهمة: اختبارات كثيرة بهذا المشروع (RBAC، استيراد Excel...) تحتاج
+# PostgreSQL حقيقي لتعمل بكامل قوتها — بدونه تتجاوز نفسها بأمان (skip) بدل
+# الفشل. أضفنا خدمة PostgreSQL هنا (services: postgres) بالضبط عشان هذي
+# الاختبارات تشتغل بكامل تغطيتها هنا تلقائياً، مو بس الجزء اللي لا يحتاج قاعدة بيانات.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sihatuna_iraq_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: تحميل الكود
+        uses: actions/checkout@v4
+
+      - name: إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: تثبيت حزم الباك إند
+        working-directory: backend
+        run: npm ci
+
+      - name: تجهيز بنية قاعدة البيانات (schema)
+        working-directory: backend
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d sihatuna_iraq_test -f ../database/postgres_schema.sql
+        continue-on-error: true # لو الملف يحتاج امتدادات غير متوفرة بالحاوية الافتراضية، لا نوقف كل الـ CI بسببها — الاختبارات نفسها ستتجاوز نفسها بأمان (pgAvailable check)
+
+      - name: تشغيل اختبارات الباك إند
+        working-directory: backend
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_USER: postgres
+          PG_PASSWORD: postgres
+          PG_DATABASE: sihatuna_iraq_test
+          JWT_SECRET: ci-test-secret-not-for-production
+          NODE_ENV: test
+        run: npm test
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تحميل الكود
+        uses: actions/checkout@v4
+
+      - name: إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: تثبيت حزم الفرونت إند
+        working-directory: frontend
+        run: npm ci
+
+      - name: تشغيل اختبارات الفرونت إند
+        working-directory: frontend
+        env:
+          CI: true
+        run: npm test -- --watchAll=false
+
+      - name: بناء الفرونت إند (يكتشف أي خطأ بالكود قبل النشر)
+        working-directory: frontend
+        env:
+          CI: true
+        run: npm run build

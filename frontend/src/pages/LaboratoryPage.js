@@ -21,8 +21,50 @@ const STATUSES = {
 };
 const EMPTY = { reqNo:'', patientName:'', patientId:'', doctorName:'', testType:'', category:'hematology', requestDate:'', sampleDate:'', resultDate:'', status:'pending', priority:'normal', results:null, notes:'' };
 
+// ── حزم فحوصات جاهزة (Panels) ────────────────────────────────────────────────
+// مشكلة حقيقية أثارتها المستخدمة: التحاليل عادة تُطلَب كمجموعة (مثلاً فحص
+// روتيني شامل = عدة تحاليل مع بعض بنفس الزيارة)، وإدخال بيانات المريض من
+// جديد لكل تحليل منفصل غير عملي. هذي الحزم تسمح بإدخال بيانات المريض مرة
+// وحدة بس، واختيار حزمة كاملة، فينشئ النظام طلب منفصل لكل تحليل بالحزمة
+// تلقائياً (لأن كل تحليل لسا له نتيجة/حالة/تاريخ عينة مستقلة عن الباقي).
+const TEST_PANELS = [
+  { key: 'routine', nameAr: 'فحص روتيني شامل', nameEn: 'Routine Full Checkup', tests: [
+    { testType: 'CBC', category: 'hematology' },
+    { testType: 'FBS (سكر صائم)', category: 'biochemistry' },
+    { testType: 'Lipid Profile (دهون الدم)', category: 'biochemistry' },
+    { testType: 'Kidney Function (يوريا/كرياتينين)', category: 'biochemistry' },
+    { testType: 'Liver Function (SGOT/SGPT)', category: 'biochemistry' },
+  ]},
+  { key: 'preop', nameAr: 'فحص ما قبل العمليات', nameEn: 'Pre-operative Panel', tests: [
+    { testType: 'CBC', category: 'hematology' },
+    { testType: 'Coagulation (PT/PTT)', category: 'hematology' },
+    { testType: 'Blood Group', category: 'hematology' },
+    { testType: 'Kidney Function', category: 'biochemistry' },
+    { testType: 'Liver Function', category: 'biochemistry' },
+  ]},
+  { key: 'pregnancy', nameAr: 'متابعة الحمل الروتينية', nameEn: 'Pregnancy Routine Panel', tests: [
+    { testType: 'CBC', category: 'hematology' },
+    { testType: 'Blood Group', category: 'hematology' },
+    { testType: 'FBS', category: 'biochemistry' },
+    { testType: 'Urine Analysis', category: 'urine' },
+    { testType: 'HBsAg', category: 'serology' },
+  ]},
+  { key: 'diabetes', nameAr: 'متابعة السكري', nameEn: 'Diabetes Follow-up Panel', tests: [
+    { testType: 'FBS', category: 'biochemistry' },
+    { testType: 'HbA1c', category: 'biochemistry' },
+    { testType: 'Lipid Profile', category: 'biochemistry' },
+    { testType: 'Kidney Function', category: 'biochemistry' },
+  ]},
+  { key: 'thyroid', nameAr: 'وظائف الغدة الدرقية', nameEn: 'Thyroid Panel', tests: [
+    { testType: 'TSH', category: 'hormones' },
+    { testType: 'T3', category: 'hormones' },
+    { testType: 'T4', category: 'hormones' },
+  ]},
+];
+const EMPTY_PANEL_FORM = { patientName: '', patientId: '', doctorName: '', requestDate: '', priority: 'normal', panelKey: '', selectedTests: [] };
+
 export default function LaboratoryPage() {
-  const { labTests, setLabTests, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { labTests, setLabTests, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const [search, setSearch] = useState('');
@@ -52,42 +94,108 @@ export default function LaboratoryPage() {
   }), [labTests]);
 
   const openAdd = () => {
-    const n = `LAB-${new Date().getFullYear()}-${String(labTests.length+1).padStart(4,'0')}`;
+    // إصلاح: labTests.length+1 يكرر رقم طلب موجود فعلاً بعد أي حذف
+    const lYear = new Date().getFullYear();
+    const lPrefix = `LAB-${lYear}-`;
+    const lMaxSeq = labTests.reduce((max,t)=>{
+      if (typeof t.reqNo !== 'string' || !t.reqNo.startsWith(lPrefix)) return max;
+      const v = parseInt(t.reqNo.slice(lPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const n = `${lPrefix}${String(lMaxSeq+1).padStart(4,'0')}`;
     setForm({ ...EMPTY, reqNo:n, requestDate:new Date().toISOString().split('T')[0] });
     setEditId(null); setShowModal(true);
   };
+
+  // ── حزم الفحوصات ──────────────────────────────────────────────────────────
+  const [showPanelModal, setShowPanelModal] = useState(false);
+  const [panelForm, setPanelForm] = useState(EMPTY_PANEL_FORM);
+  const [savingPanel, setSavingPanel] = useState(false);
+  const openPanelAdd = () => {
+    setPanelForm({ ...EMPTY_PANEL_FORM, requestDate: new Date().toISOString().split('T')[0] });
+    setShowPanelModal(true);
+  };
+  const nextReqNo = (offset) => {
+    const lYear = new Date().getFullYear();
+    const lPrefix = `LAB-${lYear}-`;
+    const lMaxSeq = labTests.reduce((max,t)=>{
+      if (typeof t.reqNo !== 'string' || !t.reqNo.startsWith(lPrefix)) return max;
+      const v = parseInt(t.reqNo.slice(lPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    return `${lPrefix}${String(lMaxSeq + offset).padStart(4,'0')}`;
+  };
+  const savePanel = async () => {
+    if (!panelForm.patientName || panelForm.selectedTests.length === 0) {
+      showToast(L('يرجى تعبئة اسم المريض واختيار تحليل واحد على الأقل', 'Please fill patient name and select at least one test'), 'error');
+      return;
+    }
+    setSavingPanel(true);
+    let createdCount = 0;
+    for (let i = 0; i < panelForm.selectedTests.length; i++) {
+      const test = panelForm.selectedTests[i];
+      const nt = {
+        ...EMPTY,
+        id: Date.now() + i, // فريد لكل سجل بنفس الدفعة (Date.now() وحدها تتكرر بحلقة سريعة)
+        reqNo: nextReqNo(i + 1),
+        patientName: panelForm.patientName,
+        patientId: panelForm.patientId,
+        doctorName: panelForm.doctorName,
+        requestDate: panelForm.requestDate,
+        priority: panelForm.priority,
+        testType: test.testType,
+        category: test.category,
+      };
+      setLabTests(p => [...p, nt]);
+      const ok = await syncToServer('labTests', 'create', nt); // نسلسل الإنشاء (await بكل تكرار) بدل الكل دفعة وحدة، لضمان عدم تكرار reqNo عند حساب nextReqNo لعنصر لاحق
+      if (ok) createdCount++;
+    }
+    setSavingPanel(false);
+    setShowPanelModal(false);
+    showToast(
+      createdCount === panelForm.selectedTests.length
+        ? L(`تم إنشاء ${createdCount} طلب فحص بنجاح`, `${createdCount} test request(s) created successfully`)
+        : L(`تم إنشاء ${createdCount} من ${panelForm.selectedTests.length} طلب — راجعي القائمة`, `${createdCount} of ${panelForm.selectedTests.length} created — please review the list`),
+      createdCount === panelForm.selectedTests.length ? 'success' : 'warning'
+    );
+  };
   const openEdit = (t) => { setForm({...t}); setEditId(t.id); setShowModal(true); };
-  const save = () => {
+  const save = async () => {
     if (!form.patientName || !form.testType) { showToast(L('يرجى تعبئة المريض ونوع التحليل','Please fill patient and test type'),'error'); return; }
+    const prev = labTests;
     if (editId) {
       const ut = {...form,id:editId};
       setLabTests(p=>p.map(t=>t.id===editId?{...t,...ut}:t));
-      syncToServer('labTests','update',ut);
+      const ok = await syncToServer('labTests','update',ut);
+      if (!ok) { setLabTests(prev); return; }
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const nt = {...form,id:Date.now()};
       setLabTests(p=>[...p,nt]);
-      syncToServer('labTests','create',nt);
+      const ok = await syncToServer('labTests','create',nt);
+      if (!ok) { setLabTests(prev); return; }
       showToast(L('تمت إضافة الطلب','Request added'),'success');
     }
     setShowModal(false);
   };
-  const updateStatus = (id, status) => {
-    setLabTests(p => {
-      const updated = p.map(t=>t.id===id?{...t,status, ...(status==='processing'?{sampleDate:new Date().toISOString().split('T')[0]}:{})}:t);
-      const changed = updated.find(t => t.id === id);
-      if (changed) syncToServer('labTests','update',changed);
-      return updated;
-    });
+  const updateStatus = async (id, status) => {
+    const prev = labTests;
+    const current = labTests.find(t => t.id === id);
+    if (!current) return;
+    const changed = {...current, status, ...(status==='processing'?{sampleDate:new Date().toISOString().split('T')[0]}:{})};
+    setLabTests(p => p.map(t=>t.id===id?changed:t));
+    const ok = await syncToServer('labTests','update',changed);
+    if (!ok) { setLabTests(prev); return; }
     showToast(L('تم تحديث الحالة','Status updated'),'success');
   };
-  const addResult = () => {
-    setLabTests(p => {
-      const updated = p.map(t=>t.id===showResultModal.id?{...t,status:'completed',resultDate:new Date().toISOString().split('T')[0],results:{value:resultText,notes:resultNote}}:t);
-      const changed = updated.find(t => t.id === showResultModal.id);
-      if (changed) syncToServer('labTests','update',changed);
-      return updated;
-    });
+  const addResult = async () => {
+    const prev = labTests;
+    const current = labTests.find(t => t.id === showResultModal.id);
+    if (!current) return;
+    const changed = {...current,status:'completed',resultDate:new Date().toISOString().split('T')[0],results:{value:resultText,notes:resultNote}};
+    setLabTests(p => p.map(t=>t.id===showResultModal.id?changed:t));
+    const ok = await syncToServer('labTests','update',changed);
+    if (!ok) { setLabTests(prev); return; }
     showToast(L('تم إدخال النتيجة','Result entered'),'success'); setShowResultModal(null);
   };
 
@@ -117,6 +225,7 @@ export default function LaboratoryPage() {
           <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة طلبات التحاليل والنتائج المخبرية':'Manage lab test requests and results'}</p>
         </div>
         <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تحليل جديد':'+ New Test Request'}</button>
+        <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={openPanelAdd}>{lang==='ar'?'🧬 حزمة فحوصات':'🧬 Test Panel'}</button>
       </div>
 
       <div style={S.stats}>
@@ -161,7 +270,7 @@ export default function LaboratoryPage() {
                     {t.status==='pending'&&<button onClick={()=>updateStatus(t.id,'processing')} style={{...S.btn('#f59e0b'),padding:'3px 8px',fontSize:10}}>{L('أخذ العينة','Take Sample')}</button>}
                     {t.status==='processing'&&<button onClick={()=>{setShowResultModal(t);setResultText('');setResultNote('');}} style={{...S.btn('#10b981'),padding:'3px 8px',fontSize:10}}>{L('إدخال النتيجة','Enter Result')}</button>}
                     <button onClick={()=>openEdit(t)} style={{...S.btn('#6b7280'),padding:'3px 8px',fontSize:10}}>✏️</button>
-                    <button onClick={()=>{setLabTests(p=>p.filter(x=>x.id!==t.id));syncToServer('labTests','delete',{id:t.id});showToast('تم الحذف','info');}} style={{...S.btn('#ef4444'),padding:'3px 8px',fontSize:10}}>🗑</button>
+                    <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const prev=labTests;setLabTests(p=>p.filter(x=>x.id!==t.id));const ok=await syncToServer('labTests','delete',{id:t.id});if(!ok){setLabTests(prev);return;}showToast(L('تم الحذف','Deleted'),'info');}} style={{...S.btn('#ef4444'),padding:'3px 8px',fontSize:10}}>🗑</button>
                   </div>
                 </td>
               </tr>
@@ -202,13 +311,94 @@ export default function LaboratoryPage() {
         </div>
       )}
 
+      {showPanelModal&&(
+        <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowPanelModal(false)}>
+          <div style={{...S.mbox, maxWidth: 560}}>
+            <h3 style={{margin:'0 0 6px',color:'var(--text-primary)'}}>{L('🧬 حزمة فحوصات', '🧬 Test Panel')}</h3>
+            <p style={{margin:'0 0 16px',fontSize:12,color:'var(--text-secondary)'}}>{L('عبّي بيانات المريض مرة وحدة، واختاري حزمة — كل تحليل بالحزمة يُنشأ كطلب منفصل تلقائياً.', 'Fill patient info once, pick a panel — each test in it is created as a separate request automatically.')}</p>
+
+            <div style={S.g2}>
+              <label style={{gridColumn:'span 2'}}>{L('اسم المريض','Patient Name')}<input style={S.fi} value={panelForm.patientName} onChange={e=>setPanelForm(p=>({...p,patientName:e.target.value}))}/></label>
+              <label>{L('رقم المريض','Patient ID')}<input style={S.fi} value={panelForm.patientId} onChange={e=>setPanelForm(p=>({...p,patientId:e.target.value}))}/></label>
+              <label>{L('الطبيب المحول','Referring Doctor')}<input style={S.fi} value={panelForm.doctorName} onChange={e=>setPanelForm(p=>({...p,doctorName:e.target.value}))}/></label>
+              <label>{L('تاريخ الطلب','Request Date')}<input type="date" style={S.fi} value={panelForm.requestDate} onChange={e=>setPanelForm(p=>({...p,requestDate:e.target.value}))}/></label>
+              <label>{L('الأولوية','Priority')}<select style={S.fi} value={panelForm.priority} onChange={e=>setPanelForm(p=>({...p,priority:e.target.value}))}><option value="normal">{L('عادي','Normal')}</option><option value="urgent">{L('عاجل','Urgent')}</option></select></label>
+            </div>
+
+            <label style={{display:'block',marginTop:14}}>
+              {L('اختاري حزمة جاهزة (اختياري)','Pick a ready panel (optional)')}
+              <select
+                style={S.fi}
+                value={panelForm.panelKey}
+                onChange={e=>{
+                  const key = e.target.value;
+                  const panel = TEST_PANELS.find(p=>p.key===key);
+                  setPanelForm(p=>({...p, panelKey:key, selectedTests: panel ? [...panel.tests] : p.selectedTests}));
+                }}
+              >
+                <option value="">{L('— اختاري حزمة أو أضيفي تحاليل منفردة تحت —','— pick a panel, or add individual tests below —')}</option>
+                {TEST_PANELS.map(p=><option key={p.key} value={p.key}>{L(p.nameAr,p.nameEn)} ({p.tests.length})</option>)}
+              </select>
+            </label>
+
+            <div style={{marginTop:12}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span style={{fontSize:13,fontWeight:700}}>{L('التحاليل المختارة','Selected Tests')} ({panelForm.selectedTests.length})</span>
+                <button
+                  type="button"
+                  style={{...S.btn('#6b7280'),padding:'3px 10px',fontSize:11}}
+                  onClick={()=>setPanelForm(p=>({...p, selectedTests:[...p.selectedTests, {testType:'', category:'hematology'}]}))}
+                >
+                  {L('+ تحليل منفرد','+ Individual Test')}
+                </button>
+              </div>
+              {panelForm.selectedTests.length === 0 ? (
+                <p style={{fontSize:12,color:'var(--text-secondary)'}}>{L('ما فيه تحاليل مختارة بعد — اختاري حزمة أو أضيفي تحليل منفرد.','No tests selected yet — pick a panel or add an individual test.')}</p>
+              ) : (
+                <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:220,overflowY:'auto'}}>
+                  {panelForm.selectedTests.map((t, idx) => (
+                    <div key={idx} style={{display:'flex',gap:6,alignItems:'center'}}>
+                      <input
+                        style={{...S.fi, flex:2}}
+                        placeholder={L('نوع التحليل','Test type')}
+                        value={t.testType}
+                        onChange={e=>setPanelForm(p=>({...p, selectedTests: p.selectedTests.map((x,i)=>i===idx?{...x,testType:e.target.value}:x)}))}
+                      />
+                      <select
+                        style={{...S.fi, flex:1}}
+                        value={t.category}
+                        onChange={e=>setPanelForm(p=>({...p, selectedTests: p.selectedTests.map((x,i)=>i===idx?{...x,category:e.target.value}:x)}))}
+                      >
+                        {Object.entries(CATEGORIES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={()=>setPanelForm(p=>({...p, selectedTests: p.selectedTests.filter((_,i)=>i!==idx)}))}
+                        style={{...S.btn('#ef4444'),padding:'4px 8px',fontSize:11}}
+                      >🗑</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{display:'flex',gap:10,marginTop:18,justifyContent:'flex-end'}}>
+              <button style={S.btn('#6b7280')} onClick={()=>setShowPanelModal(false)} disabled={savingPanel}>{lang==='ar'?'إلغاء':'Cancel'}</button>
+              <button style={S.btn()} onClick={savePanel} disabled={savingPanel}>
+                {savingPanel ? L('جارٍ الإنشاء...','Creating...') : L(`💾 إنشاء ${panelForm.selectedTests.length} طلب`,`💾 Create ${panelForm.selectedTests.length} Request(s)`)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showResultModal&&(
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowResultModal(null)}>
           <div style={{...S.mbox,maxWidth:420}}>
-            <h3 style={{margin:'0 0 12px',color:'var(--text-primary)'}}>📋 إدخال نتيجة التحليل</h3>
+            <h3 style={{margin:'0 0 12px',color:'var(--text-primary)'}}>📋 {L('إدخال نتيجة التحليل','Enter Test Result')}</h3>
             <p style={{color:'var(--text-secondary)',fontSize:13,margin:'0 0 16px'}}>{showResultModal.testType} — {showResultModal.patientName}</p>
             <label style={{display:'block',marginBottom:12}}>{L('النتيجة','Result')}<input style={{...S.fi,fontWeight:600}} placeholder={L('مثال: طبيعي / 126 mg/dL','e.g.: Normal / 126 mg/dL')} value={resultText} onChange={e=>setResultText(e.target.value)}/></label>
-            <label style={{display:'block',marginBottom:16}}><span style={S.fl}>ملاحظات الطبيب</span><textarea style={{...S.fi,minHeight:80,resize:'vertical'}} value={resultNote} onChange={e=>setResultNote(e.target.value)}/></label>
+            <label style={{display:'block',marginBottom:16}}><span style={S.fl}>{L('ملاحظات الطبيب','Physician Notes')}</span><textarea style={{...S.fi,minHeight:80,resize:'vertical'}} value={resultNote} onChange={e=>setResultNote(e.target.value)}/></label>
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowResultModal(null)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
               <button style={S.btn('#10b981')} onClick={addResult}>{lang==='ar'?'✅ تأكيد النتيجة':'✅ Confirm Result'}</button>

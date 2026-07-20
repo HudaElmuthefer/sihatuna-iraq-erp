@@ -42,14 +42,18 @@ const doseLabel = (value, lang) => DOSES.find(d => d.ar===value||d.en===value)?.
 const empty = { patient: '', vaccine: '', dose: '', date: '', nextDate: '', status: 'upcoming', provider: '', notes: '' };
 
 export default function VaccinationsPage() {
-  const { showToast, lang, syncToServer, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
+  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const tr = useT(lang);
   const [records, setRecords] = useState(initialVaccinations);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    // إصلاح: نفس خلل AppContext (`data.length > 0`) — لو كان عدد التطعيمات
+    // الحقيقي بقاعدة البيانات صفراً فعلاً، تبقى الصفحة تعرض بيانات تجريبية
+    // وهمية ثابتة (initialVaccinations) للأبد بدل الصفر الصحيح، وكأنها بيانات
+    // مرضى حقيقية. الآن نثق بأي رد صالح من الخادم، فارغاً كان أو لا.
     api.get('/vaccinations').then(data => {
-      if (!cancelled && Array.isArray(data) && data.length > 0) setRecords(data);
+      if (!cancelled && Array.isArray(data)) setRecords(data);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -79,24 +83,34 @@ export default function VaccinationsPage() {
 
   const save = async () => {
     if (!form.patient || !form.vaccine || !form.date) { showToast(tr('msg_required'), 'error'); return; }
+    const prev = records;
     if (editing) {
       const ur = { ...form, id: editing.id };
-      setRecords(prev => prev.map(r => r.id === editing.id ? ur : r));
-      await syncToServer('vaccinations', 'update', ur);
+      setRecords(p => p.map(r => r.id === editing.id ? ur : r));
+      const ok = await syncToServer('vaccinations', 'update', ur);
+      if (!ok) { setRecords(prev); return; }
       showToast(tr('msg_edited'), 'success');
     } else {
       const nr = { ...form, id: Date.now() };
-      setRecords(prev => [...prev, nr]);
+      setRecords(p => [...p, nr]);
       const synced = await syncToServer('vaccinations', 'create', nr);
-      if (synced && typeof synced === 'object' && synced.id !== nr.id) {
-        setRecords(prev => prev.map(r => r.id === nr.id ? synced : r));
+      if (!synced) { setRecords(prev); return; }
+      if (typeof synced === 'object' && synced.id !== nr.id) {
+        setRecords(p => p.map(r => r.id === nr.id ? synced : r));
       }
       showToast(tr('msg_added'), 'success');
     }
     setShowModal(false);
   };
 
-  const del = (id) => { setRecords(prev => prev.filter(r => r.id !== id)); syncToServer('vaccinations', 'delete', { id }); showToast(tr('msg_deleted'), 'success'); };
+  const del = async (id) => {
+    if (!(await confirmDialog(tr('x_hlantmtakd_laimknaltraja')))) return;
+    const prev = records;
+    setRecords(p => p.filter(r => r.id !== id));
+    const ok = await syncToServer('vaccinations', 'delete', { id });
+    if (!ok) { setRecords(prev); return; }
+    showToast(tr('msg_deleted'), 'success');
+  };
 
   const statusColor = (s) => ({ completed: '#22c55e', upcoming: '#3b82f6', overdue: '#ef4444' }[normalizeStatus(s)] || '#6b7280');
   const statusIcon = (s) => normalizeStatus(s) === 'completed' ? <FaCheckCircle /> : normalizeStatus(s) === 'upcoming' ? <FaClock /> : <FaSyringe />;

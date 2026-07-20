@@ -11,7 +11,7 @@ const NAV_ICONS = {
   'appointments': '📅', 'departments': '🏢', 'ai-diagnosis': '🧠',
   'vaccinations': '💉', 'drug-interactions': '💊', 'medical-leave': '🏥',
   'smart-reports': '📊', 'hr': '👔', 'accounts': '💰', 'settings': '⚙️',
-  'inventory': '📦', 'procurement': '🛒', 'projects': '📐', 'documents': '📁', 'crm': '📇', 'payment-settings': '💳', 'billing': '🧾' };
+  'inventory': '📦', 'procurement': '🛒', 'projects': '📐', 'documents': '📁', 'crm': '📇', 'payment-settings': '💳', 'billing': '🧾', 'results': '📄', 'barcode': '🏷️' };
 
 const GROUP_LABELS = {
   core:      { ar: '', en: '' },
@@ -324,6 +324,11 @@ export default function Layout() {
           {location.pathname !== '/' && <HealthBanner />}
           <Outlet />
         </main>
+
+        {/* Copyright footer */}
+        <footer style={{ padding: '8px 20px', textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 }}>
+          All rights reserved © Eng. Huda Elmuthefer — SIHATUNA IRAQ
+        </footer>
 
         {/* Mobile bottom nav */}
         <nav className="bottom-nav" style={{ display: 'none', background: '#1565c0', padding: '8px 0', flexShrink: 0 }}>

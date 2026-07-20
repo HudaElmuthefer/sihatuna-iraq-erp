@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
+import { api } from '../api';
 
 const STATUS_CONFIG = {
   pending:   { ar:'بانتظار الموافقة', en:'Pending Approval', color:'#f59e0b', bg:'#fef3c7' },
@@ -28,6 +29,125 @@ export default function ProcurementPage() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY);
 
+  // ── قارئ الفواتير بالذكاء الاصطناعي ─────────────────────────────────────
+  // مماثل لميزة "Razi System" بمنافس السوق (mip-iraq.com) — تصويري/رفعي
+  // فاتورة ورقية من المورد بدل كتابة كل التفاصيل يدوياً. تعتمد على نفس
+  // مفتاح Gemini المُعدّ أصلاً بـ.env لميزة التشخيص بالذكاء الاصطناعي —
+  // ما يحتاج أي إعداد إضافي لو Gemini شغّال أصلاً.
+  const [readingInvoice, setReadingInvoice] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState(null); // بيانات الفاتورة المُستخرَجة، للمراجعة قبل التطبيق
+
+  // دالة مشتركة تقرأ الفاتورة سواء جاءت من ملف مرفوع أو من التقاط كاميرا —
+  // الاثنان ينتهيان بنفس الشكل (data URL + نوع الملف)، فلا داعي لتكرار منطق
+  // استدعاء الـ API مرتين.
+  const readInvoiceFromDataUrl = async (dataUrl, mimeType) => {
+    setReadingInvoice(true);
+    setInvoicePreview(null);
+    try {
+      const result = await api.post('/invoice-reader/read', { image: dataUrl, mimeType });
+      if (!result.available) {
+        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI invoice reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+      } else {
+        setInvoicePreview(result);
+      }
+    } catch (err) {
+      showToast(L('تعذّرت قراءة الفاتورة، جرب صورة أوضح', 'Could not read the invoice, try a clearer image'), 'error');
+    } finally {
+      setReadingInvoice(false);
+    }
+  };
+
+  const handleInvoiceFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await readInvoiceFromDataUrl(dataUrl, file.type);
+    e.target.value = ''; // يسمح برفع نفس الملف مرة ثانية لو احتاجت المستخدمة تعيد المحاولة
+  };
+
+  // ── التقاط مباشر من كاميرا الحاسبة (Webcam) ─────────────────────────────
+  // بديل عن رفع ملف — تفتح بث الكاميرا مباشرة داخل المتصفح (getUserMedia)،
+  // وتلتقط لقطة واحدة عند الضغط، بدون أي برنامج خارجي أو تثبيت إضافي.
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [cameraReady, setCameraReady] = useState(false);
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+
+  const openCamera = async () => {
+    setCameraError('');
+    setCameraReady(false);
+    setShowCamera(true);
+    try {
+      // ملاحظة: بدون facingMode — هذا القيد يخص كاميرات الموبايل (أمامية/
+      // خلفية)، وكاميرات الحاسبة (Webcam) ما تدعمه عادة؛ طلبه صراحة كان
+      // يمنع ظهور الصورة رغم نجاح تشغيل الكاميرا نفسها (ضوء الكاميرا يضوي).
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // بعض المتصفحات ما تشغّل الفيديو تلقائياً حتى لو البث نفسه شغّال
+        // (ضوء الكاميرا مضوي) — نطلب التشغيل صراحة بدل الاعتماد على autoPlay وحدها
+        videoRef.current.play().catch(() => {});
+      }
+    } catch (err) {
+      setCameraError(L('تعذّر الوصول لكاميرا الحاسبة، تأكد من السماح للمتصفح باستخدام الكاميرا', 'Could not access the computer camera — make sure the browser has camera permission'));
+    }
+  };
+
+  const closeCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+    setCameraReady(false);
+  };
+
+  const captureFromCamera = async () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) {
+      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظري ثانية وحاولي مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    closeCamera();
+    await readInvoiceFromDataUrl(dataUrl, 'image/jpeg');
+  };
+
+  // يحوّل أي صيغة تاريخ شائعة (سنة-شهر-يوم أو يوم-شهر-سنة أو يوم/شهر/سنة)
+  // إلى الصيغة الوحيدة التي يقبلها حقل input من نوع date: yyyy-mm-dd.
+  // بدون هذا، أي التزام ناقص من النموذج بالصيغة يجعل الحقل يبدو فارغاً
+  // بصرياً رغم وصول القيمة فعلياً.
+  const normalizeDate = (raw) => {
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const m = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return null;
+  };
+
+  const applyInvoicePreview = () => {
+    if (!invoicePreview) return;
+    setForm((p) => ({
+      ...p,
+      supplier: invoicePreview.vendorName || p.supplier,
+      supplierEn: invoicePreview.vendorName || p.supplierEn,
+      date: normalizeDate(invoicePreview.invoiceDate) || p.date,
+      totalAmount: invoicePreview.grandTotal || p.totalAmount,
+      items: invoicePreview.items?.length || p.items,
+    }));
+    setInvoicePreview(null);
+    showToast(L('تم تعبئة بيانات الفاتورة، راجع القيم قبل الحفظ', 'Invoice data filled in — please review before saving'), 'success');
+  };
+
   const filtered = useMemo(() => procurement.filter(p => {
     const q = search.toLowerCase();
     return (!q || p.title.includes(q) || p.poNo.toLowerCase().includes(q) || p.supplier.includes(q))
@@ -43,34 +163,46 @@ export default function ProcurementPage() {
   }), [procurement]);
 
   const openAdd = () => {
-    const nextNo = `PO-${new Date().getFullYear()}-${String(procurement.length+1).padStart(3,'0')}`;
+    // إصلاح: procurement.length+1 يكرر رقم أمر شراء موجود فعلاً بعد أي حذف
+    const poYear = new Date().getFullYear();
+    const poPrefix = `PO-${poYear}-`;
+    const poMaxSeq = procurement.reduce((max,p)=>{
+      if (typeof p.poNo !== 'string' || !p.poNo.startsWith(poPrefix)) return max;
+      const v = parseInt(p.poNo.slice(poPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const nextNo = `${poPrefix}${String(poMaxSeq+1).padStart(3,'0')}`;
     setForm({ ...EMPTY, poNo: nextNo, date: new Date().toISOString().split('T')[0] });
     setEditId(null); setShowModal(true);
   };
   const openEdit = item => { setForm({ ...item }); setEditId(item.id); setShowModal(true); };
-  const savePO = () => {
+  const savePO = async () => {
     if (!form.title || !form.supplier) { showToast(L('يرجى تعبئة العنوان والمورد','Please fill title and supplier'), 'error'); return; }
     const po = { ...form, totalAmount: +form.totalAmount, items: +form.items };
+    const prev = procurement;
     if (editId) {
       const up = { ...po, id: editId };
       setProcurement(p => p.map(i => i.id === editId ? { ...i, ...up } : i));
-      syncToServer('procurement', 'update', up);
+      const ok = await syncToServer('procurement', 'update', up);
+      if (!ok) { setProcurement(prev); return; }
       showToast(L('تم التحديث','Updated'), 'success');
     } else {
       const np = { ...po, id: Date.now() };
       setProcurement(p => [...p, np]);
-      syncToServer('procurement', 'create', np);
+      const ok = await syncToServer('procurement', 'create', np);
+      if (!ok) { setProcurement(prev); return; }
       showToast(L('تمت إضافة أمر الشراء','PO added'), 'success');
     }
     setShowModal(false);
   };
-  const updateStatus = (id, status) => {
-    setProcurement(p => {
-      const updated = p.map(i => i.id === id ? { ...i, status, ...(status==='approved' ? {approvedBy: user?.name} : {}) } : i);
-      const changed = updated.find(i => i.id === id);
-      if (changed) syncToServer('procurement', 'update', changed);
-      return updated;
-    });
+  const updateStatus = async (id, status) => {
+    const prev = procurement;
+    const current = procurement.find(i => i.id === id);
+    if (!current) return;
+    const changed = { ...current, status, ...(status==='approved' ? {approvedBy: user?.name} : {}) };
+    setProcurement(p => p.map(i => i.id === id ? changed : i));
+    const ok = await syncToServer('procurement', 'update', changed);
+    if (!ok) { setProcurement(prev); return; }
     const msg = status==='approved' ? L('تمت الموافقة','Approved') : status==='delivered' ? L('تم تسجيل الاستلام','Delivery recorded') : L('تم الإلغاء','Cancelled');
     showToast(msg, 'success');
   };
@@ -172,10 +304,101 @@ export default function ProcurementPage() {
 
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
 
+      {showCamera && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+          <div style={{ background: '#111', borderRadius: 14, padding: 16, maxWidth: '90vw' }}>
+            <h4 style={{ margin: '0 0 10px', color: '#fff', fontSize: 14 }}>{L('التقاط صورة الفاتورة', 'Capture Invoice Photo')}</h4>
+            {cameraError ? (
+              <p style={{ color: '#fca5a5', fontSize: 13, maxWidth: 320 }}>{cameraError}</p>
+            ) : (
+              /* eslint-disable-next-line jsx-a11y/media-has-caption */
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                onLoadedMetadata={() => setCameraReady(true)}
+                style={{ maxWidth: '80vw', maxHeight: '60vh', borderRadius: 8, background: '#000' }}
+              />
+            )}
+            {!cameraError && !cameraReady && (
+              <p style={{ color: '#9ca3af', fontSize: 12, marginTop: 8 }}>{L('جاري تشغيل الكاميرا...', 'Starting camera...')}</p>
+            )}
+            <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={closeCamera} style={{ ...S.btn('#6b7280'), padding: '7px 16px' }}>{L('إلغاء', 'Cancel')}</button>
+              {!cameraError && (
+                <button type="button" onClick={captureFromCamera} disabled={!cameraReady} style={{ ...S.btn(), padding: '7px 16px', opacity: cameraReady ? 1 : 0.5 }}>📸 {L('التقاط', 'Capture')}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
           <div style={S.mbox}>
             <h3 style={{ margin:'0 0 20px', color:'var(--text-primary)' }}>{editId ? L('✏️ تعديل أمر الشراء','✏️ Edit PO') : L('🛒 أمر شراء جديد','🛒 New Purchase Order')}</h3>
+
+            {!editId && (
+              <div style={{ marginBottom: 18, padding: 12, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px dashed var(--border-color, #d1d5db)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                  📷 {readingInvoice ? L('جارٍ قراءة الفاتورة...', 'Reading invoice...') : L('رفع صورة فاتورة (اختياري)', 'Upload invoice photo (optional)')}
+                  <input type="file" accept="image/*" onChange={handleInvoiceFile} disabled={readingInvoice} style={{ display: 'none' }} />
+                </label>
+                <button
+                  type="button"
+                  onClick={openCamera}
+                  disabled={readingInvoice}
+                  style={{ ...S.btn('#6b7280'), padding: '5px 12px', fontSize: 12, marginTop: 8 }}
+                >
+                  📸 {L('التقاط من كاميرا الحاسبة', "Capture from computer's camera")}
+                </button>
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary)' }}>
+                  {L('صوّر أو ارفع فاتورة المورد، تُعبّأ الحقول تلقائياً، راجع البيانات المستخرَجة قبل التطبيق.', 'Photograph or upload the supplier invoice — fields fill in automatically. Review the extracted data before applying.')}
+                </p>
+
+                {invoicePreview && (
+                  <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border-color, #d1d5db)' }}>
+                    <div style={{ fontSize: 12, marginBottom: 6 }}>
+                      <strong>{L('المورد', 'Vendor')}:</strong> {invoicePreview.vendorName || '—'} &nbsp;|&nbsp;
+                      <strong>{L('التاريخ', 'Date')}:</strong> {invoicePreview.invoiceDate || '—'} &nbsp;|&nbsp;
+                      <strong>{L('الإجمالي', 'Total')}:</strong> {invoicePreview.grandTotal || '—'} &nbsp;|&nbsp;
+                      <strong>{L('عدد الأصناف', 'Items')}:</strong> {invoicePreview.items?.length || 0}
+                    </div>
+                    {invoicePreview.items?.length > 0 && (
+                      <table style={{ width: '100%', fontSize: 11, marginBottom: 6, borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-color, #d1d5db)' }}>
+                            <th style={{ textAlign: 'start', padding: 4 }}>{L('الصنف', 'Item')}</th>
+                            <th style={{ textAlign: 'center', padding: 4 }}>{L('الكمية', 'Qty')}</th>
+                            <th style={{ textAlign: 'center', padding: 4 }}>{L('السعر', 'Price')}</th>
+                            <th style={{ textAlign: 'end', padding: 4 }}>{L('المجموع', 'Total')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invoicePreview.items.map((it, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
+                              <td style={{ padding: 4 }}>{it.name || '—'}</td>
+                              <td style={{ textAlign: 'center', padding: 4 }}>{it.quantity ?? '—'}</td>
+                              <td style={{ textAlign: 'center', padding: 4 }}>{it.unitPrice ?? '—'}</td>
+                              <td style={{ textAlign: 'end', padding: 4 }}>{it.total ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {invoicePreview.confidence === 'low' && (
+                      <div style={{ fontSize: 11, color: '#b45309', marginBottom: 6 }}>⚠️ {L('دقة القراءة منخفضة، راجع الأرقام يدوياً قبل الحفظ', 'Reading confidence is low — please verify the numbers manually before saving')}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={applyInvoicePreview} style={{ ...S.btn(), padding: '5px 12px', fontSize: 12 }}>{L('✅ تعبئة النموذج', '✅ Fill Form')}</button>
+                      <button type="button" onClick={() => setInvoicePreview(null)} style={{ ...S.btn('#6b7280'), padding: '5px 12px', fontSize: 12 }}>{L('تجاهل', 'Discard')}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={S.g2}>
               {[['poNo',L('رقم أمر الشراء','PO Number'),'text'],
                 ['date',L('تاريخ الطلب','Order Date'),'date'],

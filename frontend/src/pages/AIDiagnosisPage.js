@@ -1,8 +1,10 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
-import { FaBrain, FaPlus, FaTimes, FaChevronRight, FaExclamationTriangle, FaCheckCircle, FaFileMedical, FaUserMd, FaPhone } from 'react-icons/fa';
+import { api } from '../api';
+import { buildFallback } from '../utils/fallbackDiagnosis';
+import { FaBrain, FaPlus, FaTimes, FaChevronRight, FaExclamationTriangle, FaCheckCircle, FaFileMedical, FaUserMd, FaPhone, FaRobot, FaListAlt } from 'react-icons/fa';
 
 const SYMPTOMS_DATA = [
   {ar:'صداع',en:'Headache'},{ar:'حمى',en:'Fever'},{ar:'سعال',en:'Cough'},{ar:'ضيق تنفس',en:'Shortness of breath'},
@@ -22,55 +24,14 @@ const commonSymptoms = [
   'آلام قلب', 'تورم', 'حكة', 'تساقط شعر', 'ضعف بصر', 'ألم أذن', 'عسر بلع'
 ];
 
-// أطباء البصرة من دليل البصرة الطبي
-const BASRA_DOCTORS = [
-  // باطنية
-  { name: 'دكتور أحمد سالم الغزي', spec: 'باطنية وصدرية', area: 'بريهة - قرب جرس المحاكم - مجمع بريهة الطبي', phone: '07708037628', keys: ['صداع','حمى','سعال','ضيق تنفس','إرهاق','فقدان شهية','قلق','ارتفاع ضغط دم'] },
-  { name: 'دكتور انمار عبد المحسن', spec: 'باطنية وصدرية', area: 'بريهة - قرب جرس المحاكم - مجمع البلسم الطبي', phone: '07709501368', keys: ['سعال','ضيق تنفس','آلام صدر','إرهاق','حمى'] },
-  { name: 'دكتور حسن رمضان شندوخ', spec: 'باطنية وصدرية', area: 'الجمهورية - شارع المكاتب - مجمع الإرساء الطبي', phone: '07777823697', keys: ['حمى','صداع','إرهاق','ارتفاع ضغط دم','آلام بطن'] },
-  { name: 'دكتور حيدر حسن الحجاج', spec: 'باطنية', area: 'المدينة - قرب صيدلية الكناري', phone: '07737238881', keys: ['حمى','صداع','إرهاق','غثيان','قيء'] },
-  { name: 'دكتور صفاء الدين أحمد الحاجم', spec: 'باطنية وصدرية', area: 'بريهة - قرب جرس المحاكم - مجمع السعفة الطبي', phone: '07712136408', keys: ['سعال','ضيق تنفس','صداع','حمى','إرهاق'] },
-  { name: 'دكتور عادل عبد الحسن كاظم', spec: 'باطنية', area: 'الجمهورية - شارع المكاتب - قرب مكتبة أبو طارق', phone: '07807921100', keys: ['ارتفاع ضغط دم','آلام بطن','حمى','إرهاق'] },
-  // أمراض الغدد والسكري
-  { name: 'دكتور إبراهيم هاني المطوري', spec: 'غدد صماء وسكري', area: 'القرنة - شارع الفردوس - مركز الفيحاء للغدد الصماء والسكري', phone: '07727999188', keys: ['سكري','إرهاق','تساقط شعر','ارتفاع ضغط دم','تورم'] },
-  { name: 'دكتور حيدر إياد الإدريسي', spec: 'غدد صماء وسكري', area: 'بريهة - قرب جرس المحاكم - مجمع الرافدين التخصصي', phone: '07736019049', keys: ['سكري','إرهاق','تساقط شعر','تورم'] },
-  { name: 'دكتور سلمان كاظم الساعدي', spec: 'غدد صماء وسكري', area: 'بريهة - قرب جرس المحاكم - مجمع مملكة الطب', phone: '07712436678', keys: ['سكري','إرهاق','تساقط شعر','حكة'] },
-  // جهاز هضمي
-  { name: 'دكتور طلال هادي النون', spec: 'جهاز هضمي باطنية', area: 'العباسية - شارع جامع سيد حامد - مركز جود للجهاز الهضمي', phone: '07815553252', keys: ['آلام بطن','غثيان','قيء','إسهال','فقدان شهية'] },
-  { name: 'دكتور حميد لفتة ونوس', spec: 'جهاز هضمي', area: 'بريهة - قرب جرس المحاكم - مجمع النخيل التخصصي', phone: '07717571349', keys: ['آلام بطن','غثيان','قيء','إسهال','فقدان شهية'] },
-  // قلبية
-  { name: 'دكتور حبيب نجم العبيدي', spec: 'قلبية - تشوهات قلبية ولادية', area: 'الزبير - الرشيدية - عيادات ابن سينا الطبية', phone: '07700190636', keys: ['آلام صدر','ضيق تنفس','دوار','إرهاق','تورم'] },
-  { name: 'دكتور ثامر فوزي الخياط', spec: 'جراحة قلب وصدر', area: 'بريهة - قرب جرس المحاكم - مجمع البلسم الشافي', phone: '07729106710', keys: ['آلام صدر','ضيق تنفس','إرهاق'] },
-  // أعصاب
-  { name: 'دكتور أحمد عبد الجواد السالم', spec: 'جملة عصبية', area: 'بريهة - قرب جرس المحاكم - مجمع السياب الطبي', phone: '07832379022', keys: ['صداع','دوار','اضطرابات نوم','قلق','إرهاق'] },
-  { name: 'دكتورة هدى سالم الحسيني', spec: 'جملة عصبية', area: 'المواساة الأهلية - مستشفى', phone: '07737999350', keys: ['صداع','دوار','اضطرابات نوم','قلق'] },
-  // عيون
-  { name: 'دكتور أحمد عبود شذر', spec: 'طب وجراحة عيون - شبكية', area: 'بريهة - نهاية شارع جرس المحاكم - مجمع المودة الطبي', phone: '07834994443', keys: ['ضعف بصر','صداع','آلام'] },
-  { name: 'دكتور لؤي عبد المطلب الموسوي', spec: 'طب وجراحة عيون - قرنية', area: 'العباسية - شارع الجشع - مركز النبأ الطبي', phone: '07802051462', keys: ['ضعف بصر','حكة','ألم أذن'] },
-  // أنف وأذن وحنجرة
-  { name: 'دكتور أحمد عبد الكريم الأنصاري', spec: 'أنف وأذن وحنجرة', area: 'بريهة - قرب جرس المحاكم - مجاور مجمع الحنان الطبي', phone: '07818602208', keys: ['ألم أذن','التهاب حلق','احتقان أنف','سعال','صداع'] },
-  { name: 'دكتور أحمد فاضل حسن', spec: 'أنف وأذن وحنجرة', area: 'بريهة - قرب جرس المحاكم - مجمع طيبة', phone: '07707130804', keys: ['ألم أذن','التهاب حلق','احتقان أنف','سعال','عسر بلع'] },
-  { name: 'دكتور حسام حيدر', spec: 'أنف وأذن وحنجرة', area: 'بريهة - قرب جرس المحاكم', phone: '07801424259', keys: ['ألم أذن','التهاب حلق','احتقان أنف','صداع'] },
-  // نسائية
-  { name: 'دكتورة حوراء محمد نعاس', spec: 'نسائية وتوليد', area: 'القرنة - شارع الفردوس', phone: '07740161513', keys: ['آلام بطن','غثيان','تورم','إرهاق'] },
-  { name: 'دكتورة زينب شاكر الخالدي', spec: 'نسائية وتوليد', area: 'المواساة الأهلية - العيادات الاستشارية', phone: '07735038545', keys: ['آلام بطن','غثيان','تورم','إرهاق'] },
-  // جلدية
-  { name: 'دكتور أسامة مال الله', spec: 'جلدية وتناسلية', area: 'بريهة - قرب جرس المحاكم - مجمع طيبة الطبي', phone: '07706809857', keys: ['طفح جلدي','حكة','تساقط شعر'] },
-  { name: 'دكتور صالح عياش', spec: 'جلدية وتناسلية وتجميلية', area: 'العشار - خلف عمارة النقيب - قرب سوق حنا الشيخ', phone: '07809790487', keys: ['طفح جلدي','حكة','تساقط شعر'] },
-  // أطفال
-  { name: 'دكتور رافت رائد الحسن', spec: 'أطفال وحديثو الولادة', area: 'بريهة - قرب جرس المحاكم - مجمع الرافدين الطبي', phone: '07736000513', keys: ['حمى','سعال','إسهال','غثيان','قيء','طفح جلدي'] },
-  { name: 'دكتور حسام جواد العطار', spec: 'أطفال', area: 'العشار - شارع الأطباء - قرب كنيسة العذراء', phone: '07712447221', keys: ['حمى','سعال','إسهال','غثيان','قيء'] },
-  // عظام
-  { name: 'دكتور أحمد حازم العوض الموسوي', spec: 'عظام - تبديل مفصل', area: 'الموسوي الأهلية - مستشفى', phone: '07729088006', keys: ['آلام مفاصل','تورم','إرهاق'] },
-  { name: 'دكتور سالم فاضل محمد', spec: 'جراحة ركبة ناظورية', area: 'بريهة - قرب جرس المحاكم - المركز الأوري', phone: '07712576460', keys: ['آلام مفاصل','تورم'] },
-  // نفسية
-  { name: 'دكتور عقيل الصباغ', spec: 'نفسية وعصبية', area: 'العباسية - شارع جامع سيد حامد - مجمع سما العباسية', phone: '07715160616', keys: ['قلق','اضطرابات نوم','صداع','إرهاق'] },
-  { name: 'دكتور طاهر عبد الرحمن طاهر', spec: 'نفسية وعصبية', area: 'العشار - خلف المجمع', phone: '07801257738', keys: ['قلق','اضطرابات نوم','صداع','إرهاق'] },
-];
-
-function getRecommendedDoctors(symptoms) {
-  if (!symptoms || symptoms.length === 0) return [];
-  const scored = BASRA_DOCTORS.map(doc => {
+// ── إصلاح: قائمة الأطباء المُقترَحين ما عادت مكتوبة هنا ────────────────────────
+// كانت مصفوفة ثابتة (BASRA_DOCTORS) بهذا الملف — أي تحديث (رقم هاتف، طبيب
+// جديد) كان يحتاج تعديل كود وبناء ونشر كامل. الآن تُجلَب من الباك إند
+// (GET /api/ai-diagnosis/referral-doctors) اللي يقرأها من ملف بيانات بسيط
+// (backend/data/basra-referral-doctors.json) يُعدَّل مباشرة بدون أي بناء.
+function getRecommendedDoctors(symptoms, doctorsList) {
+  if (!symptoms || symptoms.length === 0 || !doctorsList || doctorsList.length === 0) return [];
+  const scored = doctorsList.map(doc => {
     const matches = symptoms.filter(s => doc.keys.includes(s)).length;
     return { ...doc, score: matches };
   }).filter(d => d.score > 0).sort((a, b) => b.score - a.score);
@@ -99,6 +60,21 @@ export default function AIDiagnosisPage() {
   const mriRef = useRef();
   const ctRef = useRef();
 
+  // ── إصلاح: التحقق الصادق من توفّر ذكاء اصطناعي حقيقي ──────────────────────
+  // نفحص هذا فوراً عند فتح الصفحة (مو بس بعد الضغط على "تحليل") حتى يعرف
+  // المستخدم من البداية هل التشخيص القادم بذكاء اصطناعي حقيقي أو نظام مساعدة
+  // أولي محلي — بدل ما يتفاجأ بالنتيجة بعد ما يعبّي النموذج كامل.
+  const [aiAvailable, setAiAvailable] = useState(null); // null = لسا يتحقق
+  const [referralDoctors, setReferralDoctors] = useState([]);
+  useEffect(() => {
+    api.get('/ai-diagnosis/status')
+      .then(r => setAiAvailable(Boolean(r?.available)))
+      .catch(() => setAiAvailable(false)); // أي خطأ اتصال = نفترض غير متاح، نستخدم النظام المحلي بأمان
+    api.get('/ai-diagnosis/referral-doctors')
+      .then(list => Array.isArray(list) && setReferralDoctors(list))
+      .catch(() => {}); // فشل جلب قائمة الأطباء لا يمنع التشخيص نفسه من العمل
+  }, []);
+
   const toggleSymptom = (s) => {
     setSelectedSymptoms(prev =>
       prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
@@ -112,227 +88,59 @@ export default function AIDiagnosisPage() {
     }
   };
 
+  // دالة مساعدة بسيطة: ترجع النص العربي أو الإنكليزي حسب اللغة الحالية —
+  // مُعرَّفة هنا أعلى الملف (قبل analyze وbuildFallback) حتى تكون بمتناول كل
+  // دوال المكوّن دون استثناء.
+  const L = (ar, en) => lang === 'ar' ? ar : en;
+
   const analyze = async () => {
     if (selectedSymptoms.length === 0) {
-      showToast(lang==='ar'?'الرجاء اختيار أعراض واحدة على الأقل':'Please select at least one symptom', 'error');
+      showToast(L('الرجاء اختيار أعراض واحدة على الأقل','Please select at least one symptom'), 'error');
       return;
     }
     setLoading(true);
 
     const hasFiles = labFile || sonarFile || mriFile || ctFile;
-    const filesDesc = [
-      labFile ? (lang==='ar'?`تحليل مخبري: ${labFile.name}`:`Lab: ${labFile.name}`) : '',
-      sonarFile ? (lang==='ar'?`سونار: ${sonarFile.name}`:`Sonar: ${sonarFile.name}`) : '',
-      mriFile ? (lang==='ar'?`رنين مغناطيسي: ${mriFile.name}`:`MRI: ${mriFile.name}`) : '',
-      ctFile ? (lang==='ar'?`CT: ${ctFile.name}`:`CT: ${ctFile.name}`) : '',
+    const filesDescription = [
+      labFile ? `${L('تحليل مخبري','Lab')}: ${labFile.name}` : '',
+      sonarFile ? `${L('سونار','Sonar')}: ${sonarFile.name}` : '',
+      mriFile ? `${L('رنين مغناطيسي','MRI')}: ${mriFile.name}` : '',
+      ctFile ? `CT: ${ctFile.name}` : '',
     ].filter(Boolean).join('، ');
 
-    let prompt;
-    if (lang === 'en') {
-      prompt = `You are a specialist consultant physician. The patient has the following symptoms:\n- ${selectedSymptoms.join('\n- ')}\nDuration: ${duration||'unspecified'}\nAge: ${age||'unspecified'} years\nGender: ${gender||'unspecified'}\n${hasFiles?`Attached medical files: ${filesDesc}`:''}\nProvide a detailed diagnosis in English. Format as JSON only: {"diagnoses":[{"name":"...","probability":"...","description":"..."}],"severity":"mild|moderate|high|urgent","tests":["..."],"recommendations":["..."],"urgent":false,"urgentReason":""}`;
-    } else {
-      prompt = `أنت طبيب استشاري متخصص في التشخيص الطبي. المريض يعاني من الأعراض التالية:
-الأعراض: ${selectedSymptoms.join('، ')}
-مدة الأعراض: ${duration || 'غير محددة'}
-العمر: ${age || 'غير محدد'} سنة
-الجنس: ${gender || 'غير محدد'}
-${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
+    const recDoctors = getRecommendedDoctors(selectedSymptoms, referralDoctors);
 
-المطلوب:
-1. ذكر 2-3 تشخيصات محتملة مرتبة حسب الأرجحية
-2. درجة الخطورة: (خفيف / متوسط / مرتفع / طارئ)
-3. الفحوصات المقترحة (تحاليل، سونار، مفراس، رنين)
-4. التوصيات العلاجية الأولية
-5. هل يحتاج مراجعة طبيب فوراً؟
+    // ── إصلاح جذري ──────────────────────────────────────────────────────────
+    // قبل هذا، الكود يبني prompt كامل للذكاء الاصطناعي... ثم يتجاهله تماماً
+    // ويستخدم نظام قواعد محلي بدل ما يرسله لأي مكان (بحجة "الـ API محظور
+    // بـCORS بالمتصفح" — وهذا صحيح، لكن الحل الصحيح هو مناداته من الباك إند
+    // لا تجاهله بالكامل). الآن: نطلب من الباك إند فعلياً (بلا أي قيد CORS
+    // لأنه اتصال خادم-لخادم)، وهو يقرر هل يستخدم ذكاء اصطناعي حقيقي (لو مُعدّ
+    // مفتاح API) أو يرجع available:false لنستخدم النظام المحلي — بأمانة تامة
+    // حول أي النظامين استُخدم فعلياً بكل مرة (راجعي result.source بالعرض).
+    try {
+      const aiResult = await api.post('/ai-diagnosis/analyze', {
+        symptoms: selectedSymptoms, age, gender, duration, filesDescription, lang,
+      });
 
-الرجاء الإجابة بتنسيق JSON فقط بدون أي نص خارجه:
-{
-  "diagnoses": [
-    {"name": "اسم التشخيص", "probability": "نسبة مئوية", "description": "وصف مختصر"},
-    {"name": "تشخيص ثانٍ", "probability": "نسبة مئوية", "description": "وصف مختصر"}
-  ],
-  "severity": "خفيف | متوسط | مرتفع | طارئ",
-  "tests": ["فحص 1", "فحص 2"],
-  "recommendations": ["توصية 1", "توصية 2", "توصية 3"],
-  "urgent": true | false,
-  "urgentReason": "سبب الاستعجال إن وجد"
-}`;
+      if (aiResult.available) {
+        setResult({ ...aiResult, source: 'ai', symptoms: selectedSymptoms, age, gender, duration, doctors: recDoctors });
+        setAiAvailable(true);
+        setStep(3);
+        setLoading(false);
+        return;
+      }
+      // available: false (بلا مفتاح API، أو فشل الاتصال، أو رد غير صالح) — نستخدم النظام المحلي
+      setAiAvailable(false);
+    } catch {
+      // فشل الطلب بالكامل (مثلاً السيرفر غير متاح مؤقتاً) — نستخدم النظام المحلي أيضاً بدل كسر التجربة
+      setAiAvailable(false);
     }
 
-    // Use smart local diagnosis (API blocked by CORS in browser)
-    const recDoctors = getRecommendedDoctors(selectedSymptoms);
-    const diagnosis = buildFallback(selectedSymptoms);
-    setResult({ ...diagnosis, symptoms: selectedSymptoms, age, gender, duration, doctors: recDoctors });
+    const diagnosis = buildFallback(selectedSymptoms, lang);
+    setResult({ ...diagnosis, source: 'fallback', symptoms: selectedSymptoms, age, gender, duration, doctors: recDoctors });
     setStep(3);
     setLoading(false);
-  };
-
-  const buildFallback = (symptoms) => {
-    const s = symptoms;
-    // hasAll: all keys present, hasAny: at least one present, hasOne: exactly this one
-    const hasAny = (...keys) => keys.some(k => s.includes(k));
-    const hasBoth = (a, b) => s.includes(a) && s.includes(b);
-    const hasAll = (...keys) => keys.every(k => s.includes(k));
-    const has = (...keys) => keys.some(k => s.includes(k)); // alias
-
-    // ارتفاع ضغط الدم - single symptom sufficient
-    if (s.includes('ارتفاع ضغط دم')) return {
-      diagnoses: [
-        {name:'ارتفاع ضغط الدم (Hypertension)', probability:'75%', description:'ضغط الدم المرتفع يستلزم علاجاً مستمراً'},
-        {name:'الإجهاد والتوتر المزمن', probability:'20%', description:'التوتر قد يرفع ضغط الدم مؤقتاً'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['قياس ضغط الدم مرتين يومياً','تحليل دم شامل','وظائف الكلى','رسم قلب ECG'],
-      recommendations:['قياس الضغط صباحاً ومساءً وتسجيله','تقليل الملح والدهون','ممارسة المشي 30 دقيقة يومياً','مراجعة طبيب باطني لوصف العلاج']
-    };
-
-    // التهاب الجيوب الأنفية
-    if (s.includes('احتقان أنف')) return {
-      diagnoses: [
-        {name:'التهاب الجيوب الأنفية (Sinusitis)', probability:'60%', description:'التهاب يسبب احتقاناً وضغطاً حول الأنف'},
-        {name:'حساسية الأنف الموسمية (Rhinitis)', probability:'30%', description:'رد فعل تحسسي للغبار أو حبوب اللقاح'},
-        {name:'الرشح العادي (Common Cold)', probability:'10%', description:'عدوى فيروسية خفيفة'},
-      ],
-      severity:'خفيف', urgent:false, urgentReason:'',
-      tests:['فحص الأنف والحنجرة','أشعة سينية للجيوب','تحليل حساسية'],
-      recommendations:['استنشاق البخار الساخن 3 مرات يومياً','غسيل الأنف بمحلول ملحي','تجنب الغبار والدخان','مراجعة طبيب أنف وأذن وحنجرة']
-    };
-
-    // السكري
-    if (s.includes('سكري')) return {
-      diagnoses: [
-        {name:'داء السكري النوع الثاني', probability:'65%', description:'ارتفاع مستوى سكر الدم بسبب مقاومة الأنسولين'},
-        {name:'مقدمات السكري (Prediabetes)', probability:'25%', description:'مستوى السكر أعلى من الطبيعي لكن لم يصل لمرحلة السكري'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['سكر الصيام','HbA1c (سكر 3 أشهر)','تحليل بول','وظائف الكلى'],
-      recommendations:['تحليل سكر الدم فوراً','تقليل السكريات والنشويات','ممارسة الرياضة بانتظام','مراجعة طبيب غدد وسكري']
-    };
-
-    // آلام المفاصل وحيدة
-    if (s.includes('آلام مفاصل')) return {
-      diagnoses: [
-        {name:'التهاب المفاصل الروماتويدي (RA)', probability:'40%', description:'مرض مناعي يصيب المفاصل ويسبب تورماً'},
-        {name:'التهاب المفاصل العظمي (Osteoarthritis)', probability:'35%', description:'تآكل الغضروف مع التقدم بالعمر'},
-        {name:'النقرس (Gout)', probability:'20%', description:'تراكم بلورات حمض اليوريك في المفاصل'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل حمض اليوريك','عامل الروماتويد RF','سرعة ترسيب ESR','أشعة سينية للمفاصل'],
-      recommendations:['الراحة وتجنب الحمل الثقيل','كمادات دافئة أو باردة حسب الألم','مضاد التهاب غير ستيرويدي','مراجعة طبيب عظام أو روماتيزم']
-    };
-
-    // ارتفاع ضغط الدم مع صداع
-    if (hasBoth('ارتفاع ضغط دم', 'صداع') && has('دوار','إرهاق')) return {
-      diagnoses: [
-        {name:'ارتفاع ضغط الدم (Hypertension)', probability:'70%', description:'ضغط الدم المرتفع يسبب صداعاً ودواراً'},
-        {name:'الإجهاد والتعب المزمن', probability:'20%', description:'قد يرافقه صداع ودوار'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['قياس ضغط الدم','تحليل دم شامل','فحص وظائف الكلى'],
-      recommendations:['قياس الضغط يومياً','تقليل الملح','ممارسة الرياضة الخفيفة','مراجعة طبيب باطني']
-    };
-
-    // التهاب الجيوب الأنفية
-    if (has('احتقان أنف','صداع') && has('التهاب حلق','حمى','سعال')) return {
-      diagnoses: [
-        {name:'التهاب الجيوب الأنفية (Sinusitis)', probability:'65%', description:'التهاب يسبب احتقاناً وصداعاً'},
-        {name:'الرشح والإنفلونزا', probability:'25%', description:'عدوى فيروسية شائعة'},
-      ],
-      severity:'خفيف', urgent:false, urgentReason:'',
-      tests:['فحص سريري','أشعة سينية للجيوب','تحليل دم'],
-      recommendations:['بخار الماء الساخن','غسيل الأنف بالماء المالح','مزيل الاحتقان','مراجعة طبيب أنف وأذن']
-    };
-
-    // السكري
-    if (has('إرهاق','فقدان شهية') && has('كثرة التبول','عطش شديد','ضعف بصر')) return {
-      diagnoses: [
-        {name:'السكري (Diabetes)', probability:'60%', description:'ارتفاع سكر الدم يسبب إرهاقاً وعطشاً'},
-        {name:'اضطراب الغدة الدرقية', probability:'20%', description:'تؤثر على مستوى الطاقة'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل سكر الصيام','HbA1c','تحليل بول','وظائف الغدة الدرقية'],
-      recommendations:['تحليل سكر الدم فوراً','تقليل السكريات','مراجعة طبيب غدد وسكري']
-    };
-
-    // آلام المفاصل
-    if (has('آلام مفاصل','تورم') && has('إرهاق','حمى')) return {
-      diagnoses: [
-        {name:'التهاب المفاصل الروماتويدي', probability:'45%', description:'مرض مناعي يصيب المفاصل'},
-        {name:'النقرس (Gout)', probability:'30%', description:'تراكم حمض اليوريك في المفاصل'},
-        {name:'التهاب المفاصل العظمي', probability:'20%', description:'تآكل غضروف المفصل'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل حمض اليوريك','عامل الروماتويد RF','سرعة ترسيب','أشعة سينية للمفاصل'],
-      recommendations:['الراحة وتجنب الإجهاد','كمادات دافئة','مضاد التهاب','مراجعة طبيب عظام']
-    };
-
-    // آلام صدر وضيق تنفس
-    if (has('آلام صدر','ضيق تنفس')) return {
-      diagnoses: [
-        {name:'الربو أو التهاب شعبي', probability:'50%', description:'ضيق في الشعب الهوائية'},
-        {name:'ذبحة صدرية', probability:'30%', description:'نقص التروية القلبية'},
-        {name:'الانصمام الرئوي', probability:'15%', description:'جلطة في الرئة'},
-      ],
-      severity:'مرتفع', urgent:true, urgentReason:'آلام الصدر مع ضيق التنفس تستوجب تقييماً طارئاً فوراً',
-      tests:['رسم قلب ECG','أشعة صدر','تحليل دم شامل','سونار قلب','D-dimer'],
-      recommendations:['توجه لطوارئ المستشفى فوراً','لا تمارس أي مجهود','اتصل بالإسعاف']
-    };
-
-    // الجهاز الهضمي
-    if (has('آلام بطن','غثيان','قيء','إسهال')) return {
-      diagnoses: [
-        {name:'التهاب المعدة والأمعاء (Gastroenteritis)', probability:'55%', description:'عدوى هضمية فيروسية أو بكتيرية'},
-        {name:'متلازمة القولون العصبي (IBS)', probability:'25%', description:'اضطراب وظيفي مزمن'},
-        {name:'التسمم الغذائي', probability:'15%', description:'تلوث الطعام'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل براز','تحليل دم','سونار بطن'],
-      recommendations:['إكثار من السوائل والأملاح','تجنب الألبان والدهون مؤقتاً','أدوية مضادة للإسهال','مراجعة طبيب إذا استمر أكثر من 48 ساعة']
-    };
-
-    // الحمى والأعراض العامة
-    if (has('حمى','إرهاق')) return {
-      diagnoses: [
-        {name:'الإنفلونزا الموسمية', probability:'60%', description:'فيروس الإنفلونزا الأكثر شيوعاً'},
-        {name:'التهاب فيروسي عام', probability:'25%', description:'عدوى فيروسية متنوعة'},
-        {name:'التهاب بكتيري', probability:'15%', description:'قد يحتاج مضاداً حيوياً'},
-      ],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل دم كامل CBC','سرعة ترسيب CRP'],
-      recommendations:['الراحة التامة','شرب السوائل بكثرة','خافض حرارة','مراجعة الطبيب إذا تجاوزت الحرارة 39 درجة']
-    };
-
-    // جلدية
-    if (has('طفح جلدي','حكة')) return {
-      diagnoses: [
-        {name:'الحساسية الجلدية (Urticaria)', probability:'50%', description:'رد فعل تحسسي'},
-        {name:'الأكزيما (Eczema)', probability:'30%', description:'التهاب جلدي مزمن'},
-        {name:'الصدفية', probability:'15%', description:'مرض جلدي مناعي'},
-      ],
-      severity:'خفيف', urgent:false, urgentReason:'',
-      tests:['فحص جلدي سريري','تحليل حساسية IgE'],
-      recommendations:['تجنب المهيجات المحتملة','كريم مرطب','مضاد حساسية','مراجعة طبيب جلدية']
-    };
-
-    // صداع ودوار
-    if (has('صداع','دوار')) return {
-      diagnoses: [
-        {name:'الصداع النصفي (Migraine)', probability:'45%', description:'صداع نابض شديد غالباً في جهة واحدة'},
-        {name:'التوتر والإجهاد الذهني', probability:'30%', description:'صداع التوتر الشائع'},
-        {name:'الدوار الوضعي الحميد (BPPV)', probability:'15%', description:'تأثر على الأذن الداخلية'},
-      ],
-      severity:'خفيف', urgent:false, urgentReason:'',
-      tests:['فحص ضغط الدم','تحليل دم','رنين مغناطيسي للرأس إذا تكرر'],
-      recommendations:['الراحة في غرفة هادئة ومظلمة','تجنب الشاشات','مسكن ألم','مراجعة طبيب أعصاب']
-    };
-
-    // افتراضي
-    return {
-      diagnoses: [{name:'يحتاج تقييم طبي شامل', probability:'—', description:'الأعراض متعددة وتستلزم فحصاً سريرياً دقيقاً'}],
-      severity:'متوسط', urgent:false, urgentReason:'',
-      tests:['تحليل دم كامل CBC','تحليل بول','فحص سريري شامل'],
-      recommendations:['مراجعة الطبيب لتشخيص دقيق','وصف الأعراض بالتفصيل','إحضار أي تحاليل سابقة']
-    };
   };
 
   const reset = () => {
@@ -359,7 +167,7 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-          {file ? `✅ ${file.name}` : 'انقر للرفع (PDF, صورة)'}
+          {file ? `✅ ${file.name}` : L('انقر للرفع (PDF, صورة)','Click to upload (PDF, image)')}
         </div>
       </div>
       {file && <FaTimes size={14} color="#ef4444" onClick={e => { e.stopPropagation(); setFile(null); }} />}
@@ -377,6 +185,19 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
           <p style={{ margin: '4px 0 0', opacity: 0.7, fontSize: 14 }}>{tr('ai_subtitle')}</p>
         </div>
       </div>
+
+      {/* ── إصلاح: تلميح مبكر وصادق قبل ما يبدأ المستخدم أصلاً ────────────────────
+          يعرف المستخدم من أول لحظة هل التشخيص القادم بذكاء اصطناعي حقيقي أو
+          نظام محلي، بدل ما يتفاجأ بعد ما يعبّي النموذج كامل وينتظر النتيجة. */}
+      {aiAvailable === false && step < 3 && (
+        <div style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+          <FaListAlt />
+          {L(
+            'ملاحظة: الذكاء الاصطناعي الحقيقي غير مفعّل حالياً بهذا النظام — التشخيص القادم من نظام مساعدة أولية محلي (مطابقة أعراض شائعة)، وليس نموذج ذكاء اصطناعي.',
+            'Note: Real AI is not currently enabled on this system — the upcoming result comes from a local preliminary matching system, not an AI model.'
+          )}
+        </div>
+      )}
 
       {/* Steps */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
@@ -425,7 +246,7 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
             <button className="btn btn-primary" onClick={addCustom}><FaPlus /> {lang==='ar'?'إضافة':'Add'}</button>
           </div>
           <div style={{ marginTop: 20 }}>
-            <button className="btn btn-primary" onClick={() => selectedSymptoms.length > 0 ? setStep(2) : showToast('اختر عرضاً واحداً على الأقل', 'error')} style={{ padding: '10px 24px' }}>
+            <button className="btn btn-primary" onClick={() => selectedSymptoms.length > 0 ? setStep(2) : showToast(L('اختر عرضاً واحداً على الأقل','Select at least one symptom'), 'error')} style={{ padding: '10px 24px' }}>
               {lang==='ar'?'التالي':'Next'} <FaChevronRight />
             </button>
           </div>
@@ -442,18 +263,18 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
             <div style={{ gridColumn: '1/-1' }}><label className="form-label">{tr('ai_duration')}</label><select value={duration} onChange={e => setDuration(e.target.value)} className="form-control"><option value="">{tr('auto_pair_47')}</option><option>{tr('auto_pair_48')}</option><option>{tr('auto_pair_49')}</option><option>{tr('auto_pair_50')}</option><option>{tr('auto_pair_51')}</option><option>{tr('auto_pair_52')}</option></select></div>
           </div>
 
-          <h4 style={{ marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14 }}>📎 إرفاق ملفات طبية (اختياري)</h4>
+          <h4 style={{ marginBottom: 14, color: 'var(--text-secondary)', fontSize: 14 }}>📎 {L('إرفاق ملفات طبية (اختياري)','Attach Medical Files (optional)')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <FileUpload label="نتيجة تحاليل" icon="🧪" file={labFile} setFile={setLabFile} inputRef={labRef} accept=".pdf,.jpg,.jpeg,.png" />
-            <FileUpload label="تقرير سونار" icon="📡" file={sonarFile} setFile={setSonarFile} inputRef={sonarRef} accept=".pdf,.jpg,.jpeg,.png" />
-            <FileUpload label="صورة رنين مغناطيسي" icon="🔬" file={mriFile} setFile={setMriFile} inputRef={mriRef} accept=".pdf,.jpg,.jpeg,.png" />
-            <FileUpload label="صورة مفراس (CT Scan)" icon="🖥️" file={ctFile} setFile={setCtFile} inputRef={ctRef} accept=".pdf,.jpg,.jpeg,.png" />
+            <FileUpload label={L('نتيجة تحاليل','Lab Results')} icon="🧪" file={labFile} setFile={setLabFile} inputRef={labRef} accept=".pdf,.jpg,.jpeg,.png" />
+            <FileUpload label={L('تقرير سونار','Sonar Report')} icon="📡" file={sonarFile} setFile={setSonarFile} inputRef={sonarRef} accept=".pdf,.jpg,.jpeg,.png" />
+            <FileUpload label={L('صورة رنين مغناطيسي','MRI Image')} icon="🔬" file={mriFile} setFile={setMriFile} inputRef={mriRef} accept=".pdf,.jpg,.jpeg,.png" />
+            <FileUpload label={L('صورة مفراس (CT Scan)','CT Scan Image')} icon="🖥️" file={ctFile} setFile={setCtFile} inputRef={ctRef} accept=".pdf,.jpg,.jpeg,.png" />
           </div>
 
           <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
             <button className="btn" onClick={() => setStep(1)} style={{ border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}>{lang==='ar'?'رجوع':'Back'}</button>
             <button className="btn btn-primary" onClick={analyze} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FaBrain /> تحليل بالذكاء الاصطناعي
+              <FaBrain /> {L('تحليل بالذكاء الاصطناعي','Analyze with AI')}
             </button>
           </div>
         </div>
@@ -473,6 +294,26 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
       {/* Step 3 - Results */}
       {step === 3 && result && !loading && (
         <div>
+          {/* ── إصلاح: شارة صادقة توضح مصدر التشخيص الفعلي ──────────────────────
+              قبل هذا، الصفحة تدّعي "ذكاء اصطناعي" دائماً بغض النظر عن المصدر
+              الحقيقي للنتيجة. الآن نوضح بصراحة تامة: هل هذا رد فعلي من نموذج
+              ذكاء اصطناعي حقيقي (نعرض اسم المزوّد الفعلي: Gemini أو Claude)،
+              أو نظام مطابقة قواعد محلي بسيط. */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
+            padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+            background: result.source === 'ai' ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)',
+            color: result.source === 'ai' ? '#7c3aed' : '#6b7280',
+          }}>
+            {result.source === 'ai' ? <FaRobot /> : <FaListAlt />}
+            {result.source === 'ai'
+              ? L(
+                  `تشخيص بذكاء اصطناعي حقيقي (${result.provider === 'gemini' ? 'Google Gemini' : 'Claude'})`,
+                  `Real AI-powered diagnosis (${result.provider === 'gemini' ? 'Google Gemini' : 'Claude'})`
+                )
+              : L('نظام مساعدة أولية محلي — تشخيص مبني على مطابقة أعراض شائعة، وليس ذكاءً اصطناعياً','Local preliminary assistant — based on common symptom matching, not AI')}
+          </div>
+
           {/* Warning */}
           <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <FaExclamationTriangle color="#f59e0b" style={{ marginTop: 2, flexShrink: 0 }} />
@@ -497,7 +338,7 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{tr('ai_diagnoses')}</div>
                 <span style={{ background: `${severityColor(result.severity)}15`, color: severityColor(result.severity), padding: '3px 12px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
-                  درجة الخطورة: {SEV_LABEL(result.severity)}
+                  {L('درجة الخطورة','Severity')}: {SEV_LABEL(result.severity)}
                 </span>
               </div>
             </div>
@@ -515,10 +356,10 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
           {/* Tests */}
           {result.tests && result.tests.length > 0 && (
             <div className="card" style={{ marginBottom: 16 }}>
-              <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}><FaFileMedical color="#8b5cf6" /> الفحوصات المقترحة</h4>
+              <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}><FaFileMedical color="#8b5cf6" /> {L('الفحوصات المقترحة','Suggested Tests')}</h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {result.tests.map((i) => (
-                  <span key={i} style={{ background: 'rgba(139,92,246,0.1)', color: '#7c3aed', padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500 }}>🔬 {}</span>
+                {result.tests.map((testName, i) => (
+                  <span key={i} style={{ background: 'rgba(139,92,246,0.1)', color: '#7c3aed', padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500 }}>🔬 {testName}</span>
                 ))}
               </div>
             </div>
@@ -527,7 +368,7 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
           {/* Recommendations */}
           {result.recommendations && (
             <div className="card" style={{ marginBottom: 16 }}>
-              <h4 style={{ margin: '0 0 12px' }}>💡 التوصيات</h4>
+              <h4 style={{ margin: '0 0 12px' }}>💡 {L('التوصيات','Recommendations')}</h4>
               {result.recommendations.map((r, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 8 }}>
                   <FaCheckCircle color="#22c55e" size={14} style={{ marginTop: 3, flexShrink: 0 }} />
@@ -541,7 +382,7 @@ ${hasFiles ? `الملفات الطبية المرفقة: ${filesDesc}` : ''}
           {result.doctors && result.doctors.length > 0 && (
             <div className="card" style={{ marginBottom: 20 }}>
               <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FaUserMd color="#1a6bab" /> أطباء متخصصون في البصرة
+                <FaUserMd color="#1a6bab" /> {L('أطباء متخصصون في البصرة','Specialist Doctors in Basra')}
               </h4>
               {result.doctors.map((doc, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: 'var(--bg-secondary)', borderRadius: 10, marginBottom: 8, border: '1px solid var(--border)' }}>

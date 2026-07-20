@@ -1,10 +1,11 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from 'react';
-import usePagination from '../hooks/usePagination';
+import React, { useState, useMemo, useEffect } from 'react';
+import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 import { api } from '../api';
 
 const STATUS_CONFIG = {
@@ -22,12 +23,13 @@ const CAT_CONFIG = {
 const EMPTY = { code:'', name:'', nameEn:'', category:'medicine', unit:'Box', qty:0, minQty:0, maxQty:0, unitCost:0, supplier:'', location:'', expiry:'', status:'active' };
 
 export default function InventoryPage() {
-  const { inventory, setInventory, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { inventory, setInventory, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const tr = useT(lang);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -40,14 +42,19 @@ export default function InventoryPage() {
   const [movNote, setMovNote] = useState('');
   const [activeTab, setActiveTab] = useState('list');
 
-  const filtered = useMemo(() => inventory.filter(item => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || item.name.includes(q) || item.code.toLowerCase().includes(q) || item.supplier.includes(q);
-    const matchCat = catFilter === 'all' || item.category === catFilter;
-    const matchStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchSearch && matchCat && matchStatus;
-  }), [inventory, search, catFilter, statusFilter]);
-  const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
+  // تأخير البحث 350 مللي ثانية بعد آخر حرف — يمنع إرسال طلب لكل ضغطة زر
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
+  // الجدول المعروض هنا يجيب فقط الصفحة الحالية من الخادم (بحث بالاسم/الرمز +
+  // فلترة بالتصنيف والحالة تصير كلها بقاعدة البيانات). مصفوفة `inventory`
+  // بالسياق العام تبقى محمَّلة كاملة كما هي — تحتاجها صفحة الصيدلية لخصم
+  // المخزون عند صرف الوصفات، ولوحة التحكم للإحصائيات (stats تحتها بالأسفل).
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+    useServerPagination('inventory', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter }, pageSize: 50 });
 
   const stats = useMemo(() => ({
     total: inventory.length,
@@ -61,43 +68,50 @@ export default function InventoryPage() {
 
   const computeStatus = (qty, min) => qty === 0 ? 'out' : qty <= min ? 'low' : 'active';
 
-  const saveItem = () => {
+  const saveItem = async () => {
     if (!form.code || !form.name) { showToast(L('يرجى تعبئة الرمز والاسم','Please fill code and name'), 'error'); return; }
     const item = { ...form, qty: +form.qty, minQty: +form.minQty, maxQty: +form.maxQty, unitCost: +form.unitCost, status: computeStatus(+form.qty, +form.minQty) };
     if (editItem) {
       const ui = { ...item, id: editItem };
+      const prev = inventory;
       setInventory(p => p.map(i => i.id === editItem ? { ...i, ...ui } : i));
-      syncToServer('inventory', 'update', ui);
+      const ok = await syncToServer('inventory', 'update', ui);
+      if (!ok) { setInventory(prev); return; }
       showToast(L('تم التحديث','Updated'), 'success');
     } else {
       const ni = { ...item, id: Date.now() };
       setInventory(p => [...p, ni]);
-      syncToServer('inventory', 'create', ni);
+      const ok = await syncToServer('inventory', 'create', ni);
+      if (!ok) { setInventory(p => p.filter(i => i.id !== ni.id)); return; }
       showToast(L('تمت الإضافة','Item added'), 'success');
     }
     setShowModal(false);
+    refetch();
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = inventory;
     setInventory(p => p.filter(i => i.id !== id));
-    syncToServer('inventory', 'delete', { id });
+    const ok = await syncToServer('inventory', 'delete', { id });
+    if (!ok) { setInventory(prev); return; }
     showToast(L('تم الحذف','Deleted'), 'info');
+    refetch();
   };
 
-  const applyMovement = () => {
+  const applyMovement = async () => {
     if (!movQty || movQty <= 0) { showToast(L('أدخل كمية صحيحة','Enter valid quantity'), 'error'); return; }
-    setInventory(p => {
-      const updated = p.map(i => {
-        if (i.id !== showMovement.id) return i;
-        const newQty = movType === 'in' ? i.qty + +movQty : Math.max(0, i.qty - +movQty);
-        return { ...i, qty: newQty, status: computeStatus(newQty, i.minQty) };
-      });
-      const changed = updated.find(i => i.id === showMovement.id);
-      if (changed) syncToServer('inventory', 'update', changed);
-      return updated;
-    });
+    const prev = inventory;
+    const current = inventory.find(i => i.id === showMovement.id);
+    if (!current) return;
+    const newQty = movType === 'in' ? current.qty + +movQty : Math.max(0, current.qty - +movQty);
+    const changed = { ...current, qty: newQty, status: computeStatus(newQty, current.minQty) };
+    setInventory(p => p.map(i => i.id === showMovement.id ? changed : i));
+    const ok = await syncToServer('inventory', 'update', changed);
+    if (!ok) { setInventory(prev); return; }
     showToast(movType==='in'?L('تمت إضافة الكمية','Stock added'):L('تم صرف الكمية','Stock issued'), 'success');
     setShowMovement(null); setMovQty(0); setMovNote('');
+    refetch();
   };
 
   const S = {
@@ -137,6 +151,7 @@ export default function InventoryPage() {
           <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
             📊 {L('استيراد من Excel', 'Import from Excel')}
           </button>
+          <ExcelExportButton apiName="inventory" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button style={S.btn()} onClick={openAdd}>+ {L('إضافة صنف','Add Item')}</button>
         </div>
       </div>
@@ -152,6 +167,7 @@ export default function InventoryPage() {
               const fresh = await api.get('/inventory');
               if (Array.isArray(fresh)) setInventory(fresh);
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+            refetch();
           }}
         />
       )}
@@ -187,7 +203,7 @@ export default function InventoryPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{lang === 'ar' ? v.label : v.labelEn}</option>)}
         </select>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 12, marginRight: 'auto' }}>{filtered.length} {L('صنف','items')}</span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 12, marginRight: 'auto' }}>{totalItems} {L('صنف','items')}</span>
       </div>
 
       {/* Table */}
@@ -231,7 +247,10 @@ export default function InventoryPage() {
               </tr>
             );
           })}
-          {filtered.length === 0 && (
+          {loading && (
+            <tr><td colSpan={11} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'جاري التحميل...':'Loading...'}</td></tr>
+          )}
+          {!loading && pageItems.length === 0 && (
             <tr><td colSpan={11} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>لا توجد نتائج</td></tr>
           )}
         </tbody>

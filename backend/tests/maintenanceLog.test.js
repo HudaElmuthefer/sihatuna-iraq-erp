@@ -1,0 +1,66 @@
+// backend/tests/maintenanceLog.test.js
+//
+// أول اختبار لسجل الصيانة الحقيقي — كان قبل هذا الإصلاح تاريخاً وحيداً
+// يُستبدَل بكل صيانة جديدة (تُفقَد كل السجلات السابقة). يتحقق من إن سجلات
+// متعددة لنفس المركبة/الأصل تبقى محفوظة كلها، مو بس آخر واحدة.
+const request = require('supertest');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
+
+let dbPath;
+let app;
+let token;
+
+beforeAll(async () => {
+  dbPath = setupTestEnv('maintenance-log');
+  app = require('../server');
+  const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
+  token = login.body.token;
+
+  const probe = await request(app).get('/api/assetMaintenanceLog').set('Authorization', `Bearer ${token}`);
+  assertPgAvailable(probe, 'سجل الصيانة');
+});
+
+afterAll(() => {
+  cleanupTestEnv(dbPath);
+});
+
+describe('POST/GET /api/assetMaintenanceLog — سجلات متعددة تبقى محفوظة كلها', () => {
+  test('3 سجلات صيانة متتالية لنفس الأصل تبقى الثلاثة محفوظة (مو آخر وحدة بس)', async () => {
+    const assetId = 999; // معرّف وهمي — الاختبار يركّز على منطق السجل نفسه لا على وجود أصل حقيقي
+
+    for (const desc of ['تغيير زيت', 'فحص دوري', 'استبدال قطعة غيار']) {
+      const res = await request(app)
+        .post('/api/assetMaintenanceLog')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ assetId, date: '2026-07-01', description: desc, cost: 50000 });
+      expect(res.status).toBe(201);
+    }
+
+    const list = await request(app).get('/api/assetMaintenanceLog').set('Authorization', `Bearer ${token}`);
+    const forThisAsset = list.body.filter(m => m.assetId === assetId);
+    expect(forThisAsset.length).toBe(3); // الثلاثة موجودة، ولا وحدة انكتب فوقها
+  });
+
+  test('رفض سجل صيانة بدون وصف', async () => {
+    const res = await request(app)
+      .post('/api/assetMaintenanceLog')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ assetId: 1, date: '2026-07-01' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST/GET /api/ambulanceMaintenanceLog — نفس المبدأ للمركبات', () => {
+  test('سجلات متعددة لنفس المركبة تبقى محفوظة كلها', async () => {
+    const vehicleId = 888;
+
+    await request(app).post('/api/ambulanceMaintenanceLog').set('Authorization', `Bearer ${token}`)
+      .send({ vehicleId, date: '2026-06-01', description: 'صيانة أولى' });
+    await request(app).post('/api/ambulanceMaintenanceLog').set('Authorization', `Bearer ${token}`)
+      .send({ vehicleId, date: '2026-07-01', description: 'صيانة ثانية' });
+
+    const list = await request(app).get('/api/ambulanceMaintenanceLog').set('Authorization', `Bearer ${token}`);
+    const forThisVeh = list.body.filter(m => m.vehicleId === vehicleId);
+    expect(forThisVeh.length).toBe(2);
+  });
+});

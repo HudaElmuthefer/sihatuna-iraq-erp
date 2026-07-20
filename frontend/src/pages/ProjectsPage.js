@@ -1,7 +1,10 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
+import useServerPagination from '../hooks/useServerPagination';
+import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 import { api } from '../api';
 
 const STATUS_CONFIG = {
@@ -19,11 +22,12 @@ const PRIORITY_CONFIG = {
 const EMPTY = { code:'', name:'', nameEn:'', manager:'', managerEn:'', budget:0, spent:0, startDate:'', endDate:'', progress:0, status:'planning', priority:'normal', phase:'تخطيط', milestones:0, completedMilestones:0 };
 
 export default function ProjectsPage() {
-  const { projects, setProjects, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -31,11 +35,18 @@ export default function ProjectsPage() {
   const [form, setForm] = useState(EMPTY);
   const [view, setView] = useState('cards');
 
-  const filtered = useMemo(() => projects.filter(p => {
-    const q = search.toLowerCase();
-    return (!q || p.name.includes(q) || p.code.toLowerCase().includes(q) || p.manager.includes(q))
-      && (statusFilter === 'all' || p.status === statusFilter);
-  }), [projects, search, statusFilter]);
+  // تأخير البحث 350 مللي ثانية بعد آخر حرف — يمنع إرسال طلب لكل ضغطة زر
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
+  // قبل هذا، الصفحة كانت تعرض *كل* المشاريع المطابقة دفعة وحدة بدون أي ترقيم
+  // إطلاقاً (لا للبطاقات ولا للجدول) — مقبول بعدد محدود، لكن يصير بطيئاً مع
+  // نمو عدد المشاريع. الآن تجيب فقط الصفحة الحالية من الخادم.
+  const { data: filtered, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+    useServerPagination('projects', { search: debouncedSearch, status: statusFilter, pageSize: 50 });
 
   const stats = useMemo(() => ({
     total: projects.length,
@@ -46,30 +57,63 @@ export default function ProjectsPage() {
   }), [projects]);
 
   const openAdd = () => {
-    const code = `PRJ-${new Date().getFullYear()}-${String(projects.length+1).padStart(2,'0')}`;
+    // إصلاح: كان يعتمد على projects.length+1، فبعد أي حذف يتكرر رمز مشروع
+    // موجود فعلاً (مثال: 3 مشاريع، نحذف رقم 2، فالمشروع الجديد ياخذ نفس رمز
+    // رقم 3). الآن نشتق الرقم التالي من أعلى رقم تسلسلي فعلي موجود لنفس
+    // السنة، بغض النظر عن الحذف أو الترتيب.
+    const year = new Date().getFullYear();
+    const prefix = `PRJ-${year}-`;
+    const maxSeq = projects.reduce((max, p) => {
+      if (typeof p.code !== 'string' || !p.code.startsWith(prefix)) return max;
+      const n = parseInt(p.code.slice(prefix.length), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const code = `${prefix}${String(maxSeq + 1).padStart(2, '0')}`;
     setForm({ ...EMPTY, code, startDate: new Date().toISOString().split('T')[0] });
     setEditId(null); setShowModal(true);
   };
   const openEdit = p => { setForm({...p}); setEditId(p.id); setShowModal(true); };
-  const saveProject = () => {
+  const saveProject = async () => {
     if (!form.name||!form.manager) { showToast(L('يرجى تعبئة الاسم والمدير','Please fill name and manager'),'error'); return; }
-    const proj = {...form, budget:+form.budget, spent:+form.spent, progress:+form.progress, milestones:+form.milestones, completedMilestones:+form.completedMilestones};
+    // ── إصلاح: كانت المشاريع المستورَدة من Excel (وأي مشروع قديم بلا هذي
+    // الحقول) تحفظ undefined لهذي الأرقام، فتظهر "NaN%" و"undefined/undefined"
+    // بالواجهة. الآن تُفرَض قيمة رقمية دائماً (0 كحد أدنى) بكل حفظ.
+    const proj = {...form, budget:+form.budget||0, spent:+form.spent||0, progress:+form.progress||0, milestones:+form.milestones||0, completedMilestones:+form.completedMilestones||0};
+    // ── إصلاح مهم: كان يعرض "تمت الإضافة/تم التحديث" فوراً ويقفل النافذة
+    // ويستدعي refetch() دون انتظار نتيجة الحفظ الفعلية بالخادم. فلو فشل
+    // الحفظ (صلاحية منتهية، خطأ خادم، انقطاع اتصال)، تبقى الحالة المحلية
+    // (المُستخدَمة بالإحصائيات) تعرض المشروع وكأنه أُضيف، بينما القائمة
+    // الحقيقية المجلوبة من الخادم فارغة لأنه لم يُحفَظ بقاعدة البيانات أصلاً.
+    // الآن ننتظر نتيجة المزامنة، ولو فشلت نتراجع عن التغيير المحلي ونعرض
+    // خطأ بدل رسالة نجاح مضلِّلة.
     if (editId) {
       const up = {...proj,id:editId};
+      const prevList = projects;
       setProjects(p=>p.map(i=>i.id===editId?{...i,...up}:i));
-      syncToServer('projects','update',up);
+      const ok = await syncToServer('projects','update',up);
+      if (!ok) { setProjects(prevList); return; }
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const np = {...proj,id:Date.now()};
       setProjects(p=>[...p,np]);
-      syncToServer('projects','create',np);
+      const ok = await syncToServer('projects','create',np);
+      if (!ok) { setProjects(p=>p.filter(i=>i.id!==np.id)); return; }
       showToast(L('تمت إضافة المشروع','Project added'),'success');
     }
     setShowModal(false);
+    refetch();
   };
-  const deleteProject = id => { setProjects(p=>p.filter(i=>i.id!==id)); syncToServer('projects','delete',{id}); showToast(L('تم الحذف','Deleted'),'info'); };
+  const deleteProject = async id => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prevList = projects;
+    setProjects(p=>p.filter(i=>i.id!==id));
+    const ok = await syncToServer('projects','delete',{id});
+    if (!ok) { setProjects(prevList); return; }
+    showToast(L('تم الحذف','Deleted'),'info');
+    refetch();
+  };
   const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
-  const budgetPct = proj => proj.budget>0 ? Math.min(100,(proj.spent/proj.budget)*100) : 0;
+  const budgetPct = proj => (proj.budget>0) ? Math.min(100,((+proj.spent||0)/proj.budget)*100) : 0;
 
   const S = {
     page:{padding:24,direction:dir},
@@ -101,6 +145,7 @@ export default function ProjectsPage() {
           <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
             📊 {L('استيراد من Excel','Import from Excel')}
           </button>
+          <ExcelExportButton apiName="projects" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button style={S.btn()} onClick={openAdd}>+ {L('مشروع جديد','New Project')}</button>
         </div>
       </div>
@@ -116,6 +161,7 @@ export default function ProjectsPage() {
               const fresh = await api.get('/projects');
               if (Array.isArray(fresh)) setProjects(fresh);
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+            refetch();
           }}
         />
       )}
@@ -170,18 +216,18 @@ export default function ProjectsPage() {
                 <div style={{fontSize:12,color:'var(--text-secondary)',marginTop:4}}>👤 {lang==='ar'?proj.manager:(proj.managerEn||proj.manager)} | 📅 {proj.startDate} ← {proj.endDate}</div>
               </div>
               <div style={{textAlign:'center',minWidth:70}}>
-                <div style={{width:64,height:64,borderRadius:'50%',background:`conic-gradient(#1a6bab ${proj.progress*3.6}deg, var(--border) 0deg)`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
-                  <div style={{width:50,height:50,borderRadius:'50%',background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#1a6bab'}}>{proj.progress}%</div>
+                <div style={{width:64,height:64,borderRadius:'50%',background:`conic-gradient(#1a6bab ${(+proj.progress||0)*3.6}deg, var(--border) 0deg)`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
+                  <div style={{width:50,height:50,borderRadius:'50%',background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#1a6bab'}}>{+proj.progress||0}%</div>
                 </div>
                 <div style={{fontSize:10,color:'var(--text-secondary)',marginTop:4}}>{L('الإنجاز','Progress')}</div>
               </div>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:14}}>
               <div>
-                <div style={{fontSize:11,color:'var(--text-secondary)',marginBottom:6}}>{L('المراحل:','Milestones:')} {proj.completedMilestones}/{proj.milestones}</div>
+                <div style={{fontSize:11,color:'var(--text-secondary)',marginBottom:6}}>{L('المراحل:','Milestones:')} {+proj.completedMilestones||0}/{+proj.milestones||0}</div>
                 <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                  {Array.from({length:proj.milestones}).map((_,i)=>(
-                    <div key={i} style={{width:14,height:14,borderRadius:'50%',background:i<proj.completedMilestones?'#10b981':'var(--border)',border:'1px solid var(--border)'}}/>
+                  {Array.from({length:+proj.milestones||0}).map((_,i)=>(
+                    <div key={i} style={{width:14,height:14,borderRadius:'50%',background:i<(+proj.completedMilestones||0)?'#10b981':'var(--border)',border:'1px solid var(--border)'}}/>
                   ))}
                 </div>
               </div>
@@ -193,7 +239,7 @@ export default function ProjectsPage() {
                 <div style={{height:8,background:'var(--border)',borderRadius:4,overflow:'hidden'}}>
                   <div style={{width:`${bPct}%`,height:'100%',background:bPct>90?'#ef4444':bPct>70?'#f59e0b':'#10b981',borderRadius:4,transition:'width 0.4s'}}/>
                 </div>
-                <div style={{fontSize:11,color:'var(--text-secondary)',marginTop:4}}>{n(proj.spent)} / {n(proj.budget)} {L('د.ع','IQD')}</div>
+                <div style={{fontSize:11,color:'var(--text-secondary)',marginTop:4}}>{n(+proj.spent||0)} / {n(+proj.budget||0)} {L('د.ع','IQD')}</div>
               </div>
             </div>
             <div style={{display:'flex',gap:8,marginTop:12,borderTop:'1px solid var(--border)',paddingTop:10}}>
@@ -217,7 +263,7 @@ export default function ProjectsPage() {
             </thead>
             <tbody>
               {filtered.map(proj=>{
-                const st=STATUS_CONFIG[proj.status];
+                const st=STATUS_CONFIG[proj.status]||STATUS_CONFIG.planning;
                 return (
                   <tr key={proj.id} style={{borderBottom:'1px solid var(--border)'}}>
                     <td style={S.td}>
@@ -230,12 +276,12 @@ export default function ProjectsPage() {
                     <td style={S.td}>
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <div style={{flex:1,height:12,background:'var(--border)',borderRadius:6,minWidth:80}}>
-                          <div style={{width:`${proj.progress}%`,height:'100%',background:'#1a6bab',borderRadius:6}}/>
+                          <div style={{width:`${+proj.progress||0}%`,height:'100%',background:'#1a6bab',borderRadius:6}}/>
                         </div>
-                        <span style={{fontSize:12,fontWeight:600,color:'#1a6bab'}}>{proj.progress}%</span>
+                        <span style={{fontSize:12,fontWeight:600,color:'#1a6bab'}}>{+proj.progress||0}%</span>
                       </div>
                     </td>
-                    <td style={{...S.td,color:'var(--text-secondary)'}}>{n(proj.budget)} {L('د.ع','IQD')}</td>
+                    <td style={{...S.td,color:'var(--text-secondary)'}}>{n(+proj.budget||0)} {L('د.ع','IQD')}</td>
                   </tr>
                 );
               })}
@@ -244,11 +290,17 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {filtered.length===0 && (
+      {loading && (
+        <div style={{textAlign:'center',padding:48,color:'var(--text-secondary)'}}>{lang==='ar'?'جاري التحميل...':'Loading...'}</div>
+      )}
+      {!loading && filtered.length===0 && (
         <div style={{textAlign:'center',padding:48,color:'var(--text-secondary)',background:'var(--bg-secondary)',borderRadius:12}}>
           <div style={{fontSize:40,marginBottom:8}}>📐</div>
           <p>{L('لا توجد مشاريع','No projects found')}</p>
         </div>
+      )}
+      {!loading && totalItems > 0 && (
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
       )}
 
       {showModal && (
@@ -271,9 +323,9 @@ export default function ProjectsPage() {
                 </label>
               ))}
               {[['name',L('اسم المشروع بالعربية','Project Name (Arabic)')],
-                ['nameEn','Project Name (English)'],
+                ['nameEn',L('اسم المشروع بالإنجليزية','Project Name (English)')],
                 ['manager',L('مدير المشروع','Project Manager')],
-                ['managerEn','Manager (English)'],
+                ['managerEn',L('المدير بالإنجليزية','Manager (English)')],
                 ['phase',L('المرحلة الحالية','Current Phase')]
               ].map(([k,lbl])=>(
                 <label key={k} style={{gridColumn:'span 2'}}>

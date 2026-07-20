@@ -19,6 +19,21 @@ pool.on('error', (err) => {
   console.error('[PostgreSQL] Unexpected connection error:', err);
 });
 
+// ── تحسين تشغيل: فحص اتصال مبكر وواضح ────────────────────────────────────────
+// قبل هذا، لو PostgreSQL غير شغّال أو بيانات الاتصال بـ.env خاطئة، الخادم كان
+// يقلع بصمت وكأن كل شيء تمام — والمشكلة تظهر فقط لاحقاً كخطأ 503 غامض بأول
+// طلب فعلي من المستخدم (بالضبط الالتباس اللي واجهناه فعلياً أثناء تشخيص
+// مشاكل سابقة). هذي الدالة تختبر الاتصال فوراً عند الإقلاع وتطبع رسالة عربية
+// واضحة بالمشكلة والحل، بدل ترك المستخدم يكتشفها صدفة بمنتصف استخدامه للنظام.
+async function testConnection() {
+  try {
+    await pool.query('SELECT 1');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 // دالة مساعدة موحّدة للاستعلامات (يمكن استخدامها بكل الملفات بدل تكرار pool.query)
 async function query(text, params) {
   const start = Date.now();
@@ -30,4 +45,4 @@ async function query(text, params) {
   return res;
 }
 
-module.exports = { pool, query };
+module.exports = { pool, query, testConnection };

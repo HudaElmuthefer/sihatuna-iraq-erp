@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const VEH_STATUS = {
   available:   { ar:'متاحة',       en:'Available',    color:'#10b981', bg:'#d1fae5' },
@@ -30,7 +31,7 @@ const EMPTY_VEH  = { code:'', plate:'', type:'advanced', model:'', crew:'', stat
 const EMPTY_MISS = { missionNo:'', vehicleId:'', type:'emergency', callTime:'', address:'', patient:'', status:'active', crew:'', notes:'' };
 
 export default function AmbulancePage() {
-  const { ambulanceData, setAmbulanceData, lang, showToast, syncToServer, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
+  const { ambulanceData, setAmbulanceData, lang, showToast, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
@@ -55,6 +56,11 @@ export default function AmbulancePage() {
   const [editMissId, setEditMissId] = useState(null);
   const [vehForm, setVehForm] = useState({});
   const [missForm, setMissForm] = useState({});
+  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
+  const [maintenanceVeh, setMaintenanceVeh] = useState(null);
+  const [maintenanceLog, setMaintenanceLog] = useState([]);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [newMaintenance, setNewMaintenance] = useState({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
 
   const { vehicles: vehiclesRaw = [], missions: missionsRaw = [] } = ambulanceData;
   const vehicles = filterByViewingHospital(vehiclesRaw);
@@ -93,10 +99,54 @@ export default function AmbulancePage() {
     }
     setShowVehModal(false);
   };
-  const deleteVeh = id => {
+  const deleteVeh = async id => {
+    // ── إصلاح: كان يقدر يحذف مركبة أثناء مأمورية نشطة مرتبطة فيها، تاركاً
+    // المأمورية "معلّقة" بلا مركبة مرجعية بصمت بدون أي تحذير للمستخدم.
+    const activeMission = missions.find(m => m.vehicleId === id && m.status === 'active');
+    if (activeMission) {
+      showToast(L(`لا يمكن حذف المركبة — مرتبطة بمأمورية نشطة (${activeMission.missionNo})`,`Cannot delete vehicle — linked to an active mission (${activeMission.missionNo})`), 'error');
+      return;
+    }
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = ambulanceData;
     setAmbulanceData(p => ({ ...p, vehicles: p.vehicles.filter(v => v.id !== id) }));
-    syncToServer('ambulanceVehicles', 'delete', { id });
+    const ok = await syncToServer('ambulanceVehicles', 'delete', { id });
+    if (!ok) { setAmbulanceData(prev); return; }
     showToast(L('تم الحذف','Deleted'), 'info');
+  };
+
+  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
+  const openMaintenanceLog = async (veh) => {
+    setMaintenanceVeh(veh);
+    setNewMaintenance({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
+    setMaintenanceLoading(true);
+    try {
+      const all = await api.get('/ambulanceMaintenanceLog');
+      const forThisVeh = (Array.isArray(all) ? all : []).filter(m => m.vehicleId === veh.id);
+      forThisVeh.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setMaintenanceLog(forThisVeh);
+    } catch {
+      setMaintenanceLog([]);
+    }
+    setMaintenanceLoading(false);
+  };
+
+  const addMaintenanceEntry = async () => {
+    if (!newMaintenance.description) { showToast(L('يرجى وصف الصيانة المنجَزة','Please describe the maintenance performed'), 'error'); return; }
+    try {
+      const saved = await api.post('/ambulanceMaintenanceLog', { ...newMaintenance, vehicleId: maintenanceVeh.id, cost: newMaintenance.cost ? Number(newMaintenance.cost) : null });
+      setMaintenanceLog(p => [saved, ...p]);
+      const updatedVeh = { ...maintenanceVeh, status: 'available', lastService: newMaintenance.date };
+      const prev = ambulanceData;
+      setAmbulanceData(p => ({ ...p, vehicles: p.vehicles.map(v => v.id === maintenanceVeh.id ? updatedVeh : v) }));
+      const ok = await syncToServer('ambulanceVehicles', 'update', updatedVeh);
+      if (!ok) { setAmbulanceData(prev); return; }
+      setMaintenanceVeh(updatedVeh);
+      setNewMaintenance({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
+      showToast(L('تم تسجيل الصيانة','Maintenance logged'), 'success');
+    } catch (err) {
+      showToast(err.message || L('فشل الحفظ','Save failed'), 'error');
+    }
   };
 
   // ── MISSION CRUD ────────────────────────────────────────────────────
@@ -108,11 +158,22 @@ export default function AmbulancePage() {
     if (!missForm.address) {
       showToast(L('يرجى إدخال العنوان','Please enter address'), 'error'); return;
     }
-    const mNo = `MSN-${new Date().getFullYear()}-${String(missions.length + 1).padStart(3, '0')}`;
+    // إصلاح: الاعتماد على missions.length+1 يكرر رقم مهمة موجود فعلاً بعد أي
+    // حذف. الآن نشتق الرقم التالي من أعلى رقم تسلسلي فعلي لنفس السنة.
+    const mYear = new Date().getFullYear();
+    const mPrefix = `MSN-${mYear}-`;
+    const mMaxSeq = missions.reduce((max, m) => {
+      if (typeof m.missionNo !== 'string' || !m.missionNo.startsWith(mPrefix)) return max;
+      const n = parseInt(m.missionNo.slice(mPrefix.length), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const mNo = `${mPrefix}${String(mMaxSeq + 1).padStart(3, '0')}`;
+    const prev = ambulanceData;
     if (editMissId) {
       const um = { ...missForm, id: editMissId };
       setAmbulanceData(p => ({ ...p, missions: p.missions.map(m => m.id === editMissId ? { ...m, ...um } : m) }));
-      syncToServer('ambulanceMissions', 'update', um);
+      const ok = await syncToServer('ambulanceMissions', 'update', um);
+      if (!ok) { setAmbulanceData(prev); return; }
       showToast(L('تم التحديث','Updated'), 'success');
     } else {
       const newMission = { ...missForm, missionNo: mNo, id: Date.now() };
@@ -123,36 +184,45 @@ export default function AmbulancePage() {
           : p.vehicles;
         return { ...p, missions: [...p.missions, newMission], vehicles };
       });
-      syncToServer('ambulanceMissions', 'create', newMission).then(synced => {
-        if (synced && typeof synced === 'object' && synced.id !== newMission.id) {
-          setAmbulanceData(p => ({ ...p, missions: p.missions.map(m => m.id === newMission.id ? synced : m) }));
-        }
-      });
-      if (updatedVehicle) syncToServer('ambulanceVehicles', 'update', updatedVehicle);
+      const ok = await syncToServer('ambulanceMissions', 'create', newMission);
+      if (!ok) { setAmbulanceData(prev); return; }
+      if (typeof ok === 'object' && ok.id !== newMission.id) {
+        setAmbulanceData(p => ({ ...p, missions: p.missions.map(m => m.id === newMission.id ? ok : m) }));
+      }
+      if (updatedVehicle) {
+        const vehOk = await syncToServer('ambulanceVehicles', 'update', updatedVehicle);
+        if (!vehOk) showToast(L('تعذّر تحديث حالة المركبة','Failed to update vehicle status'), 'error');
+      }
       showToast(L('تم إرسال المأمورية','Mission dispatched'), 'success');
     }
     setShowMissModal(false);
   };
-  const completeMission = id => {
+  const completeMission = async id => {
     const miss = missions.find(m => m.id === id);
     const completedMission = { ...miss, status: 'completed' };
     let updatedVehicle = null;
+    const prev = ambulanceData;
     setAmbulanceData(p => ({
       ...p,
       missions: p.missions.map(m => m.id === id ? completedMission : m),
       vehicles: p.vehicles.map(v => { if (v.id === miss?.vehicleId) { updatedVehicle = { ...v, status: 'available', location: L('المستشفى','Hospital') }; return updatedVehicle; } return v; }),
     }));
-    syncToServer('ambulanceMissions', 'update', completedMission);
-    if (updatedVehicle) syncToServer('ambulanceVehicles', 'update', updatedVehicle);
+    const ok = await syncToServer('ambulanceMissions', 'update', completedMission);
+    if (!ok) { setAmbulanceData(prev); return; }
+    if (updatedVehicle) {
+      const vehOk = await syncToServer('ambulanceVehicles', 'update', updatedVehicle);
+      if (!vehOk) showToast(L('تعذّر تحديث حالة المركبة','Failed to update vehicle status'), 'error');
+    }
     showToast(L('تمت المأمورية','Mission completed'), 'success');
   };
-  const cancelMission = id => {
-    setAmbulanceData(p => {
-      const updated = p.missions.map(m => m.id === id ? { ...m, status: 'cancelled' } : m);
-      const changed = updated.find(m => m.id === id);
-      if (changed) syncToServer('ambulanceMissions', 'update', changed);
-      return { ...p, missions: updated };
-    });
+  const cancelMission = async id => {
+    const prev = ambulanceData;
+    const current = missions.find(m => m.id === id);
+    if (!current) return;
+    const changed = { ...current, status: 'cancelled' };
+    setAmbulanceData(p => ({ ...p, missions: p.missions.map(m => m.id === id ? changed : m) }));
+    const ok = await syncToServer('ambulanceMissions', 'update', changed);
+    if (!ok) { setAmbulanceData(prev); return; }
     showToast(L('تم الإلغاء','Cancelled'), 'info');
   };
 
@@ -184,6 +254,7 @@ export default function AmbulancePage() {
         <div style={{ display:'flex', gap:8 }}>
           <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
           <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
+          <ExcelExportButton apiName="ambulanceVehicles" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button style={S.btn()} onClick={openAddVeh}>+ {L('مركبة','Vehicle')}</button>
         </div>
       </div>
@@ -269,6 +340,7 @@ export default function AmbulancePage() {
                     </button>
                   )}
                   <button onClick={() => { setVehForm({ ...v }); setEditVehId(v.id); setShowVehModal(true); }} style={S.smBtn('#6b7280')}>✏️</button>
+                  <button onClick={() => openMaintenanceLog(v)} style={S.smBtn('#8b5cf6')}>📋 {L('الصيانة','Maintenance')}</button>
                   <button onClick={() => deleteVeh(v.id)} style={S.smBtn('#ef4444')}>🗑</button>
                 </div>
               </div>
@@ -438,6 +510,51 @@ export default function AmbulancePage() {
             <div style={{ display:'flex', gap:10, marginTop:18, justifyContent:'flex-end' }}>
               <button style={S.btn('#6b7280')} onClick={() => setShowMissModal(false)}>{L('إلغاء','Cancel')}</button>
               <button style={S.btn('#ef4444')} onClick={saveMiss}>🆘 {L('إرسال المأمورية','Dispatch Mission')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── نافذة سجل الصيانة (إصلاح: سجل حقيقي دائم بدل تاريخ وحيد يُستبدَل) ── */}
+      {maintenanceVeh && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setMaintenanceVeh(null)}>
+          <div style={S.mbox(560)}>
+            <h3 style={{ margin:'0 0 4px', color:'var(--text-primary)' }}>📋 {L('سجل صيانة المركبة','Vehicle Maintenance History')}</h3>
+            <p style={{ margin:'0 0 18px', fontSize:13, color:'var(--text-secondary)' }}>{maintenanceVeh.code} — {maintenanceVeh.plate}</p>
+
+            <div style={{ background:'var(--bg-secondary)', borderRadius:10, padding:14, marginBottom:16 }}>
+              <h4 style={{ margin:'0 0 10px', fontSize:13 }}>{L('تسجيل صيانة جديدة','Log New Maintenance')}</h4>
+              <div style={S.g2}>
+                <label><span style={S.fl}>{L('التاريخ','Date')}</span><input type="date" style={S.fi} value={newMaintenance.date} onChange={e => setNewMaintenance(p => ({ ...p, date: e.target.value }))}/></label>
+                <label><span style={S.fl}>{L('الكلفة (اختياري)','Cost (optional)')}</span><input type="number" style={S.fi} value={newMaintenance.cost} onChange={e => setNewMaintenance(p => ({ ...p, cost: e.target.value }))}/></label>
+                <label style={{ gridColumn:'span 2' }}><span style={S.fl}>{L('وصف الصيانة المنجَزة','Description of work performed')}</span><textarea style={{ ...S.fi, minHeight:60, resize:'vertical' }} value={newMaintenance.description} onChange={e => setNewMaintenance(p => ({ ...p, description: e.target.value }))}/></label>
+                <label style={{ gridColumn:'span 2' }}><span style={S.fl}>{L('الفنّي / الورشة المسؤولة','Technician / Workshop')}</span><input style={S.fi} value={newMaintenance.performedBy} onChange={e => setNewMaintenance(p => ({ ...p, performedBy: e.target.value }))}/></label>
+              </div>
+              <button style={{ ...S.btn('#10b981'), marginTop:10, width:'100%' }} onClick={addMaintenanceEntry}>💾 {L('حفظ سجل الصيانة','Save Maintenance Record')}</button>
+            </div>
+
+            <h4 style={{ margin:'0 0 10px', fontSize:13 }}>{L('السجل السابق','Previous Records')}</h4>
+            {maintenanceLoading ? (
+              <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:20 }}>{L('جاري التحميل...','Loading...')}</p>
+            ) : maintenanceLog.length === 0 ? (
+              <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:20, fontSize:13 }}>{L('لا يوجد سجل صيانة سابق لهذي المركبة','No previous maintenance records for this vehicle')}</p>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:220, overflowY:'auto' }}>
+                {maintenanceLog.map(m => (
+                  <div key={m.id} style={{ border:'1px solid var(--border)', borderRadius:8, padding:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, fontWeight:600, marginBottom:4 }}>
+                      <span>{m.date}</span>
+                      {m.cost && <span style={{ color:'#f59e0b' }}>{Number(m.cost).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('د.ع','IQD')}</span>}
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--text-primary)' }}>{m.description}</div>
+                    {m.performedBy && <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:2 }}>👤 {m.performedBy}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+              <button style={S.btn('#6b7280')} onClick={() => setMaintenanceVeh(null)}>{L('إغلاق','Close')}</button>
             </div>
           </div>
         </div>

@@ -1,0 +1,113 @@
+// backend/tests/passwordReset.test.js
+//
+// اختبار تكامل لتدفّق استعادة كلمة المرور الكامل: الإدمن يولّد كلمة مرور
+// مؤقتة → المستخدم يسجّل دخول بيها → يغيّر كلمة مروره بنفسه → الكلمة القديمة
+// (المؤقتة) ما تعود تشتغل.
+const request = require('supertest');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
+
+let dbPath;
+let app;
+let adminToken;
+let nurseTokenBeforeReset; // نلتقطه هنا قبل أي اختبار لاحق يغيّر كلمة مرور الممرضة
+
+beforeAll(async () => {
+  dbPath = setupTestEnv('password-reset');
+  app = require('../server');
+  const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
+  adminToken = login.body.token;
+
+  const nurseLogin = await request(app).post('/api/auth/login').send({ username: 'testnurse', password: 'testpass123' });
+  nurseTokenBeforeReset = nurseLogin.body.token;
+});
+
+afterAll(() => {
+  cleanupTestEnv(dbPath);
+});
+
+describe('POST /api/users/:id/reset-password — الإدمن يولّد كلمة مرور مؤقتة', () => {
+  test('توليد كلمة مرور مؤقتة للمستخدم رقم 2 (testnurse) ينجح ويرجع كلمة مرور فعلية', async () => {
+    const res = await request(app)
+      .post('/api/users/2/reset-password')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.tempPassword).toBeDefined();
+    expect(res.body.tempPassword.length).toBeGreaterThanOrEqual(10);
+  });
+
+  test('مستخدم غير موجود يرجع 404', async () => {
+    const res = await request(app)
+      .post('/api/users/99999/reset-password')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('غير إدمن يُرفض بـ403 (لا يقدر يعيد ضبط كلمة مرور أي حد)', async () => {
+    const res = await request(app)
+      .post('/api/users/1/reset-password')
+      .set('Authorization', `Bearer ${nurseTokenBeforeReset}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('التدفّق الكامل: كلمة مرور مؤقتة تعمل فعلياً لتسجيل الدخول، والمستخدم يقدر يغيّرها بنفسه', async () => {
+    // 1) الإدمن يولّد كلمة مرور مؤقتة جديدة
+    const resetRes = await request(app)
+      .post('/api/users/2/reset-password')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const tempPassword = resetRes.body.tempPassword;
+
+    // 2) تسجيل الدخول بالكلمة المؤقتة يجب أن ينجح، ويُعلِم الفرونت إند بضرورة التغيير
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'testnurse', password: tempPassword });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.user.mustChangePassword).toBe(true);
+
+    const nurseToken = loginRes.body.token;
+
+    // 3) المستخدم يغيّر كلمة مروره بنفسه (يحتاج معرفة الحالية - المؤقتة)
+    const changeRes = await request(app)
+      .put('/api/users/me/password')
+      .set('Authorization', `Bearer ${nurseToken}`)
+      .send({ currentPassword: tempPassword, newPassword: 'newSecurePass123' });
+    expect(changeRes.status).toBe(200);
+
+    // 4) الكلمة المؤقتة القديمة ما تعود تشتغل بعد التغيير
+    const oldLoginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'testnurse', password: tempPassword });
+    expect(oldLoginRes.status).toBe(401);
+
+    // 5) الكلمة الجديدة تشتغل، وعلامة "يجب التغيير" صارت false
+    const newLoginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'testnurse', password: 'newSecurePass123' });
+    expect(newLoginRes.status).toBe(200);
+    expect(newLoginRes.body.user.mustChangePassword).toBe(false);
+  });
+});
+
+describe('PUT /api/users/me/password — تغيير كلمة المرور الذاتي', () => {
+  test('كلمة مرور حالية خاطئة تُرفض بـ401', async () => {
+    const res = await request(app)
+      .put('/api/users/me/password')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ currentPassword: 'كلمة-خاطئة-تماماً', newPassword: 'anything123' });
+    expect(res.status).toBe(401);
+  });
+
+  test('كلمة مرور جديدة قصيرة جداً (أقل من 6 أحرف) تُرفض', async () => {
+    const res = await request(app)
+      .put('/api/users/me/password')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ currentPassword: 'testpass123', newPassword: '123' });
+    expect(res.status).toBe(400);
+  });
+
+  test('بدون توكن دخول: يُرفض بـ401', async () => {
+    const res = await request(app)
+      .put('/api/users/me/password')
+      .send({ currentPassword: 'x', newPassword: 'newpassword123' });
+    expect(res.status).toBe(401);
+  });
+});

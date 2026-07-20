@@ -1,17 +1,16 @@
 // backend/tests/invoices.test.js
 //
 // ملاحظة: إنشاء المريض التمهيدي أدناه يمر الآن عبر PostgreSQL (بعد نقل موديول
-// المرضى إليه). إن تعذّر الاتصال، يُتجاوز اختبار "الحفظ الناجح" فقط بأمان مع
-// تحذير واضح، بينما اختبارات التحقق من البيانات (لا تحتاج مريضاً حقيقياً)
-// تستمر بالعمل طبيعياً بغض النظر عن حالة PostgreSQL.
+// المرضى إليه). إن تعذّر الاتصال، يفشل الملف كاملاً بخطأ واضح (لا يُتجاوز
+// بصمت) — بما فيها اختبارات التحقق من البيانات اللي لا تحتاج مريضاً حقيقياً،
+// لأن فشلاً واضحاً بكل الملف أوضح وأأمن من نجاح جزئي مضلِّل.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
 let token;
 let patientId;
-let pgAvailable = true;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('invoices');
@@ -29,8 +28,7 @@ beforeAll(async () => {
     .send({ name: 'مريض الفوترة', phone: '07709998877' });
 
   if (patientRes.status !== 201) {
-    pgAvailable = false;
-    console.warn('⚠️  تعذّر الاتصال بـ PostgreSQL — تم تجاوز اختبار الحفظ الناجح للفاتورة. تأكد من إعدادات .env.');
+    assertPgAvailable(patientRes, 'الفوترة', 201);
   } else {
     patientId = patientRes.body.id;
   }
@@ -69,7 +67,6 @@ describe('POST /api/invoices — حفظ فاتورة جديدة', () => {
   });
 
   test('حفظ فاتورة صحيحة كاملة ينجح ويُعاد بمعرّف', async () => {
-    if (!pgAvailable) return;
     const res = await request(app)
       .post('/api/invoices')
       .set('Authorization', `Bearer ${token}`)

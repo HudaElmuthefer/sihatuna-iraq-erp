@@ -38,8 +38,10 @@
 // بهذا لا يحتاج الفرونت إند أي تعديل عند التحويل من db.json إلى PostgreSQL.
 const { pool } = require('../config/database');
 const auth = require('../middleware/auth');
+const { logAudit } = require('../utils/auditLog');
 const validate = require('../middleware/validate');
 const requirePermission = require('../middleware/requirePermission');
+const XLSX = require('xlsx');
 
 const DEFAULT_COLUMNS = [
   { field: 'name', column: 'name' },
@@ -47,14 +49,41 @@ const DEFAULT_COLUMNS = [
   { field: 'status', column: 'status' },
 ];
 
+// ── سجل الموديولات (Module Registry) ────────────────────────────────────────
+// كل استدعاء لـ pgCrud() يسجّل نفسه هنا (apiName -> { tableName, indexedColumns,
+// hospitalScoped }). سلة المحذوفات (recycleBinRoutes.js) تستخدم هذا السجل
+// لمعرفة كيف تُعيد إدراج سجل مسترجَع بجدوله الأصلي الصحيح، دون أي معرفة
+// مسبقة بتفاصيل كل موديول على حدة — تفادياً لتكرار نفس التفاصيل بمكانين.
+const moduleRegistry = {};
+
 // المعامل الخامس (sqlTableName) اختياري: يحدد اسم الجدول الفعلي بقاعدة البيانات
 // إذا كان مختلفاً عن اسم المسار بالـ API (apiName). مطلوب فقط للموديولات التي
 // اسمها camelCase بالواجهة (مثل "medicalLeaves") بينما اسم الجدول snake_case
 // حسب اتفاقية PostgreSQL القياسية (medical_leaves) — مسار الـ API يبقى دائماً
 // كما يتوقعه الفرونت إند، بينما الاستعلامات الداخلية تستخدم اسم الجدول الصحيح.
-const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTableName = apiName, options = {}) => {
+//
+// ── إصلاح أمان-من-الانكسار (fail-fast) ──────────────────────────────────────
+// المعامل الرابع (indexedColumns) لم يعد له قيمة افتراضية إطلاقاً. سابقاً كان
+// الافتراض DEFAULT_COLUMNS (أعمدة name/phone/status) — فأي تسجيل موديول جديد
+// نسي تمريره صراحة كان يفترض ضمنياً أن الجدول يملك هذي الأعمدة، وإذا لم يملكها
+// فعلاً (وهي الغالبية العظمى من الجداول، المبنية بتخزين JSONB بحت)، تفشل كل
+// عملية POST/PUT بصمت برسالة SQL غامضة ("column X does not exist") لا تظهر
+// إلا لحظة أول محاولة حفظ فعلية من مستخدم حقيقي — بالضبط ما حصل بـ 15 موديول
+// مختلفة قبل هذا الإصلاح. الآن: نسيان تمريره يوقف تشغيل الخادم فوراً برسالة
+// واضحة، مو خطأ SQL غامض لاحقاً. الموديولات التي تملك فعلاً أعمدة name/phone/
+// status الحقيقية (مثل patients و doctors) تمرر DEFAULT_COLUMNS صراحة.
+const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName, options = {}) => {
+  if (indexedColumns === undefined) {
+    throw new Error(
+      `❌ pgCrud('${apiName}'): المعامل الرابع (indexedColumns) مطلوب صراحة ولا قيمة افتراضية له.\n` +
+      `   مرري [] لو الجدول تخزين JSONB بحت (الحالة الأكثر شيوعاً — راجعي postgres_schema.sql)، ` +
+      `أو مصفوفة { field, column } لو فيه أعمدة مفهرسة حقيقية، ` +
+      `أو DEFAULT_COLUMNS المُصدَّرة من هذا الملف لو الجدول يطابق أعمدة name/phone/status القياسية.`
+    );
+  }
   const tableName = sqlTableName; // اسم الجدول الفعلي بكل استعلامات SQL أدناه
-  const { hospitalScoped = false, permission = null, openRead = false } = options;
+  const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [] } = options;
+  moduleRegistry[apiName] = { ...moduleRegistry[apiName], tableName, indexedColumns, hospitalScoped, permission };
   // ── فحص صلاحيات (RBAC) على القراءة والكتابة ──────────────────────────────────
   // الكتابة (POST/PUT/DELETE): مقيّدة دائماً بصلاحية الموديول لو كانت محدَّدة.
   // القراءة (GET): مقيّدة بنفس الصلاحية أيضاً، إلا لو openRead=true — استثناء
@@ -90,19 +119,70 @@ const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTa
   };
 
   // GET all
-  // دعم تصفح اختياري بالصفحات (page/limit)، لتفادي بطء الجداول الكبيرة مستقبلاً.
+  // دعم تصفح اختياري بالصفحات (page/limit) + بحث/فلترة، لتفادي بطء الجداول
+  // الكبيرة مستقبلاً (خصوصاً المرضى والأطباء، أكثر موديولين مرشّحين للنمو
+  // لآلاف السجلات). البحث والفلترة يعملان على الأعمدة المفهرسة (indexedColumns)
+  // مباشرة — أسرع بكثير من فحص عمود JSONB الكامل، لكنه يعني إن البحث يشتغل
+  // فقط لو كان الحقل المطلوب أصلاً من ضمن indexedColumns لهذا الموديول تحديداً.
   // ملاحظة أمان مهمة: لو طلب "page" غير مقروء كرقم صحيح، نتجاهله ونرجع لكل
   // السجلات بدل تمرير قيمة غير موثوقة مباشرة لجملة SQL (LIMIT/OFFSET).
   // الافتراضي (بدون معامل page): يرجع مصفوفة كاملة كما كان دائماً — صفر خطر
   // على أي صفحة موجودة حالياً لا ترسل هذي المعاملات.
   router.get(`/${apiName}`, auth, readPermission, async (req, res, next) => {
     try {
-      let sql = `SELECT * FROM ${tableName}`;
+      const conditions = [];
       const params = [];
+
       if (hospitalScoped && req.user?.hospitalId) {
         params.push(req.user.hospitalId);
-        sql += ` WHERE data->>'hospitalId' = $${params.length}`;
+        conditions.push(`data->>'hospitalId' = $${params.length}`);
       }
+
+      // بحث نصي اختياري (?search=) — يطابق عمود "name" و"phone" لو كانا
+      // مفهرسين بهذا الموديول، بالإضافة لأي حقول JSONB إضافية حُدِّدت صراحة
+      // بـ options.searchFields (مثل "specialization" للأطباء — حقل غير
+      // مفهرس، فالبحث فيه أبطأ قليلاً من عمود مفهرس لكنه يحافظ على نفس تجربة
+      // البحث الموجودة سابقاً بالفرونت إند قبل التحويل لترقيم من السيرفر).
+      const nameCol = indexedColumns.find(c => c.field === 'name')?.column;
+      const phoneCol = indexedColumns.find(c => c.field === 'phone')?.column;
+      if (req.query.search && (nameCol || phoneCol || searchFields.length > 0)) {
+        params.push(`%${req.query.search}%`);
+        const idx = params.length;
+        const parts = [nameCol, phoneCol].filter(Boolean).map(c => `${c} ILIKE $${idx}`);
+        // ── تحسين أداء ──────────────────────────────────────────────────────
+        // لو الحقل صار عمود حقيقي مفهرس (indexedColumns) بعد ترقيته من
+        // JSONB، نستخدم العمود مباشرة (سريع، مفهرس) بدل data->>'field'
+        // (بطيء، فحص كامل للجدول). الحقول اللي لسا JSONB بس تبقى تشتغل
+        // بنفس الطريقة القديمة — صفر كسر لأي موديول لم يُرقَّ بعد.
+        searchFields.forEach(f => {
+          const promotedCol = indexedColumns.find(c => c.field === f)?.column;
+          parts.push(promotedCol ? `${promotedCol} ILIKE $${idx}` : `data->>'${f}' ILIKE $${idx}`);
+        });
+        conditions.push(`(${parts.join(' OR ')})`);
+      }
+
+      // فلترة اختيارية بالحالة (?status=) — فقط لو "status" مفهرس بهذا الموديول
+      const statusCol = indexedColumns.find(c => c.field === 'status')?.column;
+      if (req.query.status && req.query.status !== 'all' && statusCol) {
+        params.push(req.query.status);
+        conditions.push(`${statusCol} = $${params.length}`);
+      }
+
+      // فلترة تطابق تام اختيارية على حقول JSONB إضافية (مثل ?category=medicine
+      // بالمخزون) — تعمل فقط للحقول المُصرَّح بها صراحة بـ options.extraFilterFields
+      // (قائمة بيضاء، حماية من فلترة عشوائية على أي اسم حقل يُرسَل بالطلب)
+      // نفس تحسين الأداء أعلاه: نستخدم العمود الحقيقي لو الحقل مُرقّى.
+      extraFilterFields.forEach((field) => {
+        const value = req.query[field];
+        if (value && value !== 'all') {
+          params.push(value);
+          const promotedCol = indexedColumns.find(c => c.field === field)?.column;
+          conditions.push(promotedCol ? `${promotedCol} = $${params.length}` : `data->>'${field}' = $${params.length}`);
+        }
+      });
+
+      let sql = `SELECT * FROM ${tableName}`;
+      if (conditions.length > 0) sql += ` WHERE ${conditions.join(' AND ')}`;
       sql += ' ORDER BY id ASC';
 
       const page = parseInt(req.query.page, 10);
@@ -110,7 +190,7 @@ const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTa
         const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200); // حد أقصى 200 بالصفحة الواحدة
         const offset = (page - 1) * limit;
 
-        const countSql = `SELECT COUNT(*) FROM ${tableName}` + (hospitalScoped && req.user?.hospitalId ? ` WHERE data->>'hospitalId' = $1` : '');
+        const countSql = `SELECT COUNT(*) FROM ${tableName}` + (conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '');
         const countResult = await pool.query(countSql, params);
         const total = parseInt(countResult.rows[0].count, 10);
 
@@ -127,6 +207,56 @@ const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTa
 
       const result = await pool.query(sql, params);
       res.json(result.rows.map(rowToRecord));
+    } catch (err) { next(err); }
+  });
+
+  // ── تصدير إلى Excel ──────────────────────────────────────────────────────
+  // إصلاح/ميزة جديدة: كان النظام يدعم الاستيراد من Excel فقط (رفع بيانات
+  // للنظام) بدون أي طريقة لتصدير البيانات الحالية لملف Excel. هذا المسار عام
+  // ويعمل تلقائياً لكل موديول مسجَّل عبر pgCrud (مو فقط الموديولات اللي عندها
+  // registerExcelImport مُفعَّل) — يجلب كل السجلات (بحدود منشأة المستخدم لو
+  // النظام متعدد المنشآت) ويحوّلها لملف .xlsx للتنزيل المباشر.
+  // العناوين: تُستخدم عناوين عربية جميلة لو كان هذا الموديول عنده أيضاً
+  // registerExcelImport مُسجَّل (يملأ moduleRegistry[apiName].exportHeaders
+  // تلقائياً من columnMap الخاص فيه) — وإلا تُستخدم أسماء الحقول الخام كعناوين.
+  // مسجَّل قبل GET /:id عمداً، وإلا Express يطابق "export-excel" كقيمة :id.
+  router.get(`/${apiName}/export-excel`, auth, readPermission, async (req, res, next) => {
+    try {
+      const conditions = [];
+      const params = [];
+      if (hospitalScoped && req.user?.hospitalId) {
+        params.push(req.user.hospitalId);
+        conditions.push(`data->>'hospitalId' = $${params.length}`);
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const result = await pool.query(`SELECT * FROM ${tableName} ${where} ORDER BY id`, params);
+      const records = result.rows.map(rowToRecord);
+
+      const exportHeaders = moduleRegistry[apiName]?.exportHeaders || {};
+      // نجمع كل مفاتيح موجودة فعلياً بأي سجل (مو فقط أول سجل) — لتفادي فقدان
+      // أعمدة نادرة موجودة ببعض السجلات فقط
+      const allFields = new Set();
+      records.forEach(r => Object.keys(r).forEach(k => allFields.add(k)));
+      allFields.delete('id');
+      const fields = ['id', ...[...allFields].sort()];
+      const headerLabels = fields.map(f => f === 'id' ? 'ID' : (exportHeaders[f] || f));
+
+      const rows = records.map(r => fields.map(f => {
+        const v = r[f];
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'object') return JSON.stringify(v); // مصفوفة/كائن متداخل — نص JSON بدل [object Object]
+        return v;
+      }));
+
+      const ws = XLSX.utils.aoa_to_sheet([headerLabels, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, apiName.slice(0, 31)); // اسم الورقة محدود بـ31 حرف بمواصفات Excel
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      logAudit({ action: 'EXPORT', table: tableName, count: records.length, userId: req.user?.id, username: req.user?.username });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${apiName}-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(buffer);
     } catch (err) { next(err); }
   });
 
@@ -163,7 +293,7 @@ const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTa
       }
       const result = await pool.query(sql, values);
       const record = rowToRecord(result.rows[0]);
-      console.log(`✅ [${tableName}] CREATE  id=${record.id}  by user #${req.user?.id}`);
+      logAudit({ action: 'CREATE', table: tableName, recordId: record.id, userId: req.user?.id, username: req.user?.username });
       res.status(201).json(record);
     } catch (err) { next(err); }
   });
@@ -188,23 +318,52 @@ const pgCrud = (router, apiName, schema, indexedColumns = DEFAULT_COLUMNS, sqlTa
         [...indexedValues, JSON.stringify(rest), req.params.id]
       );
       const record = rowToRecord(result.rows[0]);
-      console.log(`✏️  [${tableName}] UPDATE  id=${record.id}  by user #${req.user?.id}`);
+      logAudit({ action: 'UPDATE', table: tableName, recordId: record.id, userId: req.user?.id, username: req.user?.username });
       res.json(record);
     } catch (err) { next(err); }
   });
 
-  // DELETE
+  // DELETE — إصلاح: كان يحذف نهائياً وفوراً بلا أي إمكانية تراجع. الآن "الحذف"
+  // ينقل السجل كاملاً لسلة المحذوفات (recycle_bin) قبل حذفه من جدوله الأصلي —
+  // يختفي من القوائم فوراً (نفس السلوك الظاهري بالضبط من منظور المستخدم)، لكن
+  // يبقى قابلاً للاسترجاع أو الحذف النهائي من صفحة الإعدادات (إدمن فقط).
   router.delete(`/${apiName}/:id`, auth, writePermission, async (req, res, next) => {
+    const client = await pool.connect();
     try {
-      const existing = await pool.query(`SELECT * FROM ${tableName} WHERE id = $1`, [req.params.id]);
+      const existing = await client.query(`SELECT * FROM ${tableName} WHERE id = $1`, [req.params.id]);
       if (existing.rows.length === 0) return res.status(404).json({ message: 'غير موجود' });
-      if (!belongsToUserHospital(existing.rows[0], req)) return res.status(404).json({ message: 'غير موجود' });
+      const row = existing.rows[0];
+      if (!belongsToUserHospital(row, req)) return res.status(404).json({ message: 'غير موجود' });
 
-      await pool.query(`DELETE FROM ${tableName} WHERE id = $1`, [req.params.id]);
-      console.log(`🗑️  [${tableName}] DELETE  id=${req.params.id}  by user #${req.user?.id}`);
+      const fullRecord = rowToRecord(row);
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO recycle_bin (module_key, original_id, data, hospital_id, deleted_by, deleted_by_name)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [apiName, row.id, JSON.stringify(fullRecord), row.data?.hospitalId || null, req.user?.id || null, req.user?.name || null]
+      );
+      await client.query(`DELETE FROM ${tableName} WHERE id = $1`, [req.params.id]);
+      await client.query('COMMIT');
+
+      logAudit({ action: 'DELETE', table: tableName, recordId: req.params.id, note: 'نُقل لسلة المحذوفات', userId: req.user?.id, username: req.user?.username });
       res.json({ success: true });
-    } catch (err) { next(err); }
+    } catch (err) {
+      // إصلاح حرج: ROLLBACK كان بدون حماية — لو فشل هو نفسه (مثلاً لأن الاتصال
+      // انكسر أصلاً بسبب الخطأ الأول)، يصير استثناء غير مُعالَج داخل async
+      // route handler لا يمسكه Express، وبـ Node.js الحديث هذا **يُسقط العملية
+      // كاملة** (يطفي السيرفر بالكامل!) — تفسير مباشر لماذا ظهرت "تعذّر
+      // الاتصال بالخادم" حتى بطلبات ثانية غير متعلقة، وتبقى حتى إعادة تشغيل
+      // يدوية. الآن أي فشل بـ ROLLBACK يُسجَّل فقط ولا يُسقط السيرفر أبداً.
+      try { await client.query('ROLLBACK'); } catch (rollbackErr) {
+        console.error(`⚠️ فشل ROLLBACK بعد خطأ حذف [${tableName}]:`, rollbackErr.message);
+      }
+      next(err);
+    } finally {
+      client.release();
+    }
   });
 };
 
 module.exports = pgCrud;
+module.exports.DEFAULT_COLUMNS = DEFAULT_COLUMNS;
+module.exports.moduleRegistry = moduleRegistry;

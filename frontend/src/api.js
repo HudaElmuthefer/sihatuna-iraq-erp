@@ -3,6 +3,12 @@
 // كل الموديولات المستقبلية اللي نربطها بالباك إند تمر من هنا
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// إصلاح: روابط الملفات المرفوعة (مثل مستندات الإضابير) كانت تُستخدَم كما هي
+// (مسار نسبي مثل /uploads/xyz.pdf) بعنصر <a href> مباشرة — بما إن الفرونت
+// إند والباك إند يشتغلون على منفذين مختلفين (3000 و8000)، هذا يفتح
+// localhost:3000/uploads/... (غير موجود بالفرونت إند، فيرجّعك الموجّه
+// [React Router] للصفحة الرئيسية بصمت) بدل الملف الفعلي على الباك إند.
+export const SERVER_BASE_URL = API_BASE_URL.replace('/api', '');
 
 // ── إصلاح أمني ────────────────────────────────────────────────────────────────
 // كان التوكن يُقرأ من localStorage ويُرسَل يدوياً بـ Authorization header —
@@ -48,9 +54,14 @@ export const api = {
 // رفع ملف (multipart/form-data) — يُستخدم لاستيراد Excel وأي رفع ملفات مستقبلي.
 // لا نمرر 'Content-Type' يدوياً هنا عمداً: المتصفح يحدّده تلقائياً مع الـ
 // boundary الصحيح عند استخدام FormData، وتحديده يدوياً بالخطأ يكسر الطلب.
-export async function apiUploadFile(path, file) {
+// extraFields: حقول نصية إضافية تُرسَل جنب الملف بنفس الطلب (مثل عنوان
+// الوثيقة أو نوعها) — تصل للباك إند عبر req.body تلقائياً بفضل multer.
+export async function apiUploadFile(path, file, extraFields = {}) {
   const formData = new FormData();
-  formData.append('file', file);
+  if (file) formData.append('file', file);
+  Object.entries(extraFields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     body: formData,

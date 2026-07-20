@@ -26,7 +26,7 @@ const TYPE_CONFIG = {
 const EMPTY = { docNo: '', type: 'incoming', title: '', from: '', date: '', receivedDate: '', priority: 'normal', status: 'pending', subject: '', assignedTo: '', tags: [] };
 
 export default function DocumentsPage() {
-  const { documents, setDocuments, lang, showToast, user, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { documents, setDocuments, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
@@ -58,42 +58,59 @@ export default function DocumentsPage() {
   }), [documents]);
 
   const openAdd = () => {
+    // إصلاح: documents.length+1 يكرر رقم مستند موجود فعلاً بعد أي حذف
     const year = new Date().getFullYear();
-    const count = documents.length + 1;
-    const nextNo = `IN-${year}-${String(count).padStart(4,'0')}`;
+    const docPrefix = `IN-${year}-`;
+    const maxSeq = documents.reduce((max,d)=>{
+      if (typeof d.docNo !== 'string' || !d.docNo.startsWith(docPrefix)) return max;
+      const v = parseInt(d.docNo.slice(docPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const nextNo = `${docPrefix}${String(maxSeq+1).padStart(4,'0')}`;
     setForm({ ...EMPTY, docNo: nextNo, date: new Date().toISOString().split('T')[0], receivedDate: new Date().toISOString().split('T')[0], assignedTo: user?.name || '' });
     setEditId(null); setTagInput(''); setShowModal(true);
   };
   const openEdit = (d) => { setForm({ ...d, tags: d.tags || [] }); setEditId(d.id); setTagInput(''); setShowModal(true); };
 
-  const saveDoc = () => {
+  const saveDoc = async () => {
     if (!form.title || !form.from) { showToast('يرجى تعبئة العنوان والمصدر', 'error'); return; }
     const doc = { ...form, tags: form.tags || [] };
+    const prev = documents;
     if (editId) {
       const ud = { ...doc, id: editId };
       setDocuments(p => p.map(i => i.id === editId ? { ...i, ...ud } : i));
-      syncToServer('documents', 'update', ud);
+      const ok = await syncToServer('documents', 'update', ud);
+      if (!ok) { setDocuments(prev); return; }
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const nd = { ...doc, id: Date.now() };
       setDocuments(p => [...p, nd]);
-      syncToServer('documents', 'create', nd);
+      const ok = await syncToServer('documents', 'create', nd);
+      if (!ok) { setDocuments(prev); return; }
       showToast(L('تمت إضافة الوثيقة','Document added'),'success');
     }
     setShowModal(false);
   };
 
-  const updateStatus = (id, status) => {
-    setDocuments(p => {
-      const updated = p.map(i => i.id === id ? { ...i, status } : i);
-      const changed = updated.find(i => i.id === id);
-      if (changed) syncToServer('documents', 'update', changed);
-      return updated;
-    });
+  const updateStatus = async (id, status) => {
+    const prev = documents;
+    const current = documents.find(i => i.id === id);
+    if (!current) return;
+    const changed = { ...current, status };
+    setDocuments(p => p.map(i => i.id === id ? changed : i));
+    const ok = await syncToServer('documents', 'update', changed);
+    if (!ok) { setDocuments(prev); return; }
     showToast(L('تم تحديث الحالة','Status updated'),'success');
   };
 
-  const deleteDoc = (id) => { setDocuments(p => p.filter(i => i.id !== id)); syncToServer('documents', 'delete', { id }); showToast(L('تم الحذف','Deleted'),'info'); };
+  const deleteDoc = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = documents;
+    setDocuments(p => p.filter(i => i.id !== id));
+    const ok = await syncToServer('documents', 'delete', { id });
+    if (!ok) { setDocuments(prev); return; }
+    showToast(L('تم الحذف','Deleted'),'info');
+  };
 
   const addTag = () => {
     if (tagInput.trim() && !form.tags.includes(tagInput.trim())) {

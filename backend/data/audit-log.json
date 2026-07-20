@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "timestamp": "2026-07-09T08:49:51.146Z",
+    "timestamp": "2026-07-18T06:00:09.288Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -9,22 +9,15 @@
   },
   {
     "id": 2,
-    "timestamp": "2026-07-09T08:49:51.170Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:00:10.634Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض تجريبي",
-      "phone": "07701234567",
-      "status": "active",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 3,
-    "timestamp": "2026-07-09T08:49:51.638Z",
+    "timestamp": "2026-07-18T06:00:10.777Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -32,42 +25,23 @@
   },
   {
     "id": 4,
-    "timestamp": "2026-07-09T08:49:51.643Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:00:11.910Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض الفوترة",
-      "phone": "07709998877",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 5,
-    "timestamp": "2026-07-09T08:49:51.662Z",
-    "module": "invoices",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:00:12.021Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "patientId": 1,
-      "items": [
-        {
-          "description": "كشفية",
-          "price": 25000,
-          "qty": 1
-        }
-      ],
-      "total": 25000,
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 6,
-    "timestamp": "2026-07-09T08:49:52.040Z",
+    "timestamp": "2026-07-18T06:00:12.850Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -75,31 +49,23 @@
   },
   {
     "id": 7,
-    "timestamp": "2026-07-09T08:49:52.127Z",
+    "timestamp": "2026-07-18T06:00:13.170Z",
     "module": "auth",
-    "action": "login_failed",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "userRole": "admin"
   },
   {
     "id": 8,
-    "timestamp": "2026-07-09T08:49:52.131Z",
+    "timestamp": "2026-07-18T06:00:13.311Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
   },
   {
     "id": 9,
-    "timestamp": "2026-07-09T09:04:47.383Z",
+    "timestamp": "2026-07-18T06:00:14.009Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -107,22 +73,15 @@
   },
   {
     "id": 10,
-    "timestamp": "2026-07-09T09:04:47.409Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:00:14.468Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض تجريبي",
-      "phone": "07701234567",
-      "status": "active",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 11,
-    "timestamp": "2026-07-09T09:04:47.768Z",
+    "timestamp": "2026-07-18T06:32:35.942Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -130,42 +89,23 @@
   },
   {
     "id": 12,
-    "timestamp": "2026-07-09T09:04:47.774Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:32:51.600Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض الفوترة",
-      "phone": "07709998877",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 13,
-    "timestamp": "2026-07-09T09:04:47.797Z",
-    "module": "invoices",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:32:52.767Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "patientId": 1,
-      "items": [
-        {
-          "description": "كشفية",
-          "price": 25000,
-          "qty": 1
-        }
-      ],
-      "total": 25000,
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 14,
-    "timestamp": "2026-07-09T09:04:48.162Z",
+    "timestamp": "2026-07-18T06:32:53.840Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -173,31 +113,23 @@
   },
   {
     "id": 15,
-    "timestamp": "2026-07-09T09:04:48.248Z",
+    "timestamp": "2026-07-18T06:32:53.937Z",
     "module": "auth",
-    "action": "login_failed",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "userRole": "admin"
   },
   {
     "id": 16,
-    "timestamp": "2026-07-09T09:04:48.252Z",
+    "timestamp": "2026-07-18T06:32:55.101Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
   },
   {
     "id": 17,
-    "timestamp": "2026-07-09T09:04:48.689Z",
+    "timestamp": "2026-07-18T06:32:55.195Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -205,26 +137,15 @@
   },
   {
     "id": 18,
-    "timestamp": "2026-07-09T09:04:48.695Z",
-    "module": "appointments",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:32:56.061Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "patient": "مريض تجريبي",
-      "doctor": "د. أحمد",
-      "department": "باطنية",
-      "date": "2026-07-15",
-      "time": "09:00",
-      "status": "pending",
-      "type": "checkup",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 19,
-    "timestamp": "2026-07-09T09:24:17.551Z",
+    "timestamp": "2026-07-18T06:32:56.376Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -232,36 +153,23 @@
   },
   {
     "id": 20,
-    "timestamp": "2026-07-09T09:24:17.577Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:32:56.472Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض برقم قصير",
-      "phone": "123",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 21,
-    "timestamp": "2026-07-09T09:24:17.584Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 2,
+    "timestamp": "2026-07-18T06:32:57.208Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض تجريبي",
-      "phone": "07701234567",
-      "status": "active",
-      "id": 2
-    }
+    "userRole": "admin"
   },
   {
     "id": 22,
-    "timestamp": "2026-07-09T09:24:17.962Z",
+    "timestamp": "2026-07-18T06:38:22.209Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -269,31 +177,23 @@
   },
   {
     "id": 23,
-    "timestamp": "2026-07-09T09:24:18.050Z",
+    "timestamp": "2026-07-18T06:38:23.683Z",
     "module": "auth",
-    "action": "login_failed",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "userRole": "admin"
   },
   {
     "id": 24,
-    "timestamp": "2026-07-09T09:24:18.055Z",
+    "timestamp": "2026-07-18T06:38:24.111Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
   },
   {
     "id": 25,
-    "timestamp": "2026-07-09T09:24:18.534Z",
+    "timestamp": "2026-07-18T06:38:24.853Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -301,26 +201,15 @@
   },
   {
     "id": 26,
-    "timestamp": "2026-07-09T09:24:18.540Z",
-    "module": "appointments",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:38:25.283Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "patient": "مريض تجريبي",
-      "doctor": "د. أحمد",
-      "department": "باطنية",
-      "date": "2026-07-15",
-      "time": "09:00",
-      "status": "pending",
-      "type": "checkup",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 27,
-    "timestamp": "2026-07-09T09:24:18.873Z",
+    "timestamp": "2026-07-18T06:38:25.981Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -328,42 +217,23 @@
   },
   {
     "id": 28,
-    "timestamp": "2026-07-09T09:24:18.895Z",
-    "module": "patients",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:38:26.351Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "name": "مريض الفوترة",
-      "phone": "07709998877",
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 29,
-    "timestamp": "2026-07-09T09:24:18.910Z",
-    "module": "invoices",
-    "action": "create",
-    "recordId": 1,
+    "timestamp": "2026-07-18T06:38:26.451Z",
+    "module": "auth",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "patientId": 1,
-      "items": [
-        {
-          "description": "كشفية",
-          "price": 25000,
-          "qty": 1
-        }
-      ],
-      "total": 25000,
-      "id": 1
-    }
+    "userRole": "admin"
   },
   {
     "id": 30,
-    "timestamp": "2026-07-10T07:13:16.852Z",
+    "timestamp": "2026-07-18T06:38:27.096Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -371,7 +241,7 @@
   },
   {
     "id": 31,
-    "timestamp": "2026-07-10T07:13:17.332Z",
+    "timestamp": "2026-07-18T06:38:27.618Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -379,7 +249,7 @@
   },
   {
     "id": 32,
-    "timestamp": "2026-07-10T07:13:17.716Z",
+    "timestamp": "2026-07-18T06:46:03.126Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -387,39 +257,31 @@
   },
   {
     "id": 33,
-    "timestamp": "2026-07-10T07:13:17.811Z",
+    "timestamp": "2026-07-18T06:46:03.329Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "action": "login_success",
+    "userId": 2,
+    "userRole": "doctor"
   },
   {
     "id": 34,
-    "timestamp": "2026-07-10T07:13:17.816Z",
+    "timestamp": "2026-07-18T06:46:03.498Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 3,
+    "userRole": "nurse"
   },
   {
     "id": 35,
-    "timestamp": "2026-07-10T07:13:18.135Z",
+    "timestamp": "2026-07-18T06:46:03.651Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 4,
+    "userRole": "accountant"
   },
   {
     "id": 36,
-    "timestamp": "2026-07-10T07:15:47.548Z",
+    "timestamp": "2026-07-18T06:46:51.287Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -427,39 +289,31 @@
   },
   {
     "id": 37,
-    "timestamp": "2026-07-10T07:15:47.953Z",
+    "timestamp": "2026-07-18T06:46:51.414Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 2,
+    "userRole": "doctor"
   },
   {
     "id": 38,
-    "timestamp": "2026-07-10T07:15:48.045Z",
+    "timestamp": "2026-07-18T06:46:51.516Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "action": "login_success",
+    "userId": 3,
+    "userRole": "nurse"
   },
   {
     "id": 39,
-    "timestamp": "2026-07-10T07:15:48.050Z",
+    "timestamp": "2026-07-18T06:46:51.619Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 4,
+    "userRole": "accountant"
   },
   {
     "id": 40,
-    "timestamp": "2026-07-10T07:15:48.489Z",
+    "timestamp": "2026-07-18T06:58:48.143Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -467,127 +321,151 @@
   },
   {
     "id": 41,
-    "timestamp": "2026-07-10T07:15:48.816Z",
+    "timestamp": "2026-07-18T06:58:48.251Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 2,
+    "userRole": "doctor"
   },
   {
     "id": 42,
-    "timestamp": "2026-07-10T07:19:20.709Z",
+    "timestamp": "2026-07-18T06:58:48.348Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 3,
+    "userRole": "nurse"
   },
   {
     "id": 43,
-    "timestamp": "2026-07-10T07:19:21.109Z",
+    "timestamp": "2026-07-18T06:58:48.446Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 4,
+    "userRole": "accountant"
   },
   {
     "id": 44,
-    "timestamp": "2026-07-10T07:19:21.501Z",
+    "timestamp": "2026-07-18T07:05:26.237Z",
     "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "action": "login_failed",
+    "userId": 2,
+    "userRole": "doctor",
+    "after": {
+      "attemptedUsername": "doctor",
+      "reason": "wrong_password"
+    }
   },
   {
     "id": 45,
-    "timestamp": "2026-07-10T07:19:21.594Z",
+    "timestamp": "2026-07-18T07:05:31.764Z",
     "module": "auth",
     "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
+    "userId": 3,
+    "userRole": "nurse",
     "after": {
-      "attemptedUsername": "testadmin",
+      "attemptedUsername": "nurse",
       "reason": "wrong_password"
     }
   },
   {
     "id": 46,
-    "timestamp": "2026-07-10T07:19:21.599Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
-  },
-  {
-    "id": 47,
-    "timestamp": "2026-07-10T07:19:22.054Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
-  },
-  {
-    "id": 48,
-    "timestamp": "2026-07-10T07:32:56.834Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
-  },
-  {
-    "id": 49,
-    "timestamp": "2026-07-10T07:32:57.242Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
-  },
-  {
-    "id": 50,
-    "timestamp": "2026-07-10T07:32:57.337Z",
+    "timestamp": "2026-07-18T07:05:36.966Z",
     "module": "auth",
     "action": "login_failed",
     "userId": 1,
     "userRole": "admin",
     "after": {
-      "attemptedUsername": "testadmin",
+      "attemptedUsername": "admin",
       "reason": "wrong_password"
     }
   },
   {
-    "id": 51,
-    "timestamp": "2026-07-10T07:32:57.341Z",
+    "id": 47,
+    "timestamp": "2026-07-18T07:06:05.085Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "admin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 48,
+    "timestamp": "2026-07-18T07:06:48.305Z",
     "module": "auth",
     "action": "login_failed",
     "userId": null,
     "userRole": null,
     "after": {
-      "attemptedUsername": "no-such-user",
+      "attemptedUsername": "huda@hospital.com",
       "reason": "user_not_found"
     }
   },
   {
-    "id": 52,
-    "timestamp": "2026-07-10T07:32:57.797Z",
+    "id": 49,
+    "timestamp": "2026-07-18T07:07:02.488Z",
     "module": "auth",
-    "action": "login_success",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "huda@hospital.com",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 50,
+    "timestamp": "2026-07-18T07:07:33.577Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 3,
+    "userRole": "nurse",
+    "after": {
+      "attemptedUsername": "nurse",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 51,
+    "timestamp": "2026-07-18T07:07:38.232Z",
+    "module": "auth",
+    "action": "login_failed",
     "userId": 1,
-    "userRole": "admin"
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "admin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 52,
+    "timestamp": "2026-07-18T07:08:09.601Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "admin",
+      "reason": "wrong_password"
+    }
   },
   {
     "id": 53,
-    "timestamp": "2026-07-10T07:32:58.155Z",
+    "timestamp": "2026-07-18T07:08:44.371Z",
     "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "action": "login_failed",
+    "userId": 2,
+    "userRole": "doctor",
+    "after": {
+      "attemptedUsername": "doctor",
+      "reason": "wrong_password"
+    }
   },
   {
     "id": 54,
-    "timestamp": "2026-07-10T07:48:35.650Z",
+    "timestamp": "2026-07-18T07:10:43.942Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -595,15 +473,15 @@
   },
   {
     "id": 55,
-    "timestamp": "2026-07-10T07:48:36.184Z",
+    "timestamp": "2026-07-18T07:18:21.901Z",
     "module": "auth",
     "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "userId": 3,
+    "userRole": "nurse"
   },
   {
     "id": 56,
-    "timestamp": "2026-07-10T07:48:36.822Z",
+    "timestamp": "2026-07-18T07:18:33.195Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -611,31 +489,23 @@
   },
   {
     "id": 57,
-    "timestamp": "2026-07-10T07:48:36.915Z",
+    "timestamp": "2026-07-18T10:06:19.774Z",
     "module": "auth",
-    "action": "login_failed",
+    "action": "login_success",
     "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "userRole": "admin"
   },
   {
     "id": 58,
-    "timestamp": "2026-07-10T07:48:36.920Z",
+    "timestamp": "2026-07-18T10:31:06.290Z",
     "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
   },
   {
     "id": 59,
-    "timestamp": "2026-07-10T07:48:37.339Z",
+    "timestamp": "2026-07-18T10:50:06.939Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -643,7 +513,7 @@
   },
   {
     "id": 60,
-    "timestamp": "2026-07-10T08:03:14.973Z",
+    "timestamp": "2026-07-18T11:25:24.357Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
@@ -651,1399 +521,1659 @@
   },
   {
     "id": 61,
-    "timestamp": "2026-07-10T08:03:15.450Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T13:59:44.249Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 1,
+    "userId": 1
   },
   {
     "id": 62,
-    "timestamp": "2026-07-10T08:03:15.557Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T18:31:21.408Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 2,
+    "userId": 1
   },
   {
     "id": 63,
-    "timestamp": "2026-07-10T08:03:15.563Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T18:32:11.133Z",
+    "action": "HL7_RESULT_RECEIVED",
+    "table": "lab_tests",
+    "recordId": 2,
+    "note": "reqNo=LAB-2026-0002"
   },
   {
     "id": 64,
-    "timestamp": "2026-07-10T08:03:16.080Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T18:33:23.327Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 1,
+    "userId": 1
   },
   {
     "id": 65,
-    "timestamp": "2026-07-10T08:03:16.520Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T18:33:31.547Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 1,
+    "userId": 1
   },
   {
     "id": 66,
-    "timestamp": "2026-07-10T09:09:09.435Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T18:58:37.294Z",
+    "action": "CREATE",
+    "table": "queue_tickets",
+    "recordId": 2,
+    "userId": 1
   },
   {
     "id": 67,
-    "timestamp": "2026-07-10T09:09:09.826Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T18:59:14.951Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 2,
+    "userId": 1
   },
   {
     "id": 68,
-    "timestamp": "2026-07-10T09:09:09.909Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:00:02.818Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 2,
+    "userId": 1
   },
   {
     "id": 69,
-    "timestamp": "2026-07-10T09:09:09.913Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:23.395Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 3,
+    "userId": 1
   },
   {
     "id": 70,
-    "timestamp": "2026-07-10T09:09:10.328Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.461Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 4,
+    "userId": 1
   },
   {
     "id": 71,
-    "timestamp": "2026-07-10T09:09:10.657Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.471Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 5,
+    "userId": 1
   },
   {
     "id": 72,
-    "timestamp": "2026-07-10T09:09:45.508Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.480Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 6,
+    "userId": 1
   },
   {
     "id": 73,
-    "timestamp": "2026-07-10T09:09:55.136Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.489Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 7,
+    "userId": 1
   },
   {
     "id": 74,
-    "timestamp": "2026-07-10T09:09:55.526Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.498Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 8,
+    "userId": 1
   },
   {
     "id": 75,
-    "timestamp": "2026-07-10T09:09:55.911Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.506Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 9,
+    "userId": 1
   },
   {
     "id": 76,
-    "timestamp": "2026-07-10T09:09:56.338Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.515Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 10,
+    "userId": 1
   },
   {
     "id": 77,
-    "timestamp": "2026-07-10T09:09:56.421Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:23.527Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 11,
+    "userId": 1
   },
   {
     "id": 78,
-    "timestamp": "2026-07-10T09:09:56.426Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:23.536Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 12,
+    "userId": 1
   },
   {
     "id": 79,
-    "timestamp": "2026-07-10T09:09:56.802Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.544Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 13,
+    "userId": 1
   },
   {
     "id": 80,
-    "timestamp": "2026-07-10T09:37:12.215Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.554Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 14,
+    "userId": 1
   },
   {
     "id": 81,
-    "timestamp": "2026-07-10T09:37:12.629Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.562Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 15,
+    "userId": 1
   },
   {
     "id": 82,
-    "timestamp": "2026-07-10T09:37:12.798Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:23.571Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 16,
+    "userId": 1
   },
   {
     "id": 83,
-    "timestamp": "2026-07-10T09:37:12.804Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:23.670Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 17,
+    "userId": 1
   },
   {
     "id": 84,
-    "timestamp": "2026-07-10T09:37:13.183Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:23.697Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 18,
+    "userId": 1
   },
   {
     "id": 85,
-    "timestamp": "2026-07-10T09:37:13.548Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.000Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 19,
+    "userId": 1
   },
   {
     "id": 86,
-    "timestamp": "2026-07-10T09:37:14.159Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.010Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 20,
+    "userId": 1
   },
   {
     "id": 87,
-    "timestamp": "2026-07-10T10:03:49.529Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.019Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 21,
+    "userId": 1
   },
   {
     "id": 88,
-    "timestamp": "2026-07-10T10:03:49.953Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.027Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 22,
+    "userId": 1
   },
   {
     "id": 89,
-    "timestamp": "2026-07-10T10:03:50.743Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.035Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 23,
+    "userId": 1
   },
   {
     "id": 90,
-    "timestamp": "2026-07-10T10:03:50.830Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.044Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 24,
+    "userId": 1
   },
   {
     "id": 91,
-    "timestamp": "2026-07-10T10:03:50.835Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.052Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 25,
+    "userId": 1
   },
   {
     "id": 92,
-    "timestamp": "2026-07-10T10:03:51.198Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.062Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 26,
+    "userId": 1
   },
   {
     "id": 93,
-    "timestamp": "2026-07-10T10:03:51.661Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.070Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 27,
+    "userId": 1
   },
   {
     "id": 94,
-    "timestamp": "2026-07-10T11:18:55.236Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.078Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 28,
+    "userId": 1
   },
   {
     "id": 95,
-    "timestamp": "2026-07-10T11:18:55.641Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.086Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 29,
+    "userId": 1
   },
   {
     "id": 96,
-    "timestamp": "2026-07-10T11:18:55.752Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.097Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 30,
+    "userId": 1
   },
   {
     "id": 97,
-    "timestamp": "2026-07-10T11:18:55.758Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.106Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 31,
+    "userId": 1
   },
   {
     "id": 98,
-    "timestamp": "2026-07-10T11:18:56.140Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.202Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 32,
+    "userId": 1
   },
   {
     "id": 99,
-    "timestamp": "2026-07-10T11:18:56.605Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.224Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 33,
+    "userId": 1
   },
   {
     "id": 100,
-    "timestamp": "2026-07-10T11:18:57.019Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.246Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 34,
+    "userId": 1
   },
   {
     "id": 101,
-    "timestamp": "2026-07-10T11:29:20.612Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.264Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 35,
+    "userId": 1
   },
   {
     "id": 102,
-    "timestamp": "2026-07-10T11:29:21.095Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.277Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 36,
+    "userId": 1
   },
   {
     "id": 103,
-    "timestamp": "2026-07-10T11:29:21.211Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.289Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 37,
+    "userId": 1
   },
   {
     "id": 104,
-    "timestamp": "2026-07-10T11:29:21.218Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.302Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 38,
+    "userId": 1
   },
   {
     "id": 105,
-    "timestamp": "2026-07-10T11:29:21.842Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.315Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 39,
+    "userId": 1
   },
   {
     "id": 106,
-    "timestamp": "2026-07-10T11:29:22.269Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.328Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 40,
+    "userId": 1
   },
   {
     "id": 107,
-    "timestamp": "2026-07-10T11:29:22.751Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.341Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 41,
+    "userId": 1
   },
   {
     "id": 108,
-    "timestamp": "2026-07-10T11:38:11.943Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.353Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 42,
+    "userId": 1
   },
   {
     "id": 109,
-    "timestamp": "2026-07-10T11:38:12.440Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.365Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 43,
+    "userId": 1
   },
   {
     "id": 110,
-    "timestamp": "2026-07-10T11:38:13.024Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.379Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 44,
+    "userId": 1
   },
   {
     "id": 111,
-    "timestamp": "2026-07-10T11:38:13.116Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.391Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 45,
+    "userId": 1
   },
   {
     "id": 112,
-    "timestamp": "2026-07-10T11:38:13.122Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.404Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 46,
+    "userId": 1
   },
   {
     "id": 113,
-    "timestamp": "2026-07-10T11:38:13.545Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.502Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 47,
+    "userId": 1
   },
   {
     "id": 114,
-    "timestamp": "2026-07-10T11:38:14.058Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.515Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 48,
+    "userId": 1
   },
   {
     "id": 115,
-    "timestamp": "2026-07-10T11:59:31.205Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.526Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 49,
+    "userId": 1
   },
   {
     "id": 116,
-    "timestamp": "2026-07-10T11:59:31.625Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.536Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 50,
+    "userId": 1
   },
   {
     "id": 117,
-    "timestamp": "2026-07-10T11:59:31.715Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.547Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 51,
+    "userId": 1
   },
   {
     "id": 118,
-    "timestamp": "2026-07-10T11:59:31.720Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.556Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 52,
+    "userId": 1
   },
   {
     "id": 119,
-    "timestamp": "2026-07-10T11:59:32.095Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.565Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 53,
+    "userId": 1
   },
   {
     "id": 120,
-    "timestamp": "2026-07-10T11:59:32.749Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.573Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 54,
+    "userId": 1
   },
   {
     "id": 121,
-    "timestamp": "2026-07-10T11:59:33.196Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.582Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 55,
+    "userId": 1
   },
   {
     "id": 122,
-    "timestamp": "2026-07-10T13:07:12.654Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.590Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 56,
+    "userId": 1
   },
   {
     "id": 123,
-    "timestamp": "2026-07-10T13:07:13.175Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.598Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 57,
+    "userId": 1
   },
   {
     "id": 124,
-    "timestamp": "2026-07-10T13:07:13.671Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.606Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 58,
+    "userId": 1
   },
   {
     "id": 125,
-    "timestamp": "2026-07-10T13:07:13.773Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.614Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 59,
+    "userId": 1
   },
   {
     "id": 126,
-    "timestamp": "2026-07-10T13:07:13.779Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.623Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 60,
+    "userId": 1
   },
   {
     "id": 127,
-    "timestamp": "2026-07-10T13:07:14.201Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.630Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 61,
+    "userId": 1
   },
   {
     "id": 128,
-    "timestamp": "2026-07-10T13:07:14.596Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.638Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 62,
+    "userId": 1
   },
   {
     "id": 129,
-    "timestamp": "2026-07-10T13:28:07.960Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.736Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 63,
+    "userId": 1
   },
   {
     "id": 130,
-    "timestamp": "2026-07-10T13:28:08.059Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.758Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 64,
+    "userId": 1
   },
   {
     "id": 131,
-    "timestamp": "2026-07-10T13:28:08.065Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.776Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 65,
+    "userId": 1
   },
   {
     "id": 132,
-    "timestamp": "2026-07-10T13:28:14.989Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.792Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 66,
+    "userId": 1
   },
   {
     "id": 133,
-    "timestamp": "2026-07-10T13:28:15.412Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.802Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 67,
+    "userId": 1
   },
   {
     "id": 134,
-    "timestamp": "2026-07-10T13:28:15.939Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.812Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 68,
+    "userId": 1
   },
   {
     "id": 135,
-    "timestamp": "2026-07-10T13:28:16.349Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.821Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 69,
+    "userId": 1
   },
   {
     "id": 136,
-    "timestamp": "2026-07-10T13:28:16.762Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.831Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 70,
+    "userId": 1
   },
   {
     "id": 137,
-    "timestamp": "2026-07-10T13:28:16.857Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.843Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 71,
+    "userId": 1
   },
   {
     "id": 138,
-    "timestamp": "2026-07-10T13:28:16.861Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.853Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 72,
+    "userId": 1
   },
   {
     "id": 139,
-    "timestamp": "2026-07-10T13:35:23.369Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.863Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 73,
+    "userId": 1
   },
   {
     "id": 140,
-    "timestamp": "2026-07-10T13:35:23.850Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.873Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 74,
+    "userId": 1
   },
   {
     "id": 141,
-    "timestamp": "2026-07-10T13:35:24.385Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:24.884Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 75,
+    "userId": 1
   },
   {
     "id": 142,
-    "timestamp": "2026-07-10T13:35:24.482Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:24.894Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 76,
+    "userId": 1
   },
   {
     "id": 143,
-    "timestamp": "2026-07-10T13:35:24.488Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:24.989Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 77,
+    "userId": 1
   },
   {
     "id": 144,
-    "timestamp": "2026-07-10T13:35:24.865Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.010Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 78,
+    "userId": 1
   },
   {
     "id": 145,
-    "timestamp": "2026-07-10T13:35:25.301Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.035Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 79,
+    "userId": 1
   },
   {
     "id": 146,
-    "timestamp": "2026-07-11T07:10:53.851Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.058Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 80,
+    "userId": 1
   },
   {
     "id": 147,
-    "timestamp": "2026-07-11T07:10:54.214Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.076Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 81,
+    "userId": 1
   },
   {
     "id": 148,
-    "timestamp": "2026-07-11T07:10:54.299Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.089Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 82,
+    "userId": 1
   },
   {
     "id": 149,
-    "timestamp": "2026-07-11T07:10:54.304Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.101Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 83,
+    "userId": 1
   },
   {
     "id": 150,
-    "timestamp": "2026-07-11T07:10:54.734Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.111Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 84,
+    "userId": 1
   },
   {
     "id": 151,
-    "timestamp": "2026-07-11T07:10:55.065Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.122Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 85,
+    "userId": 1
   },
   {
     "id": 152,
-    "timestamp": "2026-07-11T07:10:55.449Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.132Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 86,
+    "userId": 1
   },
   {
     "id": 153,
-    "timestamp": "2026-07-11T07:29:42.690Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.139Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 87,
+    "userId": 1
   },
   {
     "id": 154,
-    "timestamp": "2026-07-11T07:29:43.053Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.147Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 88,
+    "userId": 1
   },
   {
     "id": 155,
-    "timestamp": "2026-07-11T07:29:43.501Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.156Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 89,
+    "userId": 1
   },
   {
     "id": 156,
-    "timestamp": "2026-07-11T07:29:43.584Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.164Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 90,
+    "userId": 1
   },
   {
     "id": 157,
-    "timestamp": "2026-07-11T07:29:43.588Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.172Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 91,
+    "userId": 1
   },
   {
     "id": 158,
-    "timestamp": "2026-07-11T07:29:43.889Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.180Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 92,
+    "userId": 1
   },
   {
     "id": 159,
-    "timestamp": "2026-07-11T07:29:44.261Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.190Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 93,
+    "userId": 1
   },
   {
     "id": 160,
-    "timestamp": "2026-07-11T07:36:32.498Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.274Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 94,
+    "userId": 1
   },
   {
     "id": 161,
-    "timestamp": "2026-07-11T07:36:32.862Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.296Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 95,
+    "userId": 1
   },
   {
     "id": 162,
-    "timestamp": "2026-07-11T07:36:32.946Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.316Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 96,
+    "userId": 1
   },
   {
     "id": 163,
-    "timestamp": "2026-07-11T07:36:32.952Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.338Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 97,
+    "userId": 1
   },
   {
     "id": 164,
-    "timestamp": "2026-07-11T07:36:33.295Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.358Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 98,
+    "userId": 1
   },
   {
     "id": 165,
-    "timestamp": "2026-07-11T07:36:33.698Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.374Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 99,
+    "userId": 1
   },
   {
     "id": 166,
-    "timestamp": "2026-07-11T07:36:34.072Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.388Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 100,
+    "userId": 1
   },
   {
     "id": 167,
-    "timestamp": "2026-07-11T07:37:24.987Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.406Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 101,
+    "userId": 1
   },
   {
     "id": 168,
-    "timestamp": "2026-07-11T08:30:23.751Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.420Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 102,
+    "userId": 1
   },
   {
     "id": 169,
-    "timestamp": "2026-07-11T08:30:24.120Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.432Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 103,
+    "userId": 1
   },
   {
     "id": 170,
-    "timestamp": "2026-07-11T08:30:24.204Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.442Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 104,
+    "userId": 1
   },
   {
     "id": 171,
-    "timestamp": "2026-07-11T08:30:24.208Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.452Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 105,
+    "userId": 1
   },
   {
     "id": 172,
-    "timestamp": "2026-07-11T08:30:24.543Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.461Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 106,
+    "userId": 1
   },
   {
     "id": 173,
-    "timestamp": "2026-07-11T08:30:24.928Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.470Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 107,
+    "userId": 1
   },
   {
     "id": 174,
-    "timestamp": "2026-07-11T08:30:25.281Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.479Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 108,
+    "userId": 1
   },
   {
     "id": 175,
-    "timestamp": "2026-07-11T09:29:23.760Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.598Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 109,
+    "userId": 1
   },
   {
     "id": 176,
-    "timestamp": "2026-07-11T09:29:24.305Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.609Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 110,
+    "userId": 1
   },
   {
     "id": 177,
-    "timestamp": "2026-07-11T09:29:24.391Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.617Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 111,
+    "userId": 1
   },
   {
     "id": 178,
-    "timestamp": "2026-07-11T09:29:24.396Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.627Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 112,
+    "userId": 1
   },
   {
     "id": 179,
-    "timestamp": "2026-07-11T09:29:24.974Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.636Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 113,
+    "userId": 1
   },
   {
     "id": 180,
-    "timestamp": "2026-07-11T09:29:25.582Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.645Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 114,
+    "userId": 1
   },
   {
     "id": 181,
-    "timestamp": "2026-07-11T09:29:26.108Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.654Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 115,
+    "userId": 1
   },
   {
     "id": 182,
-    "timestamp": "2026-07-11T09:30:46.215Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.662Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 116,
+    "userId": 1
   },
   {
     "id": 183,
-    "timestamp": "2026-07-11T09:31:36.950Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.670Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 117,
+    "userId": 1
   },
   {
     "id": 184,
-    "timestamp": "2026-07-11T09:31:50.326Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.677Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 118,
+    "userId": 1
   },
   {
     "id": 185,
-    "timestamp": "2026-07-11T09:31:50.688Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.686Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 119,
+    "userId": 1
   },
   {
     "id": 186,
-    "timestamp": "2026-07-11T09:31:51.078Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.777Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 120,
+    "userId": 1
   },
   {
     "id": 187,
-    "timestamp": "2026-07-11T09:31:51.147Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.799Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 121,
+    "userId": 1
   },
   {
     "id": 188,
-    "timestamp": "2026-07-11T09:31:51.153Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.819Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 122,
+    "userId": 1
   },
   {
     "id": 189,
-    "timestamp": "2026-07-11T09:31:51.748Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.840Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 123,
+    "userId": 1
   },
   {
     "id": 190,
-    "timestamp": "2026-07-11T09:31:52.226Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.856Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 124,
+    "userId": 1
   },
   {
     "id": 191,
-    "timestamp": "2026-07-11T09:41:40.202Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.869Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 125,
+    "userId": 1
   },
   {
     "id": 192,
-    "timestamp": "2026-07-11T09:41:49.911Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.883Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 126,
+    "userId": 1
   },
   {
     "id": 193,
-    "timestamp": "2026-07-11T09:41:50.454Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.897Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 127,
+    "userId": 1
   },
   {
     "id": 194,
-    "timestamp": "2026-07-11T09:41:51.042Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.910Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 128,
+    "userId": 1
   },
   {
     "id": 195,
-    "timestamp": "2026-07-11T09:41:51.842Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.924Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 129,
+    "userId": 1
   },
   {
     "id": 196,
-    "timestamp": "2026-07-11T09:41:51.925Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:25.939Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 130,
+    "userId": 1
   },
   {
     "id": 197,
-    "timestamp": "2026-07-11T09:41:51.930Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:25.954Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 131,
+    "userId": 1
   },
   {
     "id": 198,
-    "timestamp": "2026-07-11T09:41:52.422Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.968Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 132,
+    "userId": 1
   },
   {
     "id": 199,
-    "timestamp": "2026-07-11T10:52:00.731Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.982Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 133,
+    "userId": 1
   },
   {
     "id": 200,
-    "timestamp": "2026-07-11T10:52:01.315Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:25.996Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 134,
+    "userId": 1
   },
   {
     "id": 201,
-    "timestamp": "2026-07-11T10:52:01.439Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:26.009Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 135,
+    "userId": 1
   },
   {
     "id": 202,
-    "timestamp": "2026-07-11T10:52:01.444Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:26.113Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 136,
+    "userId": 1
   },
   {
     "id": 203,
-    "timestamp": "2026-07-11T10:52:01.943Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.134Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 137,
+    "userId": 1
   },
   {
     "id": 204,
-    "timestamp": "2026-07-11T10:52:02.427Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.158Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 138,
+    "userId": 1
   },
   {
     "id": 205,
-    "timestamp": "2026-07-11T10:52:03.060Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.181Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 139,
+    "userId": 1
   },
   {
     "id": 206,
-    "timestamp": "2026-07-11T10:56:08.841Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.195Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 140,
+    "userId": 1
   },
   {
     "id": 207,
-    "timestamp": "2026-07-11T10:56:09.494Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.206Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 141,
+    "userId": 1
   },
   {
     "id": 208,
-    "timestamp": "2026-07-11T10:56:09.594Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": 1,
-    "userRole": "admin",
-    "after": {
-      "attemptedUsername": "testadmin",
-      "reason": "wrong_password"
-    }
+    "timestamp": "2026-07-18T19:17:26.215Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 142,
+    "userId": 1
   },
   {
     "id": 209,
-    "timestamp": "2026-07-11T10:56:09.600Z",
-    "module": "auth",
-    "action": "login_failed",
-    "userId": null,
-    "userRole": null,
-    "after": {
-      "attemptedUsername": "no-such-user",
-      "reason": "user_not_found"
-    }
+    "timestamp": "2026-07-18T19:17:26.224Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 143,
+    "userId": 1
   },
   {
     "id": 210,
-    "timestamp": "2026-07-11T10:56:10.229Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.234Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 144,
+    "userId": 1
   },
   {
     "id": 211,
-    "timestamp": "2026-07-11T10:56:10.891Z",
-    "module": "auth",
-    "action": "login_success",
-    "userId": 1,
-    "userRole": "admin"
+    "timestamp": "2026-07-18T19:17:26.242Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 145,
+    "userId": 1
   },
   {
     "id": 212,
-    "timestamp": "2026-07-11T10:56:11.486Z",
+    "timestamp": "2026-07-18T19:17:26.250Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 146,
+    "userId": 1
+  },
+  {
+    "id": 213,
+    "timestamp": "2026-07-18T19:17:26.258Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 147,
+    "userId": 1
+  },
+  {
+    "id": 214,
+    "timestamp": "2026-07-18T19:17:26.266Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 148,
+    "userId": 1
+  },
+  {
+    "id": 215,
+    "timestamp": "2026-07-18T19:17:26.359Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 149,
+    "userId": 1
+  },
+  {
+    "id": 216,
+    "timestamp": "2026-07-18T19:17:26.699Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 150,
+    "userId": 1
+  },
+  {
+    "id": 217,
+    "timestamp": "2026-07-18T19:17:26.707Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 151,
+    "userId": 1
+  },
+  {
+    "id": 218,
+    "timestamp": "2026-07-18T19:17:26.716Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 152,
+    "userId": 1
+  },
+  {
+    "id": 219,
+    "timestamp": "2026-07-18T19:17:26.723Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 153,
+    "userId": 1
+  },
+  {
+    "id": 220,
+    "timestamp": "2026-07-18T19:17:26.731Z",
+    "action": "UPDATE",
+    "table": "doctors",
+    "recordId": 154,
+    "userId": 1
+  },
+  {
+    "id": 221,
+    "timestamp": "2026-07-18T19:17:26.747Z",
+    "action": "UPDATE",
+    "table": "departments",
+    "recordId": 78,
+    "userId": 1
+  },
+  {
+    "id": 222,
+    "timestamp": "2026-07-18T19:17:26.756Z",
+    "action": "UPDATE",
+    "table": "departments",
+    "recordId": 79,
+    "userId": 1
+  },
+  {
+    "id": 223,
+    "timestamp": "2026-07-18T19:17:26.985Z",
+    "action": "UPDATE",
+    "table": "departments",
+    "recordId": 80,
+    "userId": 1
+  },
+  {
+    "id": 224,
+    "timestamp": "2026-07-18T19:17:27.053Z",
+    "action": "UPDATE",
+    "table": "departments",
+    "recordId": 81,
+    "userId": 1
+  },
+  {
+    "id": 225,
+    "timestamp": "2026-07-18T19:17:27.145Z",
+    "action": "UPDATE",
+    "table": "departments",
+    "recordId": 82,
+    "userId": 1
+  },
+  {
+    "id": 226,
+    "timestamp": "2026-07-19T07:54:02.329Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 3,
+    "userId": 1
+  },
+  {
+    "id": 227,
+    "timestamp": "2026-07-19T08:10:02.643Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 3,
+    "userId": 1
+  },
+  {
+    "id": 228,
+    "timestamp": "2026-07-19T08:10:08.604Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 3,
+    "userId": 1
+  },
+  {
+    "id": 229,
+    "timestamp": "2026-07-19T08:12:17.442Z",
+    "action": "CREATE",
+    "table": "patients",
+    "recordId": 20,
+    "userId": 1
+  },
+  {
+    "id": 230,
+    "timestamp": "2026-07-19T08:12:50.042Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 4,
+    "userId": 1
+  },
+  {
+    "id": 231,
+    "timestamp": "2026-07-19T08:13:25.696Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 4,
+    "userId": 1
+  },
+  {
+    "id": 232,
+    "timestamp": "2026-07-19T08:13:28.794Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 4,
+    "userId": 1
+  },
+  {
+    "id": 233,
+    "timestamp": "2026-07-19T08:15:24.859Z",
+    "action": "CREATE",
+    "table": "patients",
+    "recordId": 21,
+    "userId": 1
+  },
+  {
+    "id": 234,
+    "timestamp": "2026-07-19T08:16:26.094Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 5,
+    "userId": 1
+  },
+  {
+    "id": 235,
+    "timestamp": "2026-07-19T08:16:32.657Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 5,
+    "userId": 1
+  },
+  {
+    "id": 236,
+    "timestamp": "2026-07-19T08:16:46.107Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 5,
+    "userId": 1
+  },
+  {
+    "id": 237,
+    "timestamp": "2026-07-19T08:20:32.940Z",
+    "action": "CREATE",
+    "table": "radiology",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 238,
+    "timestamp": "2026-07-19T08:20:37.395Z",
+    "action": "UPDATE",
+    "table": "radiology",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 239,
+    "timestamp": "2026-07-19T08:20:39.477Z",
+    "action": "UPDATE",
+    "table": "radiology",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 240,
+    "timestamp": "2026-07-19T08:20:56.638Z",
+    "action": "UPDATE",
+    "table": "radiology",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 241,
+    "timestamp": "2026-07-19T08:56:40.766Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 6,
+    "userId": 1
+  },
+  {
+    "id": 242,
+    "timestamp": "2026-07-19T08:56:40.811Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 7,
+    "userId": 1
+  },
+  {
+    "id": 243,
+    "timestamp": "2026-07-19T08:56:41.087Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 8,
+    "userId": 1
+  },
+  {
+    "id": 244,
+    "timestamp": "2026-07-19T08:56:41.271Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 9,
+    "userId": 1
+  },
+  {
+    "id": 245,
+    "timestamp": "2026-07-19T08:56:41.519Z",
+    "action": "CREATE",
+    "table": "lab_tests",
+    "recordId": 10,
+    "userId": 1
+  },
+  {
+    "id": 246,
+    "timestamp": "2026-07-19T08:56:59.291Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 6,
+    "userId": 1
+  },
+  {
+    "id": 247,
+    "timestamp": "2026-07-19T08:57:02.868Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 6,
+    "userId": 1
+  },
+  {
+    "id": 248,
+    "timestamp": "2026-07-19T08:59:55.755Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 7,
+    "userId": 1
+  },
+  {
+    "id": 249,
+    "timestamp": "2026-07-19T09:00:04.179Z",
+    "action": "UPDATE",
+    "table": "lab_tests",
+    "recordId": 7,
+    "userId": 1
+  },
+  {
+    "id": 250,
+    "timestamp": "2026-07-19T14:06:38.179Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,
     "userRole": "admin"
   },
   {
-    "id": 213,
-    "timestamp": "2026-07-11T11:04:24.891Z",
+    "id": 251,
+    "timestamp": "2026-07-19T14:08:24.693Z",
+    "module": "invoice-reader",
+    "action": "read",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "provider": "gemini",
+      "itemsCount": 0
+    }
+  },
+  {
+    "id": 252,
+    "timestamp": "2026-07-19T14:10:23.130Z",
+    "module": "invoice-reader",
+    "action": "read",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "provider": "gemini",
+      "itemsCount": 10
+    }
+  },
+  {
+    "id": 253,
+    "timestamp": "2026-07-19T14:13:36.393Z",
+    "module": "invoice-reader",
+    "action": "read",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "provider": "gemini",
+      "itemsCount": 7
+    }
+  },
+  {
+    "id": 254,
+    "timestamp": "2026-07-19T14:16:48.414Z",
+    "module": "invoice-reader",
+    "action": "read",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "provider": "gemini",
+      "itemsCount": 9
+    }
+  },
+  {
+    "id": 255,
+    "timestamp": "2026-07-19T14:17:38.822Z",
+    "action": "CREATE",
+    "table": "procurement",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 256,
+    "timestamp": "2026-07-19T14:29:49.529Z",
+    "module": "invoice-reader",
+    "action": "read",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "provider": "gemini",
+      "itemsCount": 7
+    }
+  },
+  {
+    "id": 257,
+    "timestamp": "2026-07-19T14:30:17.098Z",
+    "action": "CREATE",
+    "table": "procurement",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 258,
+    "timestamp": "2026-07-19T14:30:54.125Z",
+    "action": "UPDATE",
+    "table": "procurement",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 259,
+    "timestamp": "2026-07-19T14:46:38.201Z",
+    "action": "CREATE",
+    "table": "documents",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 260,
+    "timestamp": "2026-07-19T15:03:54.177Z",
+    "action": "CREATE",
+    "table": "outgoing",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 261,
+    "timestamp": "2026-07-19T19:16:27.221Z",
+    "action": "CREATE",
+    "table": "outgoing",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 262,
+    "timestamp": "2026-07-19T19:33:29.948Z",
+    "action": "CREATE",
+    "table": "outgoing",
+    "recordId": 3,
+    "userId": 1
+  },
+  {
+    "id": 263,
+    "timestamp": "2026-07-20T08:55:12.446Z",
+    "action": "CREATE",
+    "table": "patients",
+    "recordId": 22,
+    "userId": 1
+  },
+  {
+    "id": 264,
+    "timestamp": "2026-07-20T09:50:29.070Z",
+    "action": "CREATE",
+    "table": "patients",
+    "recordId": 23,
+    "userId": 1
+  },
+  {
+    "id": 265,
+    "timestamp": "2026-07-20T17:18:54.969Z",
     "module": "auth",
     "action": "login_success",
     "userId": 1,

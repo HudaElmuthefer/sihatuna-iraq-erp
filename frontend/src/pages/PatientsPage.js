@@ -1,18 +1,20 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../translations';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { FaUsers, FaPlus, FaSearch, FaEdit, FaTrash, FaEye, FaTimes, FaFileExcel} from 'react-icons/fa';
-import usePagination from '../hooks/usePagination';
+import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
+import DiagnosisPicker from '../components/DiagnosisPicker';
 import { api } from '../api';
 
 const emptyForm = {
-  name: '', nameEn: '', age: '', gender: 'male', phone: '',
+  name: '', nameEn: '', age: '', gender: 'male', phone: '', nationalId: '',
   bloodType: 'A+', status: 'active', insurance: '', notes: '',
-  diagnosis: '', doctor: '', allergies: '', chronicDiseases: ''
+  diagnosis: '', diagnoses: [], doctor: '', allergies: '', chronicDiseases: ''
 };
 
 const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -22,26 +24,40 @@ export default function PatientsPage() {
   const { lang, addToast, patients, setPatients, syncPatientToServer, hospitals, multiHospitalEnabled, filterByViewingHospital } = useApp();
   const tr = useT(lang);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [selected, setSelected] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const ar = lang === 'ar';
 
-  const filtered = patients.filter(p => {
-    const q = search.toLowerCase();
-    const matchSearch = (p.name || '').toLowerCase().includes(q) ||
-      (p.nameEn || '').toLowerCase().includes(q) ||
-      (p.phone || '').includes(q) ||
-      (p.patientId || '').includes(q);
-    const matchStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // تأخير البحث 350 مللي ثانية بعد آخر حرف تكتبينه — بدون هذا، كل ضغطة زر
+  // كانت ترسل طلب فوري للخادم (بطيء وغير ضروري)؛ الآن ينتظر توقفج عن الكتابة
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
+  // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
+  // الجدول المعروض بهذي الصفحة يجيب فقط الصفحة الحالية من الخادم (بحث/فلترة/
+  // ترقيم يصير كله بقاعدة البيانات، مو بالمتصفح) — سريع بغض النظر عن عدد
+  // المرضى الكلي، حتى لو وصل لعشرات الآلاف مستقبلاً. مصفوفة `patients` من
+  // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
+  // (الفوترة، المواعيد) لقوائم اختيار، وما لها علاقة بجدول هذي الصفحة تحديداً.
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+    useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50 });
 
   const openAdd = () => {
     // نعتمد على أعلى رقم مريض موجود فعلياً بدل عدد السجلات — الاعتماد على
@@ -56,7 +72,17 @@ export default function PatientsPage() {
     setModal('add');
   };
 
-  const openEdit = (p) => { setForm({ ...p }); setSelected(p); setModal('edit'); };
+  const openEdit = (p) => {
+    // التوافق العكسي: مرضى أُنشئوا قبل هذا التحديث لهم icdCode/snomedCode
+    // كحقلين منفردين لا كمصفوفة diagnoses — نحوّلهما تلقائياً هنا بدل فقدان البيانات
+    let diagnoses = Array.isArray(p.diagnoses) ? p.diagnoses : [];
+    if (diagnoses.length === 0 && (p.icdCode || p.snomedCode)) {
+      diagnoses = [{ id: Date.now(), icdCode: p.icdCode || '', icdNameAr: '', icdNameEn: '', snomedCode: p.snomedCode || '', snomedNameAr: '', snomedNameEn: '', isPrimary: true, dateAdded: '' }];
+    }
+    setForm({ ...p, diagnoses });
+    setSelected(p);
+    setModal('edit');
+  };
   const openView = (p) => { setSelected(p); setModal('view'); };
 
   // حفظ بيانات المريض: يجب انتظار الرد الفعلي من الخادم (await) قبل إظهار رسالة
@@ -79,11 +105,13 @@ export default function PatientsPage() {
       setPatients(p => [newPt, ...p]);
       const synced = await syncPatientToServer('create', newPt);
       addToast(tr(synced ? 'x_tmti_afaalmri_bnjah' : 'x_tmalhfzmhliaftqrmzamn'), synced ? 'success' : 'warning');
+      refetch(); // نحدّث الجدول المعروض (المجلوب من السيرفر) ليعكس السجل الجديد فوراً
     } else {
       const updatedPt = { ...form, id: selected.id };
       setPatients(p => p.map(pt => pt.id === selected.id ? updatedPt : pt));
       const synced = await syncPatientToServer('update', updatedPt);
       addToast(tr(synced ? 'x_tmthdithbianatalmri' : 'x_tmalhfzmhliaftqrmzamn'), synced ? 'success' : 'warning');
+      refetch();
     }
     setModal(null);
   };
@@ -93,6 +121,26 @@ export default function PatientsPage() {
     const synced = await syncPatientToServer('delete', { id: deleteConfirm });
     addToast(tr(synced ? 'x_tmhdhfalmri' : 'x_tmalhfzmhliaftqrmzamn'), synced ? 'success' : 'warning');
     setDeleteConfirm(null);
+    refetch();
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const synced = await syncPatientToServer('delete', { id });
+      if (synced) { setPatients(p => p.filter(pt => pt.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    addToast(
+      ar ? `تم حذف ${deleted} من ${ids.length} مريض` : `Deleted ${deleted} of ${ids.length} patients`,
+      deleted === ids.length ? 'success' : 'warning'
+    );
+    refetch();
   };
 
   const statusLabel = (s) => {
@@ -112,6 +160,7 @@ export default function PatientsPage() {
           <button className="btn btn-outline" onClick={() => setShowImport(true)}>
             <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
           </button>
+          <ExcelExportButton apiName="patients" lang={lang} onError={(m) => addToast(m, 'error')} />
           <button className="btn btn-primary" onClick={openAdd}>
             <FaPlus /> {tr('pat_add')}
           </button>
@@ -129,6 +178,7 @@ export default function PatientsPage() {
               const fresh = await api.get('/patients');
               if (Array.isArray(fresh)) setPatients(fresh);
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+            refetch(); // يحدّث جدول هذي الصفحة تحديداً (المجلوب من السيرفر بشكل منفصل)
           }}
         />
       )}
@@ -153,24 +203,51 @@ export default function PatientsPage() {
       </div>
 
       <div className="card">
+        {selectedIds.size > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{ar ? `${selectedIds.size} محدَّد` : `${selectedIds.size} selected`}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setSelectedIds(new Set())} className="btn btn-outline" style={{ fontSize: 12, padding: '6px 12px' }}>{ar ? 'إلغاء التحديد' : 'Clear Selection'}</button>
+              <button onClick={() => setBulkDeleteConfirm(true)} className="btn btn-danger" style={{ fontSize: 12, padding: '6px 12px' }}><FaTrash /> {ar ? `حذف المحدَّد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}</button>
+            </div>
+          </div>
+        )}
         <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(p => selectedIds.has(p.id))} onChange={() => {
+                    setSelectedIds(prev => {
+                      const allSelected = pageItems.every(p => prev.has(p.id));
+                      const next = new Set(prev);
+                      pageItems.forEach(p => allSelected ? next.delete(p.id) : next.add(p.id));
+                      return next;
+                    });
+                  }} />
+                </th>
                 <th>{tr('pat_patient_id')}</th>
                 <th>{tr('field_name')}</th>
                 <th>{tr('x_alamraljns')}</th>
                 <th>{tr('field_phone')}</th>
                 <th>{tr('pat_blood_type')}</th>
                 <th>{tr('x_altbibalmaalj')}</th>
+                <th>{lang === 'ar' ? 'التشخيص الأساسي (ICD)' : 'Primary Diagnosis (ICD)'}</th>
                 <th>{tr('pat_last_visit')}</th>
                 <th>{tr('field_status')}</th>
                 <th>{tr('field_actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan="9">
+              {loading ? (
+                <tr><td colSpan="11">
+                  <div className="empty-state">
+                    <div className="icon">⏳</div>
+                    <h3>{ar ? 'جاري التحميل...' : 'Loading...'}</h3>
+                  </div>
+                </td></tr>
+              ) : pageItems.length === 0 ? (
+                <tr><td colSpan="11">
                   <div className="empty-state">
                     <div className="icon">👤</div>
                     <h3>{tr('pat_no_patients')}</h3>
@@ -180,6 +257,7 @@ export default function PatientsPage() {
                 const s = statusLabel(p.status);
                 return (
                   <tr key={p.id}>
+                    <td><input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} /></td>
                     <td><span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.patientId}</span></td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -194,6 +272,14 @@ export default function PatientsPage() {
                     <td style={{ fontSize: 13, direction: 'ltr' }}>{p.phone}</td>
                     <td><span className="badge badge-info">{p.bloodType}</span></td>
                     <td style={{ fontSize: 13 }}>{p.doctor}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {(() => {
+                        const primary = Array.isArray(p.diagnoses) ? p.diagnoses.find(d => d.isPrimary) || p.diagnoses[0] : null;
+                        if (primary?.icdCode) return <span><span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{primary.icdCode}</span> {lang === 'ar' ? primary.icdNameAr : (primary.icdNameEn || primary.icdNameAr)}</span>;
+                        if (p.icdCode) return <span style={{ fontFamily: 'monospace' }}>{p.icdCode}</span>; // بيانات قديمة قبل هذا التحديث
+                        return '-';
+                      })()}
+                    </td>
                     <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.lastVisit}</td>
                     <td><span className={`badge ${s.className}`}>{s.label}</span></td>
                     <td>
@@ -226,6 +312,7 @@ export default function PatientsPage() {
               <div className="grid-2">
                 <div className="form-group"><label className="form-label">{tr('x_alasmbalarbi')}</label><input className="form-control" value={form.name || ''} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{tr('col_name_en')}</label><input className="form-control" value={form.nameEn || ''} onChange={e => setForm(p => ({ ...p, nameEn: e.target.value }))} /></div>
+                <div className="form-group"><label className="form-label">{lang === 'ar' ? 'رقم البطاقة الوطنية الموحدة' : 'National ID Number'}</label><input className="form-control" value={form.nationalId || ''} onChange={e => setForm(p => ({ ...p, nationalId: e.target.value }))} placeholder={lang === 'ar' ? 'اختياري' : 'Optional'} /></div>
                 <div className="form-group"><label className="form-label">{tr('x_alamr')}</label><input className="form-control" type="number" value={form.age || ''} onChange={e => setForm(p => ({ ...p, age: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{tr('field_gender')}</label>
                   <select className="form-control" value={form.gender || 'male'} onChange={e => setForm(p => ({ ...p, gender: e.target.value }))}>
@@ -249,6 +336,10 @@ export default function PatientsPage() {
                   </select>
                 </div>
                 <div className="form-group"><label className="form-label">{tr('field_diagnosis')}</label><input className="form-control" value={form.diagnosis || ''} onChange={e => setForm(p => ({ ...p, diagnosis: e.target.value }))} /></div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">{lang === 'ar' ? 'التصنيف الطبي الدولي (ICD-10 / SNOMED CT)' : 'International Medical Classification (ICD-10 / SNOMED CT)'}</label>
+                  <DiagnosisPicker diagnoses={form.diagnoses || []} onChange={(d) => setForm(p => ({ ...p, diagnoses: d }))} lang={lang} />
+                </div>
                 <div className="form-group"><label className="form-label">{tr('x_altbibalmaalj')}</label><input className="form-control" value={form.doctor || ''} onChange={e => setForm(p => ({ ...p, doctor: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{tr('x_rqmaltamin')}</label><input className="form-control" value={form.insurance || ''} onChange={e => setForm(p => ({ ...p, insurance: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{tr('field_status')}</label>
@@ -299,6 +390,20 @@ export default function PatientsPage() {
                   </div>
                 ))}
               </div>
+              {(Array.isArray(selected.diagnoses) && selected.diagnoses.length > 0) && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>{lang === 'ar' ? 'التصنيف الطبي الدولي (ICD-10 / SNOMED CT)' : 'International Medical Classification'}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {selected.diagnoses.map((d) => (
+                      <div key={d.id} style={{ padding: 10, background: d.isPrimary ? '#eff6ff' : 'var(--bg-primary)', borderRadius: 8, fontSize: 13 }}>
+                        {d.icdCode && <span><span style={{ fontFamily: 'monospace', color: '#1a6bab' }}>{d.icdCode}</span> {lang === 'ar' ? d.icdNameAr : (d.icdNameEn || d.icdNameAr)}</span>}
+                        {d.snomedCode && <span style={{ marginInlineStart: 10 }}><span style={{ fontFamily: 'monospace', color: '#7c3aed' }}>{d.snomedCode}</span> {lang === 'ar' ? d.snomedNameAr : (d.snomedNameEn || d.snomedNameAr)}</span>}
+                        {d.isPrimary && <span style={{ fontSize: 10, background: '#1a6bab', color: '#fff', padding: '1px 6px', borderRadius: 4, marginInlineStart: 8 }}>{lang === 'ar' ? 'أساسي' : 'Primary'}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setModal(null)}>{tr('btn_close')}</button>
@@ -320,6 +425,24 @@ export default function PatientsPage() {
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button className="btn btn-outline" onClick={() => setDeleteConfirm(null)}>{tr('btn_cancel')}</button>
                 <button className="btn btn-danger" onClick={handleDelete}>{tr('btn_delete')}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => !bulkDeleting && setBulkDeleteConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+              <h3 style={{ fontSize: 20, marginBottom: 8 }}>{ar ? `حذف ${selectedIds.size} مريض؟` : `Delete ${selectedIds.size} patients?`}</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>
+                {tr('x_hlantmtakd_laimknaltraja')}
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button className="btn btn-outline" onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting}>{tr('btn_cancel')}</button>
+                <button className="btn btn-danger" onClick={handleBulkDelete} disabled={bulkDeleting}>{bulkDeleting ? '...' : tr('btn_delete')}</button>
               </div>
             </div>
           </div>

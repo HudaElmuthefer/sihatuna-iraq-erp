@@ -107,12 +107,29 @@ export default function ExcelImportModal({ apiName, title, lang, onClose, onImpo
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#10b981', fontWeight: 700 }}>
                   <FaCheckCircle /> {results.imported} {ar ? 'تم استيرادهم' : 'imported'}
                 </div>
+                {results.duplicates > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b', fontWeight: 700 }}>
+                    <FaExclamationTriangle /> {results.duplicates} {ar ? 'مكرر (تم تجاوزه)' : 'duplicate (skipped)'}
+                  </div>
+                )}
                 {results.failed > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontWeight: 700 }}>
                     <FaExclamationTriangle /> {results.failed} {ar ? 'فشلوا' : 'failed'}
                   </div>
                 )}
               </div>
+              {results.duplicateRows?.length > 0 && (
+                <div style={{ maxHeight: 120, overflowY: 'auto', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 6 }}>
+                    {ar ? 'سجلات موجودة مسبقاً (تم تجاوزها):' : 'Already existing (skipped):'}
+                  </div>
+                  {results.duplicateRows.map((d, i) => (
+                    <div key={i} style={{ fontSize: 12.5, marginBottom: 4, color: 'var(--text-secondary)' }}>
+                      {ar ? `صف ${d.row}` : `Row ${d.row}`}: {d.name}
+                    </div>
+                  ))}
+                </div>
+              )}
               {results.errors?.length > 0 && (
                 <div style={{ maxHeight: 200, overflowY: 'auto', padding: '10px 16px' }}>
                   {results.errors.map((e, i) => (

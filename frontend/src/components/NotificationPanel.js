@@ -1,24 +1,38 @@
 /* eslint-disable no-unused-vars */
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
-import { FaBell, FaCalendarAlt, FaUser, FaChartBar, FaExclamationTriangle, FaCheckDouble } from 'react-icons/fa';
+import { FaBell, FaCalendarAlt, FaUser, FaChartBar, FaExclamationTriangle, FaCheckDouble, FaShoppingCart, FaFileAlt } from 'react-icons/fa';
 
 const icons = {
   appointment: <FaCalendarAlt />,
   patient: <FaUser />,
   report: <FaChartBar />,
-  alert: <FaExclamationTriangle /> };
+  alert: <FaExclamationTriangle />,
+  procurement: <FaShoppingCart />,
+  document: <FaFileAlt /> };
 
 const colors = {
   appointment: '#1a6bab',
   patient: '#10b981',
   report: '#8b5cf6',
-  alert: '#ef4444' };
+  alert: '#ef4444',
+  procurement: '#06b6d4',
+  document: '#6366f1' };
 
 export default function NotificationPanel({ onClose }) {
   const { notifications, markNotifRead, markAllNotifRead, lang } = useApp();
   const tr = useT(lang);
+  const navigate = useNavigate();
+
+  // إصلاح: الضغط على الإشعار كان يكتفي بتعليمه كمقروء بدون أي تنقّل — الآن
+  // ينقل فعلياً لصفحة الإشعار (كل إشعار يحمل link حقيقي) ويقفل القائمة.
+  const handleClick = (n) => {
+    markNotifRead(n.id);
+    if (n.link) navigate(n.link);
+    if (onClose) onClose();
+  };
 
   return (
     <div style={{
@@ -71,7 +85,7 @@ export default function NotificationPanel({ onClose }) {
           notifications.map(n => (
             <div
               key={n.id}
-              onClick={() => markNotifRead(n.id)}
+              onClick={() => handleClick(n)}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',

@@ -51,37 +51,43 @@ export default function AppointmentsPage() {
   };
   const openEdit = (a) => { setForm({...a}); setSelected(a); setModal('edit'); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.patient || !form.doctor || !form.date) {
       addToast(tr('auto_pair_53'), 'error'); return;
     }
+    const prev = apts;
     if (modal === 'add') {
       const na = { ...form, id: Date.now() };
       setApts(p => [...p, na]);
-      syncToServer('appointments', 'create', na);
+      const ok = await syncToServer('appointments', 'create', na);
+      if (!ok) { setApts(prev); return; }
       addToast(tr('auto_pair_54'), 'success');
     } else {
       const ua = { ...form, id: selected.id };
       setApts(p => p.map(a => a.id === selected.id ? ua : a));
-      syncToServer('appointments', 'update', ua);
+      const ok = await syncToServer('appointments', 'update', ua);
+      if (!ok) { setApts(prev); return; }
       addToast(tr('auto_pair_55'), 'success');
     }
     setModal(null);
   };
 
-  const changeStatus = (id, status) => {
-    setApts(p => {
-      const updated = p.map(a => a.id === id ? { ...a, status } : a);
-      const changed = updated.find(a => a.id === id);
-      if (changed) syncToServer('appointments', 'update', changed);
-      return updated;
-    });
+  const changeStatus = async (id, status) => {
+    const prev = apts;
+    const current = apts.find(a => a.id === id);
+    if (!current) return;
+    const changed = { ...current, status };
+    setApts(p => p.map(a => a.id === id ? changed : a));
+    const ok = await syncToServer('appointments', 'update', changed);
+    if (!ok) { setApts(prev); return; }
     addToast(tr('auto_pair_56'), 'success');
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    const prev = apts;
     setApts(p => p.filter(a => a.id !== deleteConfirm));
-    syncToServer('appointments', 'delete', { id: deleteConfirm });
+    const ok = await syncToServer('appointments', 'delete', { id: deleteConfirm });
+    if (!ok) { setApts(prev); return; }
     addToast(tr('auto_pair_57'), 'success');
     setDeleteConfirm(null);
   };

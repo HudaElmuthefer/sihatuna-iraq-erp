@@ -16,6 +16,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/database');
+const { devLog } = require('../utils/logger');
 
 const DB_JSON_PATH = path.join(__dirname, '..', 'data', 'db.json');
 
@@ -31,7 +32,7 @@ async function migrateHospital(client) {
     `INSERT INTO hospitals (name_ar, name_en) VALUES ($1,$2) RETURNING id`,
     ['مستشفى صحتنا العراق', 'Sihatuna Iraq Hospital'] // عدّل الاسم الفعلي إذا يختلف
   );
-  console.log('✅ Default hospital record created');
+  devLog('✅ Default hospital record created');
   return result.rows[0].id;
 }
 
@@ -46,7 +47,7 @@ async function migrateUsers(client, hospitalId, oldDb) {
     );
     if (result.rows[0]) idMap[u.id] = result.rows[0].id;
   }
-  console.log(`✅ Migrated ${Object.keys(idMap).length} users`);
+  devLog(`✅ Migrated ${Object.keys(idMap).length} users`);
   return idMap;
 }
 
@@ -61,14 +62,14 @@ async function migratePatients(client, hospitalId, oldDb) {
     );
     idMap[p.id] = result.rows[0].id;
   }
-  console.log(`✅ Migrated ${Object.keys(idMap).length} patients`);
+  devLog(`✅ Migrated ${Object.keys(idMap).length} patients`);
   return idMap;
 }
 
 async function run() {
   const client = await pool.connect();
   try {
-    console.log('🚀 Starting migration from db.json to PostgreSQL...\n');
+    devLog('🚀 Starting migration from db.json to PostgreSQL...\n');
     const oldDb = loadOldDb();
 
     await client.query('BEGIN');
@@ -83,8 +84,8 @@ async function run() {
     //  الموجود حالياً يغطي فقط: hospitals, users, patients, invoices + الدفع + CRM)
 
     await client.query('COMMIT');
-    console.log('\n✅ Successfully migrated users and patients!');
-    console.log('ℹ️  Remaining modules (doctors, appointments...) need additional SQL tables first — let me know if you want them added.');
+    devLog('\n✅ Successfully migrated users and patients!');
+    devLog('ℹ️  Remaining modules (doctors, appointments...) need additional SQL tables first — let me know if you want them added.');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Migration failed, all changes rolled back:', err);

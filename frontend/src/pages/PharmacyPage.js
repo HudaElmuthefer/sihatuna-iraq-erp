@@ -26,13 +26,20 @@ const EMPTY_ITEM = { name:'', qty:1, unit:'Tablet', dosage:'' };
 const EMPTY_DRUG = { code:'', name:'', nameEn:'', category:'other', form:'Tablet', strength:'', manufacturer:'', unitCost:0, qty:0, minQty:10, maxQty:500, expiry:'', notes:'' };
 
 export default function PharmacyPage() {
-  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [tab, setTab]           = useState('prescriptions');
   const [search, setSearch]     = useState('');
   const [drugSearch, setDrugSearch] = useState('');
+  // ── تحديد متعدد للحذف الجماعي (الوصفات والأدوية منفصلين) ─────────────────
+  const [selectedRxIds, setSelectedRxIds] = useState(new Set());
+  const [selectedDrugIds, setSelectedDrugIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(null); // 'rx' | 'drug' | null
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleRxSelect = (id) => setSelectedRxIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleDrugSelect = (id) => setSelectedDrugIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [statusFilter, setStatusFilter] = useState('all');
   const [catFilter, setCatFilter]       = useState('all');
 
@@ -84,7 +91,15 @@ export default function PharmacyPage() {
 
   // ── PRESCRIPTIONS CRUD ──────────────────────────────────────────────
   const openAddRx = () => {
-    const no = `RX-${new Date().getFullYear()}-${String(pharmacyOrders.length+1).padStart(4,'0')}`;
+    // إصلاح: pharmacyOrders.length+1 يكرر رقم وصفة موجود فعلاً بعد أي حذف
+    const rYear = new Date().getFullYear();
+    const rPrefix = `RX-${rYear}-`;
+    const rMaxSeq = pharmacyOrders.reduce((max,r)=>{
+      if (typeof r.prescNo !== 'string' || !r.prescNo.startsWith(rPrefix)) return max;
+      const v = parseInt(r.prescNo.slice(rPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const no = `${rPrefix}${String(rMaxSeq+1).padStart(4,'0')}`;
     setRxForm({ ...EMPTY_RX, prescNo: no, date: new Date().toISOString().split('T')[0] });
     setEditRxId(null); setShowRxModal(true);
   };
@@ -94,55 +109,148 @@ export default function PharmacyPage() {
     setNewItem(EMPTY_ITEM);
   };
   const removeItem = id => setRxForm(p => ({ ...p, items: p.items.filter(i => i.id !== id) }));
-  const saveRx = () => {
+  const saveRx = async () => {
     if (!rxForm.patientName || rxForm.items.length === 0) { showToast(L('يرجى إضافة اسم المريض والأدوية','Please add patient name and drugs'), 'error'); return; }
+    const prev = pharmacyOrders;
     if (editRxId) {
       const ur = { ...rxForm, id: editRxId };
       setPharmacyOrders(p => p.map(r => r.id === editRxId ? { ...r, ...ur } : r));
-      syncToServer('pharmacyOrders', 'update', ur);
+      const ok = await syncToServer('pharmacyOrders', 'update', ur);
+      if (!ok) { setPharmacyOrders(prev); return; }
       showToast(L('تم التحديث','Updated'), 'success');
     } else {
       const nr = { ...rxForm, id: Date.now() };
       setPharmacyOrders(p => [...p, nr]);
-      syncToServer('pharmacyOrders', 'create', nr);
+      const ok = await syncToServer('pharmacyOrders', 'create', nr);
+      if (!ok) { setPharmacyOrders(prev); return; }
       showToast(L('تمت إضافة الوصفة','Prescription added'), 'success');
     }
     setShowRxModal(false);
   };
-  const dispense = id => {
-    setPharmacyOrders(p => {
-      const updated = p.map(r => r.id === id ? { ...r, status: 'dispensed', dispensedBy: user?.name || L('الصيدلاني','Pharmacist') } : r);
-      const changed = updated.find(r => r.id === id);
-      if (changed) syncToServer('pharmacyOrders', 'update', changed);
-      return updated;
-    });
+  // ── إصلاح: صرف الوصفة كان يغيّر حالتها لـ"تم الصرف" بس، بدون أي خصم فعلي من
+  // المخزون — يعني تنبيهات "نواقص الأدوية" ما تعكس الاستهلاك الحقيقي إطلاقاً،
+  // فقط التعديلات اليدوية المباشرة على المخزون. الآن يحاول مطابقة كل دواء
+  // بالوصفة مع سجل مخزون حقيقي (بالاسم) ويخصم الكمية المصروفة فعلياً.
+  const dispense = async id => {
+    const rx = pharmacyOrders.find(r => r.id === id);
+    const prevOrders = pharmacyOrders;
+    const changedOrder = { ...rx, status: 'dispensed', dispensedBy: user?.name || L('الصيدلاني','Pharmacist') };
+    setPharmacyOrders(p => p.map(r => r.id === id ? changedOrder : r));
+    const orderOk = await syncToServer('pharmacyOrders', 'update', changedOrder);
+    if (!orderOk) { setPharmacyOrders(prevOrders); return; }
+
+    // خصم الكميات من المخزون — مطابقة بالاسم (عربي أو إنكليزي) مع سجلات الأدوية
+    for (const item of (rx?.items || [])) {
+      const stockDrug = (inventory || []).find(i =>
+        i.category === 'medicine' && (i.name === item.name || i.nameEn === item.name || i.name === item.nameEn)
+      );
+      if (stockDrug) {
+        const newQty = Math.max(0, (Number(stockDrug.qty) || 0) - (Number(item.qty) || 0));
+        const newStatus = newQty === 0 ? 'out' : newQty <= (stockDrug.minQty || 10) ? 'low' : 'active';
+        const updatedStock = { ...stockDrug, qty: newQty, status: newStatus };
+        const prevStock = inventory;
+        setInventory(p => p.map(i => i.id === stockDrug.id ? updatedStock : i));
+        const stockOk = await syncToServer('inventory', 'update', updatedStock);
+        if (!stockOk) {
+          setInventory(prevStock);
+          showToast(L(`تعذّر خصم ${item.name} من المخزون`, `Failed to deduct ${item.name} from stock`), 'error');
+        }
+      }
+      // لو ما لقينا مطابقة بالمخزون (دواء مو مسجَّل أصلاً)، نتجاهل الخصم بصمت
+      // بدل ما نكسر عملية الصرف — الوصفة تنصرف بأي حال، وين لو المخزون مو دقيق 100%
+    }
+
     showToast(L('تم صرف الوصفة','Prescription dispensed'), 'success');
   };
-  const deleteRx = id => { setPharmacyOrders(p => p.filter(r => r.id !== id)); syncToServer('pharmacyOrders', 'delete', { id }); showToast(L('تم الحذف','Deleted'), 'info'); };
+  const deleteRx = async id => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = pharmacyOrders;
+    setPharmacyOrders(p => p.filter(r => r.id !== id));
+    const ok = await syncToServer('pharmacyOrders', 'delete', { id });
+    if (!ok) { setPharmacyOrders(prev); return; }
+    showToast(L('تم الحذف','Deleted'), 'info');
+  };
+  const handleBulkDeleteRx = async () => {
+    const ids = [...selectedRxIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('pharmacyOrders', 'delete', { id });
+      if (ok) { setPharmacyOrders(p => p.filter(r => r.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(null);
+    setSelectedRxIds(new Set());
+    showToast(L(`تم حذف ${deleted} من ${ids.length} وصفة`, `Deleted ${deleted} of ${ids.length} prescriptions`), deleted === ids.length ? 'success' : 'warning');
+  };
 
   // ── DRUGS CRUD ────────────────────────────────────────────────────────
   const openAddDrug = () => {
-    const no = `MED-${String((drugs.all.length + 1)).padStart(3,'0')}`;
+    // إصلاح: drugs.all.length+1 يكرر رمز دواء موجود فعلاً بعد أي حذف
+    const dPrefix = `MED-`;
+    const dMaxSeq = drugs.all.reduce((max,d)=>{
+      if (typeof d.code !== 'string' || !d.code.startsWith(dPrefix)) return max;
+      const v = parseInt(d.code.slice(dPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const no = `${dPrefix}${String(dMaxSeq+1).padStart(3,'0')}`;
     setDrugForm({ ...EMPTY_DRUG, code: no });
     setEditDrugId(null); setShowDrugModal(true);
   };
   const openEditDrug = drug => { setDrugForm({ ...drug }); setEditDrugId(drug.id); setShowDrugModal(true); };
-  const saveDrug = () => {
+  const saveDrug = async () => {
     if (!drugForm.name || !drugForm.code) { showToast(L('يرجى تعبئة الرمز والاسم','Please fill code and name'), 'error'); return; }
     const qty = +drugForm.qty;
     const minQty = +drugForm.minQty;
     const status = qty === 0 ? 'out' : qty <= minQty ? 'low' : 'active';
     const d = { ...drugForm, category: 'medicine', qty, minQty, maxQty: +drugForm.maxQty, unitCost: +drugForm.unitCost, status };
+    // ── إصلاح حرج: كان الحفظ يحدّث الحالة المحلية بس بدون أي تزامن مع
+    // الباك إند إطلاقاً — أي دواء يُضاف/يُعدَّل من هذي الصفحة كان يختفي فوراً
+    // بمجرد تحديث الصفحة، رغم ظهور رسالة "تم الحفظ" ✅ (نفس نمط مشكلة إدارة
+    // الجودة اللي انصلحت سابقاً، بس هنا يمس مخزون أدوية حقيقي).
     if (editDrugId) {
-      setInventory(p => p.map(i => i.id === editDrugId ? { ...i, ...d } : i));
+      const ud = { ...d, id: editDrugId };
+      const prev = inventory;
+      setInventory(p => p.map(i => i.id === editDrugId ? { ...i, ...ud } : i));
+      const ok = await syncToServer('inventory', 'update', ud);
+      if (!ok) { setInventory(prev); return; }
       showToast(L('تم التحديث','Updated'), 'success');
     } else {
-      setInventory(p => [...p, { ...d, id: Date.now(), supplier: drugForm.manufacturer }]);
+      const nd = { ...d, id: Date.now(), supplier: drugForm.manufacturer };
+      const prev = inventory;
+      setInventory(p => [...p, nd]);
+      const synced = await syncToServer('inventory', 'create', nd);
+      if (!synced) { setInventory(prev); return; }
+      if (typeof synced === 'object' && synced.id !== nd.id) {
+        setInventory(p => p.map(i => i.id === nd.id ? synced : i));
+      }
       showToast(L('تمت إضافة الدواء','Drug added'), 'success');
     }
     setShowDrugModal(false);
   };
-  const deleteDrug = id => { setInventory(p => p.filter(i => i.id !== id)); showToast(L('تم الحذف','Deleted'), 'info'); };
+  const deleteDrug = async id => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = inventory;
+    setInventory(p => p.filter(i => i.id !== id));
+    const ok = await syncToServer('inventory', 'delete', { id });
+    if (!ok) { setInventory(prev); return; }
+    showToast(L('تم الحذف','Deleted'), 'info');
+  };
+  const handleBulkDeleteDrugs = async () => {
+    const ids = [...selectedDrugIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('inventory', 'delete', { id });
+      if (ok) { setInventory(p => p.filter(i => i.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(null);
+    setSelectedDrugIds(new Set());
+    showToast(L(`تم حذف ${deleted} من ${ids.length} دواء`, `Deleted ${deleted} of ${ids.length} drugs`), deleted === ids.length ? 'success' : 'warning');
+  };
 
   // ── STYLES ────────────────────────────────────────────────────────────
   const S = {
@@ -218,6 +326,15 @@ export default function PharmacyPage() {
           </select>
         </div>
 
+        {selectedRxIds.size > 0 && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginBottom:12, padding:'8px 12px', borderRadius:8, background:'var(--bg-secondary)' }}>
+            <span style={{ fontSize:13, fontWeight:600 }}>{L(`${selectedRxIds.size} محدَّد`, `${selectedRxIds.size} selected`)}</span>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setSelectedRxIds(new Set())} style={S.btn('#6b7280')}>{L('إلغاء التحديد','Clear Selection')}</button>
+              <button onClick={() => setBulkDeleteConfirm('rx')} style={S.btn('#ef4444')}>🗑 {L(`حذف المحدَّد (${selectedRxIds.size})`, `Delete Selected (${selectedRxIds.size})`)}</button>
+            </div>
+          </div>
+        )}
         {rxPageItems.map(rx => {
           const st = RX_STATUS[rx.status] || RX_STATUS.pending;
           return (
@@ -225,6 +342,7 @@ export default function PharmacyPage() {
               <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
                 <div style={{ flex:1 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
+                    <input type="checkbox" checked={selectedRxIds.has(rx.id)} onChange={() => toggleRxSelect(rx.id)} />
                     <code style={{ fontSize:11, background:'var(--bg-tertiary)', padding:'2px 8px', borderRadius:4, color:'var(--text-secondary)' }}>{rx.prescNo}</code>
                     <span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span>
                   </div>
@@ -272,9 +390,30 @@ export default function PharmacyPage() {
           <span style={{ color:'var(--text-secondary)', fontSize:12 }}>{filteredDrugs.length} {L('صنف','items')}</span>
         </div>
 
+        {selectedDrugIds.size > 0 && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginBottom:12, padding:'8px 12px', borderRadius:8, background:'var(--bg-secondary)' }}>
+            <span style={{ fontSize:13, fontWeight:600 }}>{L(`${selectedDrugIds.size} محدَّد`, `${selectedDrugIds.size} selected`)}</span>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setSelectedDrugIds(new Set())} style={S.btn('#6b7280')}>{L('إلغاء التحديد','Clear Selection')}</button>
+              <button onClick={() => setBulkDeleteConfirm('drug')} style={S.btn('#ef4444')}>🗑 {L(`حذف المحدَّد (${selectedDrugIds.size})`, `Delete Selected (${selectedDrugIds.size})`)}</button>
+            </div>
+          </div>
+        )}
         <table style={S.table}>
           <thead>
-            <tr>{(L(['الرمز','اسم الدواء','الشكل','التركيز','الكمية','الحد الأدنى','تاريخ الانتهاء','الحالة',''],['Code','Drug Name','Form','Strength','Qty','Min Qty','Expiry','Status',''])).map(h => <th key={h} style={S.th}>{h}</th>)}</tr>
+            <tr>
+              <th style={S.th}>
+                <input type="checkbox" checked={filteredDrugs.length > 0 && filteredDrugs.every(d => selectedDrugIds.has(d.id))} onChange={() => {
+                  setSelectedDrugIds(prev => {
+                    const allSelected = filteredDrugs.every(d => prev.has(d.id));
+                    const next = new Set(prev);
+                    filteredDrugs.forEach(d => allSelected ? next.delete(d.id) : next.add(d.id));
+                    return next;
+                  });
+                }} />
+              </th>
+              {(L(['الرمز','اسم الدواء','الشكل','التركيز','الكمية','الحد الأدنى','تاريخ الانتهاء','الحالة',''],['Code','Drug Name','Form','Strength','Qty','Min Qty','Expiry','Status',''])).map(h => <th key={h} style={S.th}>{h}</th>)}
+            </tr>
           </thead>
           <tbody>
             {filteredDrugs.map(d => {
@@ -286,6 +425,7 @@ export default function PharmacyPage() {
               const pct = d.maxQty > 0 ? Math.min(100, (d.qty/d.maxQty)*100) : 0;
               return (
                 <tr key={d.id}>
+                  <td style={S.td}><input type="checkbox" checked={selectedDrugIds.has(d.id)} onChange={() => toggleDrugSelect(d.id)} /></td>
                   <td style={S.td}><code style={{ fontSize:10, background:'var(--bg-tertiary)', padding:'2px 6px', borderRadius:4 }}>{d.code}</code></td>
                   <td style={S.td}>
                     <div style={{ fontWeight:600 }}>{L(d.name, d.nameEn||d.name)}</div>
@@ -311,7 +451,7 @@ export default function PharmacyPage() {
                 </tr>
               );
             })}
-            {filteredDrugs.length===0 && <tr><td colSpan={9} style={{...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)'}}>{L('لا توجد أدوية','No drugs found')}</td></tr>}
+            {filteredDrugs.length===0 && <tr><td colSpan={10} style={{...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)'}}>{L('لا توجد أدوية','No drugs found')}</td></tr>}
           </tbody>
         </table>
       </>}
@@ -457,6 +597,26 @@ export default function PharmacyPage() {
             <div style={{ display:'flex', gap:10, marginTop:20, justifyContent:'flex-end' }}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowDrugModal(false)}>{L('إلغاء','Cancel')}</button>
               <button style={S.btn('#10b981')} onClick={saveDrug}>💾 {L('حفظ','Save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => !bulkDeleting && setBulkDeleteConfirm(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+              <h3 style={{ fontSize: 20, marginBottom: 8 }}>
+                {bulkDeleteConfirm === 'rx'
+                  ? L(`حذف ${selectedRxIds.size} وصفة؟`, `Delete ${selectedRxIds.size} prescriptions?`)
+                  : L(`حذف ${selectedDrugIds.size} دواء؟`, `Delete ${selectedDrugIds.size} drugs?`)}
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.', 'Are you sure? This cannot be undone.')}</p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button style={S.btn('#6b7280')} onClick={() => setBulkDeleteConfirm(null)} disabled={bulkDeleting}>{L('إلغاء','Cancel')}</button>
+                <button style={S.btn('#ef4444')} onClick={bulkDeleteConfirm === 'rx' ? handleBulkDeleteRx : handleBulkDeleteDrugs} disabled={bulkDeleting}>{bulkDeleting ? '...' : L('حذف','Delete')}</button>
+              </div>
             </div>
           </div>
         </div>

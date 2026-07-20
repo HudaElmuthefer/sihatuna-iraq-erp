@@ -1,9 +1,10 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from 'react';
-import usePagination from '../hooks/usePagination';
+import React, { useState, useMemo, useEffect } from 'react';
+import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 import { api } from '../api';
 
 const CATEGORIES = {
@@ -34,25 +35,36 @@ const CONDITIONS = {
 const EMPTY = { assetNo:'', name:'', nameEn:'', category:'other', brand:'', model:'', serial:'', purchaseDate:'', purchaseCost:0, currentValue:0, location:'', status:'active', condition:'good', warranty:'', lastMaintenance:'', nextMaintenance:'', responsiblePerson:'', notes:'' };
 
 export default function AssetsPage() {
-  const { assets, setAssets, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { assets, setAssets, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY);
+  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
+  const [maintenanceAsset, setMaintenanceAsset] = useState(null); // الأصل المفتوح سجله حالياً
+  const [maintenanceLog, setMaintenanceLog] = useState([]);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [newMaintenance, setNewMaintenance] = useState({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
   const [view, setView] = useState('cards');
 
-  const filtered = useMemo(() => assets.filter(a => {
-    const q = search.toLowerCase();
-    return (!q || a.name.includes(q) || a.assetNo.toLowerCase().includes(q) || a.brand.toLowerCase().includes(q))
-      && (catFilter === 'all' || a.category === catFilter)
-      && (statusFilter === 'all' || a.status === statusFilter);
-  }), [assets, search, catFilter, statusFilter]);
-  const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
+  // تأخير البحث 350 مللي ثانية بعد آخر حرف — يمنع إرسال طلب لكل ضغطة زر
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
+  // نفس مبدأ صفحتي المرضى والمخزون — الجدول/البطاقات هنا تجيب فقط الصفحة
+  // الحالية من الخادم. مصفوفة `assets` بالسياق العام تبقى محمَّلة كاملة
+  // (تُستخدم بـ stats أدناه)، بدون علاقة بجدول هذي الصفحة تحديداً.
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+    useServerPagination('assets', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter }, pageSize: 50 });
 
   const stats = useMemo(() => ({
     total: assets.length,
@@ -64,27 +76,87 @@ export default function AssetsPage() {
   }), [assets]);
 
   const openAdd = () => {
-    const n = `AST-${new Date().getFullYear()}-${String(assets.length+1).padStart(3,'0')}`;
+    // إصلاح: assets.length+1 يكرر رقم أصل موجود فعلاً بعد أي حذف
+    const aYear = new Date().getFullYear();
+    const aPrefix = `AST-${aYear}-`;
+    const aMaxSeq = assets.reduce((max,a)=>{
+      if (typeof a.assetNo !== 'string' || !a.assetNo.startsWith(aPrefix)) return max;
+      const v = parseInt(a.assetNo.slice(aPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const n = `${aPrefix}${String(aMaxSeq+1).padStart(3,'0')}`;
     setForm({...EMPTY, assetNo:n, purchaseDate:new Date().toISOString().split('T')[0]});
     setEditId(null); setShowModal(true);
   };
-  const save = () => {
+  const save = async () => {
     if (!form.name||!form.assetNo) { showToast(L('يرجى تعبئة رقم الأصل والاسم','Please fill asset number and name'),'error'); return; }
     const a = {...form, purchaseCost:+form.purchaseCost, currentValue:+form.currentValue};
     if (editId) {
       const ua = {...a,id:editId};
+      const prev = assets;
       setAssets(p=>p.map(x=>x.id===editId?{...x,...ua}:x));
-      syncToServer('assets','update',ua);
+      const ok = await syncToServer('assets','update',ua);
+      if (!ok) { setAssets(prev); return; }
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const na = {...a,id:Date.now()};
       setAssets(p=>[...p,na]);
-      syncToServer('assets','create',na);
+      const ok = await syncToServer('assets','create',na);
+      if (!ok) { setAssets(p=>p.filter(x=>x.id!==na.id)); return; }
       showToast(L('تمت الإضافة','Asset added'),'success');
     }
     setShowModal(false);
+    refetch();
   };
-  const del = (id) => { setAssets(p=>p.filter(a=>a.id!==id)); syncToServer('assets','delete',{id}); showToast(L('تم الحذف','Deleted'),'info'); };
+  const del = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = assets;
+    setAssets(p=>p.filter(a=>a.id!==id));
+    const ok = await syncToServer('assets','delete',{id});
+    if (!ok) { setAssets(prev); return; }
+    showToast(L('تم الحذف','Deleted'),'info');
+    refetch();
+  };
+
+  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
+  // قبل هذا، ضغطة "انتهت الصيانة" كانت تكتب فوق lastMaintenance بس — لو الأصل
+  // انصان 5 مرات، تشوفين آخر مرة بس، والأربعة قبلها تختفي نهائياً. الآن كل
+  // حدث صيانة يُسجَّل بشكل مستقل بجدول asset_maintenance_log الدائم.
+  const openMaintenanceLog = async (asset) => {
+    setMaintenanceAsset(asset);
+    setNewMaintenance({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
+    setMaintenanceLoading(true);
+    try {
+      const all = await api.get('/assetMaintenanceLog');
+      const forThisAsset = (Array.isArray(all) ? all : []).filter(m => m.assetId === asset.id);
+      forThisAsset.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setMaintenanceLog(forThisAsset);
+    } catch {
+      setMaintenanceLog([]);
+    }
+    setMaintenanceLoading(false);
+  };
+
+  const addMaintenanceEntry = async () => {
+    if (!newMaintenance.description) { showToast(L('يرجى وصف الصيانة المنجَزة','Please describe the maintenance performed'),'error'); return; }
+    try {
+      const saved = await api.post('/assetMaintenanceLog', { ...newMaintenance, assetId: maintenanceAsset.id, cost: newMaintenance.cost ? Number(newMaintenance.cost) : null });
+      setMaintenanceLog(p => [saved, ...p]);
+      // نحدّث الأصل نفسه: نرجّعه "مشغّل" ونحدّث تاريخ آخر صيانة (الملخّص السريع
+      // اللي يبان بالبطاقة)، مع بقاء التفاصيل الكاملة محفوظة بالسجل الدائم فوق
+      const updatedAsset = { ...maintenanceAsset, status: 'active', lastMaintenance: newMaintenance.date };
+      const prevAssets = assets;
+      setAssets(p => p.map(x => x.id === maintenanceAsset.id ? updatedAsset : x));
+      const ok = await syncToServer('assets', 'update', updatedAsset);
+      if (!ok) { setAssets(prevAssets); return; }
+      setMaintenanceAsset(updatedAsset);
+      setNewMaintenance({ date: new Date().toISOString().split('T')[0], description: '', cost: '', performedBy: '' });
+      showToast(L('تم تسجيل الصيانة','Maintenance logged'),'success');
+      refetch();
+    } catch (err) {
+      showToast(err.message || L('فشل الحفظ','Save failed'),'error');
+    }
+  };
 
   const depr = (a) => a.purchaseCost>0 ? ((1-(a.currentValue/a.purchaseCost))*100).toFixed(0)+'%' : '—';
   const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
@@ -119,6 +191,7 @@ export default function AssetsPage() {
           <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
             📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}
           </button>
+          <ExcelExportButton apiName="assets" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ إضافة أصل':'+ Add Asset'}</button>
         </div>
       </div>
@@ -134,6 +207,7 @@ export default function AssetsPage() {
               const fresh = await api.get('/assets');
               if (Array.isArray(fresh)) setAssets(fresh);
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+            refetch();
           }}
         />
       )}
@@ -207,14 +281,16 @@ export default function AssetsPage() {
                 </div>
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>{setForm({...a});setEditId(a.id);setShowModal(true);}} style={{...S.btn('#6b7280'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'✏️ تعديل':'✏️ Edit'}</button>
-                  {a.status!=='maintenance'&&<button onClick={()=>{const u={...a,status:'maintenance'};setAssets(p=>p.map(x=>x.id===a.id?u:x));syncToServer('assets','update',u);}} style={{...S.btn('#f59e0b'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'🔧 صيانة':'🔧 Maintenance'}</button>}
-                  {a.status==='maintenance'&&<button onClick={()=>{const u={...a,status:'active',lastMaintenance:new Date().toISOString().split('T')[0]};setAssets(p=>p.map(x=>x.id===a.id?u:x));syncToServer('assets','update',u);}} style={{...S.btn('#10b981'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'✅ انتهت الصيانة':'✅ Service Done'}</button>}
+                  {a.status!=='maintenance'&&<button onClick={async ()=>{const u={...a,status:'maintenance'};const prev=assets;setAssets(p=>p.map(x=>x.id===a.id?u:x));const ok=await syncToServer('assets','update',u);if(!ok){setAssets(prev);return;}refetch();}} style={{...S.btn('#f59e0b'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'🔧 صيانة':'🔧 Maintenance'}</button>}
+                  {a.status==='maintenance'&&<button onClick={()=>openMaintenanceLog(a)} style={{...S.btn('#10b981'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'✅ انتهت الصيانة':'✅ Service Done'}</button>}
+                  <button onClick={()=>openMaintenanceLog(a)} style={{...S.btn('#8b5cf6'),padding:'5px 10px',fontSize:11}}>📋 {lang==='ar'?'سجل الصيانة':'History'}</button>
                   <button onClick={()=>del(a.id)} style={{...S.btn('#ef4444'),padding:'5px 10px',fontSize:11}}>{lang==='ar'?'🗑':'🗑'}</button>
                 </div>
               </div>
             );
           })}
-          {filtered.length===0&&<div style={{gridColumn:'1/-1',textAlign:'center',padding:48,color:'var(--text-secondary)',background:'var(--bg-secondary)',borderRadius:12}}><div style={{fontSize:40,marginBottom:8}}>🏗</div><p>{L('لا توجد أصول','No assets found')}</p></div>}
+          {loading&&<div style={{gridColumn:'1/-1',textAlign:'center',padding:48,color:'var(--text-secondary)'}}>{lang==='ar'?'جاري التحميل...':'Loading...'}</div>}
+          {!loading&&pageItems.length===0&&<div style={{gridColumn:'1/-1',textAlign:'center',padding:48,color:'var(--text-secondary)',background:'var(--bg-secondary)',borderRadius:12}}><div style={{fontSize:40,marginBottom:8}}>🏗</div><p>{L('لا توجد أصول','No assets found')}</p></div>}
         </div>
       )}
 
@@ -285,6 +361,53 @@ export default function AssetsPage() {
             <div style={{display:'flex',gap:10,marginTop:18,justifyContent:'flex-end'}}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowModal(false)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
               <button style={S.btn()} onClick={save}>{lang==='ar'?'💾 حفظ':'💾 Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── نافذة سجل الصيانة (إصلاح: سجل حقيقي دائم بدل تاريخ وحيد يُستبدَل) ── */}
+      {maintenanceAsset && (
+        <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setMaintenanceAsset(null)}>
+          <div style={{...S.mbox, maxWidth:560}}>
+            <h3 style={{margin:'0 0 4px',color:'var(--text-primary)'}}>📋 {L('سجل صيانة','Maintenance History')}</h3>
+            <p style={{margin:'0 0 18px',fontSize:13,color:'var(--text-secondary)'}}>{lang==='ar'?maintenanceAsset.name:(maintenanceAsset.nameEn||maintenanceAsset.name)} — {maintenanceAsset.assetNo}</p>
+
+            {/* نموذج تسجيل صيانة جديدة */}
+            <div style={{background:'var(--bg-secondary)',borderRadius:10,padding:14,marginBottom:16}}>
+              <h4 style={{margin:'0 0 10px',fontSize:13}}>{L('تسجيل صيانة جديدة','Log New Maintenance')}</h4>
+              <div style={S.g2}>
+                <label><span style={S.fl}>{L('التاريخ','Date')}</span><input type="date" style={S.fi} value={newMaintenance.date} onChange={e=>setNewMaintenance(p=>({...p,date:e.target.value}))}/></label>
+                <label><span style={S.fl}>{L('الكلفة (اختياري)','Cost (optional)')}</span><input type="number" style={S.fi} value={newMaintenance.cost} onChange={e=>setNewMaintenance(p=>({...p,cost:e.target.value}))}/></label>
+                <label style={{gridColumn:'span 2'}}><span style={S.fl}>{L('وصف الصيانة المنجَزة','Description of work performed')}</span><textarea style={{...S.fi,minHeight:60,resize:'vertical'}} value={newMaintenance.description} onChange={e=>setNewMaintenance(p=>({...p,description:e.target.value}))}/></label>
+                <label style={{gridColumn:'span 2'}}><span style={S.fl}>{L('الفنّي / الورشة المسؤولة','Technician / Workshop')}</span><input style={S.fi} value={newMaintenance.performedBy} onChange={e=>setNewMaintenance(p=>({...p,performedBy:e.target.value}))}/></label>
+              </div>
+              <button style={{...S.btn('#10b981'),marginTop:10,width:'100%'}} onClick={addMaintenanceEntry}>💾 {L('حفظ سجل الصيانة','Save Maintenance Record')}</button>
+            </div>
+
+            {/* السجل التاريخي الكامل */}
+            <h4 style={{margin:'0 0 10px',fontSize:13}}>{L('السجل السابق','Previous Records')}</h4>
+            {maintenanceLoading ? (
+              <p style={{textAlign:'center',color:'var(--text-secondary)',padding:20}}>{L('جاري التحميل...','Loading...')}</p>
+            ) : maintenanceLog.length === 0 ? (
+              <p style={{textAlign:'center',color:'var(--text-secondary)',padding:20,fontSize:13}}>{L('لا يوجد سجل صيانة سابق لهذا الأصل','No previous maintenance records for this asset')}</p>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:220,overflowY:'auto'}}>
+                {maintenanceLog.map(m => (
+                  <div key={m.id} style={{border:'1px solid var(--border)',borderRadius:8,padding:10}}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:12,fontWeight:600,marginBottom:4}}>
+                      <span>{m.date}</span>
+                      {m.cost && <span style={{color:'#f59e0b'}}>{Number(m.cost).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('د.ع','IQD')}</span>}
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text-primary)'}}>{m.description}</div>
+                    {m.performedBy && <div style={{fontSize:11,color:'var(--text-secondary)',marginTop:2}}>👤 {m.performedBy}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}>
+              <button style={S.btn('#6b7280')} onClick={()=>setMaintenanceAsset(null)}>{L('إغلاق','Close')}</button>
             </div>
           </div>
         </div>

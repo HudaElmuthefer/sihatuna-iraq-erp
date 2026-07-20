@@ -22,7 +22,7 @@ const STATUSES = {
 const EMPTY = { reqNo:'', patientName:'', patientId:'', doctorName:'', modality:'xray', bodyPart:'', requestDate:'', examDate:'', reportDate:'', status:'pending', priority:'normal', technician:'', radiologist:'', findings:'', impression:'', images:0 };
 
 export default function RadiologyPage() {
-  const { radiology, setRadiology, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { radiology, setRadiology, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const [search, setSearch] = useState('');
@@ -52,42 +52,55 @@ export default function RadiologyPage() {
   }), [radiology]);
 
   const openAdd = () => {
-    const n = `RAD-${new Date().getFullYear()}-${String(radiology.length+1).padStart(4,'0')}`;
+    // إصلاح: radiology.length+1 يكرر رقم طلب موجود فعلاً بعد أي حذف
+    const rdYear = new Date().getFullYear();
+    const rdPrefix = `RAD-${rdYear}-`;
+    const rdMaxSeq = radiology.reduce((max,r)=>{
+      if (typeof r.reqNo !== 'string' || !r.reqNo.startsWith(rdPrefix)) return max;
+      const v = parseInt(r.reqNo.slice(rdPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const n = `${rdPrefix}${String(rdMaxSeq+1).padStart(4,'0')}`;
     setForm({...EMPTY, reqNo:n, requestDate:new Date().toISOString().split('T')[0]});
     setEditId(null); setShowModal(true);
   };
-  const save = () => {
+  const save = async () => {
     if (!form.patientName || !form.modality) { showToast(L('يرجى تعبئة بيانات المريض','Please fill patient data'),'error'); return; }
+    const prev = radiology;
     if (editId) {
       const ur = {...form,id:editId};
       setRadiology(p=>p.map(r=>r.id===editId?{...r,...ur}:r));
-      syncToServer('radiology','update',ur);
+      const ok = await syncToServer('radiology','update',ur);
+      if (!ok) { setRadiology(prev); return; }
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const nr = {...form,id:Date.now()};
       setRadiology(p=>[...p,nr]);
-      syncToServer('radiology','create',nr);
+      const ok = await syncToServer('radiology','create',nr);
+      if (!ok) { setRadiology(prev); return; }
       showToast(L('تمت إضافة الطلب','Request added'),'success');
     }
     setShowModal(false);
   };
-  const updateStatus = (id, status) => {
+  const updateStatus = async (id, status) => {
     const now = new Date().toISOString().split('T')[0];
-    setRadiology(p => {
-      const updated = p.map(r=>r.id===id?{...r,status,...(status==='examined'?{examDate:now}:{})}:r);
-      const changed = updated.find(r => r.id === id);
-      if (changed) syncToServer('radiology','update',changed);
-      return updated;
-    });
+    const prev = radiology;
+    const current = radiology.find(r => r.id === id);
+    if (!current) return;
+    const changed = {...current,status,...(status==='examined'?{examDate:now}:{})};
+    setRadiology(p => p.map(r=>r.id===id?changed:r));
+    const ok = await syncToServer('radiology','update',changed);
+    if (!ok) { setRadiology(prev); return; }
     showToast(L('تم التحديث','Updated'),'success');
   };
-  const saveReport = () => {
-    setRadiology(p => {
-      const updated = p.map(r=>r.id===showReport.id?{...r,status:'reported',reportDate:new Date().toISOString().split('T')[0],findings,findingsEn:findings,impression,impressionEn:impression}:r);
-      const changed = updated.find(r => r.id === showReport.id);
-      if (changed) syncToServer('radiology','update',changed);
-      return updated;
-    });
+  const saveReport = async () => {
+    const prev = radiology;
+    const current = radiology.find(r => r.id === showReport.id);
+    if (!current) return;
+    const changed = {...current,status:'reported',reportDate:new Date().toISOString().split('T')[0],findings,findingsEn:findings,impression,impressionEn:impression};
+    setRadiology(p => p.map(r=>r.id===showReport.id?changed:r));
+    const ok = await syncToServer('radiology','update',changed);
+    if (!ok) { setRadiology(prev); return; }
     showToast(L('تم حفظ التقرير الإشعاعي','Radiology report saved'),'success'); setShowReport(null);
   };
 
@@ -137,17 +150,17 @@ export default function RadiologyPage() {
         <input style={{...S.inp,minWidth:200}} placeholder={L('🔍 بحث...','🔍 Search...')} value={search} onChange={e=>setSearch(e.target.value)}/>
         <select style={S.inp} value={modFilter} onChange={e=>setModFilter(e.target.value)}>
           <option value="all">{L('كل أنواع التصوير','All Modalities')}</option>
-          {Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.ar}</option>)}
+          {Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}
         </select>
         <select style={S.inp} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
           <option value="all">{L('كل الحالات','All Status')}</option>
-          {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{v.ar}</option>)}
+          {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
         </select>
       </div>
 
       <table style={S.table}>
         <thead>
-          <tr>{lang==='ar'?lang==='ar'?['رقم الطلب','المريض','نوع التصوير','منطقة الجسم','تاريخ الطلب','الحالة','الأولوية','الصور','التقرير','إجراء']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action'].map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+          <tr>{(lang==='ar'?['رقم الطلب','المريض','نوع التصوير','منطقة الجسم','تاريخ الطلب','الحالة','الأولوية','الصور','التقرير','إجراء']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action']).map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
         </thead>
         <tbody>
           {pageItems.map(r=>{
@@ -161,7 +174,7 @@ export default function RadiologyPage() {
                 <td style={S.td}>{lang==='ar'?(r.bodyPart||'—'):(r.bodyPartEn||r.bodyPart||'—')}</td>
                 <td style={{...S.td,fontSize:11,color:'var(--text-secondary)'}}>{r.requestDate}</td>
                 <td style={S.td}><span style={S.badge(st.color,st.bg)}>{lang==='ar'?st.ar:st.en}</span></td>
-                <td style={S.td}>{r.priority==='urgent'?<span style={{color:'#ef4444',fontWeight:700,fontSize:11}}>⚡ عاجل</span>:<span style={{fontSize:11,color:'var(--text-secondary)'}}>{L('عادي','Normal')}</span>}</td>
+                <td style={S.td}>{r.priority==='urgent'?<span style={{color:'#ef4444',fontWeight:700,fontSize:11}}>⚡ {L('عاجل','Urgent')}</span>:<span style={{fontSize:11,color:'var(--text-secondary)'}}>{L('عادي','Normal')}</span>}</td>
                 <td style={{...S.td,textAlign:'center'}}>{r.images>0?<span style={{background:'#dbeafe',color:'#1a6bab',borderRadius:12,padding:'2px 8px',fontSize:11,fontWeight:600}}>{r.images} {lang==='ar'?'صورة':'images'}</span>:'—'}</td>
                 <td style={S.td}>{r.status==='reported'?<div><div style={{fontSize:11,fontWeight:600,color:'#10b981'}}>{lang==='ar'?L('✓ مكتمل','✓ Complete'):'✓ Complete'}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.reportDate}</div></div>:'—'}</td>
                 <td style={S.td}>
@@ -170,7 +183,7 @@ export default function RadiologyPage() {
                     {r.status==='examined'&&<button onClick={()=>{setShowReport(r);setFindings(r.findings||'');setImpression(r.impression||'');}} style={{...S.btn('#10b981'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'كتابة تقرير':'Write Report'}</button>}
                     {r.status==='pending'&&<button onClick={()=>updateStatus(r.id,'scheduled')} style={{...S.btn('#1a6bab'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'جدولة':'Schedule'}</button>}
                     <button onClick={()=>{setForm({...r});setEditId(r.id);setShowModal(true);}} style={{...S.btn('#6b7280'),padding:'3px 7px',fontSize:10}}>✏️</button>
-                    <button onClick={()=>{setRadiology(p=>p.filter(x=>x.id!==r.id));syncToServer('radiology','delete',{id:r.id});showToast('تم الحذف','info');}} style={{...S.btn('#ef4444'),padding:'3px 7px',fontSize:10}}>🗑</button>
+                    <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const prev=radiology;setRadiology(p=>p.filter(x=>x.id!==r.id));const ok=await syncToServer('radiology','delete',{id:r.id});if(!ok){setRadiology(prev);return;}showToast(L('تم الحذف','Deleted'),'info');}} style={{...S.btn('#ef4444'),padding:'3px 7px',fontSize:10}}>🗑</button>
                   </div>
                 </td>
               </tr>
@@ -191,7 +204,7 @@ export default function RadiologyPage() {
               <label style={{gridColumn:'span 2'}}>{L('اسم المريض','Patient Name')}<input style={S.fi} value={form.patientName||''} onChange={e=>setForm(p=>({...p,patientName:e.target.value}))}/></label>
               <label>{L('رقم المريض','Patient ID')}<input style={S.fi} value={form.patientId||''} onChange={e=>setForm(p=>({...p,patientId:e.target.value}))}/></label>
               <label>{L('الطبيب المحول','Referring Doctor')}<input style={S.fi} value={form.doctorName||''} onChange={e=>setForm(p=>({...p,doctorName:e.target.value}))}/></label>
-              <label>{L('نوع التصوير','Modality')}<select style={S.fi} value={form.modality} onChange={e=>setForm(p=>({...p,modality:e.target.value}))}>{Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.ar}</option>)}</select></label>
+              <label>{L('نوع التصوير','Modality')}<select style={S.fi} value={form.modality} onChange={e=>setForm(p=>({...p,modality:e.target.value}))}>{Object.entries(MODALITIES).map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}</select></label>
               {multiHospitalEnabled && (
                 <label>{L('المنشأة','Facility')}<select style={S.fi} value={form.hospitalId||''} onChange={e=>setForm(p=>({...p,hospitalId:e.target.value}))}>
                   <option value="">—</option>
@@ -215,10 +228,10 @@ export default function RadiologyPage() {
       {showReport&&(
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowReport(null)}>
           <div style={{...S.mbox,maxWidth:500}}>
-            <h3 style={{margin:'0 0 8px',color:'var(--text-primary)'}}>📋 التقرير الإشعاعي</h3>
-            <p style={{fontSize:13,color:'var(--text-secondary)',margin:'0 0 16px'}}>{MODALITIES[showReport.modality]?.ar} — {showReport.bodyPart} — {showReport.patientName}</p>
-            <label style={{display:'block',marginBottom:12}}><span style={S.fl}>المشاهدات (Findings)</span><textarea style={{...S.fi,minHeight:90,resize:'vertical'}} value={findings} onChange={e=>setFindings(e.target.value)} placeholder={L('وصف ما يُشاهَد في الصور...','Describe what is observed...')}/></label>
-            <label style={{display:'block',marginBottom:16}}><span style={S.fl}>الاستنتاج (Impression)</span><textarea style={{...S.fi,minHeight:70,resize:'vertical'}} value={impression} onChange={e=>setImpression(e.target.value)} placeholder={L('التشخيص الإشعاعي والتوصيات...','Radiological diagnosis and recommendations...')}/></label>
+            <h3 style={{margin:'0 0 8px',color:'var(--text-primary)'}}>📋 {L('التقرير الإشعاعي','Radiology Report')}</h3>
+            <p style={{fontSize:13,color:'var(--text-secondary)',margin:'0 0 16px'}}>{L(MODALITIES[showReport.modality]?.ar, MODALITIES[showReport.modality]?.en)} — {showReport.bodyPart} — {showReport.patientName}</p>
+            <label style={{display:'block',marginBottom:12}}><span style={S.fl}>{L('المشاهدات','Findings')}</span><textarea style={{...S.fi,minHeight:90,resize:'vertical'}} value={findings} onChange={e=>setFindings(e.target.value)} placeholder={L('وصف ما يُشاهَد في الصور...','Describe what is observed...')}/></label>
+            <label style={{display:'block',marginBottom:16}}><span style={S.fl}>{L('الاستنتاج','Impression')}</span><textarea style={{...S.fi,minHeight:70,resize:'vertical'}} value={impression} onChange={e=>setImpression(e.target.value)} placeholder={L('التشخيص الإشعاعي والتوصيات...','Radiological diagnosis and recommendations...')}/></label>
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowReport(null)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
               <button style={S.btn('#10b981')} onClick={saveReport}>{lang==='ar'?'✅ حفظ التقرير':'✅ Save Report'}</button>

@@ -127,7 +127,7 @@ export default function LoginPage() {
                 key={r.user}
                 type="button"
                 className="role-chip"
-                onClick={() => setForm({ username: r.user, password: '123456' })}
+                onClick={() => setForm({ username: r.user, password: r.user })}
               >
                 {r.label}
               </button>

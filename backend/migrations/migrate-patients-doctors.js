@@ -13,6 +13,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/database');
+const { devLog } = require('../utils/logger');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'db.json');
 
@@ -25,7 +26,7 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'db.js
 async function migrateTable(label, records, indexedColumns = [], sqlTableName = label) {
   const tableName = sqlTableName;
   if (!Array.isArray(records) || records.length === 0) {
-    console.log(`ℹ️  لا توجد سجلات "${label}" بملف db.json — تم تجاوز هذا الجدول.`);
+    devLog(`ℹ️  لا توجد سجلات "${label}" بملف db.json — تم تجاوز هذا الجدول.`);
     return;
   }
 
@@ -64,7 +65,7 @@ async function migrateTable(label, records, indexedColumns = [], sqlTableName = 
     `SELECT setval(pg_get_serial_sequence('${tableName}', 'id'), COALESCE((SELECT MAX(id) FROM ${tableName}), 1))`
   );
 
-  console.log(`✅ [${tableName}] تم ترحيل ${migrated} من أصل ${records.length} سجلاً بنجاح.`);
+  devLog(`✅ [${tableName}] تم ترحيل ${migrated} من أصل ${records.length} سجلاً بنجاح.`);
 }
 
 const NAME_PHONE_STATUS = [
@@ -74,7 +75,7 @@ const NAME_PHONE_STATUS = [
 ];
 
 async function run() {
-  console.log('🔄 بدء ترحيل بيانات المرضى والأطباء والمواعيد والفواتير والموارد البشرية من db.json إلى PostgreSQL...\n');
+  devLog('🔄 بدء ترحيل بيانات المرضى والأطباء والمواعيد والفواتير والموارد البشرية من db.json إلى PostgreSQL...\n');
 
   if (!fs.existsSync(DB_PATH)) {
     console.error(`❌ ملف قاعدة البيانات غير موجود: ${DB_PATH}`);
@@ -145,7 +146,7 @@ async function run() {
       { field: 'campaignId', column: 'campaign_id' },
       { field: 'patientId', column: 'patient_id' },
     ], 'crm_campaign_targets');
-    console.log('\n🎉 اكتمل الترحيل بنجاح. يمكنك الآن تشغيل الباك إند طبيعياً.');
+    devLog('\n🎉 اكتمل الترحيل بنجاح. يمكنك الآن تشغيل الباك إند طبيعياً.');
   } catch (err) {
     console.error('\n❌ فشل الترحيل:', err.message);
     process.exit(1);

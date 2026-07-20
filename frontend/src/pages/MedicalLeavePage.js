@@ -19,7 +19,7 @@ const depts_ar = ['قسم الطوارئ', 'قسم الجراحة', 'قسم ال
 const depts_en = ['Emergency', 'Surgery', 'Pediatrics', 'Laboratory', 'Radiology', 'Internal Medicine'];
 
 export default function MedicalLeavePage() {
-  const { showToast, lang, syncToServer, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
+  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const depts = lang === 'ar' ? depts_ar : depts_en;
   const tr = useT(lang);
   const typeOptions = [
@@ -48,8 +48,10 @@ export default function MedicalLeavePage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    // إصلاح: نفس خلل AppContext — لو كان عدد الإجازات الحقيقي صفراً، تبقى
+    // الصفحة تعرض بيانات تجريبية وهمية ثابتة (init) للأبد بدل الصفر الصحيح.
     api.get('/medicalLeaves').then(data => {
-      if (!cancelled && Array.isArray(data) && data.length > 0) setLeaves(data);
+      if (!cancelled && Array.isArray(data)) setLeaves(data);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,16 +72,19 @@ export default function MedicalLeavePage() {
   const save = async () => {
     if (!form.employee || !form.from || !form.to) { showToast(tr('msg_required'), 'error'); return; }
     const days = calcDays(form.from, form.to);
+    const prev = leaves;
     if (editing) {
       const ul = { ...form, days, id: editing.id };
       setLeaves(p => p.map(r => r.id === editing.id ? ul : r));
-      await syncToServer('medicalLeaves', 'update', ul);
+      const ok = await syncToServer('medicalLeaves', 'update', ul);
+      if (!ok) { setLeaves(prev); return; }
       showToast(tr('msg_edited'), 'success');
     } else {
       const nl = { ...form, days, id: Date.now() };
       setLeaves(p => [...p, nl]);
       const synced = await syncToServer('medicalLeaves', 'create', nl);
-      if (synced && typeof synced === 'object' && synced.id !== nl.id) {
+      if (!synced) { setLeaves(prev); return; }
+      if (typeof synced === 'object' && synced.id !== nl.id) {
         setLeaves(p => p.map(r => r.id === nl.id ? synced : r));
       }
       showToast(tr('msg_added'), 'success');
@@ -87,14 +92,22 @@ export default function MedicalLeavePage() {
     setShowModal(false);
   };
 
-  const del = (id) => { setLeaves(p => p.filter(r => r.id !== id)); syncToServer('medicalLeaves', 'delete', { id }); showToast(tr('msg_deleted'), 'success'); };
-  const updateStatus = (id, status) => {
-    setLeaves(p => {
-      const updated = p.map(r => r.id === id ? { ...r, status } : r);
-      const changed = updated.find(r => r.id === id);
-      if (changed) syncToServer('medicalLeaves', 'update', changed);
-      return updated;
-    });
+  const del = async (id) => {
+    if (!(await confirmDialog(tr('x_hlantmtakd_laimknaltraja')))) return;
+    const prev = leaves;
+    setLeaves(p => p.filter(r => r.id !== id));
+    const ok = await syncToServer('medicalLeaves', 'delete', { id });
+    if (!ok) { setLeaves(prev); return; }
+    showToast(tr('msg_deleted'), 'success');
+  };
+  const updateStatus = async (id, status) => {
+    const prev = leaves;
+    const current = leaves.find(r => r.id === id);
+    if (!current) return;
+    const changed = { ...current, status };
+    setLeaves(p => p.map(r => r.id === id ? changed : r));
+    const ok = await syncToServer('medicalLeaves', 'update', changed);
+    if (!ok) { setLeaves(prev); return; }
     showToast(`${tr('leave_status_changed')}: ${displayValue(status)}`, 'success');
   };
 

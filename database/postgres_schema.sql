@@ -290,6 +290,50 @@ CREATE TABLE IF NOT EXISTS ambulance_vehicles (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- ── إصلاح: صفحة إدارة الجودة (ISO) كانت بدون أي جدول حقيقي إطلاقاً ──────────
+-- كانت البيانات (مراجعات، حالات عدم مطابقة، مؤشرات أداء) تُخزَّن بذاكرة
+-- المتصفح المؤقتة بس (React state محلي) — تُفقَد بمجرد تحديث الصفحة، وترجع
+-- لنفس البيانات التجريبية الثابتة بالكود كل مرة. الجداول الثلاثة تحت تحل هذا.
+CREATE TABLE IF NOT EXISTS quality_audits (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS quality_ncs (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS quality_kpis (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── إصلاح: سجل صيانة حقيقي للمركبات والأصول (بدل الكتابة فوق تاريخ آخر صيانة) ──
+CREATE TABLE IF NOT EXISTS asset_maintenance_log (
+    id              SERIAL PRIMARY KEY,
+    asset_id        INTEGER,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_asset_maintenance_log_asset_id ON asset_maintenance_log(asset_id);
+
+CREATE TABLE IF NOT EXISTS ambulance_maintenance_log (
+    id              SERIAL PRIMARY KEY,
+    vehicle_id      INTEGER,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ambulance_maintenance_log_vehicle_id ON ambulance_maintenance_log(vehicle_id);
+
 CREATE TABLE IF NOT EXISTS ambulance_missions (
     id              SERIAL PRIMARY KEY,
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -444,3 +488,89 @@ CREATE TABLE IF NOT EXISTS crm_campaign_targets (
     UNIQUE (campaign_id, patient_id)
 );
 CREATE INDEX IF NOT EXISTS idx_campaign_targets_campaign ON crm_campaign_targets(campaign_id);
+
+-- ── سلة المحذوفات (Recycle Bin) ─────────────────────────────────────────────
+-- جدول واحد مشترك لكل الموديولات: بدل حذف السجل نهائياً من جدوله الأصلي،
+-- pgCrud.js ينقله هنا كاملاً (module_key يحدد أي موديول، original_id رقمه
+-- الأصلي، data نسخة كاملة مطابقة تماماً لما كانت تعرضه الواجهة). لا يظهر
+-- بقوائم الموديول الأصلي بعد الآن (فعلياً محذوف من جدوله)، لكن يبقى قابلاً
+-- للاسترجاع أو الحذف النهائي من صفحة الإعدادات (صلاحية إدمن فقط).
+CREATE TABLE IF NOT EXISTS recycle_bin (
+    id              SERIAL PRIMARY KEY,
+    module_key      VARCHAR(100) NOT NULL,
+    original_id     INTEGER NOT NULL,
+    data            JSONB NOT NULL,
+    hospital_id     TEXT,
+    deleted_by      INTEGER,
+    deleted_by_name VARCHAR(200),
+    deleted_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_recycle_bin_module ON recycle_bin(module_key);
+CREATE INDEX IF NOT EXISTS idx_recycle_bin_hospital ON recycle_bin(hospital_id);
+
+-- ── الردهات (إدارة المرضى الداخليين) ────────────────────────────────────────
+-- wards: الردهات نفسها (اسم، سعة أسرّة)
+CREATE TABLE IF NOT EXISTS wards (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- admissions: كل عملية إدخال مريض لردهة (سرير، تشخيص، الطبيب المعالج، الحالة، الخروج)
+CREATE TABLE IF NOT EXISTS admissions (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- medication_orders: الأدوية اللي يكتبها الطبيب لكل حالة إدخال (اسم الدواء،
+-- الجرعة، التكرار، الطبيب الكاتب، تاريخ البدء/الانتهاء)
+CREATE TABLE IF NOT EXISTS medication_orders (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- medication_administrations: سجل كل مرة أُعطي فيها الدواء فعلياً (الممرض،
+-- الوقت، تأكيد الإعطاء) — سجل منفصل عن الوصفة نفسها لأن دواء واحد يُعطى
+-- عدة مرات (مثلاً 3 مرات باليوم لمدة أسبوع = عدة سجلات إعطاء لنفس الوصفة)
+CREATE TABLE IF NOT EXISTS medication_administrations (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── صالة الولادة ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS deliveries (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── العلاج الطبيعي ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pt_equipment (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS pt_sessions (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── إدارة الطابور ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS queue_tickets (
+    id              SERIAL PRIMARY KEY,
+    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+

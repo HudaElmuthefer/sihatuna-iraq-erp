@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { api } from '../api';
 
 // ── Status configs with ar+en ──────────────────────────────────────────────────
 const AUDIT_STATUS = {
@@ -21,37 +22,53 @@ const NC_CLASS = {
   obs:   { ar:'ملاحظة',   en:'Observation', color:'#6b7280' },
 };
 
-// ── Initial data (bilingual) ──────────────────────────────────────────────────
-const initAudits = [
-  { id:1, auditNo:'AUD-2026-01', title:'مراجعة داخلية — قسم المختبرات', titleEn:'Internal Audit — Laboratory Dept.', type:'internal', scope:'المختبرات الطبية', scopeEn:'Medical Laboratory', auditor:'م. خالد العلي', date:'2026-06-10', status:'completed', findings:3, ncs:1, score:88 },
-  { id:2, auditNo:'AUD-2026-02', title:'مراجعة داخلية — الصيدلية',       titleEn:'Internal Audit — Pharmacy',         type:'internal', scope:'الصيدلية والمخزون', scopeEn:'Pharmacy & Inventory', auditor:'م. هدى عبد العظيم', date:'2026-07-15', status:'planned', findings:0, ncs:0, score:null },
-  { id:3, auditNo:'AUD-2025-04', title:'مراجعة خارجية — هيئة الجودة',   titleEn:'External Audit — Quality Body',     type:'external', scope:'النظام الكامل', scopeEn:'Full System', auditor:'هيئة الجودة الوطنية', date:'2025-11-20', status:'completed', findings:5, ncs:2, score:92 },
-];
-const initNCs = [
-  { id:1, ncNo:'NC-2026-001', auditNo:'AUD-2026-01', title:'عدم توثيق نتائج المعايرة', titleEn:'Calibration Results Not Documented', classification:'major', department:'المختبرات', departmentEn:'Laboratory', owner:'م. فاطمة المختبر', ownerEn:'Eng. Fatima Lab', openDate:'2026-06-10', dueDate:'2026-07-10', closeDate:null, status:'inprogress', rootCause:'غياب إجراء موثق للمعايرة', rootCauseEn:'No documented calibration procedure', corrective:'إعداد إجراء معايرة موثق وتدريب الكادر', correctiveEn:'Prepare documented calibration procedure and train staff' },
-  { id:2, ncNo:'NC-2026-002', auditNo:'AUD-2025-04', title:'نقص في سجلات التدريب', titleEn:'Training Records Incomplete', classification:'minor', department:'الموارد البشرية', departmentEn:'Human Resources', owner:'هدى الموارد', ownerEn:'Huda HR', openDate:'2025-11-20', dueDate:'2026-01-20', closeDate:'2026-01-18', status:'closed', rootCause:'عدم انتظام تحديث الملفات', rootCauseEn:'Irregular file updates', corrective:'إجراء مراجعة ملفات شهرية', correctiveEn:'Conduct monthly file review' },
-];
-const initKPIs = [
-  { id:1, name:'رضا المرضى',                    nameEn:'Patient Satisfaction',       target:90,  actual:87, unit:'%',       period:'2026-Q2', trend:'up',     lowerIsBetter:false },
-  { id:2, name:'معدل الأخطاء الطبية',           nameEn:'Medical Error Rate',         target:0.5, actual:0.3,unit:'%',       period:'2026-Q2', trend:'down',   lowerIsBetter:true  },
-  { id:3, name:'وقت انتظار المرضى',             nameEn:'Patient Wait Time',          target:30,  actual:22, unit:'min',     period:'2026-Q2', trend:'down',   lowerIsBetter:true  },
-  { id:4, name:'إتمام التحاليل في وقتها',       nameEn:'Lab TAT Compliance',         target:95,  actual:91, unit:'%',       period:'2026-Q2', trend:'up',     lowerIsBetter:false },
-  { id:5, name:'اكتمال ملفات المرضى',           nameEn:'Patient File Completeness',  target:100, actual:96, unit:'%',       period:'2026-Q2', trend:'stable', lowerIsBetter:false },
-  { id:6, name:'الالتزام بإجراءات السلامة',     nameEn:'Safety Protocol Compliance', target:100, actual:99, unit:'%',       period:'2026-Q2', trend:'stable', lowerIsBetter:false },
-];
+// ── إصلاح جذري: كانت البيانات (مراجعات، عدم مطابقة، مؤشرات أداء) تُخزَّن
+// بذاكرة المتصفح المؤقتة بس (React state محلي بدون أي اتصال بقاعدة بيانات)
+// — تُفقَد بمجرد تحديث الصفحة، وترجع لنفس 3 سجلات تجريبية ثابتة بالكود كل
+// مرة، رغم إن المستخدم يشوف رسالة "تم الحفظ" بعد كل إضافة! هذا كان يخدع
+// المستخدم فعلياً بإنه يحفظ بيانات جودة حقيقية بينما تختفي بصمت. الآن كل
+// شيء يُقرأ ويُكتَب من/لقاعدة PostgreSQL الحقيقية عبر /api/qualityAudits،
+// /api/qualityNCs، /api/qualityKPIs (راجعي routes/modules.js بالباك إند).
+// لو الجداول فاضية (تركيب جديد)، الصفحة تبدأ فاضية بصراحة — بدون أي بيانات
+// تجريبية توحي بوجود سجلات مو موجودة فعلياً.
 
 export default function QualityPage() {
-  const { lang, showToast } = useApp();
+  const { lang, showToast, confirmDialog, user } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [tab, setTab]           = useState('kpi');
-  const [audits, setAudits]     = useState(initAudits);
-  const [ncs, setNCs]           = useState(initNCs);
+  const [audits, setAudits]     = useState([]);
+  const [ncs, setNCs]           = useState([]);
+  const [kpis, setKpis]         = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showNCModal, setShowNCModal]       = useState(false);
+  const [showKpiModal, setShowKpiModal]     = useState(false);
   const [auditForm, setAuditForm] = useState({});
   const [ncForm, setNCForm]       = useState({});
+  const [kpiForm, setKpiForm]     = useState({});
+  const [editingKpiId, setEditingKpiId] = useState(null);
+  const [kpiActualDraft, setKpiActualDraft] = useState('');
+
+  // ── جلب البيانات الحقيقية من الباك إند عند فتح الصفحة ────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      api.get('/qualityAudits').catch(() => []),
+      api.get('/qualityNCs').catch(() => []),
+      api.get('/qualityKPIs').catch(() => []),
+    ]).then(([a, n, k]) => {
+      if (cancelled) return;
+      if (Array.isArray(a)) setAudits(a);
+      if (Array.isArray(n)) setNCs(n);
+      if (Array.isArray(k)) setKpis(k);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => ({
     audits:   audits.length,
@@ -75,6 +92,120 @@ export default function QualityPage() {
     if (trend === 'stable') return '#6b7280';
     const good = lowerIsBetter ? trend === 'down' : trend === 'up';
     return good ? '#10b981' : '#ef4444';
+  };
+
+  // ── دوال الحفظ/التحديث/الحذف — تتصل بالباك إند الحقيقي ────────────────────────
+  const saveAudit = async () => {
+    if (!auditForm.title) { showToast(L('يرجى إدخال العنوان','Please enter title'),'error'); return; }
+    // إصلاح: audits.length+1 يكرر رقم مراجعة موجود فعلاً بعد أي حذف
+    const auYear = new Date().getFullYear();
+    const auPrefix = `AUD-${auYear}-`;
+    const auMaxSeq = audits.reduce((max,a)=>{
+      if (typeof a.auditNo !== 'string' || !a.auditNo.startsWith(auPrefix)) return max;
+      const v = parseInt(a.auditNo.slice(auPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const no = `${auPrefix}${String(auMaxSeq+1).padStart(2,'0')}`;
+    const payload = { ...auditForm, auditNo: no, findings: 0, ncs: 0, score: null };
+    try {
+      const saved = await api.post('/qualityAudits', payload);
+      setAudits(p => [...p, saved]);
+      showToast(L('تمت إضافة المراجعة','Audit added'),'success');
+      setShowAuditModal(false);
+    } catch (err) {
+      showToast(err.message || L('فشل الحفظ','Save failed'), 'error');
+    }
+  };
+
+  const deleteAudit = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    try {
+      await api.delete(`/qualityAudits/${id}`);
+      setAudits(p => p.filter(x => x.id !== id));
+    } catch (err) {
+      showToast(err.message || L('فشل الحذف','Delete failed'), 'error');
+    }
+  };
+
+  const saveNC = async () => {
+    if (!ncForm.title) { showToast(L('يرجى إدخال العنوان','Please enter title'),'error'); return; }
+    // إصلاح: ncs.length+1 يكرر رقم عدم مطابقة موجود فعلاً بعد أي حذف
+    const ncYear = new Date().getFullYear();
+    const ncPrefix = `NC-${ncYear}-`;
+    const ncMaxSeq = ncs.reduce((max,x)=>{
+      if (typeof x.ncNo !== 'string' || !x.ncNo.startsWith(ncPrefix)) return max;
+      const v = parseInt(x.ncNo.slice(ncPrefix.length),10);
+      return Number.isFinite(v) && v>max ? v : max;
+    },0);
+    const no = `${ncPrefix}${String(ncMaxSeq+1).padStart(3,'0')}`;
+    const payload = { ...ncForm, ncNo: no, status: 'open', closeDate: null };
+    try {
+      const saved = await api.post('/qualityNCs', payload);
+      setNCs(p => [...p, saved]);
+      showToast(L('تم تسجيل عدم المطابقة','NC registered'),'success');
+      setShowNCModal(false);
+    } catch (err) {
+      showToast(err.message || L('فشل الحفظ','Save failed'), 'error');
+    }
+  };
+
+  const updateNCStatus = async (nc, newStatus) => {
+    const payload = { ...nc, status: newStatus, closeDate: newStatus === 'closed' ? new Date().toISOString().split('T')[0] : nc.closeDate };
+    try {
+      const saved = await api.put(`/qualityNCs/${nc.id}`, payload);
+      setNCs(p => p.map(x => x.id === nc.id ? saved : x));
+    } catch (err) {
+      showToast(err.message || L('فشل التحديث','Update failed'), 'error');
+    }
+  };
+
+  const deleteNC = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    try {
+      await api.delete(`/qualityNCs/${id}`);
+      setNCs(p => p.filter(x => x.id !== id));
+    } catch (err) {
+      showToast(err.message || L('فشل الحذف','Delete failed'), 'error');
+    }
+  };
+
+  const saveKpi = async () => {
+    if (!kpiForm.name || kpiForm.target === undefined || kpiForm.actual === undefined) {
+      showToast(L('يرجى تعبئة الاسم والهدف والقيمة الحالية','Please fill name, target and actual value'),'error');
+      return;
+    }
+    const payload = { ...kpiForm, target: Number(kpiForm.target), actual: Number(kpiForm.actual) };
+    try {
+      const saved = await api.post('/qualityKPIs', payload);
+      setKpis(p => [...p, saved]);
+      showToast(L('تمت إضافة المؤشر','KPI added'),'success');
+      setShowKpiModal(false);
+    } catch (err) {
+      showToast(err.message || L('فشل الحفظ','Save failed'), 'error');
+    }
+  };
+
+  const saveKpiActual = async (kpi) => {
+    const newActual = Number(kpiActualDraft);
+    if (Number.isNaN(newActual)) { showToast(L('قيمة غير صالحة','Invalid value'),'error'); return; }
+    const payload = { ...kpi, actual: newActual };
+    try {
+      const saved = await api.put(`/qualityKPIs/${kpi.id}`, payload);
+      setKpis(p => p.map(x => x.id === kpi.id ? saved : x));
+      setEditingKpiId(null);
+    } catch (err) {
+      showToast(err.message || L('فشل التحديث','Update failed'), 'error');
+    }
+  };
+
+  const deleteKpi = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    try {
+      await api.delete(`/qualityKPIs/${id}`);
+      setKpis(p => p.filter(x => x.id !== id));
+    } catch (err) {
+      showToast(err.message || L('فشل الحذف','Delete failed'), 'error');
+    }
   };
 
   const S = {
@@ -103,6 +234,7 @@ export default function QualityPage() {
           <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('نظام إدارة الجودة ISO 9001 — مؤشرات الأداء · المراجعات · عدم المطابقة','ISO 9001 Quality Management — KPIs · Audits · Non-Conformance')}</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
+          {tab === 'kpi'    && <button style={S.btn('#10b981')} onClick={() => { setKpiForm({ period: `${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth()+1)/3)}`, trend:'stable', lowerIsBetter:false, unit:'%' }); setShowKpiModal(true); }}>+ {L('مؤشر جديد','New KPI')}</button>}
           {tab === 'audits' && <button style={S.btn()} onClick={() => { setAuditForm({ date: new Date().toISOString().split('T')[0], status:'planned', type:'internal' }); setShowAuditModal(true); }}>+ {L('مراجعة جديدة','New Audit')}</button>}
           {tab === 'ncs'    && <button style={S.btn('#ef4444')} onClick={() => { setNCForm({ openDate: new Date().toISOString().split('T')[0], status:'open', classification:'minor' }); setShowNCModal(true); }}>+ {L('عدم مطابقة','New NC')}</button>}
         </div>
@@ -132,12 +264,21 @@ export default function QualityPage() {
 
       {/* ── KPI TAB ── */}
       {tab === 'kpi' && (
+        loading ? (
+          <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:'40px 0' }}>{L('جاري التحميل...','Loading...')}</p>
+        ) : kpis.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--text-secondary)' }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>📊</div>
+            <p>{L('لا توجد مؤشرات أداء مسجَّلة بعد — أضيفي أول مؤشر بزر "مؤشر جديد" أعلاه','No KPIs recorded yet — add your first one with the "New KPI" button above')}</p>
+          </div>
+        ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
-          {initKPIs.map(kpi => {
+          {kpis.map(kpi => {
             const c    = kpiColor(kpi);
             const pct  = kpiPct(kpi);
             const icon = trendIcon(kpi.trend, kpi.lowerIsBetter);
             const tc   = trendColor(kpi.trend, kpi.lowerIsBetter);
+            const isEditing = editingKpiId === kpi.id;
             return (
               <div key={kpi.id} style={{ background:'var(--bg-secondary)', borderRadius:12, padding:18, border:'1px solid var(--border)', borderTop:`3px solid ${c}` }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
@@ -145,13 +286,25 @@ export default function QualityPage() {
                     <div style={{ fontWeight:600, fontSize:14, color:'var(--text-primary)' }}>{L(kpi.name, kpi.nameEn)}</div>
                     <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:2 }}>{kpi.period}</div>
                   </div>
-                  <span style={{ fontSize:18, fontWeight:700, color:tc }}>{icon}</span>
+                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                    <span style={{ fontSize:18, fontWeight:700, color:tc }}>{icon}</span>
+                    <button onClick={() => { setEditingKpiId(kpi.id); setKpiActualDraft(kpi.actual); }} style={{ ...S.smBtn('#6b7280'), padding:'3px 7px' }}>✏️</button>
+                    <button onClick={() => deleteKpi(kpi.id)} style={{ ...S.smBtn('#ef4444'), padding:'3px 7px' }}>🗑</button>
+                  </div>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:8 }}>
                   <div>
-                    <div style={{ fontSize:28, fontWeight:700, color:c }}>
-                      {kpi.actual}<span style={{ fontSize:13, fontWeight:400, color:'var(--text-secondary)' }}> {kpi.unit}</span>
-                    </div>
+                    {isEditing ? (
+                      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                        <input type="number" step="0.1" value={kpiActualDraft} onChange={e=>setKpiActualDraft(e.target.value)} style={{ ...S.fi, width:80, padding:'5px 8px' }} autoFocus />
+                        <button onClick={() => saveKpiActual(kpi)} style={{ ...S.smBtn('#10b981'), padding:'5px 9px' }}>{L('حفظ','Save')}</button>
+                        <button onClick={() => setEditingKpiId(null)} style={{ ...S.smBtn('#6b7280'), padding:'5px 9px' }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize:28, fontWeight:700, color:c }}>
+                        {kpi.actual}<span style={{ fontSize:13, fontWeight:400, color:'var(--text-secondary)' }}> {kpi.unit}</span>
+                      </div>
+                    )}
                     <div style={{ fontSize:11, color:'var(--text-secondary)' }}>{L('الهدف:','Target:')} {kpi.target} {kpi.unit}</div>
                   </div>
                   <div style={{ fontSize:18, fontWeight:700, color:c }}>{pct.toFixed(0)}%</div>
@@ -163,6 +316,7 @@ export default function QualityPage() {
             );
           })}
         </div>
+        )
       )}
 
       {/* ── AUDITS TAB ── */}
@@ -187,11 +341,12 @@ export default function QualityPage() {
                   <td style={{ ...S.td, textAlign:'center' }}>{a.ncs > 0 ? <span style={{ color:'#ef4444', fontWeight:700 }}>{a.ncs}</span> : '—'}</td>
                   <td style={S.td}>{a.score ? <span style={{ fontWeight:700, color: a.score>=90?'#10b981':a.score>=80?'#f59e0b':'#ef4444' }}>{a.score}%</span> : '—'}</td>
                   <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span></td>
-                  <td style={S.td}><button onClick={() => setAudits(p => p.filter(x => x.id !== a.id))} style={S.smBtn('#ef4444')}>🗑</button></td>
+                  <td style={S.td}><button onClick={() => deleteAudit(a.id)} style={S.smBtn('#ef4444')}>🗑</button></td>
                 </tr>
               );
             })}
-            {audits.length === 0 && <tr><td colSpan={11} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('لا توجد مراجعات','No audits found')}</td></tr>}
+            {!loading && audits.length === 0 && <tr><td colSpan={11} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('لا توجد مراجعات مسجَّلة بعد','No audits recorded yet')}</td></tr>}
+            {loading && <tr><td colSpan={11} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('جاري التحميل...','Loading...')}</td></tr>}
           </tbody>
         </table>
       )}
@@ -222,15 +377,16 @@ export default function QualityPage() {
                   <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span></td>
                   <td style={S.td}>
                     <div style={{ display:'flex', gap:4 }}>
-                      {nc.status === 'open'       && <button onClick={() => setNCs(p => p.map(x => x.id===nc.id ? {...x,status:'inprogress'} : x))} style={S.smBtn('#f59e0b')}>{L('معالجة','Process')}</button>}
-                      {nc.status === 'inprogress' && <button onClick={() => setNCs(p => p.map(x => x.id===nc.id ? {...x,status:'closed',closeDate:new Date().toISOString().split('T')[0]} : x))} style={S.smBtn('#10b981')}>{L('إغلاق','Close')}</button>}
-                      <button onClick={() => setNCs(p => p.filter(x => x.id !== nc.id))} style={S.smBtn('#ef4444')}>🗑</button>
+                      {nc.status === 'open'       && <button onClick={() => updateNCStatus(nc, 'inprogress')} style={S.smBtn('#f59e0b')}>{L('معالجة','Process')}</button>}
+                      {nc.status === 'inprogress' && <button onClick={() => updateNCStatus(nc, 'closed')} style={S.smBtn('#10b981')}>{L('إغلاق','Close')}</button>}
+                      <button onClick={() => deleteNC(nc.id)} style={S.smBtn('#ef4444')}>🗑</button>
                     </div>
                   </td>
                 </tr>
               );
             })}
-            {ncs.length === 0 && <tr><td colSpan={9} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('لا توجد حالات عدم مطابقة','No non-conformances found')}</td></tr>}
+            {!loading && ncs.length === 0 && <tr><td colSpan={9} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('لا توجد حالات عدم مطابقة مسجَّلة بعد','No non-conformances recorded yet')}</td></tr>}
+            {loading && <tr><td colSpan={9} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--text-secondary)' }}>{L('جاري التحميل...','Loading...')}</td></tr>}
           </tbody>
         </table>
       )}
@@ -259,12 +415,7 @@ export default function QualityPage() {
             </div>
             <div style={{ display:'flex', gap:10, marginTop:18, justifyContent:'flex-end' }}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowAuditModal(false)}>{L('إلغاء','Cancel')}</button>
-              <button style={S.btn()} onClick={() => {
-                if (!auditForm.title) { showToast(L('يرجى إدخال العنوان','Please enter title'),'error'); return; }
-                const no = `AUD-${new Date().getFullYear()}-${String(audits.length+1).padStart(2,'0')}`;
-                setAudits(p => [...p, { ...auditForm, id:Date.now(), auditNo:no, findings:0, ncs:0, score:null }]);
-                showToast(L('تمت إضافة المراجعة','Audit added'),'success'); setShowAuditModal(false);
-              }}>💾 {L('حفظ','Save')}</button>
+              <button style={S.btn()} onClick={saveAudit}>💾 {L('حفظ','Save')}</button>
             </div>
           </div>
         </div>
@@ -291,12 +442,33 @@ export default function QualityPage() {
             </div>
             <div style={{ display:'flex', gap:10, marginTop:18, justifyContent:'flex-end' }}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowNCModal(false)}>{L('إلغاء','Cancel')}</button>
-              <button style={S.btn('#ef4444')} onClick={() => {
-                if (!ncForm.title) { showToast(L('يرجى إدخال العنوان','Please enter title'),'error'); return; }
-                const no = `NC-${new Date().getFullYear()}-${String(ncs.length+1).padStart(3,'0')}`;
-                setNCs(p => [...p, { ...ncForm, id:Date.now(), ncNo:no, status:'open', closeDate:null }]);
-                showToast(L('تم تسجيل عدم المطابقة','NC registered'),'success'); setShowNCModal(false);
-              }}>💾 {L('حفظ','Save')}</button>
+              <button style={S.btn('#ef4444')} onClick={saveNC}>💾 {L('حفظ','Save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KPI MODAL ── */}
+      {showKpiModal && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setShowKpiModal(false)}>
+          <div style={S.mbox}>
+            <h3 style={{ margin:'0 0 18px', color:'var(--text-primary)' }}>📊 {L('مؤشر أداء جديد','New KPI')}</h3>
+            <div style={S.g2}>
+              <label style={{ gridColumn:'span 2' }}><span style={S.fl}>{L('اسم المؤشر','KPI Name')}</span><input style={S.fi} value={kpiForm.name||''} onChange={e=>setKpiForm(p=>({...p,name:e.target.value,nameEn:e.target.value}))}/></label>
+              <label><span style={S.fl}>{L('الهدف','Target')}</span><input type="number" step="0.1" style={S.fi} value={kpiForm.target??''} onChange={e=>setKpiForm(p=>({...p,target:e.target.value}))}/></label>
+              <label><span style={S.fl}>{L('القيمة الحالية','Current Value')}</span><input type="number" step="0.1" style={S.fi} value={kpiForm.actual??''} onChange={e=>setKpiForm(p=>({...p,actual:e.target.value}))}/></label>
+              <label><span style={S.fl}>{L('الوحدة','Unit')}</span><input style={S.fi} placeholder="% / min / ..." value={kpiForm.unit||''} onChange={e=>setKpiForm(p=>({...p,unit:e.target.value}))}/></label>
+              <label><span style={S.fl}>{L('الفترة','Period')}</span><input style={S.fi} placeholder="2026-Q3" value={kpiForm.period||''} onChange={e=>setKpiForm(p=>({...p,period:e.target.value}))}/></label>
+              <label><span style={S.fl}>{L('الأفضل هو الأقل؟','Lower is better?')}</span>
+                <select style={S.fi} value={kpiForm.lowerIsBetter ? 'yes' : 'no'} onChange={e=>setKpiForm(p=>({...p,lowerIsBetter: e.target.value === 'yes'}))}>
+                  <option value="no">{L('لا (الأعلى أفضل)','No (higher is better)')}</option>
+                  <option value="yes">{L('نعم (مثل معدل الأخطاء)','Yes (e.g. error rate)')}</option>
+                </select>
+              </label>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:18, justifyContent:'flex-end' }}>
+              <button style={S.btn('#6b7280')} onClick={()=>setShowKpiModal(false)}>{L('إلغاء','Cancel')}</button>
+              <button style={S.btn('#10b981')} onClick={saveKpi}>💾 {L('حفظ','Save')}</button>
             </div>
           </div>
         </div>

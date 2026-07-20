@@ -210,6 +210,22 @@ function startAutoBackup() {
   setInterval(runBackup, BACKUP_INTERVAL_MS);
   const extNote = process.env.EXTERNAL_BACKUP_DIR ? ` + external (${process.env.EXTERNAL_BACKUP_DIR})` : ' (no external destination configured)';
   console.log(`💾 Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);
+
+  // ── تحسين نشر: تنبيه واضح لا يمكن تفويته ────────────────────────────────────
+  // قبل هذا، غياب EXTERNAL_BACKUP_DIR كان يظهر بس كجزء صغير من سطر لوق طويل —
+  // سهل جداً يضيع وسط باقي رسائل الإقلاع. لو الجهاز نفسه تعطّل (قرص صلب، سرقة،
+  // حريق...) وكل النسخ الاحتياطية محفوظة بنفس القرص فقط، تُفقَد البيانات كلها
+  // نهائياً بدون أي وسيلة استرجاع. هذا صندوق منفصل تماماً يصعب تفويته.
+  if (!process.env.EXTERNAL_BACKUP_DIR) {
+    console.warn('\n╔════════════════════════════════════════════════════════════╗');
+    console.warn('║  ⚠️  تنبيه: لا توجد وجهة نسخ احتياطي خارجية!                  ║');
+    console.warn('╚════════════════════════════════════════════════════════════╝');
+    console.warn('  كل النسخ الاحتياطية محفوظة حالياً بنفس قرص هذا الجهاز فقط.');
+    console.warn('  لو تعطّل الجهاز (عطل قرص، سرقة، حريق...) تُفقَد كل البيانات');
+    console.warn('  نهائياً بدون أي وسيلة استرجاع، بما فيها النسخ الاحتياطية نفسها.');
+    console.warn('  أضيفي EXTERNAL_BACKUP_DIR بملف backend/.env يشير لمكان ثانٍ');
+    console.warn('  (قرص USB خارجي دائم الاتصال، أو مجلد Google Drive/OneDrive مزامَن).\n');
+  }
 }
 
 module.exports = { startAutoBackup, runBackup, listBackups, restoreFromBackup };

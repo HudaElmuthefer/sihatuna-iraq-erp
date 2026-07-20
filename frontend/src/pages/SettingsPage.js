@@ -1,4 +1,16 @@
 /* eslint-disable no-unused-vars */
+// ══════════════════════════════════════════════════════════════════════════
+// خريطة الملف (691 سطر) — بخلاف HRPage.js وAccountsPage.js، هذا الملف مكوّن
+// واحد بتبويبات مُعرَّضة (conditional rendering) لا دوال منفصلة، فتقسيمه
+// يحتاج تمرير الحالة/الدوال المشتركة كـ props (أكثر تعقيداً) — الأسطر التالية
+// لتسهيل التنقل بالانتظار:
+//   السطر 245  تبويب المستخدمين (users)
+//   السطر 330  تبويب المظهر (appearance)
+//   السطر 358  تبويب النظام (system)
+//   السطر 380  تبويب المنشآت (hospitals)
+//   السطر 479  تبويب النسخ الاحتياطي (backups)
+//   السطر 531  تبويب حول النظام (about)
+// ══════════════════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import { useT } from '../translations';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
@@ -17,7 +29,7 @@ const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', 
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, hospitals, multiHospitalEnabled, reloadHospitalsAndMode } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin } = useApp();
   const tr = useT(lang);
   const [tab, setTab] = useState('users');
   const [showModal, setShowModal] = useState(false);
@@ -33,13 +45,18 @@ export default function SettingsPage() {
   const [showHospModal, setShowHospModal] = useState(false);
   const [editingHosp, setEditingHosp] = useState(null);
   const [hospForm, setHospForm] = useState({ nameAr:'', nameEn:'', address:'', phone:'', enabledPages: [] });
+  const [resetPasswordResult, setResetPasswordResult] = useState(null); // { userName, tempPassword }
+  const [resettingUserId, setResettingUserId] = useState(null);
 
   const openAdd = () => { setEditing(null); setForm(emptyUser); setShowModal(true); };
   const openEdit = (u) => { setEditing(u); setForm({ ...u, password: u.password || '' }); setShowModal(true); };
-  const delUser = (id) => {
+  const delUser = async (id) => {
     if (id === 1) { showToast(tr('set_cannot_delete_admin'), 'error'); return; }
+    if (!(await confirmDialog(tr('x_hlantmtakd_laimknaltraja')))) return;
+    const prev = systemUsers;
     setSystemUsers(p => p.filter(u => u.id !== id));
-    syncToServer('users', 'delete', { id });
+    const ok = await syncToServer('users', 'delete', { id });
+    if (!ok) { setSystemUsers(prev); return; }
     showToast(tr('msg_deleted'), 'success');
   };
 
@@ -52,29 +69,48 @@ export default function SettingsPage() {
     }));
   };
 
+  // إعادة ضبط كلمة مرور مستخدم لكلمة مؤقتة عشوائية (يولّدها الخادم) — بدون
+  // نظام بريد إلكتروني بالمشروع، هذي أبسط وأضمن طريقة عملية: الإدمن يشوف
+  // الكلمة المؤقتة *مرة وحدة* هنا، ويوصّلها للمستخدم يدوياً (هاتف/حضورياً).
+  // المستخدم يُجبَر تلقائياً على تغييرها بأول تسجيل دخول (mustChangePassword).
+  const resetPassword = async (u) => {
+    setResettingUserId(u.id);
+    try {
+      const res = await api.post(`/users/${u.id}/reset-password`, {});
+      setResetPasswordResult({ userName: u.name, tempPassword: res.tempPassword });
+    } catch (err) {
+      showToast(err.message || (lang === 'ar' ? 'فشلت إعادة الضبط' : 'Reset failed'), 'error');
+    } finally {
+      setResettingUserId(null);
+    }
+  };
+
   const setRoleDefaults = (role) => {
     const defaults = {
       admin: ALL_PAGES.map(p => p.key),
-      doctor: ['dashboard','services','patients','appointments','medical-leave','vaccinations'],
-      nurse: ['dashboard','patients','appointments','vaccinations','medical-leave'],
-      receptionist: ['dashboard','patients','appointments','departments','services'],
+      doctor: ['dashboard','services','patients','appointments','medical-leave','vaccinations','wards','delivery'],
+      nurse: ['dashboard','patients','appointments','vaccinations','medical-leave','wards','delivery','queue'],
+      receptionist: ['dashboard','patients','appointments','departments','services','queue'],
       accountant: ['dashboard','accounts','smart-reports'],
       hr: ['dashboard','hr','medical-leave','smart-reports'] };
     setForm(p => ({ ...p, role, permissions: defaults[role] || ['dashboard'] }));
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.name || !form.username || (!editing && !form.password)) { showToast(tr('set_user_required'), 'error'); return; }
     if (!editing && systemUsers.find(u => u.username === form.username)) { showToast(tr('set_username_exists'), 'error'); return; }
+    const prev = systemUsers;
     if (editing) {
       const uu = { ...form, id: editing.id };
       setSystemUsers(p => p.map(u => u.id === editing.id ? uu : u));
-      syncToServer('users', 'update', uu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
+      const ok = await syncToServer('users', 'update', uu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
+      if (!ok) { setSystemUsers(prev); return; }
       showToast(tr('msg_edited'), 'success');
     } else {
       const nu = { ...form, id: Date.now() };
       setSystemUsers(p => [...p, nu]);
-      syncToServer('users', 'create', nu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
+      const ok = await syncToServer('users', 'create', nu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
+      if (!ok) { setSystemUsers(prev); return; }
       showToast(tr('msg_added'), 'success');
     }
     setShowModal(false);
@@ -86,6 +122,7 @@ export default function SettingsPage() {
     { key: 'system',     labelKey: 'set_tab_system',      icon: '⚙️' },
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
     { key: 'about',      labelKey: 'set_tab_about',       icon: 'ℹ️' },
   ];
 
@@ -116,7 +153,7 @@ export default function SettingsPage() {
   };
 
   const restoreBackup = async (name) => {
-    if (!window.confirm(tr('restore_confirm'))) return;
+    if (!(await confirmDialog(tr('restore_confirm')))) return;
     setRestoringName(name);
     try {
       await api.post(`/backups/${name}/restore`);
@@ -129,8 +166,89 @@ export default function SettingsPage() {
 
   React.useEffect(() => {
     if (tab === 'backups') loadBackups();
+    if (tab === 'recycle') loadRecycleBin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // ── سلة المحذوفات ────────────────────────────────────────────────────────
+  const [recycleItems, setRecycleItems] = useState([]);
+  const [recycleLoading, setRecycleLoading] = useState(false);
+  const [recycleBusyId, setRecycleBusyId] = useState(null);
+  const [recycleBulkBusy, setRecycleBulkBusy] = useState(false);
+  // إصلاح: زر استرجاع/حذف نهائي كان لكل عنصر لحاله فقط — لو عندك عشرات
+  // العناصر بسلة المحذوفات، تحتاجين تضغطين لكل واحد لحاله. الآن تقدرين
+  // تحددين عدة عناصر بمربعات اختيار وتسوين الإجراء على الكل مرة وحدة.
+  const [selectedRecycleIds, setSelectedRecycleIds] = useState(new Set());
+  const toggleRecycleSelect = (id) => setSelectedRecycleIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAllRecycle = () => setSelectedRecycleIds(prev =>
+    prev.size === recycleItems.length ? new Set() : new Set(recycleItems.map(r => r.id))
+  );
+
+  const loadRecycleBin = async () => {
+    setRecycleLoading(true);
+    setRecycleItems(await fetchRecycleBin());
+    setRecycleLoading(false);
+    setSelectedRecycleIds(new Set());
+  };
+
+  const restoreItem = async (item) => {
+    setRecycleBusyId(item.id);
+    const result = await restoreFromRecycleBin(item.id);
+    setRecycleBusyId(null);
+    if (!result) return;
+    showToast(result.idChanged ? tr('recycle_restored_new_id') : tr('recycle_restored'), 'success');
+    setRecycleItems(prev => prev.filter(r => r.id !== item.id));
+    setSelectedRecycleIds(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+  };
+
+  const purgeItem = async (item) => {
+    if (!(await confirmDialog(tr('recycle_purge_confirm')))) return;
+    setRecycleBusyId(item.id);
+    const ok = await purgeFromRecycleBin(item.id);
+    setRecycleBusyId(null);
+    if (!ok) return;
+    showToast(tr('recycle_purged'), 'success');
+    setRecycleItems(prev => prev.filter(r => r.id !== item.id));
+    setSelectedRecycleIds(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+  };
+
+  const restoreSelected = async () => {
+    const ids = [...selectedRecycleIds];
+    if (ids.length === 0) return;
+    setRecycleBulkBusy(true);
+    let restored = 0, idChanged = 0;
+    for (const id of ids) {
+      const result = await restoreFromRecycleBin(id);
+      if (result) { restored++; if (result.idChanged) idChanged++; setRecycleItems(prev => prev.filter(r => r.id !== id)); }
+    }
+    setRecycleBulkBusy(false);
+    setSelectedRecycleIds(new Set());
+    showToast(
+      lang === 'ar'
+        ? `تم استرجاع ${restored} من ${ids.length}${idChanged ? ` (${idChanged} برقم جديد بسبب تعارض)` : ''}`
+        : `Restored ${restored} of ${ids.length}${idChanged ? ` (${idChanged} with a new ID due to conflict)` : ''}`,
+      restored === ids.length ? 'success' : 'warning'
+    );
+  };
+
+  const purgeSelected = async () => {
+    const ids = [...selectedRecycleIds];
+    if (ids.length === 0) return;
+    if (!(await confirmDialog(lang === 'ar' ? `حذف نهائي لـ ${ids.length} عنصر؟ لا يمكن التراجع عن هذا إطلاقاً.` : `Permanently delete ${ids.length} items? This absolutely cannot be undone.`))) return;
+    setRecycleBulkBusy(true);
+    let purged = 0;
+    for (const id of ids) {
+      const ok = await purgeFromRecycleBin(id);
+      if (ok) { purged++; setRecycleItems(prev => prev.filter(r => r.id !== id)); }
+    }
+    setRecycleBulkBusy(false);
+    setSelectedRecycleIds(new Set());
+    showToast(lang === 'ar' ? `تم حذف ${purged} من ${ids.length} نهائياً` : `Permanently deleted ${purged} of ${ids.length}`, purged === ids.length ? 'success' : 'warning');
+  };
 
   // ── المنشآت المتعددة (مرحلة تأسيسية) ────────────────────────────────────
   const loadHospitals = async () => {
@@ -176,7 +294,7 @@ export default function SettingsPage() {
   };
 
   const deleteHospital = async (id) => {
-    if (!window.confirm(tr('confirm_delete'))) return;
+    if (!(await confirmDialog(tr('confirm_delete')))) return;
     try {
       await api.delete(`/hospitals/${id}`);
       await reloadHospitalsAndMode();
@@ -258,12 +376,47 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                        <button onClick={() => resetPassword(u)} disabled={resettingUserId === u.id} style={{ background:'none', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', cursor:'pointer', color:'var(--text-primary)', fontSize:12 }}>
+                          🔑 {resettingUserId === u.id ? (lang==='ar'?'جارٍ...':'...') : (lang==='ar'?'كلمة مرور مؤقتة':'Reset Password')}
+                        </button>
                         <button onClick={() => openEdit(u)} style={{ background:'none', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', cursor:'pointer', color:'var(--text-primary)', fontSize:12 }}>✏️ {tr('btn_edit')}</button>
                         {u.id !== 1 && <button onClick={() => delUser(u.id)} style={{ background:'none', border:'1px solid #ef4444', borderRadius:8, padding:'6px 12px', cursor:'pointer', color:'#ef4444', fontSize:12 }}>🗑️ {tr('btn_delete')}</button>}
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── نافذة عرض كلمة المرور المؤقتة (مرة واحدة فقط) ── */}
+          {resetPasswordResult && (
+            <div className="modal-overlay" onClick={() => setResetPasswordResult(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+                <div className="modal-header">
+                  <h3 style={{ margin: 0 }}>🔑 {lang === 'ar' ? 'كلمة مرور مؤقتة' : 'Temporary Password'}</h3>
+                </div>
+                <div className="modal-body">
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    {lang === 'ar'
+                      ? `كلمة مرور مؤقتة جديدة لـ"${resetPasswordResult.userName}". انسخيها وأرسليها له الآن — لن تظهر مرة ثانية بعد إغلاق هذي النافذة. سيُطلب منه تغييرها بأول تسجيل دخول.`
+                      : `New temporary password for "${resetPasswordResult.userName}". Copy and send it now — it will not be shown again. They will be required to change it on first login.`}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <code style={{ flex: 1, background: 'var(--bg-secondary)', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 16, fontWeight: 700, textAlign: 'center', letterSpacing: 1, direction: 'ltr' }}>
+                      {resetPasswordResult.tempPassword}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(resetPasswordResult.tempPassword); showToast(lang === 'ar' ? 'تم النسخ' : 'Copied', 'success'); }}
+                      className="btn btn-outline"
+                    >
+                      📋 {lang === 'ar' ? 'نسخ' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-primary" onClick={() => setResetPasswordResult(null)}>{lang === 'ar' ? 'تم، أغلقي' : 'Done, close'}</button>
+                </div>
               </div>
             </div>
           )}
@@ -465,6 +618,85 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ── RECYCLE BIN TAB ── */}
+          {tab === 'recycle' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 6px' }}>🗑️ {tr('set_tab_recycle')}</h3>
+              <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-secondary)' }}>
+                {lang === 'ar'
+                  ? 'كل عملية حذف بالنظام تنقل السجل هنا بدل حذفه نهائياً — يمكنك استرجاعه لمكانه الأصلي أو حذفه نهائياً.'
+                  : 'Every delete in the system moves the record here instead of erasing it — you can restore it or delete it permanently.'}
+              </p>
+
+              {recycleLoading ? (
+                <p style={{ color:'var(--text-secondary)' }}>...</p>
+              ) : recycleItems.length === 0 ? (
+                <p style={{ color:'var(--text-secondary)' }}>{tr('recycle_empty')}</p>
+              ) : (
+                <>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginBottom:12, padding:'8px 12px', borderRadius:8, background:'var(--bg-secondary)' }}>
+                    <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
+                      <input type="checkbox" checked={selectedRecycleIds.size === recycleItems.length && recycleItems.length > 0} onChange={toggleSelectAllRecycle} />
+                      {lang === 'ar' ? `تحديد الكل (${selectedRecycleIds.size} محدَّد)` : `Select all (${selectedRecycleIds.size} selected)`}
+                    </label>
+                    {selectedRecycleIds.size > 0 && (
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={restoreSelected} disabled={recycleBulkBusy} className="btn btn-primary" style={{ fontSize:12, padding:'6px 12px' }}>
+                          {recycleBulkBusy ? '...' : `♻️ ${lang === 'ar' ? `استرجاع المحدَّد (${selectedRecycleIds.size})` : `Restore Selected (${selectedRecycleIds.size})`}`}
+                        </button>
+                        <button onClick={purgeSelected} disabled={recycleBulkBusy} className="btn btn-outline" style={{ fontSize:12, padding:'6px 12px', color:'#ef4444', borderColor:'#ef4444' }}>
+                          {recycleBulkBusy ? '...' : `🔥 ${lang === 'ar' ? `حذف نهائي للمحدَّد (${selectedRecycleIds.size})` : `Delete Selected Permanently (${selectedRecycleIds.size})`}`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:520, overflowY:'auto' }}>
+                  {recycleItems.map(item => {
+                    const label = item.data?.name || item.data?.title || item.data?.patientName
+                      || item.data?.employee || item.data?.assetNo || item.data?.code
+                      || item.data?.missionNo || item.data?.docNo || `#${item.originalId}`;
+                    const busy = recycleBusyId === item.id;
+                    return (
+                      <div key={item.id} style={{
+                        display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8,
+                        padding:'10px 14px', borderRadius:8, background: selectedRecycleIds.has(item.id) ? 'var(--bg-hover, #1a6bab15)' : 'var(--bg-secondary)',
+                      }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <input type="checkbox" checked={selectedRecycleIds.has(item.id)} onChange={() => toggleRecycleSelect(item.id)} />
+                          <div>
+                            <div style={{ fontSize:13, fontWeight:600 }}>{label}</div>
+                            <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:2 }}>
+                              {tr('recycle_module')}: {item.moduleKey} · {tr('recycle_deleted_by')}: {item.deletedByName || '—'} · {tr('recycle_deleted_at')}: {new Date(item.deletedAt).toLocaleString(lang==='ar'?'ar-IQ':'en-US')}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button
+                            onClick={() => restoreItem(item)}
+                            disabled={busy}
+                            className="btn btn-primary"
+                            style={{ fontSize:12, padding:'6px 12px' }}
+                          >
+                            {busy ? '...' : `♻️ ${tr('recycle_restore')}`}
+                          </button>
+                          <button
+                            onClick={() => purgeItem(item)}
+                            disabled={busy}
+                            className="btn btn-outline"
+                            style={{ fontSize:12, padding:'6px 12px', color:'#ef4444', borderColor:'#ef4444' }}
+                          >
+                            {busy ? '...' : `🔥 ${tr('recycle_purge')}`}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                </>
               )}
             </div>
           )}

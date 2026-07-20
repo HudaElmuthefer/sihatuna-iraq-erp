@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
-import { FaPlus, FaTimes, FaExclamationTriangle, FaCheckCircle, FaSearch } from 'react-icons/fa';
+import { api } from '../api';
+import { FaPlus, FaTimes, FaExclamationTriangle, FaCheckCircle, FaSearch, FaRobot, FaListAlt } from 'react-icons/fa';
 
 const drugDatabaseBilingual = [
   {ar:'أسبرين',en:'Aspirin'},{ar:'إيبوبروفين',en:'Ibuprofen'},{ar:'باراسيتامول',en:'Paracetamol'},
@@ -31,6 +32,20 @@ export default function DrugInteractionsPage() {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState(null);
   const [checked, setChecked] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [resultSource, setResultSource] = useState(null); // 'ai' | 'fallback'
+  const [resultProvider, setResultProvider] = useState(null);
+
+  // ── إصلاح: فحص صادق لتوفّر الذكاء الاصطناعي الحقيقي ────────────────────────
+  // نفس مبدأ صفحة التشخيص بالذكاء الاصطناعي — نتحقق فوراً عند فتح الصفحة
+  // حتى يعرف المستخدم من البداية هل الفحص القادم بذكاء اصطناعي حقيقي أو
+  // بجدول محلي محدود بـ5 تضاربات معروفة بس.
+  const [aiAvailable, setAiAvailable] = useState(null);
+  useEffect(() => {
+    api.get('/drug-interactions/status')
+      .then(r => setAiAvailable(Boolean(r?.available)))
+      .catch(() => setAiAvailable(false));
+  }, []);
 
   // filtered now inline above
   const filtered = drugDatabaseBilingual.filter(d =>
@@ -41,15 +56,59 @@ export default function DrugInteractionsPage() {
   const addDrug = (d) => { setSelectedDrugs(p => [...p, d]); setSearch(''); setResults(null); setChecked(false); };
   const removeDrug = (d) => { setSelectedDrugs(p => p.filter(x => x !== d)); setResults(null); setChecked(false); };
 
-  const checkInteractions = () => {
+  // ── إصلاح جذري: كان فحص التضارب يطابق مقابل 5 أزواج ثابتة بالكود بس ─────────
+  // أي دواءين غير موجودين حرفياً بهذي القائمة الخمسة كانا يُعتبَران "آمنين"
+  // تلقائياً، بغض النظر عن وجود تضارب حقيقي بينهم. الآن يستدعي الباك إند
+  // (الذي يستدعي بدوره Gemini/Claude الحقيقي) أولاً، ويستخدم الجدول المحلي
+  // بس كاحتياط صادق التسمية لو ما فيه ذكاء اصطناعي مفعّل.
+  const checkInteractions = async () => {
     if (selectedDrugs.length < 2) { showToast(tr('drug_no_drugs'), 'error'); return; }
+    setChecking(true);
+
+    const drugNames = selectedDrugs.map(ar => {
+      const d = drugDatabaseBilingual.find(x => x.ar === ar);
+      return lang === 'ar' ? ar : (d?.en || ar);
+    });
+
+    try {
+      const aiResult = await api.post('/drug-interactions/check', { drugs: drugNames, lang });
+      if (aiResult.available) {
+        // توحيد شكل نتيجة الذكاء الاصطناعي لتطابق شكل العرض (effect/recommendation
+        // نصوص مباشرة بلغة الطلب، مو أزواج ثنائية اللغة زي الجدول المحلي)
+        const normalized = (aiResult.interactions || []).map(inter => ({
+          drugs: inter.drugs || [],
+          severity: inter.severity === 'medium' ? 'med' : inter.severity,
+          effect: inter.effect,
+          recommendation: inter.recommendation,
+        }));
+        setResults(normalized);
+        setResultSource('ai');
+        setResultProvider(aiResult.provider);
+        setChecked(true);
+        setChecking(false);
+        return;
+      }
+    } catch {
+      // فشل الاتصال بالكامل — نكمل للاحتياط المحلي بدل كسر التجربة
+    }
+
+    // احتياط محلي (5 تضاربات معروفة بس) — يُستخدم فقط لو الذكاء الاصطناعي
+    // غير مفعّل أو فشل الاتصال به مؤقتاً
     const found = [];
     interactions.forEach(inter => {
       const match = inter.drugs.every(d => selectedDrugs.includes(d));
-      if (match) found.push(inter);
+      if (match) found.push({
+        drugs: inter.drugs.map(d => { const dd = drugDatabaseBilingual.find(x => x.ar === d); return lang === 'ar' ? d : (dd?.en || d); }),
+        severity: inter.severity,
+        effect: lang === 'ar' ? inter.effectAr : inter.effectEn,
+        recommendation: lang === 'ar' ? inter.recAr : inter.recEn,
+      });
     });
     setResults(found);
+    setResultSource('fallback');
+    setResultProvider(null);
     setChecked(true);
+    setChecking(false);
   };
 
   const sevColor = (s) => ({ high: '#ef4444', med: '#f59e0b', low: '#22c55e' }[s] || '#6b7280');
@@ -116,11 +175,21 @@ export default function DrugInteractionsPage() {
             <button
               className="btn btn-primary"
               onClick={checkInteractions}
+              disabled={checking}
               style={{ width: '100%', marginTop: 16, padding: '12px' }}
             >
-              🔍 {tr('drug_check')}
+              {checking ? `⏳ ${lang==='ar'?'جاري الفحص...':'Checking...'}` : `🔍 ${tr('drug_check')}`}
             </button>
           </div>
+
+          {aiAvailable === false && (
+            <div style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <FaListAlt />
+              {lang==='ar'
+                ? 'ملاحظة: الذكاء الاصطناعي غير مفعّل حالياً — الفحص القادم من جدول محلي محدود (5 تضاربات معروفة بس)، مو فحصاً شاملاً.'
+                : 'Note: AI is not currently enabled — the check will use a limited local table (5 known interactions only), not a comprehensive check.'}
+            </div>
+          )}
 
           {/* Common drugs quick add */}
           <div className="card">
@@ -143,34 +212,51 @@ export default function DrugInteractionsPage() {
               <h3 style={{ margin: '0 0 8px', color: 'var(--text-secondary)' }}>{tr('auto_pair_123')}</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0 }}>{tr('drug_choose_hint')}</p>
             </div>
-          ) : results.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
-              <FaCheckCircle size={52} color="#22c55e" style={{ marginBottom: 16 }} />
-              <h3 style={{ margin: '0 0 8px', color: '#22c55e' }}>{tr('drug_no_interaction')}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0 }}>{tr('drug_safe_msg')}</p>
-              <p style={{ color: '#f59e0b', fontSize: 12, marginTop: 12 }}>⚠️ {tr('drug_consult_warning')}</p>
-            </div>
           ) : (
-            <div>
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 8 }}>
-                <FaExclamationTriangle color="#ef4444" style={{ marginTop: 2 }} />
-                <span style={{ fontSize: 13, color: '#991b1b' }}>{tr('drug_found_count').replace('{count}', results.length)}</span>
+            <>
+              {/* ── إصلاح: شارة صادقة توضح مصدر نتيجة الفحص الفعلي ── */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
+                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                background: resultSource === 'ai' ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)',
+                color: resultSource === 'ai' ? '#7c3aed' : '#6b7280',
+              }}>
+                {resultSource === 'ai' ? <FaRobot /> : <FaListAlt />}
+                {resultSource === 'ai'
+                  ? (lang==='ar' ? `فحص بذكاء اصطناعي حقيقي (${resultProvider === 'gemini' ? 'Google Gemini' : 'Claude'})` : `Real AI-powered check (${resultProvider === 'gemini' ? 'Google Gemini' : 'Claude'})`)
+                  : (lang==='ar' ? 'جدول محلي محدود (5 تضاربات معروفة بس) — وليس فحصاً شاملاً' : 'Limited local table (5 known interactions only) — not a comprehensive check')}
               </div>
-              {results.map((r, i) => (
-                <div key={i} className="card" style={{ marginBottom: 12, border: `2px solid ${sevColor(r.severity)}30` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {r.drugs.map(d => <span key={d} style={{ background: 'var(--bg-secondary)', padding: '3px 10px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{lang==='ar'?d.ar:d.en}</span>)}
-                    </div>
-                    <span style={{ background: `${sevColor(r.severity)}15`, color: sevColor(r.severity), padding: '3px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                      {sevLabel(r.severity)}
-                    </span>
-                  </div>
-                  <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600 }}>⚠️ {lang==='ar' ? r.effectAr : r.effectEn}</p>
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>💡 {lang==='ar' ? r.recAr : r.recEn}</p>
+
+              {results.length === 0 ? (
+                <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
+                  <FaCheckCircle size={52} color="#22c55e" style={{ marginBottom: 16 }} />
+                  <h3 style={{ margin: '0 0 8px', color: '#22c55e' }}>{tr('drug_no_interaction')}</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0 }}>{tr('drug_safe_msg')}</p>
+                  <p style={{ color: '#f59e0b', fontSize: 12, marginTop: 12 }}>⚠️ {tr('drug_consult_warning')}</p>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div>
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 8 }}>
+                    <FaExclamationTriangle color="#ef4444" style={{ marginTop: 2 }} />
+                    <span style={{ fontSize: 13, color: '#991b1b' }}>{tr('drug_found_count').replace('{count}', results.length)}</span>
+                  </div>
+                  {results.map((r, i) => (
+                    <div key={i} className="card" style={{ marginBottom: 12, border: `2px solid ${sevColor(r.severity)}30` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {r.drugs.map(d => <span key={d} style={{ background: 'var(--bg-secondary)', padding: '3px 10px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{d}</span>)}
+                        </div>
+                        <span style={{ background: `${sevColor(r.severity)}15`, color: sevColor(r.severity), padding: '3px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                          {sevLabel(r.severity)}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600 }}>⚠️ {r.effect}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>💡 {r.recommendation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

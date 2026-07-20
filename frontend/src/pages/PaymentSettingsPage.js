@@ -38,9 +38,10 @@ export default function PaymentSettingsPage() {
     setDraft({ isSandbox: config(provider.code)?.isSandbox ?? true });
   }
 
-  function save() {
+  async function save() {
     const { isSandbox, ...credentials } = draft;
-    savePaymentCredentials(editing.code, credentials, isSandbox);
+    const ok = await savePaymentCredentials(editing.code, credentials, isSandbox);
+    if (!ok) return;
     showToast(L('تم حفظ الإعدادات', 'Settings saved'), 'success');
     setEditing(null);
     setDraft({});

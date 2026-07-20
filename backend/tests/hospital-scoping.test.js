@@ -3,15 +3,14 @@
 // اختبار حرج للمرحلة 4 من دعم المنشآت المتعددة: يتأكد فعلياً إن مستخدماً
 // مربوطاً بمنشأة معينة لا يقدر يشوف أو يعدّل أو يحذف بيانات منشأة أخرى،
 // حتى لو خمّن معرّف السجل مباشرة. يحتاج اتصالاً حقيقياً بـ PostgreSQL —
-// يُتجاوز بأمان لو تعذّر، بنفس نمط بقية الاختبارات.
+// يفشل الملف كاملاً بخطأ واضح لو تعذّر (لا يُتجاوز بصمت)، بنفس نمط بقية الاختبارات.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
 let adminToken;
 let hospitalATokenUser, hospitalBTokenUser;
-let pgAvailable = true;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('hospital-scoping');
@@ -29,9 +28,7 @@ beforeAll(async () => {
     .send({ nameAr: 'منشأة ب', nameEn: 'Hospital B' });
 
   if (hospA.status !== 201 || hospB.status !== 201) {
-    pgAvailable = false;
-    console.warn('⚠️  تعذّر الاتصال بـ PostgreSQL — تم تجاوز اختبار عزل المنشآت.');
-    return;
+    assertPgAvailable(hospA.status !== 201 ? hospA : hospB, 'عزل المنشآت', 201);
   }
 
   // إنشاء مستخدم مربوط بكل منشأة، وتسجيل دخول كل واحد للحصول على توكن خاص به
@@ -52,7 +49,6 @@ afterAll(() => {
 
 describe('عزل بيانات المرضى بين المنشآت', () => {
   test('موظف منشأة أ يضيف مريضاً، وموظف منشأة ب لا يقدر يشوفه إطلاقاً', async () => {
-    if (!pgAvailable) return;
 
     const createRes = await request(app)
       .post('/api/patients')
@@ -82,7 +78,6 @@ describe('عزل بيانات المرضى بين المنشآت', () => {
   });
 
   test('موظف منشأة ب لا يقدر يحذف مريضاً يخص منشأة أ حتى لو عرف المعرّف', async () => {
-    if (!pgAvailable) return;
 
     const createRes = await request(app)
       .post('/api/patients')
@@ -103,7 +98,6 @@ describe('عزل بيانات المرضى بين المنشآت', () => {
   });
 
   test('إدمن بلا منشأة مُعيَّنة (مستوى الوزارة) يشوف مرضى كل المنشآت', async () => {
-    if (!pgAvailable) return;
 
     const listAsAdmin = await request(app)
       .get('/api/patients')

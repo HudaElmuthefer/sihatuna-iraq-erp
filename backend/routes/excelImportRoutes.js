@@ -15,6 +15,7 @@ const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const { validateFields } = require('../middleware/validate');
 const { parseExcelBuffer } = require('../utils/excelImport');
+const { moduleRegistry } = require('./pgCrud');
 
 // تخزين بالذاكرة فقط (memoryStorage) — الملف يُقرأ ويُحلَّل مباشرة ولا يُكتب
 // على القرص إطلاقاً، فلا حاجة لأي تنظيف لاحق ولا خطر تراكم ملفات مؤقتة.
@@ -39,19 +40,79 @@ const importUpload = multer({
 //            الموديول، وإلا يفشل الإدراج بخطأ "الجدول غير موجود"
 // schema: نفس مخطط التحقق المستخدم بـ middleware/schemas.js لهذا الموديول
 // columnMap: قاموس "عنوان العمود بملف Excel" -> "اسم الحقل الداخلي"
-// options.indexedColumns: لازم يطابق تماماً نفس المصفوفة المُمرَّرة لـ pgCrud()
-//            لنفس الموديول بـ server.js (حتى لو فاضية []) — وإلا يفشل الإدراج
+// options.indexedColumns: مطلوب صراحة الآن (بلا قيمة افتراضية) — لازم يطابق
+//            تماماً نفس المصفوفة المُمرَّرة لـ pgCrud() لنفس الموديول
+//            بـ modules.js (حتى لو فاضية [])، وإلا يفشل الإدراج.
+//            ── إصلاح fail-fast: كان الافتراض الضمني name/phone/status، وهو
+//            خاطئ لأغلب الجداول (تخزين JSONB بحت) — بالضبط نفس خطأ pgCrud.js
+//            اللي كسر 4 موديولات فعلياً بالاستيراد (المشاريع، الأقسام،
+//            المخزون، الأصول) قبل هذا الإصلاح. نسيان تمريره الآن يوقف تسجيل
+//            المسار فوراً برسالة واضحة بدل فشل استيراد غامض لاحقاً.
 const registerExcelImport = (router, apiName, schema, columnMap, options = {}) => {
+  if (options.indexedColumns === undefined) {
+    throw new Error(
+      `❌ registerExcelImport('${apiName}'): options.indexedColumns مطلوب صراحة ولا قيمة افتراضية له.\n` +
+      `   مرري نفس المصفوفة بالضبط المُستخدَمة بتسجيل pgCrud() لنفس الموديول (حتى لو []).`
+    );
+  }
   const {
-    indexedColumns = [
-      { field: 'name', column: 'name' },
-      { field: 'phone', column: 'phone' },
-      { field: 'status', column: 'status' },
-    ],
+    indexedColumns,
     hospitalScoped = false,
     permission = null,
     tableName = apiName,
+    limiter = (req, res, next) => next(), // بدون تحديد معدل إضافي إن لم يُمرَّر
+    duplicateCheck = null, // مثال: ['name', 'phone'] — راجعي isDuplicate أدناه
+    // ── إصلاح: تعبئة افتراضية اختيارية بعد تحليل كل صف ────────────────────────
+    // بعض الحقول الرقمية (مثل spent/progress/milestones بموديول المشاريع)
+    // ما تكون بأعمدة Excel أصلاً، فتبقى undefined وتكسر حسابات الواجهة
+    // (تظهر "NaN%" أو "undefined/undefined"). afterParse(data) دالة اختيارية
+    // تُستدعى على كل صف بعد تحليله وقبل التحقق منه — تقدر ترجع نسخة معدَّلة
+    // بقيم افتراضية معقولة للحقول الناقصة.
+    afterParse = null,
   } = options;
+
+  // ── ميزة التصدير إلى Excel: عناوين أعمدة جميلة ─────────────────────────────
+  // columnMap يربط عدة عناوين محتملة بنفس الحقل (مثلاً 'الاسم' و'اسم المريض'
+  // و'Name' كلها -> 'name'، لمرونة الاستيراد). للتصدير نريد عنوان واحد لطيف
+  // لكل حقل — نأخذ أول عنوان نصادفه بترتيب المفاتيح (وهو غالباً التسمية
+  // العربية الأساسية بكل تعريفات الموديولات الحالية). يُخزَّن بـ moduleRegistry
+  // (نفس السجل المشترك المستخدم لسلة المحذوفات) ليقرأه export-excel بـ
+  // pgCrud.js — يعمل حتى لو استُدعيت registerExcelImport قبل pgCrud() لنفس
+  // الموديول (ترتيب الاستدعاء الفعلي بـ modules.js)، لأن pgCrud.js يدمج بدل
+  // ما يستبدل عند تسجيله لاحقاً.
+  const exportHeaders = {};
+  Object.entries(columnMap).forEach(([header, field]) => {
+    if (!(field in exportHeaders)) exportHeaders[field] = header;
+  });
+  moduleRegistry[apiName] = { ...moduleRegistry[apiName], exportHeaders };
+
+  // ── إصلاح: كشف التكرار قبل الإدراج ────────────────────────────────────────
+  // قبل هذا، رفع نفس الملف مرتين (بالخطأ، أو بعد إضافة صفوف جديدة لملف قديم)
+  // كان يُنشئ نسخاً مكررة كاملة لكل سجل، بدون أي تحذير. الآن نتحقق قبل كل
+  // إدراج: لو فيه سجل موجود مسبقاً يطابق كل حقول duplicateCheck بالضبط (مثلاً
+  // نفس الاسم ونفس الهاتف لمريض)، نتجاوزه ونبلّغ عنه كـ"مكرر" بدل إدراجه مرة
+  // ثانية. الحقل المفهرس (indexedColumns) يُستعلَم مباشرة (أسرع)، وأي حقل غير
+  // مفهرس يُستعلَم من عمود JSONB (data->>'field') — أبطأ قليلاً لكنه دقيق.
+  const isDuplicate = async (data, userHospitalId) => {
+    if (!duplicateCheck || duplicateCheck.length === 0) return false;
+    const conditions = [];
+    const values = [];
+    duplicateCheck.forEach((field) => {
+      const indexed = indexedColumns.find(c => c.field === field);
+      const expr = indexed ? indexed.column : `data->>'${field}'`;
+      values.push(data[field] ?? '');
+      conditions.push(`${expr} = $${values.length}`);
+    });
+    // نطاق التحقق يبقى ضمن نفس المنشأة فقط بالأنظمة متعددة المنشآت — نفس
+    // الاسم والهاتف بمستشفيين مختلفين حالة مشروعة (مريضين مختلفين)، مو تكراراً
+    if (hospitalScoped && userHospitalId) {
+      values.push(userHospitalId);
+      conditions.push(`data->>'hospitalId' = $${values.length}`);
+    }
+    const sql = `SELECT id FROM ${tableName} WHERE ${conditions.join(' AND ')} LIMIT 1`;
+    const result = await pool.query(sql, values);
+    return result.rows.length > 0;
+  };
 
   // ── تحميل قالب فارغ ──────────────────────────────────────────────────────
   // يبني ملف Excel بصف عناوين + صف مثال واحد، بنفس الأعمدة المتوقعة بالضبط —
@@ -72,18 +133,20 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
     });
   }
 
-  router.post(`/${apiName}/import-excel`, auth, requirePermission(permission), importUpload.single('file'), async (req, res, next) => {
+  router.post(`/${apiName}/import-excel`, auth, requirePermission(permission), limiter, importUpload.single('file'), async (req, res, next) => {
     try {
       if (!req.file) return res.status(400).json({ message: 'لم يُرفَع أي ملف' });
 
       const { rows, error } = parseExcelBuffer(req.file.buffer, columnMap);
       if (error) return res.status(400).json({ message: error });
 
-      const results = { imported: 0, failed: 0, errors: [] };
+      const results = { imported: 0, failed: 0, duplicates: 0, errors: [], duplicateRows: [] };
 
-      for (const { rowNumber, data } of rows) {
+      for (const { rowNumber, data: rawData } of rows) {
         // صف فاضي بالكامل (مثلاً صف أخير زايد بالملف بالخطأ) — تجاهله بصمت
-        if (Object.values(data).every(v => v === '' || v === undefined)) continue;
+        if (Object.values(rawData).every(v => v === '' || v === undefined)) continue;
+
+        const data = afterParse ? afterParse(rawData) : rawData;
 
         const rowErrors = validateFields(schema, data);
         if (rowErrors.length > 0) {
@@ -97,6 +160,18 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
           data.hospitalId = req.user.hospitalId;
         }
         if (!data.status) data.status = 'active'; // قيمة افتراضية معقولة لو العمود غير موجود بالملف
+
+        try {
+          if (await isDuplicate(data, req.user?.hospitalId)) {
+            results.duplicates++;
+            results.duplicateRows.push({ row: rowNumber, name: data.name || data.title || '' });
+            continue;
+          }
+        } catch (dupErr) {
+          // فشل فحص التكرار نفسه (مثلاً عمود JSONB بحاجة صياغة مختلفة) — لا
+          // نوقف الاستيراد كله بسببه، نكمل للإدراج مباشرة كما لو ما فيه تكرار
+          console.warn(`⚠️ [${apiName}] فشل فحص التكرار للصف ${rowNumber}:`, dupErr.message);
+        }
 
         const indexedValues = indexedColumns.map(({ field }) => data[field] ?? null);
         const rest = { ...data };
@@ -125,7 +200,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         }
       }
 
-      console.log(`📥 [${apiName}] استيراد Excel: ${results.imported} نجح، ${results.failed} فشل — بواسطة user #${req.user?.id}`);
+      console.log(`📥 [${apiName}] استيراد Excel: ${results.imported} نجح، ${results.duplicates} مكرر، ${results.failed} فشل — بواسطة user #${req.user?.id}`);
       res.json(results);
     } catch (err) { next(err); }
   });

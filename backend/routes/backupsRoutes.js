@@ -1,0 +1,56 @@
+// backend/routes/backupsRoutes.js
+//
+// مسارات النسخ الاحتياطي وسجل التدقيق (Audit Log).
+//
+// ── إصلاح أمني ────────────────────────────────────────────────────────────
+// كل هذي المسارات تتطلب **إدمن عام (مستوى الوزارة)** حصراً، مو أي إدمن —
+// ملف نسخة احتياطية واحد يحوي بيانات *كل* المنشآت مع بعض بنفس الملف (db.json
+// كامل)، فلا معنى لتفويض الوصول له أو لاستعادته لإدمن محلي مرتبط بمنشأة
+// واحدة (كان يقدر نظرياً يستعيد نسخة قديمة تمسح تعديلات حديثة بمنشآت ثانية
+// غيره بالكامل). نفس المنطق ينطبق على سجل التدقيق الشامل — راجعي
+// middleware/requireGlobalAdmin.js.
+const express = require('express');
+const fs = require('fs');
+const asyncHandler = require('../middleware/asyncHandler');
+const auth = require('../middleware/auth');
+const requireGlobalAdmin = require('../middleware/requireGlobalAdmin');
+const { listBackups, restoreFromBackup, runBackup } = require('../utils/backup');
+const { logAudit, AUDIT_LOG_PATH } = require('../utils/auditLog');
+
+const router = express.Router();
+
+// ── BACKUPS ──────────────────────────────────────────────────────────────────
+router.get('/backups', auth, requireGlobalAdmin, (req, res) => {
+  res.json(listBackups());
+});
+
+router.post('/backups/run', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
+  await runBackup();
+  logAudit({ module: 'system', action: 'manual_backup', userId: req.user.id, userRole: req.user.role });
+  res.json({ success: true, backups: listBackups() });
+}));
+
+router.post('/backups/:name/restore', auth, requireGlobalAdmin, (req, res) => {
+  try {
+    restoreFromBackup(req.params.name);
+    logAudit({ module: 'system', action: 'restore_backup', userId: req.user.id, userRole: req.user.role, after: { backupName: req.params.name } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+// GET /api/audit-log?module=patients&limit=100  (للإدمن العام فقط)
+router.get('/audit-log', auth, requireGlobalAdmin, (req, res) => {
+  if (!fs.existsSync(AUDIT_LOG_PATH)) return res.json([]);
+  let log = JSON.parse(fs.readFileSync(AUDIT_LOG_PATH, 'utf8'));
+  const { module, action, userId, limit } = req.query;
+  if (module) log = log.filter(e => e.module === module);
+  if (action) log = log.filter(e => e.action === action);
+  if (userId) log = log.filter(e => String(e.userId) === String(userId));
+  log = log.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  res.json(log.slice(0, Number(limit) || 200));
+});
+
+module.exports = router;

@@ -153,4 +153,69 @@ module.exports = {
     category: { required: true, type: 'string' },
     price: { required: true },
   },
+  // ── إصلاح: صفحة إدارة الجودة (ISO) كانت بدون أي اتصال بقاعدة بيانات ──────────
+  // كانت البيانات (مراجعات، عدم مطابقة، مؤشرات أداء) تُفقَد بمجرد تحديث
+  // الصفحة. الثلاثة مخططات تحت تدعم التخزين الحقيقي — راجعي
+  // routes/modules.js وmigrations/add-quality-tables.js.
+  qualityAudits: {
+    title: { required: true, type: 'string' },
+  },
+  qualityNCs: {
+    title: { required: true, type: 'string' },
+  },
+  qualityKPIs: {
+    name: { required: true, type: 'string' },
+  },
+  // ── إصلاح: حقل "الصيانة" كان مجرد حالة + تاريخ يُكتَب فوقه بدون أي سجل تاريخي ──
+  // كل مرة تُنهى صيانة، يُفقَد سجل الصيانة السابقة نهائياً (يُستبدَل بس بتاريخ
+  // جديد). الآن كل حدث صيانة يُسجَّل بشكل مستقل بسجل دائم — راجعي
+  // routes/modules.js وmigrations/add-maintenance-log-tables.js.
+  ambulanceMaintenanceLog: {
+    vehicleId: { required: true },
+    date: { required: true, type: 'string' },
+    description: { required: true, type: 'string' },
+  },
+  assetMaintenanceLog: {
+    assetId: { required: true },
+    date: { required: true, type: 'string' },
+    description: { required: true, type: 'string' },
+  },
+  // ── الردهات (إدارة المرضى الداخليين) ────────────────────────────────────
+  wards: {
+    name: { required: true, type: 'string' },
+  },
+  admissions: {
+    patientName: { required: true, type: 'string' },
+    wardId: { required: true },
+  },
+  medicationOrders: {
+    admissionId: { required: true },
+    drugName: { required: true, type: 'string' },
+  },
+  medicationAdministrations: {
+    orderId: { required: true },
+    administeredBy: { required: true, type: 'string' },
+  },
+  // ── صالة الولادة ────────────────────────────────────────────────────────
+  // إصلاح: deliveryDate كان required دائماً، فكان يرفض حفظ سجل "الأم قبل
+  // الولادة" (مرحلة admitted) لأنه منطقياً ما فيه تاريخ ولادة بعد — يُملأ لاحقاً
+  // لحظة "إتمام الولادة". الفرونت إند نفسه (DeliveryRoomPage.js) يتحقق من
+  // وجود deliveryDate تحديداً بمرحلة إتمام/تسجيل الولادة الكاملة، فلا حاجة
+  // لفرضه هنا على كل السجلات بغض النظر عن مرحلتها.
+  deliveries: {
+    motherName: { required: true, type: 'string' },
+  },
+  // ── العلاج الطبيعي ──────────────────────────────────────────────────────
+  ptEquipment: {
+    name: { required: true, type: 'string' },
+  },
+  ptSessions: {
+    patientName: { required: true, type: 'string' },
+    date: { required: true, type: 'string' },
+  },
+  // ── إدارة الطابور ───────────────────────────────────────────────────────
+  queueTickets: {
+    patientName: { required: true, type: 'string' },
+    department: { required: true, type: 'string' },
+  },
 };

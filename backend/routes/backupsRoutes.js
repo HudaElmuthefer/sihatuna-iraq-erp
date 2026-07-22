@@ -9,12 +9,17 @@
 // واحدة (كان يقدر نظرياً يستعيد نسخة قديمة تمسح تعديلات حديثة بمنشآت ثانية
 // غيره بالكامل). نفس المنطق ينطبق على سجل التدقيق الشامل — راجعي
 // middleware/requireGlobalAdmin.js.
+//
+// ── إضافة: POST /backups/run يقبل الآن destination اختياري بجسم الطلب ──────
+// { destination: 'pgadmin' | 'computer' | 'cloud', cloudUrl?: string }
+// بدون destination (أو الاستدعاء القديم بلا جسم)، يعمل تماماً كما كان —
+// نسخة محلية عادية، بدون أي تغيير بالسلوك الحالي.
 const express = require('express');
 const fs = require('fs');
 const asyncHandler = require('../middleware/asyncHandler');
 const auth = require('../middleware/auth');
 const requireGlobalAdmin = require('../middleware/requireGlobalAdmin');
-const { listBackups, restoreFromBackup, runBackup } = require('../utils/backup');
+const { listBackups, restoreFromBackup, runBackup, runBackupWithDestination } = require('../utils/backup');
 const { logAudit, AUDIT_LOG_PATH } = require('../utils/auditLog');
 
 const router = express.Router();
@@ -25,9 +30,34 @@ router.get('/backups', auth, requireGlobalAdmin, (req, res) => {
 });
 
 router.post('/backups/run', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
-  await runBackup();
-  logAudit({ module: 'system', action: 'manual_backup', userId: req.user.id, userRole: req.user.role });
-  res.json({ success: true, backups: listBackups() });
+  const { destination, cloudUrl } = req.body || {};
+
+  // بدون وجهة محددة: نفس السلوك القديم تماماً (نسخة محلية عادية)
+  if (!destination) {
+    await runBackup();
+    logAudit({ module: 'system', action: 'manual_backup', userId: req.user.id, userRole: req.user.role });
+    return res.json({ success: true, backups: listBackups() });
+  }
+
+  const result = await runBackupWithDestination(destination, cloudUrl);
+  logAudit({
+    module: 'system',
+    action: 'manual_backup',
+    userId: req.user.id,
+    userRole: req.user.role,
+    after: { destination },
+  });
+
+  if (result.type === 'computer') {
+    return res.download(result.sqlFilePath, 'sihatuna_backup.sql');
+  }
+
+  const messages = {
+    pgadmin: 'تم إنشاء النسخة الاحتياطية بنجاح، جاهزة للفتح من pgAdmin',
+    cloud: 'تم إنشاء النسخة الاحتياطية ورفعها على الكلاود بنجاح',
+  };
+
+  res.json({ success: true, message: messages[result.type], backups: listBackups() });
 }));
 
 router.post('/backups/:name/restore', auth, requireGlobalAdmin, (req, res) => {

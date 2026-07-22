@@ -15,6 +15,13 @@
 // Google Drive / OneDrive) يضمن وجود نسخة بمكان مختلف فعلياً.
 //
 // كلا النوعين: نسخة تلقائية دورية (كل ساعة)، الاحتفاظ بآخر N نسخة فقط.
+//
+// ── إضافة: نسخة يدوية بوجهة يحددها المستخدم ─────────────────────────────────
+// runBackupWithDestination() تُستخدم فقط من راوت POST /backups/run عندما يمرر
+// المستخدم destination (pgadmin / computer / cloud). لا تُستدعى إطلاقاً من
+// الجدولة التلقائية (startAutoBackup)، ولا تُغيّر بأي شكل سلوك النسخ الدوري
+// الموجود أصلاً — فقط تعيد استخدام runBackup() نفسها ثم تقرر ماذا تفعل
+// بالملف الناتج حسب الوجهة المطلوبة.
 
 const fs = require('fs');
 const path = require('path');
@@ -106,6 +113,10 @@ function cleanupOldExternalBackups() {
   }
 }
 
+// ── ملاحظة: الآن تُرجع معلومات النسخة المُنشأة (backupFolder, pgOk, backedUpAny)
+// بدل عدم إرجاع شيء — إضافة غير مؤثرة على المستدعين الحاليين (startAutoBackup،
+// restoreFromBackup) لأنهم لا يستخدمون القيمة المُرجعة أصلاً، لكنها ضرورية
+// لـ runBackupWithDestination() الجديدة كي تعرف مكان الملف الناتج.
 async function runBackup() {
   ensureDir(BACKUPS_DIR);
   const ts = timestamp();
@@ -139,6 +150,8 @@ async function runBackup() {
   }
 
   cleanupOldBackups();
+
+  return { backupFolder, pgOk, backedUpAny };
 }
 
 function cleanupOldBackups() {
@@ -204,6 +217,68 @@ function restoreFromBackup(backupName) {
   console.log(`    backend/backups/${backupName}/postgres_backup.sql يدوياً بـ pgAdmin`);
 }
 
+// يرفع ملفاً واحداً لرابط سحابي عبر PUT (webhook أو pre-signed URL)
+function uploadFileToCloud(filePath, cloudUrl) {
+  return new Promise(async (resolve) => {
+    try {
+      const fileBuffer = fs.readFileSync(filePath);
+      const response = await fetch(cloudUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/sql' },
+        body: fileBuffer,
+      });
+      resolve({ ok: response.ok, status: response.status });
+    } catch (err) {
+      resolve({ ok: false, error: err.message });
+    }
+  });
+}
+
+// نسخة احتياطية يدوية بوجهة يحددها المستخدم — تُستدعى فقط من راوت
+// POST /backups/run عند تمرير destination بالجسم. تُنفّذ runBackup() العادية
+// أولاً (فتحصل على db.json + audit-log.json + postgres_backup.sql بنفس آلية
+// النسخ التلقائي)، ثم تقرر حسب الوجهة:
+//   - pgadmin: لا شيء إضافي، الملف أصلاً محلي وجاهز لفتحه بـ pgAdmin
+//   - computer: تُعيد مسار ملف postgres_backup.sql كي يُرسله الراوت كتحميل
+//   - cloud: ترفع نفس الملف للرابط المُعطى
+async function runBackupWithDestination(destination, cloudUrl) {
+  const result = await runBackup();
+  if (!result.backedUpAny) {
+    const err = new Error('فشل إنشاء النسخة الاحتياطية');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const sqlFilePath = path.join(result.backupFolder, 'postgres_backup.sql');
+
+  if (destination === 'pgadmin') {
+    return { type: 'pgadmin', backupFolder: result.backupFolder, sqlFilePath };
+  }
+
+  if (destination === 'computer') {
+    return { type: 'computer', sqlFilePath };
+  }
+
+  if (destination === 'cloud') {
+    if (!cloudUrl || !cloudUrl.trim()) {
+      const err = new Error('رابط الخزن السحابي مطلوب');
+      err.statusCode = 400;
+      throw err;
+    }
+    const uploadResult = await uploadFileToCloud(sqlFilePath, cloudUrl);
+    if (!uploadResult.ok) {
+      const err = new Error(`فشل الرفع على الكلاود (${uploadResult.status || uploadResult.error})، لكن النسخة محفوظة محلياً`);
+      err.statusCode = 502;
+      throw err;
+    }
+    return { type: 'cloud', backupFolder: result.backupFolder };
+  }
+
+  const err = new Error('وجهة غير معروفة');
+  err.statusCode = 400;
+  throw err;
+}
+
 // يبدأ الجدولة التلقائية — تُستدعى مرة وحدة عند إقلاع السيرفر
 function startAutoBackup() {
   runBackup(); // نسخة فورية عند التشغيل
@@ -211,11 +286,6 @@ function startAutoBackup() {
   const extNote = process.env.EXTERNAL_BACKUP_DIR ? ` + external (${process.env.EXTERNAL_BACKUP_DIR})` : ' (no external destination configured)';
   console.log(`💾 Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);
 
-  // ── تحسين نشر: تنبيه واضح لا يمكن تفويته ────────────────────────────────────
-  // قبل هذا، غياب EXTERNAL_BACKUP_DIR كان يظهر بس كجزء صغير من سطر لوق طويل —
-  // سهل جداً يضيع وسط باقي رسائل الإقلاع. لو الجهاز نفسه تعطّل (قرص صلب، سرقة،
-  // حريق...) وكل النسخ الاحتياطية محفوظة بنفس القرص فقط، تُفقَد البيانات كلها
-  // نهائياً بدون أي وسيلة استرجاع. هذا صندوق منفصل تماماً يصعب تفويته.
   if (!process.env.EXTERNAL_BACKUP_DIR) {
     console.warn('\n╔════════════════════════════════════════════════════════════╗');
     console.warn('║  ⚠️  تنبيه: لا توجد وجهة نسخ احتياطي خارجية!                  ║');
@@ -228,4 +298,4 @@ function startAutoBackup() {
   }
 }
 
-module.exports = { startAutoBackup, runBackup, listBackups, restoreFromBackup };
+module.exports = { startAutoBackup, runBackup, listBackups, restoreFromBackup, runBackupWithDestination };

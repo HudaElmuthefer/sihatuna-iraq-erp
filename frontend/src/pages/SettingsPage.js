@@ -14,8 +14,8 @@
 import React, { useState } from 'react';
 import { useT } from '../translations';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
-import { api } from '../api';
-
+import { api, SERVER_BASE_URL } from '../api';
+import BackupDestinationModal from '../components/BackupDestinationModal';
 const ROLES = ['admin','doctor','nurse','receptionist','accountant','hr'];
 const ROLE_LABELS = (tr) => ({
   admin: tr('role_admin'),
@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [backups, setBackups] = useState([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
   const [backupRunning, setBackupRunning] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [restoringName, setRestoringName] = useState(null);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [togglingMode, setTogglingMode] = useState(false);
@@ -140,17 +141,39 @@ export default function SettingsPage() {
     setBackupsLoading(false);
   };
 
-  const runBackupNow = async () => {
-    setBackupRunning(true);
-    try {
-      const res = await api.post('/backups/run');
-      setBackups(res.backups);
+  const handleBackupConfirm = async ({ destination, cloudUrl }) => {
+  setBackupRunning(true);
+  try {
+    if (destination === 'computer') {
+     const response = await fetch(`${SERVER_BASE_URL}/api/backups/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ destination, cloudUrl }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || tr('backup_failed'));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sihatuna_backup.sql';
+      a.click();
+      window.URL.revokeObjectURL(url);
       showToast(tr('backup_created'), 'success');
-    } catch (err) {
-      showToast(err.message, 'error');
+    } else {
+      const res = await api.post('/backups/run', { destination, cloudUrl });
+      setBackups(res.backups);
+      showToast(res.message || tr('backup_created'), 'success');
     }
-    setBackupRunning(false);
-  };
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+  setBackupRunning(false);
+  setShowBackupModal(false);
+};
 
   const restoreBackup = async (name) => {
     if (!(await confirmDialog(tr('restore_confirm')))) return;
@@ -578,12 +601,12 @@ export default function SettingsPage() {
                   <h3 style={{ margin:'0 0 6px' }}>💾 {tr('set_tab_backups')}</h3>
                   <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('backups_desc')}</p>
                 </div>
-                <button
-                  onClick={runBackupNow}
-                  disabled={backupRunning}
-                  className="btn btn-primary"
-                  style={{ whiteSpace:'nowrap' }}
-                >
+             <button
+                      onClick={() => setShowBackupModal(true)}
+                      disabled={backupRunning}
+                      className="btn btn-primary"
+                      style={{ whiteSpace:'nowrap' }}
+>
                   {backupRunning ? `⏳ ${tr('backup_running')}` : `💾 ${tr('btn_backup_now')}`}
                 </button>
               </div>
@@ -830,7 +853,12 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
+{showBackupModal && (
+  <BackupDestinationModal
+    onClose={() => setShowBackupModal(false)}
+    onConfirm={handleBackupConfirm}
+  />
+)}
       {/* ── RESET DATA SECTION ── */}
       <div style={{ marginTop:32, padding:'20px 24px', background:'var(--bg-secondary)', borderRadius:12, border:'2px dashed #ef4444' }}>
         <h3 style={{ color:'#ef4444', margin:'0 0 8px', fontSize:16 }}>⚠️ {lang==='ar'?'إعادة ضبط بيانات النظام':'Reset System Data'}</h3>

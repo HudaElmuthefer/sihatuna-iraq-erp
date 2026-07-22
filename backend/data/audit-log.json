@@ -2178,5 +2178,32 @@
     "action": "login_success",
     "userId": 1,
     "userRole": "admin"
+  },
+  {
+    "id": 266,
+    "timestamp": "2026-07-22T07:39:45.772Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 267,
+    "timestamp": "2026-07-22T07:40:05.902Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 268,
+    "timestamp": "2026-07-22T08:33:46.427Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
   }
 ]

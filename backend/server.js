@@ -146,6 +146,7 @@ router.use(require('./routes/hospitalsRoutes'));
 router.use(require('./routes/dicomWebhookRoutes'));
 router.use(require('./routes/invoiceReaderRoutes'));
 router.use(require('./routes/documentLookupRoutes'));
+router.use(require('./routes/bookingRoutes'));
 router.use(require('./routes/medicalCodesRoutes'));
 router.use(require('./routes/backupsRoutes'));
 router.use(require('./routes/authRoutes'));
@@ -161,17 +162,26 @@ router.use(require('./routes/authRoutes'));
 router.get('/queue-display', async (req, res, next) => {
   try {
     const { hospitalId } = req.query;
-    const params = [];
-    let where = '';
+    // ── إصلاح: كان الاستعلام يجيب "آخر 200 تذكرة برقم id" بدون أي فلترة
+    // بالتاريخ — يعني أي تذكرة قديمة (id أصغر) تُنادى الآن (تحديث status
+    // فقط، id ما يتغيّر) تختفي من الشاشة إذا صار عندها 200+ تذكرة أحدث id
+    // بعدها (بالضبط ما صار بعد استيراد دفعة كبيرة من التذاكر التجريبية) —
+    // رغم إن التحديث نجح فعلياً بقاعدة البيانات. الآن نفلتر بتاريخ اليوم
+    // فقط (بنفس منطق "اليوم المحلي" المُصلَح بـ QueuePage.js، لا UTC)، فلا
+    // توجد تذكرة نشطة تختفي بسبب الترتيب.
+    const now = new Date();
+    const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const params = [todayLocal];
+    let where = `WHERE data->>'createdAt' LIKE $1 || '%'`;
     if (hospitalId) {
       params.push(hospitalId);
-      where = `WHERE data->>'hospitalId' = $1`;
+      where += ` AND data->>'hospitalId' = $${params.length}`;
     }
     const result = await pool.query(
       `SELECT id, department, status, data->>'ticketNo' AS "ticketNo", data->>'calledBy' AS "calledBy"
        FROM queue_tickets
        ${where}
-       ORDER BY id DESC LIMIT 200`,
+       ORDER BY id DESC`,
       params
     );
     res.json(result.rows);

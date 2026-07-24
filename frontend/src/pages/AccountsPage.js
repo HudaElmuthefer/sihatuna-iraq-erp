@@ -38,8 +38,8 @@ export default function AccountsPage() {
     Promise.all([api.get('/promotions').catch(() => []), api.get('/allowances').catch(() => [])])
       .then(([promotions, allowances]) => {
         if (cancelled) return;
-        if (Array.isArray(promotions)) setPromotionDue(promotions.filter(p => p.status === 'due').length);
-        if (Array.isArray(allowances)) setAllowanceDue(allowances.filter(a => a.status === 'due').length);
+        if (Array.isArray(promotions)) setPromotionDue(promotions.filter(p => p.status === 'مستحق').length);
+        if (Array.isArray(allowances)) setAllowanceDue(allowances.filter(a => a.status === 'مستحقة').length);
       });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -5,6 +5,8 @@ import { api } from '../api';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { FaPlus, FaEdit, FaTrash, FaBed, FaPills, FaSignOutAlt } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const emptyWard = { name: '', nameEn: '', bedCount: 10, notes: '' };
 const emptyAdmission = { patientName: '', wardId: '', bedNo: '', admissionDate: new Date().toISOString().split('T')[0], diagnosis: '', treatingDoctor: '', status: 'admitted', dischargeDate: '', dischargeNotes: '' };
@@ -80,6 +82,9 @@ export default function WardsPage() {
   const [admForm, setAdmForm] = useState(emptyAdmission);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('admitted');
+  const [showAdmImport, setShowAdmImport] = useState(false);
+  const [showWardImport, setShowWardImport] = useState(false);
+  const [showOrderImport, setShowOrderImport] = useState(false);
 
   const openAddAdm = () => { setEditingAdm(null); setAdmForm(emptyAdmission); setShowAdmModal(true); };
   const openEditAdm = (a) => { setEditingAdm(a); setAdmForm({ ...a }); setShowAdmModal(true); };
@@ -275,10 +280,16 @@ export default function WardsPage() {
 
       {tab === 'schedule' && (
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>⏳ {L('قادمة', 'Upcoming')}: {scheduleRows.filter(r => r.status === 'upcoming').length}</span>
-            <span style={{ fontSize: 12, color: '#ef4444' }}>⚠️ {L('متأخرة', 'Overdue')}: {scheduleRows.filter(r => r.status === 'overdue').length}</span>
-            <span style={{ fontSize: 12, color: '#22c55e' }}>✅ {L('تم الإعطاء', 'Given')}: {scheduleRows.filter(r => r.status === 'given').length}</span>
+          <div style={{ padding: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>⏳ {L('قادمة', 'Upcoming')}: {scheduleRows.filter(r => r.status === 'upcoming').length}</span>
+              <span style={{ fontSize: 12, color: '#ef4444' }}>⚠️ {L('متأخرة', 'Overdue')}: {scheduleRows.filter(r => r.status === 'overdue').length}</span>
+              <span style={{ fontSize: 12, color: '#22c55e' }}>✅ {L('تم الإعطاء', 'Given')}: {scheduleRows.filter(r => r.status === 'given').length}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowOrderImport(true)} className="btn btn-outline">📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+              <ExcelExportButton apiName="medicationOrders" lang={lang} onError={(m) => showToast(m, 'error')} />
+            </div>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table className="table">
@@ -343,9 +354,13 @@ export default function WardsPage() {
 
       {tab === 'wards' && (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <h3 style={{ margin: 0 }}>{L('الردهات', 'Wards')}</h3>
-            <button onClick={openAddWard} className="btn btn-primary"><FaPlus /> {L('ردهة جديدة', 'New Ward')}</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowWardImport(true)} className="btn btn-outline">📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+              <ExcelExportButton apiName="wards" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button onClick={openAddWard} className="btn btn-primary"><FaPlus /> {L('ردهة جديدة', 'New Ward')}</button>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
             {wards.map(w => {
@@ -383,7 +398,11 @@ export default function WardsPage() {
                   ))}
                 </div>
               </div>
-              <button onClick={openAddAdm} className="btn btn-primary"><FaPlus /> {L('إدخال مريض', 'Admit Patient')}</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowAdmImport(true)} className="btn btn-outline">📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+                <ExcelExportButton apiName="admissions" lang={lang} onError={(m) => showToast(m, 'error')} />
+                <button onClick={openAddAdm} className="btn btn-primary"><FaPlus /> {L('إدخال مريض', 'Admit Patient')}</button>
+              </div>
             </div>
           </div>
 
@@ -664,6 +683,51 @@ export default function WardsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showWardImport && (
+        <ExcelImportModal
+          apiName="wards"
+          title={L('استيراد ردهات من Excel', 'Import Wards from Excel')}
+          lang={lang}
+          onClose={() => setShowWardImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/wards');
+              if (Array.isArray(fresh)) setWards(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
+
+      {showAdmImport && (
+        <ExcelImportModal
+          apiName="admissions"
+          title={L('استيراد حالات إدخال من Excel', 'Import Admissions from Excel')}
+          lang={lang}
+          onClose={() => setShowAdmImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/admissions');
+              if (Array.isArray(fresh)) setAdmissions(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
+
+      {showOrderImport && (
+        <ExcelImportModal
+          apiName="medicationOrders"
+          title={L('استيراد وصفات أدوية من Excel', 'Import Medication Orders from Excel')}
+          lang={lang}
+          onClose={() => setShowOrderImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/medicationOrders');
+              if (Array.isArray(fresh)) setOrders(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
       )}
     </div>
   );

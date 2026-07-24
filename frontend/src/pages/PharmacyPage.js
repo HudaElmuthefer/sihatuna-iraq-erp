@@ -3,6 +3,10 @@ import React, { useState, useMemo } from 'react';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
+import { FaFileExcel } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
+import { api } from '../api';
 
 const RX_STATUS = {
   pending:   { ar:'بانتظار الصرف', en:'Pending Dispense', color:'#f59e0b', bg:'#fef3c7' },
@@ -29,6 +33,7 @@ export default function PharmacyPage() {
   const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
+  const ar = lang === 'ar';
 
   const [tab, setTab]           = useState('prescriptions');
   const [search, setSearch]     = useState('');
@@ -42,6 +47,9 @@ export default function PharmacyPage() {
   const toggleDrugSelect = (id) => setSelectedDrugIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [statusFilter, setStatusFilter] = useState('all');
   const [catFilter, setCatFilter]       = useState('all');
+
+  // ── استيراد من Excel (الوصفات فقط) ────────────────────────────────────────
+  const [showImport, setShowImport] = useState(false);
 
   // Prescription modal
   const [showRxModal, setShowRxModal] = useState(false);
@@ -286,11 +294,34 @@ export default function PharmacyPage() {
           <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>💊 {L('الصيدلية','Pharmacy')}</h1>
           <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة الوصفات الطبية وصرف الأدوية وإدارة المخزون','Manage prescriptions, drug dispensing and inventory')}</p>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          {tab === 'prescriptions' && <button style={S.btn()} onClick={openAddRx}>+ {L('وصفة جديدة','New Prescription')}</button>}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {tab === 'prescriptions' && (
+            <>
+              <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={() => setShowImport(true)}>
+                <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+              </button>
+              <ExcelExportButton apiName="pharmacyOrders" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button style={S.btn()} onClick={openAddRx}>+ {L('وصفة جديدة','New Prescription')}</button>
+            </>
+          )}
           {(tab === 'available' || tab === 'shortage') && <button style={S.btn('#10b981')} onClick={openAddDrug}>+ {L('إضافة دواء','Add Drug')}</button>}
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="pharmacyOrders"
+          title={ar ? 'استيراد وصفات طبية من Excel' : 'Import Prescriptions from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/pharmacyOrders');
+              if (Array.isArray(fresh)) setPharmacyOrders(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div style={S.stats}>

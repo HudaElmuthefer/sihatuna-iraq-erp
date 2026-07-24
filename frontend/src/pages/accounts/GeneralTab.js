@@ -6,6 +6,9 @@ import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { today, initTransactions, ACCT_CATS, METHODS_KEYS, TR_LABELS, displayValue, printTable, usePersistedTab } from './shared';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
+import { api } from '../../api';
 
 export default
 function GeneralTab() {
@@ -13,8 +16,9 @@ function GeneralTab() {
   const tr = useT(lang);
   const [txs, setTxs] = usePersistedTab('acc_transactions', 'transactions', initTransactions);
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
-  const empty = { date:today, desc:'', category:'إيراد', type:'income', amount:'', method:'cash', ref:'' };
+  const empty = { date:today, desc:'', category:'revenue', type:'دخل', amount:'', method:'cash', ref:'' };
   const [form, setForm] = useState(empty);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -24,8 +28,8 @@ function GeneralTab() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const totalIn = txs.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount),0);
-  const totalOut = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0);
+  const totalIn = txs.filter(t=>t.type==='دخل').reduce((s,t)=>s+Number(t.amount),0);
+  const totalOut = txs.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount),0);
   const balance = totalIn - totalOut;
 
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
@@ -90,7 +94,7 @@ function GeneralTab() {
             <div style={{ width:46, height:46, borderRadius:'50%', background:`${s.color}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>{s.icon}</div>
             <div>
               <div style={{ fontSize:11, color:'var(--text-secondary)' }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:700, color:s.color }}>{s.val.toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {tr('iqd')}</div>
+              <div style={{ fontSize:20, fontWeight:700, color:s.color }}>{s.val.toLocaleString('en-US')} {tr('iqd')}</div>
             </div>
           </div>
         ))}
@@ -99,15 +103,32 @@ function GeneralTab() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
         <div style={{ display:'flex', gap:8 }}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr('acc_search')} className="form-control" style={{ width:200 }} />
-          {[{k:'all',l:tr('acc_filter_all')},{k:'income',l:tr('acc_filter_in')},{k:'expense',l:tr('acc_filter_out')}].map(f=>(
+          {[{k:'all',l:tr('acc_filter_all')},{k:'دخل',l:tr('acc_filter_in')},{k:'مصروف',l:tr('acc_filter_out')}].map(f=>(
             <button key={f} onClick={()=>setFilter(f)} style={{ padding:'7px 14px', borderRadius:20, border:`2px solid ${filter===f.k?'#1a6bab':'var(--border)'}`, background:filter===f.k?'#1a6bab':'transparent', color:filter===f.k?'#fff':'var(--text-primary)', cursor:'pointer', fontSize:12 }}>{f.l}</button>
           ))}
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={()=>printTable('acct-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {tr('acc_print')}</button>
+          <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
+          <ExcelExportButton apiName="transactions" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">+ {tr('acc_add_transaction_btn')}</button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="transactions"
+          title={lang==='ar'?'استيراد معاملات مالية من Excel':'Import Transactions from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/transactions');
+              if (Array.isArray(fresh)) setTxs(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       <div className="card" style={{ padding:0 }}>
         {selectedIds.size > 0 && (
@@ -141,9 +162,9 @@ function GeneralTab() {
                   <td style={{ fontFamily:'monospace', color:'#1a6bab', fontSize:12 }}>{t.ref}</td>
                   <td style={{ fontWeight:500 }}>{lang==='ar'?t.desc:t.descEn||t.desc}</td>
                   <td><span style={{ background:'var(--bg-primary)', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{TR_LABELS(tr)[t.category]||(lang==='ar'?t.category:t.categoryEn||t.category)}</span></td>
-                  <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{displayValue(t.method, tr)}</td>
-                  <td style={{ fontWeight:700, color:t.type==='income'?'#22c55e':'#ef4444' }}>{t.type==='income'?'+':'-'}{Number(t.amount).toLocaleString(lang==='ar'?'ar-IQ':'en-US')}</td>
-                  <td><span style={{ background:t.type==='income'?'#dcfce7':'#fee2e2', color:t.type==='income'?'#166534':'#991b1b', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:600 }}>{displayValue(t.type, tr)}</span></td>
+                  <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{TR_LABELS(tr)[t.method]||displayValue(t.method, tr)}</td>
+                  <td style={{ fontWeight:700, color:t.type==='income'?'#22c55e':'#ef4444' }}>{t.type==='income'?'+':'-'}{Number(t.amount).toLocaleString('en-US')}</td>
+                  <td><span style={{ background:t.type==='income'?'#dcfce7':'#fee2e2', color:t.type==='income'?'#166534':'#991b1b', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:600 }}>{TR_LABELS(tr)[t.type]||displayValue(t.type, tr)}</span></td>
                   <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(t)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(t.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
                 </tr>
               ))}
@@ -159,7 +180,7 @@ function GeneralTab() {
             <div className="modal-header"><h3 style={{ margin:0 }}>{editing?tr('btn_edit'):tr('acc_add_transaction')}</h3><button onClick={()=>setShowModal(false)} style={{ background:'none',border:'none',cursor:'pointer',fontSize:22 }}>×</button></div>
             <div className="modal-body">
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        <div><label className="form-label">{tr('acc_type')}</label><select value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value,category:ACCT_CATS[e.target.value]?.[0] || ''}))} className="form-control"><option value="دخل">{tr('acc_income')}</option><option value="مصروف">{tr('acc_expense')}</option></select></div>
+        <div><label className="form-label">{tr('acc_type')}</label><select value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value,category:ACCT_CATS[e.target.value]?.[0] || ''}))} className="form-control"><option value="income">{tr('acc_income')}</option><option value="expense">{tr('acc_expense')}</option></select></div>
         <div><label className="form-label">{tr('acc_category')}</label><select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="form-control">{(ACCT_CATS[form.type]||[]).map(c=><option key={c} value={c}>{displayValue(c, tr)}</option>)}</select></div>
                 <div style={{ gridColumn:'1/-1' }}><label className="form-label">{tr('acc_description')} *</label><input value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} className="form-control" /></div>
                 {multiHospitalEnabled && (

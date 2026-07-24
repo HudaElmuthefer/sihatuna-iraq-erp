@@ -146,7 +146,13 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         // صف فاضي بالكامل (مثلاً صف أخير زايد بالملف بالخطأ) — تجاهله بصمت
         if (Object.values(rawData).every(v => v === '' || v === undefined)) continue;
 
-        const data = afterParse ? afterParse(rawData) : rawData;
+        // ── إصلاح: afterParse الآن يُنتظَر (await) ويستقبل hospitalId كمعامل
+        // ثانٍ — يسمح لدوال afterParse بعمل استعلام قاعدة بيانات حقيقي أثناء
+        // معالجة الصف (مثلاً تحويل اسم ردهة نصي بملف Excel إلى wardId رقمي
+        // فعلي بالبحث بجدول wards)، وليس فقط تحويلات محلية على نفس الصف كما
+        // كان الحال سابقاً. الدوال المتزامنة (non-async) تبقى تعمل بلا أي
+        // تغيير — await على قيمة عادية غير Promise يرجعها كما هي فوراً.
+        const data = afterParse ? await afterParse(rawData, hospitalScoped ? req.user?.hospitalId : null) : rawData;
 
         const rowErrors = validateFields(schema, data);
         if (rowErrors.length > 0) {

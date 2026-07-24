@@ -4,6 +4,9 @@ import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
+import { api } from '../api';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const STATUS_CONFIG = {
   pending:   { label: 'قيد المعالجة', en:'Pending',   color: '#f59e0b', bg: '#fef3c7' },
@@ -35,6 +38,7 @@ export default function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [tagInput, setTagInput] = useState('');
@@ -147,7 +151,13 @@ export default function DocumentsPage() {
           <h1 style={S.title}>📁 {L('ضبط الوثائق والمراسلات','Document Control')}</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '4px 0 0' }}>{lang === 'ar' ? 'إدارة الوارد والصادر وأرشفة الوثائق | متوافق مع ISO 9001' : 'Incoming, outgoing & document archiving | ISO 9001 compliant'}</p>
         </div>
-        <button style={S.btn()} onClick={openAdd}>+ {lang === 'ar' ? 'وثيقة جديدة' : 'New Document'}</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button style={{ ...S.btn('var(--bg-tertiary)'), color: 'var(--text-primary)' }} onClick={() => setShowImport(true)}>
+            📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <ExcelExportButton apiName="documents" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <button style={S.btn()} onClick={openAdd}>+ {lang === 'ar' ? 'وثيقة جديدة' : 'New Document'}</button>
+        </div>
       </div>
 
       <div style={S.stats}>
@@ -302,6 +312,21 @@ export default function DocumentsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="documents"
+          title={lang === 'ar' ? 'استيراد وثائق من Excel' : 'Import Documents from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/documents');
+              if (Array.isArray(fresh)) setDocuments(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
       )}
     </div>
   );

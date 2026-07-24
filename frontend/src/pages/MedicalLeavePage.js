@@ -6,6 +6,8 @@ import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { api } from '../api';
 import { FaPlus, FaEdit, FaTrash, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const init = [
   { id: 1, employee: 'محمد علي حسن', employeeEn:'Mohammed Ali Hassan', dept: 'قسم الطوارئ', deptEn:'Emergency Dept.', type: 'sick', from: '2024-06-01', to: '2024-06-05', days: 5, diagnosis: 'التهاب حاد', diagnosisEn:'Acute Inflammation', doctor: 'د. أحمد الكريم', status: 'approved', notes: '' },
@@ -56,6 +58,7 @@ export default function MedicalLeavePage() {
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [filter, setFilter] = useState('all');
@@ -137,11 +140,30 @@ export default function MedicalLeavePage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+            📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <ExcelExportButton apiName="medicalLeaves" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
           <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#1e3a5f', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
             <FaPlus /> {tr('leave_add')}
           </button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="medicalLeaves"
+          title={lang === 'ar' ? 'استيراد إجازات مرضية من Excel' : 'Import Medical Leaves from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/medicalLeaves');
+              if (Array.isArray(fresh)) setLeaves(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 24 }}>

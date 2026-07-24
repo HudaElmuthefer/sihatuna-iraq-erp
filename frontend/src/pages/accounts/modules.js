@@ -221,8 +221,6 @@ const registerAllModules = (router) => {
     'الرقم التسلسلي': 'serial', 'Serial': 'serial',
     'تاريخ الشراء': 'purchaseDate', 'Purchase Date': 'purchaseDate',
     'تكلفة الشراء': 'purchaseCost', 'Purchase Cost': 'purchaseCost',
-    'القيمة الحالية': 'currentValue', 'Current Value': 'currentValue',
-    'الحالة الفنية': 'condition', 'Condition': 'condition',
     'الموقع': 'location', 'Location': 'location',
     'الحالة': 'status', 'Status': 'status',
     'المسؤول': 'responsiblePerson', 'Responsible Person': 'responsiblePerson',
@@ -232,41 +230,15 @@ const registerAllModules = (router) => {
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['assetNo'],
-    // ── إصلاح: "القيمة الحالية" (currentValue) كانت غائبة تماماً من هذا
-    // الاستيراد — AssetsPage.js يحسب نسبة الاستهلاك المعروضة كـ
-    // `(1 - currentValue/purchaseCost) * 100`، فأي أصل مستورَد بدون
-    // currentValue يطلع "NaN%" بصمت. الآن تُحسَب هنا تلقائياً (استهلاك خطي
-    // على مدى 10 سنوات كعمر افتراضي، بحد أدنى 10% من التكلفة كقيمة إنقاذ)
-    // إن لم تُقدَّم صراحةً بالملف.
-    afterParse: (row) => {
-      const rest = { ...row };
-      const cost = Number(rest.purchaseCost) || 0;
-      if (rest.currentValue === undefined || rest.currentValue === '' || rest.currentValue === null) {
-        if (cost > 0 && rest.purchaseDate) {
-          const ageYears = (Date.now() - new Date(rest.purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-          const usefulLife = 10;
-          const salvageFraction = 0.10;
-          const fractionLeft = Math.max(salvageFraction, 1 - (Math.min(ageYears, usefulLife) / usefulLife) * (1 - salvageFraction));
-          rest.currentValue = Math.round(cost * fractionLeft);
-        } else {
-          rest.currentValue = cost;
-        }
-      } else {
-        rest.currentValue = Number(rest.currentValue) || 0;
-      }
-      return rest;
-    },
     template: [
       { header: 'رقم الأصل', example: 'AST-2026-001' },
       { header: 'الاسم', example: 'جهاز أشعة سينية' },
-      { header: 'التصنيف', example: 'radiology' },
+      { header: 'التصنيف', example: 'medical' },
       { header: 'الماركة', example: 'Siemens' },
       { header: 'تاريخ الشراء', example: '2024-05-01' },
       { header: 'تكلفة الشراء', example: '15000000' },
-      { header: 'القيمة الحالية', example: '' },
-      { header: 'الحالة الفنية', example: 'good' },
       { header: 'الموقع', example: 'قسم الأشعة' },
-      { header: 'الحالة', example: 'active' },
+      { header: 'الحالة', example: 'نشط' },
     ],
   });
 
@@ -702,14 +674,6 @@ const registerAllModules = (router) => {
       const { additionLabelRaw, additionAmountRaw, deductionLabelRaw, deductionAmountRaw, ...rest } = row;
       rest.additions = additionLabelRaw ? [{ label: additionLabelRaw, amount: Number(additionAmountRaw) || 0 }] : [];
       rest.deductions = deductionLabelRaw ? [{ label: deductionLabelRaw, amount: Number(deductionAmountRaw) || 0 }] : [];
-      // ── إصلاح: مخطط التحقق (collectionSchemas.salaries) يطلب حقل "amount"
-      // صراحة، رغم إن نموذج الإضافة اليدوي بالواجهة (SalariesTab.js) يستخدم
-      // "baseSalary" فقط ولا يرسل "amount" إطلاقاً — فشل الاستيراد بالكامل
-      // (36 من 36) بسبب هذا الحقل الناقص. نعبّيه هنا تلقائياً بقيمة الراتب
-      // الأساسي حتى يمر التحقق؛ يستحق التأكد لاحقاً من الغرض الفعلي لحقل
-      // amount بمخطط قاعدة البيانات (هل يفترض يكون صافي الراتب بعد
-      // الإضافات/الخصومات، أو نفس الراتب الأساسي فقط؟).
-      rest.amount = Number(rest.baseSalary) || 0;
       const map = { 'مصرف': 'مدفوع', 'مُصرَف': 'مدفوع', 'مصروف': 'مدفوع', 'مدفوع': 'مدفوع', paid: 'مدفوع', 'معلق': 'معلق', pending: 'معلق', 'مرفوض': 'مرفوض', rejected: 'مرفوض' };
       const s = (rest.status || '').toString().trim();
       rest.status = map[s] || map[s.toLowerCase()] || 'معلق';
@@ -1214,63 +1178,6 @@ const registerAllModules = (router) => {
     { field: 'date', column: 'date' },
     { field: 'status', column: 'status' },
   ], undefined, { hospitalScoped: true, permission: 'appointments', openRead: true });
-  // ── الفوترة: الفواتير (invoices) — سجلات فواتير مدفوعة تاريخياً ──────────────
-  // ── نفس أسلوب حل patientId المستخدم بـ crmFollowUps: تقبل "اسم المريض"
-  // مباشرة وتحوّله لمعرّف رقمي حقيقي بالبحث بجدول patients. كل صف Excel يمثّل
-  // فاتورة بخدمة واحدة (الحالة الأشيع لفواتير تاريخية بسيطة) — لفواتير بعدة
-  // خدمات بنفس الزيارة، تُضاف كصفوف منفصلة بنفس اسم المريض ونفس المرجع
-  // (referenceCode)، وتبقى فواتير منفصلة بقاعدة البيانات (الاستيراد الحالي
-  // ما يجمّعها بفاتورة واحدة تلقائياً).
-  registerExcelImport(router, 'invoices', collectionSchemas.invoices, {
-    'اسم المريض': 'patientName', 'Patient Name': 'patientName',
-    'الخدمة': 'description', 'Service': 'description',
-    'الفئة': 'category', 'Category': 'category',
-    'السعر': 'price', 'Price': 'price',
-    'الكمية': 'qty', 'Qty': 'qty',
-    'طريقة الدفع': 'paymentMethod', 'Payment Method': 'paymentMethod',
-    'المرجع': 'referenceCode', 'Reference': 'referenceCode',
-    'تاريخ الدفع': 'paidAt', 'Paid At': 'paidAt',
-  }, {
-    hospitalScoped: true, permission: 'billing',
-    indexedColumns: [
-      { field: 'patientId', column: 'patient_id' },
-      { field: 'status', column: 'status' },
-      { field: 'total', column: 'total' },
-    ],
-    limiter: importLimiter,
-    duplicateCheck: ['patientId', 'referenceCode', 'description'],
-    afterParse: async (row, hospitalId) => {
-      const { patientName, category, price, qty, ...rest } = row;
-      const description = rest.description;
-      if (patientName) {
-        try {
-          const conditions = ['name = $1'];
-          const values = [patientName];
-          if (hospitalId) { values.push(hospitalId); conditions.push(`data->>'hospitalId' = $${values.length}`); }
-          const result = await pool.query(`SELECT id FROM patients WHERE ${conditions.join(' AND ')} LIMIT 1`, values);
-          if (result.rows.length > 0) rest.patientId = result.rows[0].id;
-        } catch { /* فشل البحث — patientId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح بدل ربط خاطئ */ }
-      }
-      const p = Number(price) || 0;
-      const q = Number(qty) || 1;
-      rest.items = [{ id: Date.now() + Math.floor(Math.random() * 1000), description: description || '', category: category || 'other', price: p, qty: q }];
-      rest.total = p * q;
-      rest.status = 'paid';
-      rest.paidAt = rest.paidAt || new Date().toISOString();
-      return rest;
-    },
-    template: [
-      { header: 'اسم المريض', example: 'Test Patient CBC 1' },
-      { header: 'الخدمة', example: 'كشفية طبيب اختصاص' },
-      { header: 'الفئة', example: 'consultation' },
-      { header: 'السعر', example: '25000' },
-      { header: 'الكمية', example: '1' },
-      { header: 'طريقة الدفع', example: 'cash' },
-      { header: 'المرجع', example: 'INV-2026-0001' },
-      { header: 'تاريخ الدفع', example: '2026-07-01' },
-    ],
-  });
-
   pgCrud(router, 'invoices', collectionSchemas.invoices, [
     { field: 'patientId', column: 'patient_id' },
     { field: 'status', column: 'status' },
@@ -1324,14 +1231,14 @@ const registerAllModules = (router) => {
   pgCrud(router, 'labTests', collectionSchemas.labTests, [{ field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }], 'lab_tests', { hospitalScoped: true, permission: 'laboratory' });
   pgCrud(router, 'radiology', collectionSchemas.radiology, [{ field: 'status', column: 'status' }, { field: 'modality', column: 'modality' }], undefined, { hospitalScoped: true, permission: 'radiology' });
   pgCrud(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, [{ field: 'status', column: 'status' }], 'pharmacy_orders', { hospitalScoped: true, permission: 'pharmacy' });
-  pgCrud(router, 'assets', collectionSchemas.assets, [], undefined, { hospitalScoped: true, permission: 'assets', searchFields: ['assetNo'], extraFilterFields: ['category', 'status'] });
+  pgCrud(router, 'assets', collectionSchemas.assets, [], undefined, { hospitalScoped: true, permission: 'assets', searchFields: ['assetNo'], extraFilterFields: ['category'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'assetMaintenanceLog', collectionSchemas.assetMaintenanceLog, [
     { field: 'assetId', column: 'asset_id' },
   ], 'asset_maintenance_log', { hospitalScoped: true, permission: 'assets' });
-  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'] });
+  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category'] });
   pgCrud(router, 'procurement', collectionSchemas.procurement, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'procurement' });
-  pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
+  pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'] });
   pgCrud(router, 'documents', collectionSchemas.documents, [{ field: 'type', column: 'type' }, { field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }], undefined, { hospitalScoped: true, permission: 'documents' });
   pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [{ field: 'category', column: 'category' }], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
   pgCrud(router, 'transactions', collectionSchemas.transactions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });

@@ -51,6 +51,8 @@ export default function AmbulancePage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showVehModal, setShowVehModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  // ── إضافة: استيراد/تصدير Excel لتبويب المأموريات (كان متاحاً للمركبات فقط) ──
+  const [showMissImport, setShowMissImport] = useState(false);
   const [showMissModal, setShowMissModal] = useState(false);
   const [editVehId, setEditVehId] = useState(null);
   const [editMissId, setEditMissId] = useState(null);
@@ -251,11 +253,22 @@ export default function AmbulancePage() {
           <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>🚑 {L('الإسعاف والمركبات','Ambulance & Vehicles')}</h1>
           <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة سيارات الإسعاف والمأموريات الطارئة','Manage ambulances and emergency missions')}</p>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
-          <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
-          <ExcelExportButton apiName="ambulanceVehicles" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btn()} onClick={openAddVeh}>+ {L('مركبة','Vehicle')}</button>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {tab === 'vehicles' ? (
+            <>
+              <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
+              <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
+              <ExcelExportButton apiName="ambulanceVehicles" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button style={S.btn()} onClick={openAddVeh}>+ {L('مركبة','Vehicle')}</button>
+            </>
+          ) : (
+            <>
+              {/* ── إضافة: استيراد/تصدير Excel لتبويب المأموريات ── */}
+              <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowMissImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
+              <ExcelExportButton apiName="ambulanceMissions" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -269,6 +282,22 @@ export default function AmbulancePage() {
             try {
               const fresh = await api.get('/ambulanceVehicles');
               if (Array.isArray(fresh)) setAmbulanceData(p => ({ ...p, vehicles: fresh }));
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
+
+      {/* ── إضافة: نافذة استيراد المأموريات ── */}
+      {showMissImport && (
+        <ExcelImportModal
+          apiName="ambulanceMissions"
+          title={L('استيراد مأموريات من Excel','Import Missions from Excel')}
+          lang={lang}
+          onClose={() => setShowMissImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/ambulanceMissions');
+              if (Array.isArray(fresh)) setAmbulanceData(p => ({ ...p, missions: fresh }));
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
           }}
         />

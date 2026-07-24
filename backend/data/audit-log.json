@@ -2205,5 +2205,2209 @@
     "after": {
       "destination": "computer"
     }
+  },
+  {
+    "id": 269,
+    "timestamp": "2026-07-22T09:17:44.494Z",
+    "action": "DELETE",
+    "table": "patients",
+    "recordId": "20",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 270,
+    "timestamp": "2026-07-22T09:17:44.512Z",
+    "action": "DELETE",
+    "table": "patients",
+    "recordId": "21",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 271,
+    "timestamp": "2026-07-22T09:17:44.598Z",
+    "action": "DELETE",
+    "table": "patients",
+    "recordId": "22",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 272,
+    "timestamp": "2026-07-22T09:17:44.701Z",
+    "action": "DELETE",
+    "table": "patients",
+    "recordId": "23",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 273,
+    "timestamp": "2026-07-22T09:17:56.992Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "97",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 274,
+    "timestamp": "2026-07-22T09:17:57.017Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "96",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 275,
+    "timestamp": "2026-07-22T09:17:57.049Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "95",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 276,
+    "timestamp": "2026-07-22T09:17:57.066Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "94",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 277,
+    "timestamp": "2026-07-22T09:17:57.083Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "93",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 278,
+    "timestamp": "2026-07-22T09:17:57.101Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "92",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 279,
+    "timestamp": "2026-07-22T09:17:57.118Z",
+    "action": "PURGE",
+    "table": "recycle_bin",
+    "recordId": "91",
+    "note": "حذف نهائي — لا رجعة",
+    "userId": 1
+  },
+  {
+    "id": 280,
+    "timestamp": "2026-07-22T09:21:33.567Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 281,
+    "timestamp": "2026-07-22T09:21:37.658Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 282,
+    "timestamp": "2026-07-22T10:24:09.793Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "3",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 283,
+    "timestamp": "2026-07-22T10:24:09.820Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "4",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 284,
+    "timestamp": "2026-07-22T10:24:09.918Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "5",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 285,
+    "timestamp": "2026-07-22T10:24:10.005Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "6",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 286,
+    "timestamp": "2026-07-22T10:24:10.079Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "7",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 287,
+    "timestamp": "2026-07-22T10:24:10.148Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "8",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 288,
+    "timestamp": "2026-07-22T10:24:10.202Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "9",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 289,
+    "timestamp": "2026-07-22T10:24:10.281Z",
+    "action": "DELETE",
+    "table": "lab_tests",
+    "recordId": "10",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 290,
+    "timestamp": "2026-07-22T11:27:27.222Z",
+    "action": "UPDATE",
+    "table": "patients",
+    "recordId": 24,
+    "userId": 1
+  },
+  {
+    "id": 291,
+    "timestamp": "2026-07-22T11:28:56.428Z",
+    "action": "UPDATE",
+    "table": "patients",
+    "recordId": 24,
+    "userId": 1
+  },
+  {
+    "id": 292,
+    "timestamp": "2026-07-22T11:30:19.385Z",
+    "action": "UPDATE",
+    "table": "patients",
+    "recordId": 24,
+    "userId": 1
+  },
+  {
+    "id": 293,
+    "timestamp": "2026-07-22T11:32:08.523Z",
+    "action": "UPDATE",
+    "table": "patients",
+    "recordId": 24,
+    "userId": 1
+  },
+  {
+    "id": 294,
+    "timestamp": "2026-07-22T12:29:06.039Z",
+    "action": "UPDATE",
+    "table": "procurement",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 295,
+    "timestamp": "2026-07-22T13:48:51.678Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 296,
+    "timestamp": "2026-07-22T17:18:13.535Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 297,
+    "timestamp": "2026-07-22T17:18:13.548Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "3",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 298,
+    "timestamp": "2026-07-22T17:18:13.645Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "4",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 299,
+    "timestamp": "2026-07-22T17:18:13.731Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "5",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 300,
+    "timestamp": "2026-07-22T17:18:13.801Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "6",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 301,
+    "timestamp": "2026-07-22T17:18:13.882Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "7",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 302,
+    "timestamp": "2026-07-22T17:18:13.957Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "8",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 303,
+    "timestamp": "2026-07-22T17:18:14.029Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "9",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 304,
+    "timestamp": "2026-07-22T17:18:14.073Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "10",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 305,
+    "timestamp": "2026-07-22T17:18:14.143Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "11",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 306,
+    "timestamp": "2026-07-22T17:18:14.224Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "12",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 307,
+    "timestamp": "2026-07-22T17:18:14.272Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "13",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 308,
+    "timestamp": "2026-07-22T17:18:14.340Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "14",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 309,
+    "timestamp": "2026-07-22T17:18:14.412Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "15",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 310,
+    "timestamp": "2026-07-22T17:18:14.539Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "16",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 311,
+    "timestamp": "2026-07-22T17:18:14.623Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "17",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 312,
+    "timestamp": "2026-07-22T17:18:14.694Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "18",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 313,
+    "timestamp": "2026-07-22T17:18:14.736Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "19",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 314,
+    "timestamp": "2026-07-22T17:18:14.799Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "20",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 315,
+    "timestamp": "2026-07-22T17:18:14.835Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "21",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 316,
+    "timestamp": "2026-07-22T17:18:14.897Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "22",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 317,
+    "timestamp": "2026-07-22T17:18:14.933Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "23",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 318,
+    "timestamp": "2026-07-22T17:18:15.000Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "24",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 319,
+    "timestamp": "2026-07-22T17:18:15.034Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "25",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 320,
+    "timestamp": "2026-07-22T17:18:15.106Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "26",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 321,
+    "timestamp": "2026-07-22T17:18:15.141Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "27",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 322,
+    "timestamp": "2026-07-22T17:18:15.206Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "28",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 323,
+    "timestamp": "2026-07-22T17:18:15.279Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "29",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 324,
+    "timestamp": "2026-07-22T17:18:15.318Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "30",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 325,
+    "timestamp": "2026-07-22T17:18:15.390Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "31",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 326,
+    "timestamp": "2026-07-22T17:18:15.462Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "32",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 327,
+    "timestamp": "2026-07-22T17:18:15.560Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "33",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 328,
+    "timestamp": "2026-07-22T17:18:15.679Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "34",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 329,
+    "timestamp": "2026-07-22T17:18:15.758Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "35",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 330,
+    "timestamp": "2026-07-22T17:18:15.824Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "36",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 331,
+    "timestamp": "2026-07-22T17:18:15.884Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "37",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 332,
+    "timestamp": "2026-07-22T17:18:15.919Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "38",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 333,
+    "timestamp": "2026-07-22T17:18:15.987Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "39",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 334,
+    "timestamp": "2026-07-22T17:18:16.051Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "40",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 335,
+    "timestamp": "2026-07-22T17:18:16.089Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "41",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 336,
+    "timestamp": "2026-07-22T17:18:16.153Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "42",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 337,
+    "timestamp": "2026-07-22T17:18:16.235Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "43",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 338,
+    "timestamp": "2026-07-22T17:18:16.313Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "44",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 339,
+    "timestamp": "2026-07-22T17:18:16.355Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "45",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 340,
+    "timestamp": "2026-07-22T17:18:16.425Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "46",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 341,
+    "timestamp": "2026-07-22T17:18:16.467Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "47",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 342,
+    "timestamp": "2026-07-22T17:18:16.560Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "48",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 343,
+    "timestamp": "2026-07-22T17:18:16.693Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "49",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 344,
+    "timestamp": "2026-07-22T17:18:16.777Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "50",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 345,
+    "timestamp": "2026-07-22T17:18:16.838Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "51",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 346,
+    "timestamp": "2026-07-22T17:18:23.256Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "52",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 347,
+    "timestamp": "2026-07-22T17:18:23.298Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "53",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 348,
+    "timestamp": "2026-07-22T17:18:23.370Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "54",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 349,
+    "timestamp": "2026-07-22T17:18:23.458Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "55",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 350,
+    "timestamp": "2026-07-22T17:18:23.516Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "56",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 351,
+    "timestamp": "2026-07-22T17:18:23.585Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "57",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 352,
+    "timestamp": "2026-07-22T17:18:23.617Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "58",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 353,
+    "timestamp": "2026-07-22T17:18:23.673Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "59",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 354,
+    "timestamp": "2026-07-22T17:18:23.734Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "60",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 355,
+    "timestamp": "2026-07-22T17:18:23.768Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "61",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 356,
+    "timestamp": "2026-07-22T17:18:23.822Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "62",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 357,
+    "timestamp": "2026-07-22T17:18:23.853Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "63",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 358,
+    "timestamp": "2026-07-22T17:18:23.914Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "64",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 359,
+    "timestamp": "2026-07-22T17:18:23.952Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "65",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 360,
+    "timestamp": "2026-07-22T17:18:24.007Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "66",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 361,
+    "timestamp": "2026-07-22T17:18:24.064Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "67",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 362,
+    "timestamp": "2026-07-22T17:18:24.100Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "68",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 363,
+    "timestamp": "2026-07-22T17:18:24.155Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "69",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 364,
+    "timestamp": "2026-07-22T17:18:24.187Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "70",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 365,
+    "timestamp": "2026-07-22T17:18:24.254Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "71",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 366,
+    "timestamp": "2026-07-22T17:18:24.322Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "72",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 367,
+    "timestamp": "2026-07-22T17:18:24.397Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "73",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 368,
+    "timestamp": "2026-07-22T17:18:24.472Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "74",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 369,
+    "timestamp": "2026-07-22T17:18:24.516Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "75",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 370,
+    "timestamp": "2026-07-22T17:18:24.574Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "76",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 371,
+    "timestamp": "2026-07-22T17:18:24.631Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "77",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 372,
+    "timestamp": "2026-07-22T17:18:24.714Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "78",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 373,
+    "timestamp": "2026-07-22T17:18:24.771Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "79",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 374,
+    "timestamp": "2026-07-22T17:18:24.832Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "80",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 375,
+    "timestamp": "2026-07-22T17:18:24.894Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "81",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 376,
+    "timestamp": "2026-07-22T17:18:24.950Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "82",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 377,
+    "timestamp": "2026-07-22T17:18:24.982Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "83",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 378,
+    "timestamp": "2026-07-22T17:18:25.036Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "84",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 379,
+    "timestamp": "2026-07-22T17:18:25.069Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "85",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 380,
+    "timestamp": "2026-07-22T17:18:25.129Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "86",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 381,
+    "timestamp": "2026-07-22T17:18:25.184Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "87",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 382,
+    "timestamp": "2026-07-22T17:18:25.216Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "88",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 383,
+    "timestamp": "2026-07-22T17:18:25.271Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "89",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 384,
+    "timestamp": "2026-07-22T17:18:25.305Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "90",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 385,
+    "timestamp": "2026-07-22T17:18:25.379Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "91",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 386,
+    "timestamp": "2026-07-22T17:18:25.453Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "92",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 387,
+    "timestamp": "2026-07-22T17:18:25.533Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "93",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 388,
+    "timestamp": "2026-07-22T17:18:25.598Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "94",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 389,
+    "timestamp": "2026-07-22T17:18:25.631Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "95",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 390,
+    "timestamp": "2026-07-22T17:18:25.685Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "96",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 391,
+    "timestamp": "2026-07-22T17:18:25.719Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "97",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 392,
+    "timestamp": "2026-07-22T17:18:25.774Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "98",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 393,
+    "timestamp": "2026-07-22T17:18:25.832Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "99",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 394,
+    "timestamp": "2026-07-22T17:18:25.868Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "100",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 395,
+    "timestamp": "2026-07-22T17:18:25.932Z",
+    "action": "DELETE",
+    "table": "radiology",
+    "recordId": "101",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 396,
+    "timestamp": "2026-07-22T17:51:09.480Z",
+    "action": "EXPORT",
+    "table": "patients",
+    "count": 1500,
+    "userId": 1
+  },
+  {
+    "id": 397,
+    "timestamp": "2026-07-23T15:09:38.021Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 398,
+    "timestamp": "2026-07-23T19:13:44.276Z",
+    "action": "DELETE",
+    "table": "wards",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 399,
+    "timestamp": "2026-07-23T20:54:30.282Z",
+    "action": "CREATE",
+    "table": "vaccinations",
+    "recordId": 17368,
+    "userId": 1
+  },
+  {
+    "id": 400,
+    "timestamp": "2026-07-23T20:54:30.320Z",
+    "action": "UPDATE",
+    "table": "deliveries",
+    "recordId": 4,
+    "userId": 1
+  },
+  {
+    "id": 401,
+    "timestamp": "2026-07-23T21:13:12.165Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 150,
+    "userId": 1
+  },
+  {
+    "id": 402,
+    "timestamp": "2026-07-23T21:18:07.154Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 183,
+    "userId": 1
+  },
+  {
+    "id": 403,
+    "timestamp": "2026-07-23T21:18:45.646Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 403,
+    "userId": 1
+  },
+  {
+    "id": 404,
+    "timestamp": "2026-07-23T21:40:21.992Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 370,
+    "userId": 1
+  },
+  {
+    "id": 405,
+    "timestamp": "2026-07-23T21:40:44.457Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 14,
+    "userId": 1
+  },
+  {
+    "id": 406,
+    "timestamp": "2026-07-23T21:40:48.346Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 234,
+    "userId": 1
+  },
+  {
+    "id": 407,
+    "timestamp": "2026-07-23T21:40:53.243Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 454,
+    "userId": 1
+  },
+  {
+    "id": 408,
+    "timestamp": "2026-07-23T21:41:04.230Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 590,
+    "userId": 1
+  },
+  {
+    "id": 409,
+    "timestamp": "2026-07-23T21:41:36.409Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 646,
+    "userId": 1
+  },
+  {
+    "id": 410,
+    "timestamp": "2026-07-23T21:41:39.115Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 221,
+    "userId": 1
+  },
+  {
+    "id": 411,
+    "timestamp": "2026-07-23T21:41:45.032Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 426,
+    "userId": 1
+  },
+  {
+    "id": 412,
+    "timestamp": "2026-07-23T21:42:09.447Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 206,
+    "userId": 1
+  },
+  {
+    "id": 413,
+    "timestamp": "2026-07-23T21:53:50.450Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 674,
+    "userId": 1
+  },
+  {
+    "id": 414,
+    "timestamp": "2026-07-23T21:55:28.588Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 881,
+    "userId": 1
+  },
+  {
+    "id": 415,
+    "timestamp": "2026-07-23T21:55:58.151Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 810,
+    "userId": 1
+  },
+  {
+    "id": 416,
+    "timestamp": "2026-07-23T22:08:20.487Z",
+    "action": "UPDATE",
+    "table": "queue_tickets",
+    "recordId": 903,
+    "userId": 1
+  },
+  {
+    "id": 417,
+    "timestamp": "2026-07-23T22:30:23.126Z",
+    "action": "UPDATE",
+    "table": "crm_follow_ups",
+    "recordId": 187,
+    "userId": 1
+  },
+  {
+    "id": 418,
+    "timestamp": "2026-07-23T22:30:23.132Z",
+    "action": "UPDATE",
+    "table": "crm_follow_ups",
+    "recordId": 187,
+    "userId": 1
+  },
+  {
+    "id": 419,
+    "timestamp": "2026-07-23T22:30:32.125Z",
+    "action": "UPDATE",
+    "table": "crm_follow_ups",
+    "recordId": 1118,
+    "userId": 1
+  },
+  {
+    "id": 420,
+    "timestamp": "2026-07-23T22:30:32.130Z",
+    "action": "UPDATE",
+    "table": "crm_follow_ups",
+    "recordId": 1118,
+    "userId": 1
+  },
+  {
+    "id": 421,
+    "timestamp": "2026-07-24T03:02:29.087Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 422,
+    "timestamp": "2026-07-24T03:32:33.555Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 423,
+    "timestamp": "2026-07-24T03:32:33.571Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 424,
+    "timestamp": "2026-07-24T03:32:33.594Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "3",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 425,
+    "timestamp": "2026-07-24T03:32:33.623Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "4",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 426,
+    "timestamp": "2026-07-24T03:32:33.648Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "5",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 427,
+    "timestamp": "2026-07-24T03:32:33.675Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "6",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 428,
+    "timestamp": "2026-07-24T03:32:33.693Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "7",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 429,
+    "timestamp": "2026-07-24T03:32:33.766Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "8",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 430,
+    "timestamp": "2026-07-24T03:32:33.801Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "9",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 431,
+    "timestamp": "2026-07-24T03:32:33.827Z",
+    "action": "DELETE",
+    "table": "promotions",
+    "recordId": "10",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 432,
+    "timestamp": "2026-07-24T03:33:01.709Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 433,
+    "timestamp": "2026-07-24T03:33:01.744Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 434,
+    "timestamp": "2026-07-24T03:33:01.786Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "3",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 435,
+    "timestamp": "2026-07-24T03:33:01.858Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "4",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 436,
+    "timestamp": "2026-07-24T03:33:01.935Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "5",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 437,
+    "timestamp": "2026-07-24T03:33:01.968Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "6",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 438,
+    "timestamp": "2026-07-24T03:33:02.008Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "7",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 439,
+    "timestamp": "2026-07-24T03:33:02.047Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "8",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 440,
+    "timestamp": "2026-07-24T03:33:02.086Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "9",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 441,
+    "timestamp": "2026-07-24T03:33:02.108Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "10",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 442,
+    "timestamp": "2026-07-24T03:33:02.146Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "11",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 443,
+    "timestamp": "2026-07-24T03:33:02.190Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "12",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 444,
+    "timestamp": "2026-07-24T03:33:02.236Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "13",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 445,
+    "timestamp": "2026-07-24T03:33:02.257Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "14",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 446,
+    "timestamp": "2026-07-24T03:33:02.294Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "15",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 447,
+    "timestamp": "2026-07-24T03:33:02.328Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "16",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 448,
+    "timestamp": "2026-07-24T03:33:02.361Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "17",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 449,
+    "timestamp": "2026-07-24T03:33:02.399Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "18",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 450,
+    "timestamp": "2026-07-24T03:33:02.455Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "19",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 451,
+    "timestamp": "2026-07-24T03:33:02.477Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "20",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 452,
+    "timestamp": "2026-07-24T03:33:02.515Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "21",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 453,
+    "timestamp": "2026-07-24T03:33:02.566Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "22",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 454,
+    "timestamp": "2026-07-24T03:33:02.593Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "23",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 455,
+    "timestamp": "2026-07-24T03:33:02.627Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "24",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 456,
+    "timestamp": "2026-07-24T03:33:02.665Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "25",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 457,
+    "timestamp": "2026-07-24T03:33:02.704Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "26",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 458,
+    "timestamp": "2026-07-24T03:33:02.730Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "27",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 459,
+    "timestamp": "2026-07-24T03:33:02.780Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "28",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 460,
+    "timestamp": "2026-07-24T03:33:02.842Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "29",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 461,
+    "timestamp": "2026-07-24T03:33:02.885Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "30",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 462,
+    "timestamp": "2026-07-24T03:33:02.921Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "31",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 463,
+    "timestamp": "2026-07-24T03:33:02.970Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "32",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 464,
+    "timestamp": "2026-07-24T03:33:02.999Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "33",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 465,
+    "timestamp": "2026-07-24T03:33:03.032Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "34",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 466,
+    "timestamp": "2026-07-24T03:33:03.066Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "35",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 467,
+    "timestamp": "2026-07-24T03:33:03.098Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "36",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 468,
+    "timestamp": "2026-07-24T03:33:03.126Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "37",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 469,
+    "timestamp": "2026-07-24T03:33:03.165Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "38",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 470,
+    "timestamp": "2026-07-24T03:33:03.205Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "39",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 471,
+    "timestamp": "2026-07-24T03:33:03.241Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "40",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 472,
+    "timestamp": "2026-07-24T03:33:03.280Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "41",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 473,
+    "timestamp": "2026-07-24T03:33:03.308Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "42",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 474,
+    "timestamp": "2026-07-24T03:33:03.322Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "43",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 475,
+    "timestamp": "2026-07-24T03:33:03.352Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "44",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 476,
+    "timestamp": "2026-07-24T03:33:03.379Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "45",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 477,
+    "timestamp": "2026-07-24T03:33:03.406Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "46",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 478,
+    "timestamp": "2026-07-24T03:33:03.436Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "47",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 479,
+    "timestamp": "2026-07-24T03:33:03.463Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "48",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 480,
+    "timestamp": "2026-07-24T03:33:03.491Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "49",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 481,
+    "timestamp": "2026-07-24T03:33:03.513Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "50",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 482,
+    "timestamp": "2026-07-24T03:33:10.969Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "51",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 483,
+    "timestamp": "2026-07-24T03:33:10.984Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "52",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 484,
+    "timestamp": "2026-07-24T03:33:11.028Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "53",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 485,
+    "timestamp": "2026-07-24T03:33:11.056Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "54",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 486,
+    "timestamp": "2026-07-24T03:33:11.091Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "55",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 487,
+    "timestamp": "2026-07-24T03:33:11.127Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "56",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 488,
+    "timestamp": "2026-07-24T03:33:11.148Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "57",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 489,
+    "timestamp": "2026-07-24T03:33:11.191Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "58",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 490,
+    "timestamp": "2026-07-24T03:33:11.210Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "59",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 491,
+    "timestamp": "2026-07-24T03:33:11.230Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "60",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 492,
+    "timestamp": "2026-07-24T03:33:11.258Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "61",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 493,
+    "timestamp": "2026-07-24T03:33:11.284Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "62",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 494,
+    "timestamp": "2026-07-24T03:33:11.306Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "63",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 495,
+    "timestamp": "2026-07-24T03:33:11.319Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "64",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 496,
+    "timestamp": "2026-07-24T03:33:11.340Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "65",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 497,
+    "timestamp": "2026-07-24T03:33:11.364Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "66",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 498,
+    "timestamp": "2026-07-24T03:33:11.387Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "67",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 499,
+    "timestamp": "2026-07-24T03:33:11.416Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "68",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 500,
+    "timestamp": "2026-07-24T03:33:11.440Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "69",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 501,
+    "timestamp": "2026-07-24T03:33:11.467Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "70",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 502,
+    "timestamp": "2026-07-24T03:33:11.508Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "71",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 503,
+    "timestamp": "2026-07-24T03:33:11.541Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "72",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 504,
+    "timestamp": "2026-07-24T03:33:11.564Z",
+    "action": "DELETE",
+    "table": "allowances",
+    "recordId": "73",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 505,
+    "timestamp": "2026-07-24T04:08:25.040Z",
+    "action": "DELETE",
+    "table": "procurement",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 506,
+    "timestamp": "2026-07-24T04:08:34.150Z",
+    "action": "DELETE",
+    "table": "procurement",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 507,
+    "timestamp": "2026-07-24T04:16:15.985Z",
+    "action": "UPDATE",
+    "table": "procurement",
+    "recordId": 3,
+    "userId": 1
+  },
+  {
+    "id": 508,
+    "timestamp": "2026-07-24T04:32:58.192Z",
+    "action": "UPDATE",
+    "table": "inventory",
+    "recordId": 1,
+    "userId": 1
+  },
+  {
+    "id": 509,
+    "timestamp": "2026-07-24T04:34:06.352Z",
+    "action": "CREATE",
+    "table": "invoices",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 510,
+    "timestamp": "2026-07-24T05:30:30.065Z",
+    "action": "DELETE",
+    "table": "outgoing",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 511,
+    "timestamp": "2026-07-24T05:30:30.081Z",
+    "action": "DELETE",
+    "table": "outgoing",
+    "recordId": "2",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 512,
+    "timestamp": "2026-07-24T05:30:30.102Z",
+    "action": "DELETE",
+    "table": "outgoing",
+    "recordId": "3",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 513,
+    "timestamp": "2026-07-24T09:38:04.301Z",
+    "action": "DELETE",
+    "table": "documents",
+    "recordId": "1",
+    "note": "نُقل لسلة المحذوفات",
+    "userId": 1
+  },
+  {
+    "id": 514,
+    "timestamp": "2026-07-24T09:40:12.701Z",
+    "action": "UPDATE",
+    "table": "documents",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 515,
+    "timestamp": "2026-07-24T09:40:36.744Z",
+    "action": "UPDATE",
+    "table": "documents",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 516,
+    "timestamp": "2026-07-24T09:46:02.098Z",
+    "action": "EXPORT",
+    "table": "quality_audits",
+    "count": 0,
+    "userId": 1
+  },
+  {
+    "id": 517,
+    "timestamp": "2026-07-24T09:46:23.886Z",
+    "action": "EXPORT",
+    "table": "quality_ncs",
+    "count": 0,
+    "userId": 1
   }
 ]

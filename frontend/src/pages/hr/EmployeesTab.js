@@ -168,7 +168,7 @@ function EmployeesTab({ lang }) {
                     <td style={{ fontSize:13 }}>{lang==='ar'?e.jobTitle:e.jobTitleEn||e.jobTitle}</td>
                     <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{lang==='ar'?e.dept:e.deptEn||e.dept}</span></td>
                     <td style={{ fontSize:13, direction:'ltr', textAlign:'center' }}>{lang==='ar'?e.grade:e.gradeEn||e.grade} / {e.step}</td>
-                    <td style={{ fontWeight:600, color:'#22c55e' }}>{Number(e.salary).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('iqd')}</td>
+                    <td style={{ fontWeight:600, color:'#22c55e' }}>{Number(e.salary).toLocaleString('en-US')} {L('iqd')}</td>
                     <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{e.hireDate}</td>
                     <td style={{ fontSize:12, color: promAlert ? '#1a6bab' : 'var(--text-secondary)' }}>{e.lastPromotion}{promAlert && <span> ⬆️</span>}</td>
                     <td style={{ fontSize:12, color: allowAlert ? '#f59e0b' : 'var(--text-secondary)' }}>{e.lastAllowance}{allowAlert && <span> 💰</span>}</td>
@@ -217,7 +217,7 @@ function EmployeesTab({ lang }) {
                 <div><label className="form-label">{L('lbl_est_retire')}</label><input type="date" value={form.retirementDate} onChange={e=>setForm(p=>({...p,retirementDate:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_status')}</label>
                   <select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control">
-                    <option>{L('status_active')}</option><option>{L('status_leave')}</option><option>{L('status_inactive')}</option>
+                    <option value="active">{L('status_active')}</option><option value="leave">{L('status_leave')}</option><option value="inactive">{L('status_inactive')}</option>
                   </select>
                 </div>
                 <div style={{ gridColumn:'1/-1' }}><label className="form-label">{L('lbl_notes')}</label><textarea rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} className="form-control" /></div>

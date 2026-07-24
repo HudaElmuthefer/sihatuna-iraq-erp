@@ -3,11 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useT } from '../translations';
 import { useNavigate } from 'react-router-dom';
 import { useApp, translateDays } from '../contexts/AppContext';
+import { api } from '../api';
 import { FaSearch, FaCalendarAlt, FaUserMd, FaArrowRight } from 'react-icons/fa';
 
 export default function PersonalServicesPage() {
   const navigate = useNavigate();
-  const { lang, addToast, doctors, departments } = useApp();
+  const { lang, addToast, doctors, departments, appointments, setAppointments, syncToServer, patients } = useApp();
   const tr = useT(lang);
   const ar = lang === 'ar';
   const [search, setSearch] = useState('');
@@ -25,7 +26,10 @@ export default function PersonalServicesPage() {
     }
   }, []);
   const [bookModal, setBookModal] = useState(null);
-  const [form, setForm] = useState({ date: '', time: '09:00', notes: '' });
+  const [form, setForm] = useState({ patientName: '', patientPhone: '', date: '', time: '09:00', notes: '' });
+  const [booking, setBooking] = useState(false);
+  // ── لوحة الطبيب: عرض مواعيده المحجوزة وتفاصيلها ──────────────────────────────
+  const [scheduleModal, setScheduleModal] = useState(null);
 
   // Get all unique specializations from doctors
   const specializations = lang==='ar' ? [...new Set(doctors.map(d=>d.specialization).filter(Boolean))] : [...new Set(doctors.map(d=>d.specializationEn||d.specialization).filter(Boolean))];
@@ -41,11 +45,78 @@ export default function PersonalServicesPage() {
     return matchSearch && matchSpec && matchDept;
   });
 
-  const handleBook = () => {
+  // ── الأوقات المحجوزة فعلياً لهذا الطبيب بهذا التاريخ (لمنع تعارض الحجز) ──────
+  const takenTimesForDoctor = (doctorName, date) => new Set(
+    (appointments || [])
+      .filter(a => a && a.doctor === doctorName && a.date === date && a.status !== 'cancelled')
+      .map(a => a.time)
+  );
+
+  // أول وقت فارغ بعد 09:00 بخطوات نصف ساعة، يتفادى الأوقات المحجوزة فعلياً
+  const suggestFreeTime = (doctorName, date) => {
+    const taken = takenTimesForDoctor(doctorName, date);
+    for (let mins = 9 * 60; mins <= 15 * 60; mins += 30) {
+      const h = String(Math.floor(mins / 60)).padStart(2, '0');
+      const m = String(mins % 60).padStart(2, '0');
+      const t = `${h}:${m}`;
+      if (!taken.has(t)) return t;
+    }
+    return '09:00';
+  };
+
+  // ── تسجيل حضور المريض: يختفي فوراً من جدول مواعيد الطبيب بعد الحضور ─────────
+  const [markingId, setMarkingId] = useState(null);
+  const markArrived = async (appt) => {
+    setMarkingId(appt.id);
+    const changed = { ...appt, status: 'completed' };
+    const ok = await syncToServer('appointments', 'update', changed);
+    setMarkingId(null);
+    if (!ok) { addToast(lang==='ar' ? 'تعذّر تسجيل الحضور' : 'Could not mark as arrived', 'error'); return; }
+    setAppointments(p => (p || []).map(a => a.id === appt.id ? changed : a));
+  };
+
+  const handleBook = async () => {
+    if (!form.patientName.trim()) { addToast(lang==='ar' ? 'أدخلي اسم المريض' : 'Enter patient name', 'error'); return; }
+    if (!form.patientPhone.trim()) { addToast(lang==='ar' ? 'أدخلي رقم الهاتف' : 'Enter phone number', 'error'); return; }
     if (!form.date) { addToast(tr('x_akhtrtarikhalmwad'), 'error'); return; }
-    addToast(`${tr('svc_booking_success')} ${bookModal?.name} ✅`, 'success');
-    setBookModal(null);
-    setForm({ date: '', time: '09:00', notes: '' });
+
+    const doctorName = bookModal.name;
+    const taken = takenTimesForDoctor(doctorName, form.date);
+    if (taken.has(form.time)) {
+      addToast(lang==='ar' ? 'هذا الموعد محجوز فعلاً لهذا الطبيب — اختاري وقتاً آخر' : 'This slot is already booked for this doctor — pick another time', 'error');
+      return;
+    }
+
+    // لو رقم الهاتف يطابق مريضاً مسجَّلاً فعلاً، نستخدم اسمه الرسمي المسجَّل
+    // بدل النص المكتوب يدوياً — يقلّل تكرار الأسماء بصيغ مختلفة لنفس المريض
+    const existingPatient = (patients || []).find(p => p && p.phone === form.patientPhone.trim());
+
+    const payload = {
+      patient: existingPatient ? existingPatient.name : form.patientName.trim(),
+      patientPhone: form.patientPhone.trim(),
+      doctor: bookModal.name,
+      doctorEn: bookModal.nameEn || bookModal.name,
+      department: lang==='ar' ? bookModal.specialization : (bookModal.specializationEn || bookModal.specialization),
+      date: form.date,
+      time: form.time,
+      notes: form.notes,
+    };
+
+    setBooking(true);
+    try {
+      // ── مسار حجز مخصَّص يفحص التعارض على قاعدة البيانات الحقيقية مباشرة
+      // (مو بس على النسخة المحلية المخزَّنة بالمتصفح) — يمسك حالة نادرة لكن
+      // ممكنة: مريضين يحجزون نفس الوقت بنفس اللحظة تقريباً من جهازين مختلفين.
+      const saved = await api.post('/booking/book-appointment', payload);
+      setAppointments(p => [...(p || []), saved]);
+      addToast(`${tr('svc_booking_success')} ${bookModal?.name} ✅`, 'success');
+      setBookModal(null);
+      setForm({ patientName: '', patientPhone: '', date: '', time: '09:00', notes: '' });
+    } catch (err) {
+      addToast(err?.message || (lang==='ar' ? 'تعذّر تسجيل الحجز، حاولي مرة ثانية' : 'Could not save the booking, try again'), 'error');
+    } finally {
+      setBooking(false);
+    }
   };
 
   return (
@@ -141,9 +212,18 @@ export default function PersonalServicesPage() {
                   <span>👥 {doc.patients}</span>
                   <span>🕐 {doc.experience} {lang==='ar'?'سنة':'yr'}</span>
                 </div>
-                <button className="btn btn-primary" style={{ width:'100%', fontSize:13, padding:'8px' }} onClick={() => setBookModal(doc)}>
-                  <FaCalendarAlt style={{ marginLeft:6 }} /> {tr('svc_book')}
-                </button>
+                <div style={{ display:'flex', gap:8, width:'100%' }}>
+                  <button className="btn btn-primary" style={{ flex:1, fontSize:13, padding:'8px' }} onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setForm({ patientName:'', patientPhone:'', date: today, time: suggestFreeTime(doc.name, today), notes:'' });
+                    setBookModal(doc);
+                  }}>
+                    <FaCalendarAlt style={{ marginLeft:6 }} /> {tr('svc_book')}
+                  </button>
+                  <button className="btn btn-outline" style={{ fontSize:13, padding:'8px 10px' }} title={lang==='ar' ? 'عرض المواعيد المحجوزة' : 'View booked appointments'} onClick={() => setScheduleModal(doc)}>
+                    📋
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -167,15 +247,79 @@ export default function PersonalServicesPage() {
                   <div style={{ fontSize:11, color:'#22c55e' }}>⏰ {bookModal.workHours}</div>
                 </div>
               </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                <div><label className="form-label">{lang==='ar' ? 'اسم المريض' : 'Patient Name'}</label><input className="form-control" value={form.patientName} onChange={e=>setForm(p=>({...p,patientName:e.target.value}))} placeholder={lang==='ar' ? 'الاسم الكامل' : 'Full name'} /></div>
+                <div><label className="form-label">{lang==='ar' ? 'رقم الهاتف' : 'Phone Number'}</label><input className="form-control" value={form.patientPhone} onChange={e=>setForm(p=>({...p,patientPhone:e.target.value}))} placeholder="07xxxxxxxxx" /></div>
+              </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                <div><label className="form-label">{tr('x_altarikh')}</label><input className="form-control" type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} min={new Date().toISOString().split('T')[0]} /></div>
+                <div><label className="form-label">{tr('x_altarikh')}</label><input className="form-control" type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value,time:suggestFreeTime(bookModal.name,e.target.value)}))} min={new Date().toISOString().split('T')[0]} /></div>
                 <div><label className="form-label">{tr('field_time')}</label><input className="form-control" type="time" value={form.time} onChange={e=>setForm(p=>({...p,time:e.target.value}))} /></div>
               </div>
+              {takenTimesForDoctor(bookModal.name, form.date).has(form.time) && (
+                <p style={{ color:'#ef4444', fontSize:12, marginTop:8 }}>⚠️ {lang==='ar' ? 'هذا الموعد محجوز فعلاً — اختاري وقتاً آخر' : 'This slot is already booked — pick another time'}</p>
+              )}
               <div style={{ marginTop:12 }}><label className="form-label">{tr('field_notes')}</label><textarea className="form-control" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder={tr('auto_سبب_الزيارة')} /></div>
             </div>
             <div className="modal-footer">
               <button onClick={() => setBookModal(null)} style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{tr('auto_إلغاء')}</button>
-              <button className="btn btn-primary" onClick={handleBook}><FaCalendarAlt /> {tr('svc_book_confirm')}</button>
+              <button className="btn btn-primary" onClick={handleBook} disabled={booking}><FaCalendarAlt /> {booking ? (lang==='ar'?'جارٍ الحجز...':'Booking...') : tr('svc_book_confirm')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Doctor Schedule Modal — لوحة الطبيب: مواعيده المحجوزة وتفاصيلها */}
+      {scheduleModal && (
+        <div className="modal-overlay" onClick={() => setScheduleModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h3 style={{ margin: 0, display:'flex', alignItems:'center', gap:8 }}>
+                📋 {lang==='ar' ? 'مواعيد' : 'Schedule —'} {lang==='ar' ? scheduleModal.name : (scheduleModal.nameEn||scheduleModal.name)}
+              </h3>
+              <button onClick={() => setScheduleModal(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: 460, overflowY: 'auto' }}>
+              {(() => {
+                const docAppts = (appointments || [])
+                  .filter(a => a && a.doctor === scheduleModal.name && a.status !== 'cancelled' && a.status !== 'completed')
+                  .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+                if (docAppts.length === 0) {
+                  return <div style={{ textAlign:'center', padding:'30px 10px', color:'var(--text-secondary)' }}>
+                    <div style={{ fontSize:36, marginBottom:8 }}>📅</div>
+                    <p>{lang==='ar' ? 'لا توجد مواعيد محجوزة لهذا الطبيب' : 'No appointments booked for this doctor'}</p>
+                  </div>;
+                }
+                return docAppts.map(a => (
+                  <div key={a.id} style={{ border:'1px solid var(--border)', borderRadius:10, padding:12, marginBottom:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                      <strong style={{ fontSize:14 }}>{a.patient}</strong>
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:20,
+                        background: a.status==='confirmed' ? '#dcfce7' : a.status==='completed' ? '#dbeafe' : '#fef3c7',
+                        color: a.status==='confirmed' ? '#166534' : a.status==='completed' ? '#1e40af' : '#92400e',
+                      }}>
+                        {a.status==='confirmed' ? (lang==='ar'?'مؤكد':'Confirmed') : a.status==='completed' ? (lang==='ar'?'مكتمل':'Completed') : (lang==='ar'?'انتظار':'Pending')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--text-secondary)', display:'flex', gap:14, flexWrap:'wrap' }}>
+                      <span>📅 {a.date}</span>
+                      <span>🕐 {a.time}</span>
+                      {a.patientPhone && <span>📞 {a.patientPhone}</span>}
+                    </div>
+                    {a.notes && <div style={{ fontSize:12, color:'var(--text-secondary)', marginTop:6 }}>📝 {a.notes}</div>}
+                    <button
+                      onClick={() => markArrived(a)}
+                      disabled={markingId === a.id}
+                      style={{ marginTop:8, fontSize:12, fontWeight:600, padding:'6px 12px', borderRadius:8, border:'none', background:'#22c55e', color:'#fff', cursor:'pointer' }}
+                    >
+                      {markingId === a.id ? (lang==='ar'?'جارٍ...':'...') : `✓ ${lang==='ar' ? 'سجّل الحضور' : 'Mark Arrived'}`}
+                    </button>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setScheduleModal(null)} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer' }}>{lang==='ar' ? 'إغلاق' : 'Close'}</button>
             </div>
           </div>
         </div>

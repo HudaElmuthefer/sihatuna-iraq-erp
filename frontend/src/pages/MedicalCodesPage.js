@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 export default function MedicalCodesPage() {
   const { lang, showToast } = useApp();
@@ -21,6 +22,7 @@ export default function MedicalCodesPage() {
 
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDiagnosisImport, setShowDiagnosisImport] = useState(false);
   const [form, setForm] = useState({ code: '', nameAr: '', nameEn: '', icdLink: '' });
   const [saving, setSaving] = useState(false);
 
@@ -77,8 +79,28 @@ export default function MedicalCodesPage() {
         <button onClick={() => { setSystem('snomed'); setPage(1); }} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', cursor: 'pointer', background: system === 'snomed' ? '#1a6bab' : '#fff', color: system === 'snomed' ? '#fff' : '#333', fontSize: 13 }}>SNOMED CT</button>
         <div style={{ flex: 1 }} />
         <button onClick={() => setShowImport(true)} style={{ padding: '6px 16px', borderRadius: 6, border: '1px solid #1a6bab', background: 'transparent', color: '#1a6bab', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+        <ExcelExportButton apiName={`medical-codes-${system}`} lang={lang} onError={(m) => showToast(m, 'error')} />
         <button onClick={openAdd} style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#16a34a', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>+ {L('إضافة رمز جديد', 'Add New Code')}</button>
       </div>
+
+      {/* ── ربط رموز بمرضى — مختلف عن إدارة قائمة الرموز نفسها أعلاه ── */}
+      <div style={{ background: 'var(--bg-secondary, #f9fafb)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>{L('ربط تشخيصات بمرضى', 'Link Diagnoses to Patients')}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{L('يضيف رمزاً لملف مريض حقيقي — منفصل عن قائمة الرموز أعلاه، ويُستخدَم لتغذية تقرير "أكثر التشخيصات شيوعاً".', 'Adds a code to a real patient\'s file — separate from the code list above, feeds the "Most Common Diagnoses" report.')}</div>
+        </div>
+        <button onClick={() => setShowDiagnosisImport(true)} style={{ padding: '6px 16px', borderRadius: 6, border: '1px solid #7c3aed', background: 'transparent', color: '#7c3aed', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>📊 {L('استيراد دفعة من Excel', 'Bulk Import from Excel')}</button>
+      </div>
+
+      {showDiagnosisImport && (
+        <ExcelImportModal
+          apiName="patient-diagnoses"
+          title={L('ربط تشخيصات ICD-10 بمرضى من Excel', 'Link ICD-10 Diagnoses to Patients from Excel')}
+          lang={lang}
+          onClose={() => setShowDiagnosisImport(false)}
+          onImported={() => {}}
+        />
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input className="form-control" placeholder={L('ابحث بالرمز أو الاسم...', 'Search by code or name...')} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />

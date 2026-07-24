@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const FOLLOWUP_TYPES = {
   appointment:  { ar:'موعد',            en:'Appointment' },
@@ -40,6 +42,7 @@ export default function CRMPage() {
   const [fuFilter, setFuFilter] = useState('pending');
   const [showFuModal, setShowFuModal] = useState(false);
   const [fuForm, setFuForm] = useState({ patientId:'', followUpType:'checkup', title:'', dueDate:'', reminderChannel:'sms' });
+  const [showImport, setShowImport] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [campaignForm, setCampaignForm] = useState({ nameAr:'', nameEn:'', campaignType:'awareness', targetSegment:'all', channel:'sms', messageAr:'', messageEn:'' });
 
@@ -133,6 +136,10 @@ export default function CRMPage() {
               </button>
             ))}
             <div style={{ flex:1 }} />
+            <button style={{ ...S.btn('var(--bg-tertiary)'), color:'var(--text-primary)' }} onClick={() => setShowImport(true)}>
+              📊 {L('استيراد من Excel','Import from Excel')}
+            </button>
+            <ExcelExportButton apiName="crmFollowUps" lang={lang} onError={(m) => showToast(m, 'error')} />
             <button style={S.btn()} onClick={() => setShowFuModal(true)}>{L('+ متابعة جديدة','+ New Follow-up')}</button>
           </div>
 
@@ -362,6 +369,21 @@ export default function CRMPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="crmFollowUps"
+          title={L('استيراد متابعات من Excel','Import Follow-ups from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
+            // crmFollowUps comes from AppContext with no dedicated bulk
+            // refetch/setter exposed to this page, so a full reload is the
+            // safest way to reflect newly imported rows immediately.
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

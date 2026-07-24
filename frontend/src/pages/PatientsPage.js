@@ -43,8 +43,8 @@ export default function PatientsPage() {
 
   const ar = lang === 'ar';
 
-  // تأخير البحث 350 مللي ثانية بعد آخر حرف تكتبينه — بدون هذا، كل ضغطة زر
-  // كانت ترسل طلب فوري للخادم (بطيء وغير ضروري)؛ الآن ينتظر توقفج عن الكتابة
+  // تأخير البحث 350 مللي ثانية بعد آخر حرف تكتبه — بدون هذا، كل ضغطة زر
+  // كانت ترسل طلب فوري للخادم (بطيء وغير ضروري)؛ الآن ينتظر توقفك عن الكتابة
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
@@ -52,10 +52,10 @@ export default function PatientsPage() {
 
   // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
   // الجدول المعروض بهذي الصفحة يجيب فقط الصفحة الحالية من الخادم (بحث/فلترة/
-  // ترقيم يصير كله بقاعدة البيانات، مو بالمتصفح) — سريع بغض النظر عن عدد
+  // ترقيم يصير كله بقاعدة البيانات، وليس بالمتصفح) — سريع بغض النظر عن عدد
   // المرضى الكلي، حتى لو وصل لعشرات الآلاف مستقبلاً. مصفوفة `patients` من
   // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
-  // (الفوترة، المواعيد) لقوائم اختيار، وما لها علاقة بجدول هذي الصفحة تحديداً.
+  // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذي الصفحة تحديداً.
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
     useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50 });
 
@@ -243,7 +243,7 @@ export default function PatientsPage() {
                 <tr><td colSpan="11">
                   <div className="empty-state">
                     <div className="icon">⏳</div>
-                    <h3>{ar ? 'جاري التحميل...' : 'Loading...'}</h3>
+                    <h3>{ar ? 'جارٍ التحميل...' : 'Loading...'}</h3>
                   </div>
                 </td></tr>
               ) : pageItems.length === 0 ? (
@@ -310,6 +310,17 @@ export default function PatientsPage() {
             </div>
             <div className="modal-body">
               <div className="grid-2">
+                {/* ── إضافة: حقل رقم المريض (patientId) ──────────────────────
+                    لم يكن موجوداً بهذي النافذة إطلاقاً رغم أن العمود يظهر
+                    بالجدول — يُولَّد تلقائياً عند الإضافة فقط (openAdd)، لكن
+                    لا توجد طريقة لعرضه أو تعديله يدوياً، خصوصاً للسجلات
+                    المستوردة عبر Excel التي قد يصل رقم المريض فيها فارغاً أو
+                    بتنسيق مختلف يحتاج تصحيحاً يدوياً لربطه بموديولات أخرى
+                    (مثل نتائج المختبر). الآن يظهر كحقل نصي قابل للتعديل. */}
+                <div className="form-group">
+                  <label className="form-label">{tr('pat_patient_id') || (lang === 'ar' ? 'رقم المريض' : 'Patient ID')}</label>
+                  <input className="form-control" style={{ fontFamily: 'monospace' }} value={form.patientId || ''} onChange={e => setForm(p => ({ ...p, patientId: e.target.value }))} placeholder="PT-0001" />
+                </div>
                 <div className="form-group"><label className="form-label">{tr('x_alasmbalarbi')}</label><input className="form-control" value={form.name || ''} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{tr('col_name_en')}</label><input className="form-control" value={form.nameEn || ''} onChange={e => setForm(p => ({ ...p, nameEn: e.target.value }))} /></div>
                 <div className="form-group"><label className="form-label">{lang === 'ar' ? 'رقم البطاقة الوطنية الموحدة' : 'National ID Number'}</label><input className="form-control" value={form.nationalId || ''} onChange={e => setForm(p => ({ ...p, nationalId: e.target.value }))} placeholder={lang === 'ar' ? 'اختياري' : 'Optional'} /></div>

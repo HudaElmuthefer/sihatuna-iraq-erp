@@ -6,6 +6,8 @@
 // Scan: read a barcode off a paper letter, see its full details instantly.
 import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../../api';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
 
 const CODE39 = {
   '0':'NNNWWNWNN','1':'WNNWNNNNW','2':'NNWWNNNNW','3':'WNWWNNNNN',
@@ -76,6 +78,7 @@ async function generateBarcode(type, text) {
 export default function BarcodeTab({ lang }) {
   const L = (ar, en) => (lang === 'ar' ? ar : en);
   const [subTab, setSubTab] = useState('generate');
+  const [showImport, setShowImport] = useState(false);
 
   // -- توليد --------------------------------------------------------------
   const hasArabic = (text) => /[\u0600-\u06FF]/.test(text || '');
@@ -100,8 +103,21 @@ export default function BarcodeTab({ lang }) {
   useEffect(() => {
     if (!letter) { setPreviewSvg(''); return; }
     setQrError('');
+    // إصلاح: لو الكتاب عنده صورة باركود محفوظة مسبقاً (barcodeSvg)، نعرضها
+    // كما هي بدل توليدها من جديد — يضمن تطابق الملصق المطبوع فعلياً على
+    // الورق مع اللي يظهر هنا لاحقاً، حتى لو تغيّرت طريقة التوليد مستقبلاً.
+    if (letter.barcodeSvg && letter.barcodeType === barcodeType) {
+      setPreviewSvg(letter.barcodeSvg);
+      return;
+    }
     generateBarcode(barcodeType, letter.ref)
-      .then((r) => setPreviewSvg(r.svg))
+      .then((r) => {
+        setPreviewSvg(r.svg);
+        // أول توليد لهذا النوع لهذا الكتاب — نحفظه فوراً بسجل الكتاب نفسه
+        api.post('/document-lookup/save-barcode', {
+          type: letter.type, id: letter.id, barcodeSvg: r.svg, barcodeType,
+        }).then((saved) => setLetter((prev) => (prev ? { ...prev, ...saved } : prev))).catch(() => {});
+      })
       .catch(() => { setPreviewSvg(''); setQrError(L('تعذّر تحميل أداة QR، تحقق من الاتصال بالإنترنت', 'Could not load the QR tool, check the internet connection')); });
   }, [letter, barcodeType]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -123,11 +139,15 @@ export default function BarcodeTab({ lang }) {
 
   const printLabel = async (l) => {
     let svg;
-    try {
-      ({ svg } = await generateBarcode(barcodeType, l.ref));
-    } catch {
-      alert(L('تعذّر تحميل أداة QR، تحقق من الاتصال بالإنترنت', 'Could not load the QR tool, check the internet connection'));
-      return;
+    if (l.barcodeSvg && l.barcodeType === barcodeType) {
+      svg = l.barcodeSvg;
+    } else {
+      try {
+        ({ svg } = await generateBarcode(barcodeType, l.ref));
+      } catch {
+        alert(L('تعذّر تحميل أداة QR، تحقق من الاتصال بالإنترنت', 'Could not load the QR tool, check the internet connection'));
+        return;
+      }
     }
     const win = window.open('', '_blank', 'width=500,height=300');
     if (!win) return;
@@ -162,6 +182,7 @@ export default function BarcodeTab({ lang }) {
   useEffect(() => {
     if (subTab !== 'scan') return;
     let cancelled = false;
+    let startPromise = null;
     const scriptId = 'html5-qrcode-script';
     const start = () => {
       if (cancelled || !window.Html5Qrcode) return;
@@ -175,7 +196,7 @@ export default function BarcodeTab({ lang }) {
         ],
       });
       scannerInstance.current = scanner;
-      scanner.start(
+      startPromise = scanner.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 280, height: 120 } },
         (decodedText) => {
@@ -186,7 +207,15 @@ export default function BarcodeTab({ lang }) {
             .catch(() => setScanResult({ code: decodedText, found: false, loading: false }));
         },
         () => {}
-      ).then(() => setScannerReady(true)).catch(() => setScanError(L('تعذّر تشغيل الكاميرا', 'Could not start the camera')));
+      ).then(() => {
+        // ── إصلاح: لو صار تبديل التبويب (cancelled=true) قبل ما start()
+        // يخلص فعلياً، الكاميرا كانت تضل شغّالة — لأن cleanup سبق واستدعى
+        // stop() ومكتبة html5-qrcode ترفض إيقاف ماسح لسا بمرحلة "بدء التشغيل"
+        // (يرمي خطأ يُبتلَع بصمت بالـ catch). الآن لو صار الإلغاء أثناء
+        // الانتظار، نوقف الكاميرا فوراً بمجرد ما start() يخلص فعلياً.
+        if (cancelled) { scanner.stop().catch(() => {}); return; }
+        setScannerReady(true);
+      }).catch(() => setScanError(L('تعذّر تشغيل الكاميرا', 'Could not start the camera')));
     };
     if (window.Html5Qrcode) {
       start();
@@ -200,7 +229,14 @@ export default function BarcodeTab({ lang }) {
     }
     return () => {
       cancelled = true;
-      try { scannerInstance.current?.stop().catch(() => {}); } catch { /* الماسح متوقف أصلاً */ }
+      if (startPromise) {
+        // ننتظر start() قبل استدعاء stop() — استدعاؤه مبكراً هو أصل المشكلة
+        startPromise.finally(() => {
+          try { scannerInstance.current?.stop().catch(() => {}); } catch { /* الماسح متوقف أصلاً */ }
+        });
+      } else {
+        try { scannerInstance.current?.stop().catch(() => {}); } catch { /* الماسح متوقف أصلاً */ }
+      }
       setScannerReady(false);
       setScanResult(null);
       setScanError('');
@@ -209,10 +245,23 @@ export default function BarcodeTab({ lang }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={() => setSubTab('generate')} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: subTab === 'generate' ? '#1a6bab' : '#e5e7eb', color: subTab === 'generate' ? '#fff' : '#333', fontWeight: 700 }}>{L('توليد باركود', 'Generate')}</button>
         <button onClick={() => setSubTab('scan')} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: subTab === 'scan' ? '#1a6bab' : '#e5e7eb', color: subTab === 'scan' ? '#fff' : '#333', fontWeight: 700 }}>{L('قراءة باركود', 'Scan')}</button>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => setShowImport(true)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', color: '#333', cursor: 'pointer', fontSize: 13 }}>📊 {L('استيراد دفعة من Excel', 'Bulk Import from Excel')}</button>
+        <ExcelExportButton apiName="barcode" lang={lang} onError={(m) => alert(m)} />
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="barcode"
+          title={L('توليد باركود دفعة من Excel', 'Bulk-Generate Barcodes from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={() => { /* لا حاجة لتحديث حالة محلية — النتائج تظهر مباشرة بنافذة الاستيراد نفسها */ }}
+        />
+      )}
 
       {subTab === 'generate' && (
         <div>
@@ -294,6 +343,9 @@ export default function BarcodeTab({ lang }) {
                   <p><strong>{scanResult.type === 'outgoing' ? L('الجهة المرسل إليها', 'Sent To') : L('الجهة المرسلة', 'Sent From')}:</strong> {scanResult.to || scanResult.from}</p>
                   <p><strong>{L('الموضوع', 'Subject')}:</strong> {scanResult.subject}</p>
                   <p><strong>{L('التاريخ', 'Date')}:</strong> {scanResult.date}</p>
+                  {scanResult.barcodeSvg && (
+                    <div dangerouslySetInnerHTML={{ __html: scanResult.barcodeSvg }} style={{ margin: '12px 0' }} />
+                  )}
                 </>
               ) : (
                 <p style={{ color: '#dc2626' }}>{L('لم يُعثر على كتاب بهذا الرمز', 'No letter found with this code')}</p>

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { FaPlus, FaTrash, FaBullhorn, FaCheckCircle, FaUserClock, FaExclamationTriangle } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const empty = { patientName: '', department: '', priority: 'normal', notes: '' };
 
@@ -19,10 +21,16 @@ export default function QueuePage() {
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [form, setForm] = useState(empty);
   const [deptFilter, setDeptFilter] = useState('all');
 
-  const today = new Date().toISOString().split('T')[0];
+  // ── إصلاح: toISOString() يحوّل الوقت لتوقيت UTC قبل الحساب — ببغداد
+  // (UTC+3) هذا يعني قرب منتصف الليل يُحسَب "اليوم" على أنه أمس فعلياً
+  // (مثلاً 12:07 صباحاً 24/7 بغداد = 9:07 مساءً 23/7 UTC)، فتختفي تذاكر
+  // اليوم كلها من العرض رغم كونها محفوظة بشكل صحيح. نحسب التاريخ محلياً الآن.
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const todaysTickets = filterByViewingHospital(tickets).filter(t => (t.createdAt || '').slice(0, 10) === today);
 
   const openAdd = () => { setForm(empty); setShowModal(true); };
@@ -139,8 +147,28 @@ export default function QueuePage() {
             <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('إصدار تذاكر ومتابعة دور المرضى', 'Issue tickets and manage patient turns')}</p>
           </div>
         </div>
-        <button onClick={openAdd} className="btn" style={{ background: '#fff', color: '#047857', fontWeight: 600 }}><FaPlus /> {L('تذكرة جديدة', 'New Ticket')}</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => window.open('/queue-display', '_blank')} className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>🖥️ {L('فتح شاشة العرض', 'Open Display Screen')}</button>
+          <button onClick={() => setShowImport(true)} className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+          <ExcelExportButton apiName="queueTickets" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+          <button onClick={openAdd} className="btn" style={{ background: '#fff', color: '#047857', fontWeight: 600 }}><FaPlus /> {L('تذكرة جديدة', 'New Ticket')}</button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="queueTickets"
+          title={L('استيراد تذاكر من Excel', 'Import Tickets from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/queueTickets');
+              if (Array.isArray(fresh)) setTickets(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
         {[

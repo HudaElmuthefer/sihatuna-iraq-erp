@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
-import { FaCalendarAlt, FaPlus, FaSearch, FaEdit, FaTrash, FaTimes, FaCheck, FaClock } from 'react-icons/fa';
+import { FaCalendarAlt, FaPlus, FaSearch, FaEdit, FaTrash, FaTimes, FaCheck, FaClock, FaFileExcel } from 'react-icons/fa';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
+import { api } from '../api';
 
 const statusConfig = {
   confirmed: { ar: 'مؤكد',       en: 'Confirmed', class: 'badge-success' },
@@ -25,6 +28,9 @@ export default function AppointmentsPage() {
   const [form, setForm]               = useState({});
   const [selected, setSelected]       = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // ── استيراد من Excel ──────────────────────────────────────────────────────
+  const [showImport, setShowImport] = useState(false);
 
   const filtered = (apts || []).filter(a => {
     if (!a) return false;
@@ -107,10 +113,31 @@ export default function AppointmentsPage() {
           {tr('apt_management')}
           <span className="badge badge-info" style={{ fontSize:13 }}>{(apts||[]).length}</span>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <FaPlus /> {tr('apt_add')}
-        </button>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <button className="btn btn-outline" onClick={() => setShowImport(true)}>
+            <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <ExcelExportButton apiName="appointments" lang={lang} onError={(m) => addToast(m, 'error')} />
+          <button className="btn btn-primary" onClick={openAdd}>
+            <FaPlus /> {tr('apt_add')}
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="appointments"
+          title={ar ? 'استيراد مواعيد من Excel' : 'Import Appointments from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/appointments');
+              if (Array.isArray(fresh)) setApts(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>

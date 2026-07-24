@@ -3,6 +3,9 @@ import React, { useState, useMemo } from 'react';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
+import { FaFileExcel, FaTrash } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import { api } from '../api';
 
 const CATEGORIES = {
   hematology:   { ar:'تحاليل الدم',       en:'Hematology',   icon:'🩸', color:'#ef4444' },
@@ -67,6 +70,7 @@ export default function LaboratoryPage() {
   const { labTests, setLabTests, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
+  const ar = lang === 'ar';
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -76,6 +80,19 @@ export default function LaboratoryPage() {
   const [form, setForm] = useState(EMPTY);
   const [resultText, setResultText] = useState('');
   const [resultNote, setResultNote] = useState('');
+
+  // ── استيراد من Excel ──────────────────────────────────────────────────────
+  const [showImport, setShowImport] = useState(false);
+
+  // ── تحديد متعدد للحذف الجماعي (بنفس نمط PatientsPage) ────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const filtered = useMemo(() => labTests.filter(t => {
     const q = search.toLowerCase();
@@ -199,6 +216,25 @@ export default function LaboratoryPage() {
     showToast(L('تم إدخال النتيجة','Result entered'),'success'); setShowResultModal(null);
   };
 
+  // ── حذف جماعي (بنفس نمط PatientsPage.handleBulkDelete) ───────────────────
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('labTests', 'delete', { id });
+      if (ok) { setLabTests(p => p.filter(t => t.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    showToast(
+      ar ? `تم حذف ${deleted} من ${ids.length} طلب` : `Deleted ${deleted} of ${ids.length} requests`,
+      deleted === ids.length ? 'success' : 'warning'
+    );
+  };
+
   const S = {
     page:{padding:24,direction:dir},
     stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:20},
@@ -224,9 +260,29 @@ export default function LaboratoryPage() {
           <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>{lang==='ar'?'🔬 المختبرات الطبية':'🔬 Medical Laboratory'}</h1>
           <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة طلبات التحاليل والنتائج المخبرية':'Manage lab test requests and results'}</p>
         </div>
-        <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تحليل جديد':'+ New Test Request'}</button>
-        <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={openPanelAdd}>{lang==='ar'?'🧬 حزمة فحوصات':'🧬 Test Panel'}</button>
+        <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+          <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={() => setShowImport(true)}>
+            <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={openPanelAdd}>{lang==='ar'?'🧬 حزمة فحوصات':'🧬 Test Panel'}</button>
+          <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تحليل جديد':'+ New Test Request'}</button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="labTests"
+          title={ar ? 'استيراد طلبات مختبر من Excel' : 'Import Lab Requests from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/labTests');
+              if (Array.isArray(fresh)) setLabTests(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+          }}
+        />
+      )}
 
       <div style={S.stats}>
         {[[lang==='ar'?'إجمالي الطلبات':'Total Requests',stats.total,'#1a6bab'],[lang==='ar'?'بانتظار العينة':'Awaiting Sample',stats.pending,'#6b7280'],[lang==='ar'?'قيد التحليل':'Processing',stats.processing,'#f59e0b'],[lang==='ar'?'مكتملة':'Completed',stats.completed,'#10b981'],[lang==='ar'?'عاجلة':'Urgent',stats.urgent,'#ef4444']].map(([l,v,c],i)=>(
@@ -246,9 +302,31 @@ export default function LaboratoryPage() {
         </select>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{ar ? `${selectedIds.size} محدَّد` : `${selectedIds.size} selected`}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setSelectedIds(new Set())} style={{...S.btn('var(--bg-secondary)'), color:'var(--text-primary)', border:'1.5px solid var(--border-color)', padding:'6px 12px', fontSize:12}}>{ar ? 'إلغاء التحديد' : 'Clear Selection'}</button>
+            <button onClick={() => setBulkDeleteConfirm(true)} style={{...S.btn('#ef4444'), padding:'6px 12px', fontSize:12}}><FaTrash /> {ar ? `حذف المحدَّد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}</button>
+          </div>
+        </div>
+      )}
+
       <table style={S.table}>
         <thead>
-          <tr>{(lang==='ar'?['رقم الطلب','المريض','الطبيب','نوع التحليل','الفئة','تاريخ الطلب','الحالة','الأولوية','النتيجة','إجراء']:['Req No','Patient','Doctor','Test','Category','Date','Status','Priority','Result','Action']).map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+          <tr>
+            <th style={{...S.th, width:36}}>
+              <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(t => selectedIds.has(t.id))} onChange={() => {
+                setSelectedIds(prev => {
+                  const allSelected = pageItems.every(t => prev.has(t.id));
+                  const next = new Set(prev);
+                  pageItems.forEach(t => allSelected ? next.delete(t.id) : next.add(t.id));
+                  return next;
+                });
+              }} />
+            </th>
+            {(lang==='ar'?['رقم الطلب','المريض','الطبيب','نوع التحليل','الفئة','تاريخ الطلب','الحالة','الأولوية','النتيجة','إجراء']:['Req No','Patient','Doctor','Test','Category','Date','Status','Priority','Result','Action']).map(h=><th key={h} style={S.th}>{h}</th>)}
+          </tr>
         </thead>
         <tbody>
           {pageItems.map(t=>{
@@ -256,6 +334,7 @@ export default function LaboratoryPage() {
             const cat=CATEGORIES[t.category]||CATEGORIES.other;
             return (
               <tr key={t.id}>
+                <td style={S.td}><input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)} /></td>
                 <td style={S.td}><code style={{fontSize:10,background:'var(--bg-tertiary)',padding:'2px 6px',borderRadius:4}}>{t.reqNo}</code></td>
                 <td style={S.td}><div style={{fontWeight:600}}>{t.patientName}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{t.patientId}</div></td>
                 <td style={{...S.td,fontSize:11}}>{t.doctorName}</td>
@@ -276,7 +355,7 @@ export default function LaboratoryPage() {
               </tr>
             );
           })}
-          {filtered.length===0&&<tr><td colSpan={10} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
+          {filtered.length===0&&<tr><td colSpan={11} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
         </tbody>
       </table>
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
@@ -402,6 +481,22 @@ export default function LaboratoryPage() {
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowResultModal(null)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
               <button style={S.btn('#10b981')} onClick={addResult}>{lang==='ar'?'✅ تأكيد النتيجة':'✅ Confirm Result'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirm && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && !bulkDeleting && setBulkDeleteConfirm(false)}>
+          <div style={{...S.mbox, maxWidth: 420, textAlign:'center', padding: 40}}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+            <h3 style={{ fontSize: 20, marginBottom: 8, color:'var(--text-primary)' }}>{ar ? `حذف ${selectedIds.size} طلب؟` : `Delete ${selectedIds.size} requests?`}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>
+              {L('هل أنت متأكدة؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button style={S.btn('#6b7280')} onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting}>{lang==='ar'?'إلغاء':'Cancel'}</button>
+              <button style={S.btn('#ef4444')} onClick={handleBulkDelete} disabled={bulkDeleting}>{bulkDeleting ? '...' : (lang==='ar'?'حذف':'Delete')}</button>
             </div>
           </div>
         </div>

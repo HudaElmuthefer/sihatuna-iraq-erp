@@ -6,6 +6,8 @@ import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { api } from '../api';
 import { FaPlus, FaEdit, FaTrash, FaSyringe, FaCheckCircle, FaClock } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const initialVaccinations = [
   { id: 1, patient: 'Ahmed Mohammed Ali', vaccine: 'COVID-19 (Pfizer)', dose: 'First Dose', date: '2024-01-15', nextDate: '2024-02-05', status: 'completed', provider: 'د. سالم المنصوري', notes: '' },
@@ -58,6 +60,7 @@ export default function VaccinationsPage() {
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -139,10 +142,31 @@ export default function VaccinationsPage() {
             <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: 13 }}>{tr("vac_subtitle")}</p>
           </div>
         </div>
-        <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-          <FaPlus /> {tr('vac_add_btn')}
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+            📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <ExcelExportButton apiName="vaccinations" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+          <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+            <FaPlus /> {tr('vac_add_btn')}
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="vaccinations"
+          title={lang === 'ar' ? 'استيراد تطعيمات من Excel' : 'Import Vaccinations from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/vaccinations');
+              if (Array.isArray(fresh)) setRecords(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>

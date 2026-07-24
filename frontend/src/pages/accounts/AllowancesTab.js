@@ -6,6 +6,9 @@ import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { today, initAllowances, TR_LABELS, displayValue, printTable, usePersistedTab } from './shared';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
+import { api } from '../../api';
 
 export default
 function AllowancesTab() {
@@ -16,7 +19,7 @@ function AllowancesTab() {
   const { pageItems: allowPageItems, currentPage: allowCurrentPage, setCurrentPage: setAllowCurrentPage, totalPages: allowTotalPages, totalItems: allowTotalItems } = usePagination(allowances, 50);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const empty = { name:'', type:'annual', amount:'', date:today, decisionNo:'', status:'paid', notes:'' };
+  const empty = { name:'', type:'annual', amount:'', date:today, decisionNo:'', status:'مدفوع', notes:'' };
   const [form, setForm] = useState(empty);
   const TYPES = ['annual','risk','field','specialty','social'];
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
@@ -25,7 +28,8 @@ function AllowancesTab() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const due = allowances.filter(a=>a.status==='due');
+  const [showImport, setShowImport] = useState(false);
+  const due = allowances.filter(a=>a.status==='مستحقة');
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setShowModal(true); };
   const del = async (id) => {
@@ -86,9 +90,26 @@ function AllowancesTab() {
         <h3 style={{ margin:0 }}>{tr('auto_pair_23')}</h3>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={()=>printTable('allow-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {tr('acc_print')}</button>
+          <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
+          <ExcelExportButton apiName="allowances" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">+ {tr('acc_register_allowance')}</button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="allowances"
+          title={lang==='ar'?'استيراد بدلات من Excel':'Import Allowances from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/allowances');
+              if (Array.isArray(fresh)) setAllowances(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       <div className="card" style={{ padding:0 }}>
         {selectedIds.size > 0 && (
@@ -115,14 +136,14 @@ function AllowancesTab() {
             <th>{tr('hr_emp_name')}</th><th>{tr('auto_pair_24')}</th><th>{tr('acc_amount')} (IQD)</th><th>{tr('acc_date')}</th><th>{tr('auto_pair_25')}</th><th>{tr('field_status')}</th><th>{tr('field_notes')}</th><th>{tr('field_actions')}</th></tr></thead>
           <tbody>
             {allowPageItems.map(a=>(
-              <tr key={a.id} style={{ background:a.status==='due'?'rgba(245,158,11,0.04)':undefined }}>
+              <tr key={a.id} style={{ background:a.status==='مستحقة'?'rgba(245,158,11,0.04)':undefined }}>
                 <td><input type="checkbox" checked={selectedIds.has(a.id)} onChange={() => toggleSelect(a.id)} /></td>
                 <td style={{ fontWeight:600 }}>{lang==='ar'?a.name:a.nameEn||a.name}</td>
                 <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{TR_LABELS(tr)[a.type]||a.type}</span></td>
-                <td style={{ fontWeight:700, color:'#22c55e' }}>{a.amount?Number(a.amount).toLocaleString(lang==='ar'?'ar-IQ':'en-US'):'—'}</td>
+                <td style={{ fontWeight:700, color:'#22c55e' }}>{a.amount?Number(a.amount).toLocaleString('en-US'):'—'}</td>
                 <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{a.date||'—'}</td>
                 <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{a.decisionNo||'—'}</td>
-                <td><span style={{ background:a.status==='paid'?'#dcfce7':'rgba(245,158,11,0.1)', color:a.status==='paid'?'#166534':'#f59e0b', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{displayValue(a.status, tr)}</span></td>
+                <td><span style={{ background:a.status==='مدفوع'?'#dcfce7':'rgba(245,158,11,0.1)', color:a.status==='مدفوع'?'#166534':'#f59e0b', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{displayValue(a.status, tr)}</span></td>
                 <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{a.notes}</td>
                 <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(a)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(a.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
               </tr>
@@ -151,7 +172,7 @@ function AllowancesTab() {
                 <div><label className="form-label">{tr('acc_amount')} (IQD) *</label><input type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{tr('acc_date')}</label><input type="date" value={form.date||''} onChange={e=>setForm(p=>({...p,date:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{tr('auto_pair_30')}</label><input value={form.decisionNo} onChange={e=>setForm(p=>({...p,decisionNo:e.target.value}))} className="form-control" /></div>
-            <div><label className="form-label">{tr('field_status')}</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control"><option value="مُصرَف">{tr('acc_status_paid')}</option><option value="مستحقة">{tr('acc_status_due')}</option><option value="قيد المعالجة">{tr('acc_status_process')}</option></select></div>
+            <div><label className="form-label">{tr('field_status')}</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control"><option value="مدفوع">{tr('acc_status_paid')}</option><option value="مستحقة">{tr('acc_status_due')}</option><option value="قيد المعالجة">{tr('acc_status_process')}</option></select></div>
                 <div style={{ gridColumn:'1/-1' }}><label className="form-label">{tr('field_notes')}</label><textarea rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} className="form-control" /></div>
               </div>
             </div>

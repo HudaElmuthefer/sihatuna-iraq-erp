@@ -5,6 +5,9 @@ import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { initOutgoing, I18N, printTable, today, useBackendLoad } from './shared';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
+import { api } from '../../api';
 
 export default
 function OutgoingTab({ lang }) {
@@ -15,6 +18,7 @@ function OutgoingTab({ lang }) {
   const visibleOutgoing = filterByViewingHospital(letters);
   const { pageItems: outPageItems, currentPage: outCurrentPage, setCurrentPage: setOutCurrentPage, totalPages: outTotalPages, totalItems: outTotalItems } = usePagination(visibleOutgoing, 50);
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const empty = { ref:'', title:'', to:'', date:today.toISOString().split('T')[0], subject:'', status:'مُرسَل', notes:'' };
   const [form, setForm] = useState(empty);
@@ -83,9 +87,26 @@ function OutgoingTab({ lang }) {
         <h3 style={{ margin:0 }}>{L('out_list')} ({letters.length})</h3>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => printTable('out-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {L('print')}</button>
+          <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
+          <ExcelExportButton apiName="outgoing" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">＋ {L('add_out')}</button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="outgoing"
+          title={lang==='ar'?'استيراد كتب صادرة من Excel':'Import Outgoing Letters from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/outgoing');
+              if (Array.isArray(fresh)) setLetters(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
       <div className="card" style={{ padding:0 }}>
         {selectedIds.size > 0 && (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'10px 16px', background:'var(--bg-secondary)' }}>

@@ -226,7 +226,7 @@ const translations = {
   acc_additions:        { ar: 'الإضافات',                en: 'Additions' },
   acc_deductions:       { ar: 'الاستقطاعات',             en: 'Deductions' },
   acc_net_salary:       { ar: 'الصافي',                  en: 'Net' },
-  acc_paid:             { ar: 'مُصرَف',                  en: 'Paid' },
+  acc_paid:             { ar: 'مدفوع',                  en: 'Paid' },
   acc_pending:          { ar: 'معلق',                    en: 'Pending' },
 
   // ─── الموارد البشرية / HR ────────────────────────────────────────────────────
@@ -366,6 +366,8 @@ const translations = {
 
   // ─── حقول مشتركة / Common Fields ────────────────────────────────────────────
   field_name:           { ar: 'الاسم',                    en: 'Name' },
+  field_gender:         { ar: 'الجنس',                    en: 'Gender' },
+  col_name_en:          { ar: 'الاسم بالإنجليزي',         en: 'Name in English' },
   field_date:           { ar: 'التاريخ',                  en: 'Date' },
   field_time:           { ar: 'الوقت',                    en: 'Time' },
   field_phone:          { ar: 'الهاتف',                   en: 'Phone' },
@@ -545,7 +547,7 @@ const translations = {
   acc_method_bank:    { ar: 'تحويل بنكي', en: 'Bank Transfer' },
   acc_method_card:    { ar: 'بطاقة', en: 'Card' },
   acc_method_check:   { ar: 'شيك', en: 'Check' },
-  acc_status_paid:    { ar: 'مُصرَف', en: 'Paid' },
+  acc_status_paid:    { ar: 'مدفوع', en: 'Paid' },
   acc_status_pending: { ar: 'معلق', en: 'Pending' },
   acc_status_done:    { ar: 'مُنجَز', en: 'Done' },
   acc_status_due:     { ar: 'مستحق', en: 'Due' },
@@ -690,7 +692,7 @@ const translations = {
   acc_register_promotion:{ ar: 'تسجيل ترفيع', en: 'Register Promotion' },
   acc_register_allowance:{ ar: 'تسجيل علاوة', en: 'Register Allowance' },
   acc_total_net_salaries:{ ar: 'إجمالي الرواتب الصافية', en: 'Total Net Salaries' },
-  acc_paid_employees:   { ar: 'موظفون مُصرَف رواتبهم', en: 'Paid Employees' },
+  acc_paid_employees:   { ar: 'موظفون مدفوع رواتبهم', en: 'Paid Employees' },
   acc_pending_count:    { ar: 'قيد الانتظار', en: 'Pending' },
   acc_average_salary:   { ar: 'متوسط الراتب', en: 'Average Salary' },
   acc_add_item:         { ar: 'إضافة', en: 'Add' },
@@ -735,7 +737,7 @@ const translations = {
   auto_pair_28: { ar: "اسم الموظف *", en: "Employee Name *" },
   auto_pair_29: { ar: "نوع العلاوة", en: "Allowance Type" },
   auto_pair_30: { ar: "رقم قرار الصرف", en: "Payment Decree" },
-  auto_pair_31: { ar: "مُصرَف", en: "Paid" },
+  auto_pair_31: { ar: "مدفوع", en: "Paid" },
   auto_pair_32: { ar: "مستحقة", en: "Due" },
   auto_pair_33: { ar: "قيد المعالجة", en: "Processing" },
   auto_pair_34: { ar: "الوظيفة", en: "Job" },
@@ -747,7 +749,7 @@ const translations = {
   auto_pair_40: { ar: "الوظيفة", en: "Job Title" },
   auto_pair_41: { ar: "الدرجة", en: "Grade" },
   auto_pair_42: { ar: "معلق", en: "Pending" },
-  auto_pair_43: { ar: "مُصرَف", en: "Paid" },
+  auto_pair_43: { ar: "مدفوع", en: "Paid" },
   auto_pair_44: { ar: "مرفوض", en: "Rejected" },
   auto_pair_45: { ar: "معلومات إضافية وملفات طبية", en: "Additional Info & Medical Files" },
   auto_pair_46: { ar: "اختر...", en: "Choose..." },

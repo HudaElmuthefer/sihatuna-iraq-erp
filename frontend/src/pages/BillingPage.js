@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useMemo } from 'react';
 import { useApp, PAYMENT_PROVIDERS } from '../contexts/AppContext';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const CATEGORY_LABELS = {
   consultation: { ar:'كشفية',  en:'Consultation', icon:'🩺' },
@@ -20,7 +22,7 @@ export default function BillingPage() {
 
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => (lang === 'ar' ? ar : en);
-  const fmt = (n) => Number(n || 0).toLocaleString(lang === 'ar' ? 'ar-IQ' : 'en-US');
+  const fmt = (n) => Number(n || 0).toLocaleString('en-US');
 
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
@@ -30,6 +32,8 @@ export default function BillingPage() {
   const [payMethod, setPayMethod] = useState('cash');
   const [manualRef, setManualRef] = useState('');
   const [managePrices, setManagePrices] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showInvoiceImport, setShowInvoiceImport] = useState(false);
 
   const S = {
     page:{padding:24,direction:dir},
@@ -117,9 +121,19 @@ export default function BillingPage() {
             {L('اختر المريض، اجمع خدماته، واستلم الدفع', "Select patient, add services, and collect payment")}
           </p>
         </div>
-        <button style={S.btnGhost} onClick={() => setManagePrices(!managePrices)}>
-          {managePrices ? L('إخفاء قائمة الأسعار','Hide Price List') : L('⚙️ تعديل الأسعار الافتراضية','⚙️ Edit Default Prices')}
-        </button>
+        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          <button style={S.btnGhost} onClick={() => setShowInvoiceImport(true)}>
+            📊 {L('استيراد فواتير من Excel','Import Invoices from Excel')}
+          </button>
+          <ExcelExportButton apiName="invoices" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <button style={S.btnGhost} onClick={() => setShowImport(true)}>
+            📊 {L('استيراد قائمة الأسعار من Excel','Import Price List from Excel')}
+          </button>
+          <ExcelExportButton apiName="servicePrices" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <button style={S.btnGhost} onClick={() => setManagePrices(!managePrices)}>
+            {managePrices ? L('إخفاء قائمة الأسعار','Hide Price List') : L('⚙️ تعديل الأسعار الافتراضية','⚙️ Edit Default Prices')}
+          </button>
+        </div>
       </div>
 
       {managePrices && (
@@ -266,6 +280,39 @@ export default function BillingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showInvoiceImport && (
+        <ExcelImportModal
+          apiName="invoices"
+          title={L('استيراد فواتير من Excel','Import Invoices from Excel')}
+          lang={lang}
+          onClose={() => setShowInvoiceImport(false)}
+          onImported={() => {
+            // invoices تُدار عبر دوال AppContext (createInvoice/processPayment)
+            // بدون setter مباشر أو دالة إعادة جلب مكشوفة لهذي الصفحة، فإعادة
+            // تحميل الصفحة أسلم طريقة لعرض الفواتير المستورَدة فوراً.
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="servicePrices"
+          title={L('استيراد قائمة الأسعار من Excel','Import Price List from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
+            // servicePrices is loaded from AppContext with no dedicated bulk
+            // refetch/setter exposed to this page (only updateServicePrice
+            // for single-row edits exists), so a full reload is the safest
+            // way to reflect newly imported rows immediately.
+            // Replace this with a proper context refetch call if/when
+            // AppContext exposes one for servicePrices.
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

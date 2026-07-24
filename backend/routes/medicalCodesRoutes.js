@@ -45,6 +45,116 @@ function registerTemplateRoute(system) {
 registerTemplateRoute('icd');
 registerTemplateRoute('snomed');
 
+// GET /api/medical-codes-icd/export-excel ، /api/medical-codes-snomed/export-excel
+// كانت غائبة تماماً — الاستيراد فقط كان موجوداً بلا أي طريقة لتصدير الرموز
+// الحالية. مسجَّلة بنفس نمط مسار الاستيراد بالضبط (نفس apiName) حتى يعمل
+// مكوّن ExcelExportButton الجاهز مباشرة بدون أي تعديل إضافي بالواجهة.
+function registerExportRoute(system) {
+  router.get(`/medical-codes-${system}/export-excel`, auth, async (req, res, next) => {
+    try {
+      const result = await pool.query(
+        'SELECT code, name_ar AS "nameAr", name_en AS "nameEn", icd_link AS "icdLink" FROM medical_codes WHERE system = $1 ORDER BY code',
+        [system]
+      );
+      const headers = system === 'snomed' ? ['code', 'nameAr', 'nameEn', 'icdLink'] : ['code', 'nameAr', 'nameEn'];
+      const rows = result.rows.map(r => headers.map(h => r[h] ?? ''));
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'codes');
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="medical-codes-${system}-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(buffer);
+    } catch (err) { next(err); }
+  });
+}
+registerExportRoute('icd');
+registerExportRoute('snomed');
+
+// ── ربط تشخيصات ICD-10/SNOMED CT بمرضى حقيقيين دفعة واحدة ────────────────────
+// مختلف عن كل استيرادات Excel الثانية بالنظام: هذا لا يُنشئ سجلات جديدة، بل
+// يُحدِّث سجلات patients الموجودة فعلاً (يضيف عنصراً لمصفوفة diagnoses[]
+// المخزَّنة بسجل كل مريض) — لهذا السبب ما يقدر يستخدم مصنع registerExcelImport
+// العام (مصمَّم للإدراج فقط INSERT). يطابق نفس شكل عنصر diagnoses[] المستخدَم
+// فعلياً بـ PatientsPage.js بالضبط: {id, icdCode, icdNameAr, icdNameEn,
+// snomedCode, snomedNameAr, snomedNameEn, isPrimary, dateAdded}.
+router.get('/patient-diagnoses/import-template', auth, (req, res) => {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['اسم المريض', 'رمز ICD-10', 'الاسم بالعربي', 'الاسم بالإنجليزي', 'رمز SNOMED CT', 'تاريخ الإضافة'],
+    ['Test Patient CBC 1', 'I21.9', 'احتشاء عضلة قلبية حاد، غير محدد', 'Acute myocardial infarction, unspecified', '', '2026-07-01'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'diagnoses');
+  const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="patient-diagnoses-template.xlsx"');
+  res.send(buffer);
+});
+
+router.post('/patient-diagnoses/import-excel', auth, importUpload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'لم يُرفَع أي ملف' });
+
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    const results = { imported: 0, duplicates: 0, failed: 0, errors: [], duplicateRows: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const patientName = String(row['اسم المريض'] || row['Patient Name'] || '').trim();
+      const icdCode = String(row['رمز ICD-10'] || row['ICD-10 Code'] || '').trim();
+      if (!patientName || !icdCode) {
+        results.failed++;
+        results.errors.push({ row: i + 2, messages: ['اسم المريض ورمز ICD-10 مطلوبان'] });
+        continue;
+      }
+
+      try {
+        const patientResult = await pool.query('SELECT id, data FROM patients WHERE name = $1 LIMIT 1', [patientName]);
+        if (patientResult.rows.length === 0) {
+          results.failed++;
+          results.errors.push({ row: i + 2, messages: [`لم يُعثر على مريض باسم "${patientName}"`] });
+          continue;
+        }
+        const patient = patientResult.rows[0];
+        const existingDiagnoses = Array.isArray(patient.data?.diagnoses) ? patient.data.diagnoses : [];
+
+        if (existingDiagnoses.some(d => d.icdCode === icdCode)) {
+          results.duplicates++;
+          results.duplicateRows.push({ row: i + 2, name: `${patientName} — ${icdCode}` });
+          continue;
+        }
+
+        const newDiagnosis = {
+          id: Date.now() + Math.floor(Math.random() * 100000),
+          icdCode,
+          icdNameAr: String(row['الاسم بالعربي'] || '').trim(),
+          icdNameEn: String(row['الاسم بالإنجليزي'] || '').trim(),
+          snomedCode: String(row['رمز SNOMED CT'] || '').trim(),
+          snomedNameAr: '',
+          snomedNameEn: '',
+          isPrimary: existingDiagnoses.length === 0,
+          dateAdded: String(row['تاريخ الإضافة'] || new Date().toISOString().split('T')[0]).trim(),
+        };
+        const updatedDiagnoses = [...existingDiagnoses, newDiagnosis];
+        await pool.query(
+          `UPDATE patients SET data = jsonb_set(data, '{diagnoses}', $1::jsonb) WHERE id = $2`,
+          [JSON.stringify(updatedDiagnoses), patient.id]
+        );
+        results.imported++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push({ row: i + 2, messages: ['خطأ حفظ بقاعدة البيانات: ' + err.message] });
+      }
+    }
+
+    console.log(`📥 [patient-diagnoses] استيراد: ${results.imported} تمّ، ${results.duplicates} مكرر، ${results.failed} فشل`);
+    res.json(results);
+  } catch (err) { next(err); }
+});
+
 // POST /api/medical-codes-icd/import-excel ، /api/medical-codes-snomed/import-excel
 // Bulk import — each row is processed independently (one bad row doesn't
 // block the rest), matching the pattern used elsewhere in this app.

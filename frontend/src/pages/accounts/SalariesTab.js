@@ -6,6 +6,9 @@ import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { today, initSalaries, calcNet, displayValue, gradeEn, printTable, usePersistedTab } from './shared';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
+import { api } from '../../api';
 
 export default
 function SalariesTab() {
@@ -22,9 +25,10 @@ function SalariesTab() {
   const salaries = filterByViewingHospital(salariesRaw);
   const { pageItems: salPageItems, currentPage: salCurrentPage, setCurrentPage: setSalCurrentPage, totalPages: salTotalPages, totalItems: salTotalItems } = usePagination(salaries, 50);
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
-  const empty = { name:'', jobTitle:'', dept:'', grade:'', baseSalary:'', additions:[{label:'علاوة اجتماعية',amount:0}], deductions:[{label:'ضريبة',amount:0}], month:today.slice(0,7), status:'pending', notes:'' };
+  const empty = { name:'', jobTitle:'', dept:'', grade:'', baseSalary:'', additions:[{label:'علاوة اجتماعية',amount:0}], deductions:[{label:'ضريبة',amount:0}], month:today.slice(0,7), status:'معلق', notes:'' };
   const [form, setForm] = useState(empty);
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -33,7 +37,7 @@ function SalariesTab() {
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const totalNet = salaries.reduce((s,e) => s + calcNet(e), 0);
-  const paidCount = salaries.filter(e => e.status==='paid').length;
+  const paidCount = salaries.filter(e => e.status==='مدفوع').length;
 
   const openAdd = () => { setEditing(null); setForm(empty); setSelected(null); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setSelected(null); setShowModal(true); };
@@ -86,17 +90,17 @@ function SalariesTab() {
     setShowModal(false);
   };
 
-  const statusColor = (s) => s==='paid'?'#22c55e':s==='pending'?'#f59e0b':'#ef4444';
+  const statusColor = (s) => s==='مدفوع'?'#22c55e':s==='معلق'?'#f59e0b':'#ef4444';
 
   return (
     <div>
       {/* Summary */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
-          { label:tr('acc_total_net_salaries'), val:`${totalNet.toLocaleString(lang==='ar'?'ar-IQ':'en-US')} ${tr('iqd')}`, color:'#1a6bab', icon:'💰' },
+          { label:tr('acc_total_net_salaries'), val:`${totalNet.toLocaleString('en-US')} ${tr('iqd')}`, color:'#1a6bab', icon:'💰' },
           { label:tr('acc_paid_employees'), val:`${paidCount} / ${salaries.length}`, color:'#22c55e', icon:'✅' },
-          { label:tr('acc_pending_count'), val:salaries.filter(e=>e.status==='pending').length, color:'#f59e0b', icon:'⏳' },
-          { label:tr('acc_average_salary'), val:salaries.length?`${Math.round(totalNet/salaries.length).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} ${tr('iqd')}`:'0', color:'#8b5cf6', icon:'📊' },
+          { label:tr('acc_pending_count'), val:salaries.filter(e=>e.status==='معلق').length, color:'#f59e0b', icon:'⏳' },
+          { label:tr('acc_average_salary'), val:salaries.length?`${Math.round(totalNet/salaries.length).toLocaleString('en-US')} ${tr('iqd')}`:'0', color:'#8b5cf6', icon:'📊' },
         ].map((s,i) => (
           <div key={i} className="card" style={{ padding:'14px 16px', borderRight:`4px solid ${s.color}` }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{s.icon}</div>
@@ -110,9 +114,26 @@ function SalariesTab() {
         <h3 style={{ margin:0 }}>{tr('acc_salary_sheet')} — {today.slice(0,7)}</h3>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => printTable('sal-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {tr('acc_print')}</button>
+          <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
+          <ExcelExportButton apiName="salaries" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">+ {tr('acc_add_item')}</button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="salaries"
+          title={lang==='ar'?'استيراد رواتب من Excel':'Import Salaries from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/salaries');
+              if (Array.isArray(fresh)) setSalaries(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       <div className="card" style={{ padding:0 }}>
         {selectedIds.size > 0 && (
@@ -153,10 +174,10 @@ function SalariesTab() {
                     <td style={{ fontSize:12 }}>{lang==='ar'?e.jobTitle:e.jobTitleEn||({'طبيب اختصاص':'Specialist Physician','ممرضة أولى':'Senior Nurse','فني مختبر':'Lab Technician','سكرتيرة':'Secretary','محاسب':'Accountant','مدير':'Manager'})[e.jobTitle]||e.jobTitle}</td>
                     <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:11 }}>{lang==='ar'?e.dept:e.deptEn||({'الباطنية':'Internal Medicine','الجراحة':'Surgery','التحاليل':'Laboratory','الإدارة':'Administration','الأشعة':'Radiology','الطوارئ':'Emergency','الأطفال':'Pediatrics'})[e.dept]||e.dept}</span></td>
                     <td style={{ fontSize:12 }}>{lang==='ar'?e.grade:e.gradeEn||gradeEn(e.grade)||e.grade}</td>
-                    <td style={{ fontWeight:600 }}>{Number(e.baseSalary).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {tr('iqd')}</td>
-                    <td style={{ color:'#22c55e', fontWeight:600 }}>+{totalAdd.toLocaleString(lang==='ar'?'ar-IQ':'en-US')}</td>
-                    <td style={{ color:'#ef4444', fontWeight:600 }}>-{totalDed.toLocaleString(lang==='ar'?'ar-IQ':'en-US')}</td>
-                    <td style={{ fontWeight:700, color:'#1a6bab', fontSize:14 }}>{net.toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {tr('iqd')}</td>
+                    <td style={{ fontWeight:600 }}>{Number(e.baseSalary).toLocaleString('en-US')} {tr('iqd')}</td>
+                    <td style={{ color:'#22c55e', fontWeight:600 }}>+{totalAdd.toLocaleString('en-US')}</td>
+                    <td style={{ color:'#ef4444', fontWeight:600 }}>-{totalDed.toLocaleString('en-US')}</td>
+                    <td style={{ fontWeight:700, color:'#1a6bab', fontSize:14 }}>{net.toLocaleString('en-US')} {tr('iqd')}</td>
                     <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{e.month}</td>
                     <td><span style={{ background:`${statusColor(e.status)}15`, color:statusColor(e.status), padding:'3px 10px', borderRadius:8, fontSize:11, fontWeight:700 }}>{displayValue(e.status, tr)}</span></td>
                     <td>
@@ -180,7 +201,7 @@ function SalariesTab() {
                             {(e.additions||[]).map((a,i) => (
                               <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'rgba(34,197,94,0.08)', borderRadius:8, marginBottom:4 }}>
                                 <span style={{ fontSize:13 }}>{displayValue(a.label, tr)}</span>
-                                <span style={{ fontWeight:700, color:'#22c55e' }}>+{Number(a.amount).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {tr('iqd')}</span>
+                                <span style={{ fontWeight:700, color:'#22c55e' }}>+{Number(a.amount).toLocaleString('en-US')} {tr('iqd')}</span>
                               </div>
                             ))}
                           </div>
@@ -189,7 +210,7 @@ function SalariesTab() {
                             {(e.deductions||[]).map((d,i) => (
                               <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'rgba(239,68,68,0.08)', borderRadius:8, marginBottom:4 }}>
                                 <span style={{ fontSize:13 }}>{displayValue(d.label, tr)}</span>
-                                <span style={{ fontWeight:700, color:'#ef4444' }}>-{Number(d.amount).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {tr('iqd')}</span>
+                                <span style={{ fontWeight:700, color:'#ef4444' }}>-{Number(d.amount).toLocaleString('en-US')} {tr('iqd')}</span>
                               </div>
                             ))}
                           </div>
@@ -226,7 +247,7 @@ function SalariesTab() {
                 <div><label className="form-label">{tr('auto_pair_41')}</label><input value={form.grade} onChange={e=>setForm(p=>({...p,grade:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{tr('acc_base_salary')}</label><input type="number" value={form.baseSalary} onChange={e=>setForm(p=>({...p,baseSalary:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{tr('field_month')}</label><input type="month" value={form.month} onChange={e=>setForm(p=>({...p,month:e.target.value}))} className="form-control" /></div>
-                <div><label className="form-label">{tr('field_status')}</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control"><option value="مُصرَف">{tr('acc_status_paid')}</option><option value="معلق">{tr('acc_status_pending')}</option><option value="مرفوض">{tr('leave_status_rej2')}</option></select></div>
+                <div><label className="form-label">{tr('field_status')}</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control"><option value="مدفوع">{tr('acc_status_paid')}</option><option value="معلق">{tr('acc_status_pending')}</option><option value="مرفوض">{tr('leave_status_rej2')}</option></select></div>
               </div>
               <div style={{ marginTop:16 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}><h4 style={{ margin:0, color:'#22c55e' }}>{tr('acc_additions')}</h4><button onClick={addAddition} style={{ background:'none', border:'1px solid #22c55e', color:'#22c55e', borderRadius:6, padding:'2px 10px', cursor:'pointer', fontSize:12 }}>+ {tr('acc_add_item')}</button></div>

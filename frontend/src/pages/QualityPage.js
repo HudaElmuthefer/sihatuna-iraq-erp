@@ -2,6 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 // ── Status configs with ar+en ──────────────────────────────────────────────────
 const AUDIT_STATUS = {
@@ -50,6 +52,7 @@ export default function QualityPage() {
   const [kpiForm, setKpiForm]     = useState({});
   const [editingKpiId, setEditingKpiId] = useState(null);
   const [kpiActualDraft, setKpiActualDraft] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   // ── جلب البيانات الحقيقية من الباك إند عند فتح الصفحة ────────────────────────
   useEffect(() => {
@@ -234,11 +237,31 @@ export default function QualityPage() {
           <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('نظام إدارة الجودة ISO 9001 — مؤشرات الأداء · المراجعات · عدم المطابقة','ISO 9001 Quality Management — KPIs · Audits · Non-Conformance')}</p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
+          <button style={{ ...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
+            📊 {L('استيراد من Excel','Import from Excel')}
+          </button>
+          <ExcelExportButton apiName={tab === 'kpi' ? 'qualityKPIs' : tab === 'audits' ? 'qualityAudits' : 'qualityNCs'} lang={lang} onError={(m) => showToast(m, 'error')} />
           {tab === 'kpi'    && <button style={S.btn('#10b981')} onClick={() => { setKpiForm({ period: `${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth()+1)/3)}`, trend:'stable', lowerIsBetter:false, unit:'%' }); setShowKpiModal(true); }}>+ {L('مؤشر جديد','New KPI')}</button>}
           {tab === 'audits' && <button style={S.btn()} onClick={() => { setAuditForm({ date: new Date().toISOString().split('T')[0], status:'planned', type:'internal' }); setShowAuditModal(true); }}>+ {L('مراجعة جديدة','New Audit')}</button>}
           {tab === 'ncs'    && <button style={S.btn('#ef4444')} onClick={() => { setNCForm({ openDate: new Date().toISOString().split('T')[0], status:'open', classification:'minor' }); setShowNCModal(true); }}>+ {L('عدم مطابقة','New NC')}</button>}
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName={tab === 'kpi' ? 'qualityKPIs' : tab === 'audits' ? 'qualityAudits' : 'qualityNCs'}
+          title={tab === 'kpi' ? L('استيراد مؤشرات أداء من Excel','Import KPIs from Excel') : tab === 'audits' ? L('استيراد مراجعات من Excel','Import Audits from Excel') : L('استيراد حالات عدم مطابقة من Excel','Import Non-Conformances from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              if (tab === 'kpi') { const fresh = await api.get('/qualityKPIs'); if (Array.isArray(fresh)) setKpis(fresh); }
+              else if (tab === 'audits') { const fresh = await api.get('/qualityAudits'); if (Array.isArray(fresh)) setAudits(fresh); }
+              else { const fresh = await api.get('/qualityNCs'); if (Array.isArray(fresh)) setNCs(fresh); }
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div style={S.stats}>

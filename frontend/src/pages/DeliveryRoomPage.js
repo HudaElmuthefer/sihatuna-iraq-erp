@@ -4,7 +4,9 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
-import { FaPlus, FaEdit, FaTrash, FaBaby, FaSyringe, FaBed } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaBaby, FaSyringe, FaBed, FaFileExcel } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -45,6 +47,7 @@ export default function DeliveryRoomPage() {
   const [admForm, setAdmForm] = useState(emptyAdmission);
   const [fullForm, setFullForm] = useState(emptyFull);
   const [search, setSearch] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   // ── إدخال الأم قبل الولادة ───────────────────────────────────────────────
   const openAddAdmission = () => { setAdmForm(emptyAdmission); setShowAdmModal(true); };
@@ -147,7 +150,13 @@ export default function DeliveryRoomPage() {
             <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('من دخول الأم قبل الولادة إلى تسجيل الطفل ولقاحه الأول', "From the mother's admission through the baby's first vaccine")}</p>
           </div>
         </div>
-        <button onClick={openAddAdmission} className="btn" style={{ background: '#fff', color: '#db2777', fontWeight: 600 }}><FaBed /> {L('دخول أم جديدة', 'New Mother Admission')}</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setShowImport(true)} className="btn" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 600, border: '1px solid rgba(255,255,255,0.5)' }}>
+            <FaFileExcel /> {L('استيراد من Excel', 'Import from Excel')}
+          </button>
+          <ExcelExportButton apiName="deliveries" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+          <button onClick={openAddAdmission} className="btn" style={{ background: '#fff', color: '#db2777', fontWeight: 600 }}><FaBed /> {L('دخول أم جديدة', 'New Mother Admission')}</button>
+        </div>
       </div>
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
@@ -434,6 +443,21 @@ export default function DeliveryRoomPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="deliveries"
+          title={L('استيراد سجلات الولادة من Excel', 'Import Delivery Records from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/deliveries');
+              if (Array.isArray(fresh)) setRecords(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
       )}
     </div>
   );

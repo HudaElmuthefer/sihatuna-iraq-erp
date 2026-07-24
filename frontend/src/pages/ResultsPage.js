@@ -299,7 +299,7 @@ export default function ResultsPage() {
       <div style={{ position: 'relative', maxWidth: 420, marginBottom: 20 }}>
         <input
           className="form-control"
-          placeholder={L('ابحثي عن مريض بالاسم أو رقم الهاتف...', 'Search patient by name or phone...')}
+          placeholder={L('ابحث عن مريض بالاسم أو رقم الهاتف...', 'Search patient by name or phone...')}
           value={search}
           onChange={(e) => { setSearch(e.target.value); setSelectedPatient(null); }}
         />

@@ -6,6 +6,9 @@ import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import { today, initPromotions, gradeEn, displayValue, printTable, usePersistedTab } from './shared';
+import ExcelImportModal from '../../components/ExcelImportModal';
+import ExcelExportButton from '../../components/ExcelExportButton';
+import { api } from '../../api';
 
 export default
 function PromotionsTab() {
@@ -24,7 +27,8 @@ function PromotionsTab() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const due = promotions.filter(p=>p.status==='due');
+  const due = promotions.filter(p=>p.status==='مستحق');
+  const [showImport, setShowImport] = useState(false);
 
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setShowModal(true); };
@@ -87,9 +91,26 @@ function PromotionsTab() {
         <h3 style={{ margin:0 }}>{tr('auto_pair_4')}</h3>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={()=>printTable('prom-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {tr('acc_print')}</button>
+          <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
+          <ExcelExportButton apiName="promotions" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">+ {tr('acc_register_promotion')}</button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="promotions"
+          title={lang==='ar'?'استيراد ترفيعات من Excel':'Import Promotions from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/promotions');
+              if (Array.isArray(fresh)) setPromotions(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
       <div className="card" style={{ padding:0 }}>
         {selectedIds.size > 0 && (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'10px 16px', background:'var(--bg-secondary)' }}>
@@ -115,14 +136,14 @@ function PromotionsTab() {
             <th>{tr('hr_emp_name')}</th><th>{tr('auto_pair_5')}</th><th>{tr('auto_pair_6')}</th><th>{tr('auto_pair_7')}</th><th>{tr('auto_pair_8')}</th><th>{tr('auto_pair_9')}</th><th>{tr('auto_pair_10')}</th><th>{tr('field_status')}</th><th>{tr('field_actions')}</th></tr></thead>
           <tbody>
             {promoPageItems.map(p=>(
-              <tr key={p.id} style={{ background:p.status==='due'?'rgba(26,107,171,0.04)':undefined }}>
+              <tr key={p.id} style={{ background:p.status==='مستحق'?'rgba(26,107,171,0.04)':undefined }}>
                 <td><input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} /></td>
                 <td style={{ fontWeight:600 }}>{lang==='ar'?p.name:p.nameEn||p.name}</td>
                 <td style={{ fontSize:13 }}>{lang==='ar'?p.fromGrade:p.fromGradeEn||gradeEn(p.fromGrade)||p.fromGrade}</td>
                 <td style={{ fontSize:13, color:'#1a6bab', fontWeight:600 }}>{lang==='ar'?p.toGrade:p.toGradeEn||gradeEn(p.toGrade)||p.toGrade||'—'}</td>
                 <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{p.date||'—'}</td>
-                <td style={{ fontSize:13 }}>{p.salaryBefore?Number(p.salaryBefore).toLocaleString(lang==='ar'?'ar-IQ':'en-US'):'—'}</td>
-                <td style={{ fontSize:13, color:'#22c55e', fontWeight:600 }}>{p.salaryAfter?Number(p.salaryAfter).toLocaleString(lang==='ar'?'ar-IQ':'en-US'):'—'}</td>
+                <td style={{ fontSize:13 }}>{p.salaryBefore?Number(p.salaryBefore).toLocaleString('en-US'):'—'}</td>
+                <td style={{ fontSize:13, color:'#22c55e', fontWeight:600 }}>{p.salaryAfter?Number(p.salaryAfter).toLocaleString('en-US'):'—'}</td>
                 <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{p.decisionNo||'—'}</td>
                 <td><span style={{ background:p.status==='done'?'#dcfce7':'rgba(26,107,171,0.1)', color:p.status==='done'?'#166534':'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{displayValue(p.status, tr)}</span></td>
                 <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(p)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(p.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>

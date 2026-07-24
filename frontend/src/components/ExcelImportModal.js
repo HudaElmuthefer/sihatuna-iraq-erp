@@ -2,7 +2,7 @@
 //
 // نافذة استيراد جماعي من ملف Excel — قابلة لإعادة الاستخدام لأي موديول
 // (حالياً: المرضى والأطباء). تتعامل مع تحميل قالب فارغ، رفع الملف، وعرض
-// نتيجة الاستيراد بالتفصيل (كم سجل انضاف، كم فشل ولیش بالضبط).
+// نتيجة الاستيراد بالتفصيل (كم سجل أُضيف، وكم فشل ولماذا بالضبط).
 import React, { useState } from 'react';
 import { FaTimes, FaFileExcel, FaDownload, FaUpload, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { apiUploadFile, apiDownloadFile } from '../api';
@@ -10,7 +10,7 @@ import { apiUploadFile, apiDownloadFile } from '../api';
 // apiName: 'patients' | 'doctors' — يحدد المسار الفعلي بالباك إند
 // title: عنوان النافذة (مثل "استيراد مرضى من Excel")
 // onClose: تُستدعى عند إغلاق النافذة
-// onImported: تُستدعى بعد استيراد ناجح (لو انضاف سجل واحد على الأقل) لتحديث القائمة بالصفحة
+// onImported: تُستدعى بعد استيراد ناجح (إذا أُضيف سجل واحد على الأقل) لتحديث القائمة بالصفحة
 export default function ExcelImportModal({ apiName, title, lang, onClose, onImported }) {
   const ar = lang === 'ar';
   const [file, setFile] = useState(null);
@@ -65,23 +65,23 @@ export default function ExcelImportModal({ apiName, title, lang, onClose, onImpo
           {/* خطوة 1: تحميل القالب */}
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              {ar ? '1. حمّلي القالب الفارغ' : '1. Download the empty template'}
+              {ar ? '1. حمّل القالب الفارغ' : '1. Download the empty template'}
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
               {ar
-                ? 'يحتوي أسماء الأعمدة الصحيحة وصف مثال — عبّيه بنفس الترتيب وارفعيه.'
+                ? 'يحتوي على أسماء الأعمدة الصحيحة وصف مثال — املأه بنفس الترتيب وارفعه أدناه.'
                 : 'Contains the correct column headers and an example row — fill it in and upload it below.'}
             </div>
             <button className="btn btn-sm" onClick={handleDownloadTemplate} disabled={downloadingTemplate}
               style={{ background: 'var(--bg-primary)', border: '1.5px solid var(--border)', color: 'var(--text-primary)' }}>
-              <FaDownload /> {downloadingTemplate ? (ar ? 'جاري التحميل...' : 'Downloading...') : (ar ? 'تحميل القالب' : 'Download Template')}
+              <FaDownload /> {downloadingTemplate ? (ar ? 'جارٍ التحميل...' : 'Downloading...') : (ar ? 'تحميل القالب' : 'Download Template')}
             </button>
           </div>
 
           {/* خطوة 2: رفع الملف */}
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              {ar ? '2. ارفعي الملف المعبّى' : '2. Upload the filled file'}
+              {ar ? '2. ارفع الملف بعد تعبئته' : '2. Upload the filled file'}
             </div>
             <input
               type="file"
@@ -90,7 +90,7 @@ export default function ExcelImportModal({ apiName, title, lang, onClose, onImpo
               style={{ width: '100%', padding: 8, borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
             />
             <button className="btn btn-primary" onClick={handleUpload} disabled={!file || uploading} style={{ marginTop: 10, width: '100%' }}>
-              <FaUpload /> {uploading ? (ar ? 'جاري الاستيراد...' : 'Importing...') : (ar ? 'استيراد' : 'Import')}
+              <FaUpload /> {uploading ? (ar ? 'جارٍ الاستيراد...' : 'Importing...') : (ar ? 'استيراد' : 'Import')}
             </button>
           </div>
 
@@ -105,7 +105,7 @@ export default function ExcelImportModal({ apiName, title, lang, onClose, onImpo
             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', gap: 12, padding: '12px 16px', background: 'var(--bg-secondary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#10b981', fontWeight: 700 }}>
-                  <FaCheckCircle /> {results.imported} {ar ? 'تم استيرادهم' : 'imported'}
+                  <FaCheckCircle /> {results.imported} {ar ? 'تم استيرادها' : 'imported'}
                 </div>
                 {results.duplicates > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b', fontWeight: 700 }}>
@@ -114,7 +114,7 @@ export default function ExcelImportModal({ apiName, title, lang, onClose, onImpo
                 )}
                 {results.failed > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontWeight: 700 }}>
-                    <FaExclamationTriangle /> {results.failed} {ar ? 'فشلوا' : 'failed'}
+                    <FaExclamationTriangle /> {results.failed} {ar ? 'فشل' : 'failed'}
                   </div>
                 )}
               </div>

@@ -200,9 +200,19 @@ select.form-control {
 }
 
 /* Table */
+/* Table */
 .table-wrapper {
-  overflow-x: auto;
+  overflow: auto;
   border-radius: var(--radius);
+  max-height: 65vh;
+  position: relative;
+}
+
+.table-wrapper .table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 2;
 }
 
 .table {

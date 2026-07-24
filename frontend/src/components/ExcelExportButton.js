@@ -9,7 +9,11 @@ import { apiDownloadFile } from '../api';
 
 // apiName: نفس اسم المسار المستخدم بالموديول (مثل 'patients', 'assets'...)
 // label: نص الزر (اختياري، له نص افتراضي بالعربي/الإنجليزي)
-export default function ExcelExportButton({ apiName, lang, label, onError }) {
+// className / style: تخصيص اختياري للمظهر — الافتراضي "btn btn-outline" يناسب
+// الخلفيات الفاتحة (بطاقات، أشرطة أدوات بيضاء). على رأسيات ملوّنة/داكنة
+// (تدرّجات لونية بأعلى بعض الصفحات) مرّري style بلون نص وحدود واضحين، مثل:
+// style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }}
+export default function ExcelExportButton({ apiName, lang, label, onError, className, style }) {
   const [downloading, setDownloading] = useState(false);
   const ar = lang === 'ar';
 
@@ -26,7 +30,7 @@ export default function ExcelExportButton({ apiName, lang, label, onError }) {
   };
 
   return (
-    <button onClick={handleExport} disabled={downloading} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <button onClick={handleExport} disabled={downloading} className={className || 'btn btn-outline'} style={{ display: 'flex', alignItems: 'center', gap: 6, ...style }}>
       <FaFileExcel />
       {downloading ? (ar ? 'جارٍ التصدير...' : 'Exporting...') : (label || (ar ? 'تصدير Excel' : 'Export Excel'))}
     </button>

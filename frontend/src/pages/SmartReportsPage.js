@@ -147,10 +147,10 @@ export default function SmartReportsPage() {
       {/* KPI Cards — كلها أرقام حقيقية محسوبة من بيانات النظام الفعلية */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 24 }}>
         {[
-          { label: tr('rep_total_patients'), val: (patients || []).length.toLocaleString(lang==='ar'?'ar-IQ':'en-US'), icon: '👥', color: '#1a6bab' },
-          { label: L('مواعيد بالفترة المختارة','Appointments in period'), val: appointmentsInPeriod.length.toLocaleString(lang==='ar'?'ar-IQ':'en-US'), icon: '📅', color: '#8b5cf6' },
-          { label: tr('rep_revenue_iqd'), val: revenueInPeriod.toLocaleString(lang==='ar'?'ar-IQ':'en-US'), icon: '💰', color: '#22c55e' },
-          { label: L('عدد الأطباء المسجَّلين','Registered doctors'), val: (doctors || []).length.toLocaleString(lang==='ar'?'ar-IQ':'en-US'), icon: '👨‍⚕️', color: '#f59e0b' },
+          { label: tr('rep_total_patients'), val: (patients || []).length.toLocaleString('en-US'), icon: '👥', color: '#1a6bab' },
+          { label: L('مواعيد بالفترة المختارة','Appointments in period'), val: appointmentsInPeriod.length.toLocaleString('en-US'), icon: '📅', color: '#8b5cf6' },
+          { label: tr('rep_revenue_iqd'), val: revenueInPeriod.toLocaleString('en-US'), icon: '💰', color: '#22c55e' },
+          { label: L('عدد الأطباء المسجَّلين','Registered doctors'), val: (doctors || []).length.toLocaleString('en-US'), icon: '👨‍⚕️', color: '#f59e0b' },
         ].map(s => (
           <div key={s.label} className="card" style={{ position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -10, left: -10, width: 60, height: 60, borderRadius: '50%', background: `${s.color}15` }} />

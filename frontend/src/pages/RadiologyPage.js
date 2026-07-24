@@ -3,6 +3,9 @@ import React, { useState, useMemo } from 'react';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
+import { FaFileExcel, FaTrash } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import { api } from '../api';
 
 const MODALITIES = {
   xray:      { ar:'أشعة سينية',         en:'X-Ray',       icon:'📡', color:'#1a6bab' },
@@ -25,6 +28,7 @@ export default function RadiologyPage() {
   const { radiology, setRadiology, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
+  const ar = lang === 'ar';
   const [search, setSearch] = useState('');
   const [modFilter, setModFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -34,6 +38,19 @@ export default function RadiologyPage() {
   const [form, setForm] = useState(EMPTY);
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
+
+  // ── استيراد من Excel ──────────────────────────────────────────────────────
+  const [showImport, setShowImport] = useState(false);
+
+  // ── تحديد متعدد للحذف الجماعي (بنفس نمط LaboratoryPage) ──────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const filtered = useMemo(() => radiology.filter(r => {
     const q = search.toLowerCase();
@@ -104,6 +121,25 @@ export default function RadiologyPage() {
     showToast(L('تم حفظ التقرير الإشعاعي','Radiology report saved'),'success'); setShowReport(null);
   };
 
+  // ── حذف جماعي (بنفس نمط LaboratoryPage.handleBulkDelete) ─────────────────
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('radiology', 'delete', { id });
+      if (ok) { setRadiology(p => p.filter(r => r.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    showToast(
+      ar ? `تم حذف ${deleted} من ${ids.length} طلب` : `Deleted ${deleted} of ${ids.length} requests`,
+      deleted === ids.length ? 'success' : 'warning'
+    );
+  };
+
   const S = {
     page:{padding:24,direction:dir},
     stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:20},
@@ -129,8 +165,28 @@ export default function RadiologyPage() {
           <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>{lang==='ar'?'📡 الأشعة والتصوير الطبي':'📡 Radiology & Medical Imaging'}</h1>
           <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة الأشعة السينية • السونار • المفراس (CT) • الرنين المغناطيسي (MRI)':'Manage X-Ray • Ultrasound • CT Scan • MRI'}</p>
         </div>
-        <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تصوير جديد':'+ New Imaging Request'}</button>
+        <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+          <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={() => setShowImport(true)}>
+            <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+          </button>
+          <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تصوير جديد':'+ New Imaging Request'}</button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="radiology"
+          title={ar ? 'استيراد طلبات تصوير من Excel' : 'Import Imaging Requests from Excel'}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/radiology');
+              if (Array.isArray(fresh)) setRadiology(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+          }}
+        />
+      )}
 
       <div style={S.stats}>
         {[[lang==='ar'?'إجمالي الطلبات':'Total Requests',stats.total,'#1a6bab'],[lang==='ar'?'بانتظار الفحص':'Pending Exam',stats.pending,'#6b7280'],[lang==='ar'?'تم الفحص':'Examined',stats.examined,'#f59e0b'],[lang==='ar'?'مكتمل التقرير':'Report Ready',stats.reported,'#10b981']].map(([l,v,c],i)=>(
@@ -158,9 +214,31 @@ export default function RadiologyPage() {
         </select>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{ar ? `${selectedIds.size} محدَّد` : `${selectedIds.size} selected`}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setSelectedIds(new Set())} style={{...S.btn('var(--bg-secondary)'), color:'var(--text-primary)', border:'1.5px solid var(--border-color)', padding:'6px 12px', fontSize:12}}>{ar ? 'إلغاء التحديد' : 'Clear Selection'}</button>
+            <button onClick={() => setBulkDeleteConfirm(true)} style={{...S.btn('#ef4444'), padding:'6px 12px', fontSize:12}}><FaTrash /> {ar ? `حذف المحدَّد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}</button>
+          </div>
+        </div>
+      )}
+
       <table style={S.table}>
         <thead>
-          <tr>{(lang==='ar'?['رقم الطلب','المريض','نوع التصوير','منطقة الجسم','تاريخ الطلب','الحالة','الأولوية','الصور','التقرير','إجراء']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action']).map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+          <tr>
+            <th style={{...S.th, width:36}}>
+              <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(r => selectedIds.has(r.id))} onChange={() => {
+                setSelectedIds(prev => {
+                  const allSelected = pageItems.every(r => prev.has(r.id));
+                  const next = new Set(prev);
+                  pageItems.forEach(r => allSelected ? next.delete(r.id) : next.add(r.id));
+                  return next;
+                });
+              }} />
+            </th>
+            {(lang==='ar'?['رقم الطلب','المريض','نوع التصوير','منطقة الجسم','تاريخ الطلب','الحالة','الأولوية','الصور','التقرير','إجراء']:['Req No','Patient','Modality','Body Part','Date','Status','Priority','Images','Report','Action']).map(h=><th key={h} style={S.th}>{h}</th>)}
+          </tr>
         </thead>
         <tbody>
           {pageItems.map(r=>{
@@ -168,6 +246,7 @@ export default function RadiologyPage() {
             const mod=MODALITIES[r.modality]||MODALITIES.other;
             return (
               <tr key={r.id}>
+                <td style={S.td}><input type="checkbox" checked={selectedIds.has(r.id)} onChange={() => toggleSelect(r.id)} /></td>
                 <td style={S.td}><code style={{fontSize:10,background:'var(--bg-tertiary)',padding:'2px 6px',borderRadius:4}}>{r.reqNo}</code></td>
                 <td style={S.td}><div style={{fontWeight:600}}>{r.patientName}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.patientId}</div></td>
                 <td style={S.td}><span style={S.badge(mod.color,mod.color+'22')}>{mod.icon} {lang==='ar'?mod.ar:mod.en}</span></td>
@@ -189,7 +268,7 @@ export default function RadiologyPage() {
               </tr>
             );
           })}
-          {filtered.length===0&&<tr><td colSpan={10} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
+          {filtered.length===0&&<tr><td colSpan={11} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
         </tbody>
       </table>
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
@@ -235,6 +314,22 @@ export default function RadiologyPage() {
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button style={S.btn('#6b7280')} onClick={()=>setShowReport(null)}>{lang==='ar'?'إلغاء':'Cancel'}</button>
               <button style={S.btn('#10b981')} onClick={saveReport}>{lang==='ar'?'✅ حفظ التقرير':'✅ Save Report'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirm && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && !bulkDeleting && setBulkDeleteConfirm(false)}>
+          <div style={{...S.mbox, maxWidth: 420, textAlign:'center', padding: 40}}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+            <h3 style={{ fontSize: 20, marginBottom: 8, color:'var(--text-primary)' }}>{ar ? `حذف ${selectedIds.size} طلب؟` : `Delete ${selectedIds.size} requests?`}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>
+              {L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button style={S.btn('#6b7280')} onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting}>{lang==='ar'?'إلغاء':'Cancel'}</button>
+              <button style={S.btn('#ef4444')} onClick={handleBulkDelete} disabled={bulkDeleting}>{bulkDeleting ? '...' : (lang==='ar'?'حذف':'Delete')}</button>
             </div>
           </div>
         </div>

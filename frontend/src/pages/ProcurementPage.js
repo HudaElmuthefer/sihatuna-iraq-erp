@@ -4,6 +4,8 @@ import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const STATUS_CONFIG = {
   pending:   { ar:'بانتظار الموافقة', en:'Pending Approval', color:'#f59e0b', bg:'#fef3c7' },
@@ -19,13 +21,18 @@ const PRIORITY_CONFIG = {
 const EMPTY = { poNo:'', title:'', titleEn:'', supplier:'', supplierEn:'', date:'', deliveryDate:'', totalAmount:0, status:'pending', items:1, priority:'normal', approvedBy:null };
 
 export default function ProcurementPage() {
-  const { procurement, setProcurement, user, lang, showToast, syncToServer, hospitals, multiHospitalEnabled } = useApp();
+  const { procurement, setProcurement, user, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [showImport, setShowImport] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY);
 
@@ -159,7 +166,7 @@ export default function ProcurementPage() {
     total: procurement.length,
     pending: procurement.filter(p => p.status === 'pending').length,
     approved: procurement.filter(p => p.status === 'approved').length,
-    totalValue: procurement.reduce((s, p) => s + p.totalAmount, 0),
+    totalValue: procurement.reduce((s, p) => s + (Number(p.totalAmount) || 0), 0),
   }), [procurement]);
 
   const openAdd = () => {
@@ -206,7 +213,29 @@ export default function ProcurementPage() {
     const msg = status==='approved' ? L('تمت الموافقة','Approved') : status==='delivered' ? L('تم تسجيل الاستلام','Delivery recorded') : L('تم الإلغاء','Cancelled');
     showToast(msg, 'success');
   };
-  const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
+  const n = v => (Number(v) || 0).toLocaleString('en-US');
+  const del = async (id) => {
+    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    const prev = procurement;
+    setProcurement(p => p.filter(i => i.id !== id));
+    const ok = await syncToServer('procurement', 'delete', { id });
+    if (!ok) { setProcurement(prev); return; }
+    showToast(L('تم الحذف','Deleted'), 'info');
+  };
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('procurement', 'delete', { id });
+      if (ok) { setProcurement(p => p.filter(i => i.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    showToast(lang==='ar' ? `تم حذف ${deleted} من ${ids.length} أمر شراء` : `Deleted ${deleted} of ${ids.length} POs`, deleted === ids.length ? 'success' : 'warning');
+  };
 
   const S = {
     page: { padding:24, direction:dir },
@@ -233,8 +262,29 @@ export default function ProcurementPage() {
           <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>🛒 {L('المشتريات','Procurement')}</h1>
           <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة أوامر الشراء والموردين','Manage purchase orders and suppliers')}</p>
         </div>
-        <button style={S.btn()} onClick={openAdd}>+ {L('أمر شراء جديد','New PO')}</button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button style={{ ...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
+            📊 {L('استيراد من Excel','Import from Excel')}
+          </button>
+          <ExcelExportButton apiName="procurement" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <button style={S.btn()} onClick={openAdd}>+ {L('أمر شراء جديد','New PO')}</button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          apiName="procurement"
+          title={L('استيراد أوامر شراء من Excel','Import Purchase Orders from Excel')}
+          lang={lang}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/procurement');
+              if (Array.isArray(fresh)) setProcurement(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
 
       <div style={S.stats}>
         {[[L('إجمالي أوامر الشراء','Total POs'), stats.total, '#1a6bab'],
@@ -257,7 +307,28 @@ export default function ProcurementPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUS_CONFIG).map(([k,v]) => <option key={k} value={k}>{L(v.ar,v.en)}</option>)}
         </select>
+        <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-secondary)', cursor:'pointer' }}>
+          <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(po => selectedIds.has(po.id))} onChange={() => {
+            setSelectedIds(prev => {
+              const allSelected = pageItems.every(po => prev.has(po.id));
+              const next = new Set(prev);
+              pageItems.forEach(po => allSelected ? next.delete(po.id) : next.add(po.id));
+              return next;
+            });
+          }} />
+          {L('تحديد الكل','Select all')}
+        </label>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'10px 16px', background:'var(--bg-secondary)', borderRadius:10, marginBottom:12 }}>
+          <span style={{ fontSize:13, fontWeight:600 }}>{lang==='ar' ? `${selectedIds.size} محدَّد` : `${selectedIds.size} selected`}</span>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => setSelectedIds(new Set())} style={{ padding:'6px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>{lang==='ar' ? 'إلغاء التحديد' : 'Clear Selection'}</button>
+            <button onClick={() => setBulkDeleteConfirm(true)} style={{ padding:'6px 14px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}>🗑️ {lang==='ar' ? `حذف المحدَّد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}</button>
+          </div>
+        </div>
+      )}
 
       {pageItems.map(po => {
         const st = STATUS_CONFIG[po.status] || STATUS_CONFIG.pending;
@@ -265,7 +336,9 @@ export default function ProcurementPage() {
         return (
           <div key={po.id} style={S.card}>
             <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-              <div style={{ flex:1 }}>
+              <div style={{ display:'flex', gap:10, flex:1 }}>
+                <input type="checkbox" checked={selectedIds.has(po.id)} onChange={() => toggleSelect(po.id)} style={{ marginTop:4 }} />
+                <div style={{ flex:1 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6, flexWrap:'wrap' }}>
                   <code style={{ fontSize:12, background:'var(--bg-tertiary)', padding:'2px 8px', borderRadius:4, color:'var(--text-secondary)' }}>{po.poNo}</code>
                   <span style={S.badge(st.color,st.bg)}>{L(st.ar,st.en)}</span>
@@ -279,6 +352,7 @@ export default function ProcurementPage() {
                   <span style={{ fontSize:12, color:'var(--text-secondary)' }}>📦 {po.items} {L('صنف','items')}</span>
                 </div>
                 {po.approvedBy && <div style={{ fontSize:11, color:'#10b981', marginTop:6 }}>✅ {L('معتمد بواسطة:','Approved by:')} {po.approvedBy}</div>}
+                </div>
               </div>
               <div style={{ textAlign:'center', minWidth:120 }}>
                 <div style={{ fontSize:20, fontWeight:700, color:'#1a6bab' }}>{n(po.totalAmount)}</div>
@@ -290,6 +364,7 @@ export default function ProcurementPage() {
               {po.status==='pending'   && <button onClick={()=>updateStatus(po.id,'approved')}  style={S.smBtn('#10b981')}>✅ {L('اعتماد','Approve')}</button>}
               {po.status==='approved'  && <button onClick={()=>updateStatus(po.id,'delivered')} style={S.smBtn('#1a6bab')}>📦 {L('تسجيل استلام','Mark Delivered')}</button>}
               {['pending','approved'].includes(po.status) && <button onClick={()=>updateStatus(po.id,'cancelled')} style={S.smBtn('#ef4444')}>❌ {L('إلغاء','Cancel')}</button>}
+              <button onClick={()=>del(po.id)} style={S.smBtn('#ef4444')}>🗑️ {L('حذف','Delete')}</button>
             </div>
           </div>
         );
@@ -303,6 +378,22 @@ export default function ProcurementPage() {
       )}
 
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
+
+      {bulkDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => !bulkDeleting && setBulkDeleteConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+              <h3 style={{ fontSize: 20, marginBottom: 8 }}>{lang==='ar' ? `حذف ${selectedIds.size} أمر شراء؟` : `Delete ${selectedIds.size} POs?`}</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}</p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting} style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{L('إلغاء','Cancel')}</button>
+                <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding:'8px 20px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', cursor:'pointer', fontWeight:600 }}>{bulkDeleting ? '...' : (lang==='ar' ? 'حذف' : 'Delete')}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCamera && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>

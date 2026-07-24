@@ -21,6 +21,136 @@ const PRIORITY_CONFIG = {
 };
 const EMPTY = { code:'', name:'', nameEn:'', manager:'', managerEn:'', budget:0, spent:0, startDate:'', endDate:'', progress:0, status:'planning', priority:'normal', phase:'تخطيط', milestones:0, completedMilestones:0 };
 
+// ── تصدير XML متوافق مع Primavera P6 (وMicrosoft Project) ───────────────────
+// يبني ملف XML بمواصفات Microsoft Project القياسية (نفس الصيغة اللي يقرأها
+// Primavera P6 مباشرة عبر File → Import → MS Project XML) — بدون أي مكتبة
+// خارجية، نص XML خام يُبنى هنا يدوياً حسب هيكل MSP الرسمي (Project/Tasks/
+// Resources/Assignments). كل مشروع بالنظام يصير Task رئيسي (WBS)، وكل
+// "مرحلة" (milestone) بالمشروع تصير Task فرعي من نوع Milestone موزَّع بالتساوي
+// بين تاريخ البداية والنهاية — أول عدد "المراحل المنجزة" يُعلَّم 100% والباقي
+// 0%. مدير كل مشروع يصير Resource مرتبط بمهمته عبر Assignment.
+const xmlEscape = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+const toMspDateTime = (dateStr, hour = 8) => {
+  if (!dateStr) return '';
+  return `${dateStr}T${String(hour).padStart(2, '0')}:00:00`;
+};
+const PRIORITY_TO_MSP = { high: 700, normal: 500, low: 300 };
+
+function buildPrimaveraXML(projectsList, lang) {
+  const managerResources = [];
+  const managerUid = (name) => {
+    if (!name) return null;
+    let idx = managerResources.indexOf(name);
+    if (idx === -1) { managerResources.push(name); idx = managerResources.length - 1; }
+    return idx + 1; // UID يبدأ من 1
+  };
+
+  let uidCounter = 1;
+  const taskBlocks = [];
+  const assignmentBlocks = [];
+
+  projectsList.forEach((proj, i) => {
+    const wbs = i + 1;
+    const taskUid = uidCounter++;
+    const managerName = lang === 'ar' ? proj.manager : (proj.managerEn || proj.manager);
+    const resUid = managerUid(managerName);
+
+    const priorityMsp = PRIORITY_TO_MSP[proj.priority] ?? 500;
+    const notesParts = [];
+    if (proj.status) notesParts.push(`${lang === 'ar' ? 'الحالة' : 'Status'}: ${proj.status}`);
+    if (proj.phase) notesParts.push(`${lang === 'ar' ? 'المرحلة الحالية' : 'Phase'}: ${proj.phase}`);
+
+    taskBlocks.push(`
+    <Task>
+      <UID>${taskUid}</UID>
+      <ID>${wbs}</ID>
+      <Name>${xmlEscape(lang === 'ar' ? proj.name : (proj.nameEn || proj.name))}</Name>
+      <WBS>${wbs}</WBS>
+      <OutlineNumber>${wbs}</OutlineNumber>
+      <OutlineLevel>1</OutlineLevel>
+      <Start>${toMspDateTime(proj.startDate)}</Start>
+      <Finish>${toMspDateTime(proj.endDate, 17)}</Finish>
+      <PercentComplete>${Math.max(0, Math.min(100, Math.round(+proj.progress || 0)))}</PercentComplete>
+      <Priority>${priorityMsp}</Priority>
+      <Cost>${(+proj.budget || 0).toFixed(2)}</Cost>
+      <ActualCost>${(+proj.spent || 0).toFixed(2)}</ActualCost>
+      <Notes>${xmlEscape(notesParts.join(' | '))}</Notes>
+      <Text1>${xmlEscape(proj.code || '')}</Text1>
+    </Task>`);
+
+    if (resUid && managerName) {
+      assignmentBlocks.push(`
+    <Assignment>
+      <UID>${taskUid}</UID>
+      <TaskUID>${taskUid}</TaskUID>
+      <ResourceUID>${resUid}</ResourceUID>
+    </Assignment>`);
+    }
+
+    // مراحل المشروع (milestones) كمهام فرعية موزَّعة بالتساوي بين البداية والنهاية
+    const milestoneCount = Math.max(0, Math.round(+proj.milestones || 0));
+    const completedCount = Math.max(0, Math.min(milestoneCount, Math.round(+proj.completedMilestones || 0)));
+    if (milestoneCount > 0 && proj.startDate && proj.endDate) {
+      const startMs = new Date(proj.startDate).getTime();
+      const endMs = new Date(proj.endDate).getTime();
+      const span = Math.max(endMs - startMs, 0);
+      for (let m = 1; m <= milestoneCount; m++) {
+        const mUid = uidCounter++;
+        const frac = milestoneCount === 1 ? 1 : m / milestoneCount;
+        const mDate = new Date(startMs + span * frac).toISOString().split('T')[0];
+        taskBlocks.push(`
+    <Task>
+      <UID>${mUid}</UID>
+      <ID>${mUid}</ID>
+      <Name>${xmlEscape((lang === 'ar' ? 'مرحلة ' : 'Milestone ') + m)}</Name>
+      <OutlineNumber>${wbs}.${m}</OutlineNumber>
+      <OutlineLevel>2</OutlineLevel>
+      <Start>${toMspDateTime(mDate)}</Start>
+      <Finish>${toMspDateTime(mDate, 17)}</Finish>
+      <Milestone>1</Milestone>
+      <PercentComplete>${m <= completedCount ? 100 : 0}</PercentComplete>
+      <PredecessorLink><PredecessorUID>${taskUid}</PredecessorUID></PredecessorLink>
+    </Task>`);
+      }
+    }
+  });
+
+  const resourceBlocks = managerResources.map((name, i) => `
+    <Resource>
+      <UID>${i + 1}</UID>
+      <ID>${i + 1}</ID>
+      <Name>${xmlEscape(name)}</Name>
+    </Resource>`).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Project xmlns="http://schemas.microsoft.com/project">
+  <Name>SIHATUNA-Projects-${new Date().toISOString().split('T')[0]}.xml</Name>
+  <Title>${xmlEscape(lang === 'ar' ? 'مشاريع صحّتنا العراق' : 'SIHATUNA IRAQ Projects')}</Title>
+  <CreationDate>${new Date().toISOString()}</CreationDate>
+  <CurrencySymbol>IQD</CurrencySymbol>
+  <SaveVersion>14</SaveVersion>
+  <Tasks>${taskBlocks.join('')}
+  </Tasks>
+  <Resources>${resourceBlocks}
+  </Resources>
+  <Assignments>${assignmentBlocks.join('')}
+  </Assignments>
+</Project>`;
+}
+
+function downloadPrimaveraXML(projectsList, lang) {
+  const xml = buildPrimaveraXML(projectsList, lang);
+  const blob = new Blob([xml], { type: 'application/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `SIHATUNA-Projects-${new Date().toISOString().split('T')[0]}.xml`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function ProjectsPage() {
   const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -112,7 +242,7 @@ export default function ProjectsPage() {
     showToast(L('تم الحذف','Deleted'),'info');
     refetch();
   };
-  const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
+  const n = v => Number(v).toLocaleString('en-US');
   const budgetPct = proj => (proj.budget>0) ? Math.min(100,((+proj.spent||0)/proj.budget)*100) : 0;
 
   const S = {
@@ -146,6 +276,16 @@ export default function ProjectsPage() {
             📊 {L('استيراد من Excel','Import from Excel')}
           </button>
           <ExcelExportButton apiName="projects" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <button
+            style={{ ...S.btn('#7c3aed') }}
+            onClick={() => {
+              if (!projects || projects.length === 0) { showToast(L('لا توجد مشاريع للتصدير','No projects to export'), 'error'); return; }
+              downloadPrimaveraXML(projects, lang);
+              showToast(L('تم تصدير ملف XML — افتحيه من Primavera P6 عبر File → Import','XML exported — open it in Primavera P6 via File → Import'), 'success');
+            }}
+          >
+            📤 {L('تصدير Primavera P6 (XML)','Export Primavera P6 (XML)')}
+          </button>
           <button style={S.btn()} onClick={openAdd}>+ {L('مشروع جديد','New Project')}</button>
         </div>
       </div>

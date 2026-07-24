@@ -198,30 +198,30 @@ export const initialDocuments = [
 
 // ── ERP: Laboratory Initial Data ──────────────────────────────────────────────
 // ── إصلاح: كانت 4 طلبات تحاليل وهمية (بأسماء مرضى وأطباء واقعية، نتائج فعلية
-// مثل "126 mg/dL") تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد. تبدأ فاضية
+// مثل "126 mg/dL") تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد. تبدأ فارغة
 // بصراحة الآن.
 export const initialLabTests = [];
 
 // ── ERP: Radiology Initial Data ────────────────────────────────────────────────
 // ── إصلاح: كانت 4 فحوصات أشعة وهمية تظهر تلقائياً كـ"احتياط" لأول مستخدم
-// جديد. تبدأ فاضية بصراحة الآن.
+// جديد. تبدأ فارغة بصراحة الآن.
 export const initialRadiology = [];
 
 // ── ERP: Pharmacy Initial Data ─────────────────────────────────────────────────
 // ── إصلاح: كانت 3 وصفات صيدلية وهمية (بتكاليف فعلية مثل 18500 د.ع) تظهر
-// تلقائياً كـ"احتياط" لأول مستخدم جديد. تبدأ فاضية بصراحة الآن.
+// تلقائياً كـ"احتياط" لأول مستخدم جديد. تبدأ فارغة بصراحة الآن.
 export const initialPharmacyOrders = [];
 
 // ── ERP: Ambulance Initial Data ────────────────────────────────────────────────
 // ── إصلاح: كانت هذي بيانات تجريبية وهمية (3 سيارات إسعاف، 2 مأمورية) تظهر
-// تلقائياً كـ"احتياط" لأول مستخدم جديد قبل ما يضيف أي مركبة حقيقية — بدون
-// أي تمييز إنها وهمية. تبدأ فاضية الآن بصراحة تامة؛ البيانات الحقيقية تجي من
+// تلقائياً كـ"احتياط" لأول مستخدم جديد قبل أن يضيف أي مركبة حقيقية — بدون
+// أي تمييز أنها وهمية. تبدأ فارغة الآن بصراحة تامة؛ البيانات الحقيقية تأتي من
 // الباك إند فقط.
 export const initialAmbulance = { vehicles: [], missions: [] };
 
 // ── إصلاح: كانت هذي 6 أصول طبية وهمية (جهاز أشعة، MRI بـ650 مليون دينار...)
-// تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد قبل ما يضيف أي أصل حقيقي —
-// بدون أي تمييز إنها وهمية. تبدأ فاضية الآن بصراحة تامة.
+// تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد قبل أن يضيف أي أصل حقيقي —
+// بدون أي تمييز أنها وهمية. تبدأ فارغة الآن بصراحة تامة.
 export const initialAssets = [];
 
 // Backward compatibility aliases
@@ -236,7 +236,7 @@ export function AppProvider({ children }) {
   // ── إصلاح: رفع النسخة يمسح أي بيانات تجريبية وهمية (سيارات إسعاف/أصول
   // وهمية) كانت مخبَّأة بمتصفح المستخدم من نسخة سابقة — يجبر إعادة تحميل
   // البيانات الحقيقية من الباك إند بدل عرض البيانات الوهمية القديمة المحفوظة.
-  const DATA_VERSION = 'v7.3-accounts-real-data-only';
+  const DATA_VERSION = 'v7.4-no-localstorage-quota-crash';
   const storedVersion = localStorage.getItem('data_version');
   if (storedVersion !== DATA_VERSION) {
     const authUser  = localStorage.getItem('auth_user');
@@ -259,9 +259,9 @@ export function AppProvider({ children }) {
   // محلية مساعدة لعرض الواجهة فوراً دون انتظار. لو صار أي تعارض بينهما (مثلاً
   // المستخدم مسح localStorage يدوياً، أو أي خطأ آخر يفرّغ auth_user بينما
   // الكوكي لسا صالحة) — كانت الواجهة تعرض حالة "شبه مسجّل دخول" مربكة: القائمة
-  // الجانبية تظهر عادي، لكن كل البيانات تبقى فاضية بصمت بدون أي رسالة خطأ،
-  // لأن كل نقاط جلب البيانات تتحقق من user (الفاضي) وتتوقف دون محاولة حتى.
-  // الحل: عند التحميل، لو user فاضي محلياً، نتحقق من الخادم مباشرة (الكوكي
+  // الجانبية تظهر عادي، لكن كل البيانات تبقى فارغة بصمت بدون أي رسالة خطأ،
+  // لأن كل نقاط جلب البيانات تتحقق من user (الفارغ) وتتوقف دون محاولة حتى.
+  // الحل: عند التحميل، لو user فارغ محلياً، نتحقق من الخادم مباشرة (الكوكي
   // تُرسَل تلقائياً لو موجودة) — فإن كانت صالحة نستعيد الجلسة الحقيقية، وإن لم
   // تكن (فعلاً غير مسجّل دخول) نبقى بحالة تسجيل الخروج الطبيعية بدون أي تغيير.
   useEffect(() => {
@@ -343,15 +343,20 @@ export function AppProvider({ children }) {
 
   // إعداد موحّد لكل الموديولات المربوطة بالباك إند — إضافة موديول جديد هنا فقط
   // ── ERP DATA ───────────────────────────────────────────────────────────────
-  const [labTests, setLabTests] = useState(() => {
-    try { const s = localStorage.getItem('erp_labtests'); return s ? JSON.parse(s) : initialLabTests; } catch { return initialLabTests; }
-  });
-  const [radiology, setRadiology] = useState(() => {
-    try { const s = localStorage.getItem('erp_radiology'); return s ? JSON.parse(s) : initialRadiology; } catch { return initialRadiology; }
-  });
-  const [pharmacyOrders, setPharmacyOrders] = useState(() => {
-    try { const s = localStorage.getItem('erp_pharmacy'); return s ? JSON.parse(s) : initialPharmacyOrders; } catch { return initialPharmacyOrders; }
-  });
+  // ── إصلاح حرج (QuotaExceededError) ──────────────────────────────────────
+  // labTests وradiology وpharmacyOrders تُملأ عبر استيراد Excel جماعي وقد
+  // تصل لآلاف السجلات دفعة واحدة — تخزينها بـ localStorage (حده الفعلي عادة
+  // 5-10 ميجابايت لكل موقع) كان يتسبب بخطأ "Setting the value of erp_labtests
+  // exceeded the quota" الذي يوقف تحميل الصفحة بالكامل بعد أي استيراد كبير.
+  // لا حاجة حقيقية لهذا التخزين المحلي أصلاً: هذي الموديولات الثلاثة مسجَّلة
+  // ضمن SYNCED_MODULES أدناه وتُجلَب بالكامل من الباك إند (PostgreSQL) فور
+  // تسجيل الدخول — الخادم هو مصدر الحقيقة، وliocalStorage كان مجرّد نسخة
+  // احتياطية زائدة ولا فائدة عملية منها. الآن تبدأ فارغة دائماً في الذاكرة
+  // فقط، وتُملأ عبر الجلب من الخادم بعد تسجيل الدخول (انظر useEffect الخاص
+  // بـ SYNCED_MODULES بالأسفل).
+  const [labTests, setLabTests] = useState(initialLabTests);
+  const [radiology, setRadiology] = useState(initialRadiology);
+  const [pharmacyOrders, setPharmacyOrders] = useState(initialPharmacyOrders);
   const [ambulanceData, setAmbulanceData] = useState(() => {
     try { const s = localStorage.getItem('erp_ambulance'); return s ? JSON.parse(s) : initialAmbulance; } catch { return initialAmbulance; }
   });
@@ -473,7 +478,7 @@ export function AppProvider({ children }) {
   const [hospitals, setHospitals] = useState([]);
   // "المنشأة المعروضة حالياً" — مفهوم مختلف عن hospitalId بحساب المستخدم:
   // هذا فلتر عرض اختياري يظهر فقط لحساب مستوى الوزارة (بلا hospitalId مُعيَّن)
-  // اللي يدير عدة منشآت ويحتاج يركّز على وحدة معينة أحياناً بدل الكل دفعة وحدة.
+  // الذي يدير عدة منشآت ويحتاج يركّز على وحدة معينة أحياناً بدل الكل دفعة واحدة.
   // 'all' = يشوف بيانات كل المنشآت مجتمعة (السلوك الافتراضي الحالي).
   const [viewingHospitalId, setViewingHospitalId] = useState(() => localStorage.getItem('viewing_hospital_id') || 'all');
   useEffect(() => { localStorage.setItem('viewing_hospital_id', viewingHospitalId); }, [viewingHospitalId]);
@@ -536,7 +541,7 @@ export function AppProvider({ children }) {
   };
 
   // ── سلة المحذوفات (Recycle Bin) ──────────────────────────────────────────
-  // كل حذف بأي موديول الآن ينقل السجل هنا بدل حذفه نهائياً (راجعي pgCrud.js).
+  // كل حذف بأي موديول الآن ينقل السجل هنا بدل حذفه نهائياً (راجع pgCrud.js).
   // هذي الدوال تخدم صفحة الإعدادات (تبويب سلة المحذوفات، إدمن فقط) للاطلاع
   // على المحذوفات واسترجاعها أو حذفها نهائياً.
   const fetchRecycleBin = async () => {
@@ -579,7 +584,7 @@ export function AppProvider({ children }) {
   const deleteServicePrice = (id) => setServicePrices(prev => prev.filter(s => s.id !== id));
 
   const createInvoice = async (patientId) => {
-    // إذا فيه فاتورة غير مدفوعة أصلاً لنفس المريض، رجّعيها بدل إنشاء وحدة جديدة
+    // إذا فيه فاتورة غير مدفوعة أصلاً لنفس المريض، أعِدها بدل إنشاء وحدة جديدة
     const existing = invoices.find(inv => inv.patientId === patientId && inv.status === 'unpaid');
     if (existing) return existing.id;
     const id = Date.now();
@@ -626,10 +631,10 @@ export function AppProvider({ children }) {
       // ── حرج: الدفع فعلياً تم وتأكّد من مزوّد الدفع (processPayment يستدعي
       // هذي الدالة فقط بعد نجاح حقيقي) — لا نتراجع عن حالة "مدفوعة" محلياً
       // حتى لو فشلت المزامنة، لأن هذا يخفي دفعة حقيقية حصلت فعلاً. نبقيها
-      // محلياً وننبّه بوضوح إن الفاتورة تحتاج مزامنة يدوية لاحقاً.
+      // محلياً وننبّه بوضوح أن الفاتورة تحتاج مزامنة يدوية لاحقاً.
       showToast(
         lang === 'ar'
-          ? 'تم الدفع فعلياً لكن تعذّر تحديث حالة الفاتورة بالخادم — راجعيها يدوياً'
+          ? 'تم الدفع فعلياً لكن تعذّر تحديث حالة الفاتورة بالخادم — راجعها يدوياً'
           : 'Payment succeeded but failed to sync invoice status to server — please verify manually',
         'error'
       );
@@ -686,9 +691,9 @@ export function AppProvider({ children }) {
   useEffect(() => { localStorage.setItem('erp_procurement', JSON.stringify(procurement)); }, [procurement]);
   useEffect(() => { localStorage.setItem('erp_projects', JSON.stringify(projects)); }, [projects]);
   useEffect(() => { localStorage.setItem('erp_documents', JSON.stringify(documents)); }, [documents]);
-  useEffect(() => { localStorage.setItem('erp_labtests', JSON.stringify(labTests)); }, [labTests]);
-  useEffect(() => { localStorage.setItem('erp_radiology', JSON.stringify(radiology)); }, [radiology]);
-  useEffect(() => { localStorage.setItem('erp_pharmacy', JSON.stringify(pharmacyOrders)); }, [pharmacyOrders]);
+  // ── إصلاح: أُزيل تخزين labTests وradiology وpharmacyOrders في localStorage
+  // (كان هنا سابقاً) — راجع الملاحظة عند تعريف الحالة الخاصة بها أعلاه لسبب
+  // الإزالة الكامل (خطأ QuotaExceededError بعد استيراد Excel جماعي).
   useEffect(() => { localStorage.setItem('erp_ambulance', JSON.stringify(ambulanceData)); }, [ambulanceData]);
   useEffect(() => { localStorage.setItem('erp_assets', JSON.stringify(assets)); }, [assets]);
   useEffect(() => { localStorage.setItem('crm_followups', JSON.stringify(crmFollowUps)); }, [crmFollowUps]);
@@ -769,7 +774,7 @@ export function AppProvider({ children }) {
             logout();
             showToast(
               lang === 'ar'
-                ? 'انتهت جلسة الدخول، الرجاء تسجيل الدخول من جديد'
+                ? 'انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد'
                 : 'Your session has expired — please log in again',
               'error'
             );
@@ -799,7 +804,7 @@ export function AppProvider({ children }) {
         // تفشل لأن الخادم لا يعرف هذا المعرّف أصلاً — وهذا بالضبط ما كان
         // يسبب خطأ "value out of range for type integer" عند ربط الفواتير
         // بالمدفوعات. الحل: نستبدل السجل المحلي بالنسخة الحقيقية الكاملة
-        // المُعادة من الخادم (اللي تحمل المعرّف الصحيح) فور نجاح الإنشاء.
+        // المُعادة من الخادم (التي تحمل المعرّف الصحيح) فور نجاح الإنشاء.
         if (created && created.id !== undefined && created.id !== item.id) {
           const moduleEntry = SYNCED_MODULES.find(m => m.key === moduleKey);
           if (moduleEntry) {
@@ -825,7 +830,7 @@ export function AppProvider({ children }) {
         logout();
         showToast(
           lang === 'ar'
-            ? 'انتهت جلسة الدخول، الرجاء تسجيل الدخول من جديد'
+            ? 'انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد'
             : 'Your session has expired — please log in again',
           'error'
         );
@@ -853,7 +858,7 @@ export function AppProvider({ children }) {
         console.warn(`⚠️ رُفض وصول "${moduleKey}" (403 — لا صلاحية أو جلسة قديمة):`, err.message);
         showToast(
           lang === 'ar'
-            ? 'لم يُحفَظ التغيير: لا توجد صلاحية كافية، أو أن جلسة الدخول قديمة. جرّبي تسجيل الخروج والدخول من جديد.'
+            ? 'لم يُحفَظ التغيير: لا توجد صلاحية كافية، أو أن جلسة الدخول قديمة. جرّب تسجيل الخروج والدخول من جديد.'
             : 'Not saved: insufficient permission, or your session is outdated. Try logging out and back in.',
           'error'
         );
@@ -951,13 +956,13 @@ export function AppProvider({ children }) {
   // ── بيانات خفيفة لتنبيهات الأدوية المستحقة بالردهات + الترفيعات/البدلات
   // المستحقة بالحسابات ──────────────────────────────────────────────────────
   // إضافة: طلب المستخدمة تنبيهاً فورياً "المريض الفلاني يستحق دواءه الآن"
-  // بغض النظر عن أي صفحة هو فاتحها — مو بس لما يفتح صفحة الردهات بنفسه.
+  // بغض النظر عن أي صفحة هو فاتحها — ليس فقط عند فتح صفحة الردهات بنفسه.
   // جلب خفيف مخصَّص لهذا الغرض فقط (بيانات الردهات/الحسابات نفسها تبقى محلية
   // بصفحاتها كما هي، هذا مسار منفصل يغذّي جرس الإشعارات العام بالتطبيق).
   //
   // إصلاح حرج: كان يُجلَب مرة واحدة فقط عند تحميل التطبيق ولا يتحدّث أبداً
-  // بعدها — فتأكيد إعطاء جرعة بصفحة الردهات يحدّث حالتها المحلية هناك بس،
-  // وجرس الإشعارات يبقى ما يدري بالتحديث، فيبقى التنبيه معروضاً للأبد حتى لو
+  // بعدها — فتأكيد إعطاء جرعة بصفحة الردهات يحدّث حالتها المحلية هناك فقط،
+  // وجرس الإشعارات يبقى لا يعرف بالتحديث، فيبقى التنبيه معروضاً للأبد حتى لو
   // فعلاً انحلّت المشكلة. الآن أي صفحة تقدر تطلب تحديث فوري لهذا المصدر عبر
   // refreshNotifSources() بعد أي إجراء يُفترَض يُسقِط تنبيهاً (إعطاء جرعة،
   // تصفير حالة "مستحق" بترفيع أو بدل...).
@@ -970,7 +975,7 @@ export function AppProvider({ children }) {
     // إصلاح: كانت تجلب الخمس نقاط دائماً لكل مستخدم مسجَّل دخول، حتى لو ما
     // عنده صلاحية وصول للردهات ولا الحسابات إطلاقاً (فني مختبر، موظف
     // استقبال...) — حمل شبكة حقيقي وقت التوسّع لعدة منشآت بمستخدمين كثار.
-    // الآن تُجلَب فقط المجموعة اللي المستخدم فعلاً يقدر يشوف بياناتها.
+    // الآن تُجلَب فقط المجموعة التي المستخدم فعلاً يقدر يشوف بياناتها.
     const canWards = user.role === 'admin' || (user.permissions || []).includes('wards');
     const canAccounts = user.role === 'admin' || (user.permissions || []).includes('accounts');
     if (!canWards && !canAccounts) { setMedNotifSource({ admissions: [], orders: [], administrations: [], promotions: [], allowances: [] }); return; }
@@ -994,9 +999,9 @@ export function AppProvider({ children }) {
     return () => { cancelled = true; };
   }, [user?.id, notifRefreshTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // إصلاح: الإشعارات الحين مُشتقّة حياً من بيانات حقيقية موجودة فعلاً
+  // إصلاح: الإشعارات الآن مُشتقّة حياً من بيانات حقيقية موجودة فعلاً
   // بالسياق (مخزون، مشتريات، مواعيد، مستندات، فواتير) بدل قائمة وهمية ثابتة،
-  // وكل إشعار يحمل رابط (link) لصفحته الفعلية عشان يشتغل الضغط عليه بالواجهة.
+  // وكل إشعار يحمل رابط (link) لصفحته الفعلية حتى يعمل الضغط عليه بالواجهة.
   const notifications = React.useMemo(() => {
     const list = [];
     const today = new Date().toISOString().split('T')[0];
@@ -1097,7 +1102,7 @@ export function AppProvider({ children }) {
           (!a.scheduledFor && Math.abs(new Date(a.administeredAt) - scheduledAt) < 90 * 60 * 1000)
         ));
         if (given) return;
-        const isDueOrOverdue = new Date() > scheduledAt; // الوقت وصل أو فات (مو "قادمة" بعد)
+        const isDueOrOverdue = new Date() > scheduledAt; // الوقت وصل أو فات (وليس "قادمة" بعد)
         if (!isDueOrOverdue || dueMedCount >= 8) return;
         dueMedCount++;
         list.push({

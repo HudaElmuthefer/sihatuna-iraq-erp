@@ -22,7 +22,9 @@ const CATEGORIES = {
 const STATUSES = {
   active:      { ar:'مشغّل',     en:'Active',     color:'#10b981', bg:'#d1fae5' },
   maintenance: { ar:'صيانة',     en:'Maintenance',     color:'#f59e0b', bg:'#fef3c7' },
+  needsMaintenance: { ar:'يحتاج صيانة', en:'Needs Maintenance', color:'#fb923c', bg:'#ffedd5' },
   inactive:    { ar:'معطّل',     en:'Inactive',     color:'#ef4444', bg:'#fee2e2' },
+  consumed:    { ar:'مستهلك',    en:'Consumed',    color:'#78350f', bg:'#fde68a' },
   retired:     { ar:'مُهمَل',    en:'Retired',    color:'#6b7280', bg:'#f3f4f6' },
 };
 const CONDITIONS = {
@@ -43,6 +45,10 @@ export default function AssetsPage() {
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [showImport, setShowImport] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -117,6 +123,21 @@ export default function AssetsPage() {
     showToast(L('تم الحذف','Deleted'),'info');
     refetch();
   };
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of ids) {
+      const ok = await syncToServer('assets', 'delete', { id });
+      if (ok) { setAssets(p => p.filter(a => a.id !== id)); deleted++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    showToast(lang==='ar' ? `تم حذف ${deleted} من ${ids.length} أصل` : `Deleted ${deleted} of ${ids.length} assets`, deleted === ids.length ? 'success' : 'warning');
+    refetch();
+  };
 
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
   // قبل هذا، ضغطة "انتهت الصيانة" كانت تكتب فوق lastMaintenance بس — لو الأصل
@@ -159,7 +180,7 @@ export default function AssetsPage() {
   };
 
   const depr = (a) => a.purchaseCost>0 ? ((1-(a.currentValue/a.purchaseCost))*100).toFixed(0)+'%' : '—';
-  const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
+  const n = v => Number(v).toLocaleString('en-US');
   const daysTo = (d) => { if(!d) return null; const diff=Math.ceil((new Date(d)-Date.now())/(1000*60*60*24)); return diff; };
 
   const S = {
@@ -214,7 +235,7 @@ export default function AssetsPage() {
 
       <div style={S.stats}>
         {[[lang==='ar'?'إجمالي الأصول':'Total Assets',stats.total,'#1a6bab'],[lang==='ar'?'مشغّل':'Active',stats.active,'#10b981'],[lang==='ar'?'صيانة':'Maintenance',stats.maintenance,'#f59e0b'],[lang==='ar'?'استحقاق صيانة':'Service Due',stats.dueService,'#ef4444']].map(([l,v,c],i)=>(
-          <div key={i} style={S.card(c)}><div style={{fontSize:22,fontWeight:700,color:'var(--text-primary)'}}>{v}</div><div style={{fontSize:11,color:'var(--text-secondary)',marginTop:3}}>{l}</div></div>
+          <div key={i} style={S.card(c)}><div style={{fontSize:22,fontWeight:700,color:'var(--text-primary)'}}>{n(v)}</div><div style={{fontSize:11,color:'var(--text-secondary)',marginTop:3}}>{l}</div></div>
         ))}
         <div style={S.card('#8b5cf6')}>
           <div style={{fontSize:16,fontWeight:700,color:'var(--text-primary)'}}>{n(stats.totalCost)}</div>
@@ -236,12 +257,33 @@ export default function AssetsPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
         </select>
-        <div style={{marginRight:'auto',display:'flex',gap:6}}>
+        <div style={{marginRight:'auto',display:'flex',gap:6, alignItems:'center'}}>
+          <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-secondary)', cursor:'pointer' }}>
+            <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(a => selectedIds.has(a.id))} onChange={() => {
+              setSelectedIds(prev => {
+                const allSelected = pageItems.every(a => prev.has(a.id));
+                const next = new Set(prev);
+                pageItems.forEach(a => allSelected ? next.delete(a.id) : next.add(a.id));
+                return next;
+              });
+            }} />
+            {L('تحديد الكل','Select all')}
+          </label>
           {[['cards',lang==='ar'?'بطاقات':'Cards'],['table',lang==='ar'?'جدول':'Table']].map(([v,l])=>(
             <button key={v} onClick={()=>setView(v)} style={{padding:'7px 14px',borderRadius:8,border:view===v?'none':'1px solid var(--border)',background:view===v?'#1a6bab':'var(--bg-secondary)',color:view===v?'#fff':'var(--text-secondary)',cursor:'pointer',fontSize:12}}>{l}</button>
           ))}
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'10px 16px', background:'var(--bg-secondary)', borderRadius:10, marginBottom:16 }}>
+          <span style={{ fontSize:13, fontWeight:600 }}>{lang==='ar' ? `${selectedIds.size} محدَّد` : `${selectedIds.size} selected`}</span>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => setSelectedIds(new Set())} style={{ padding:'6px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>{L('إلغاء التحديد','Clear Selection')}</button>
+            <button onClick={() => setBulkDeleteConfirm(true)} style={{ padding:'6px 14px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}>🗑️ {lang==='ar' ? `حذف المحدَّد (${selectedIds.size})` : `Delete Selected (${selectedIds.size})`}</button>
+          </div>
+        </div>
+      )}
 
       {view==='cards'&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:14}}>
@@ -253,7 +295,9 @@ export default function AssetsPage() {
             return (
               <div key={a.id} style={{...S.aCard,borderTop:`3px solid ${cat.color}`}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-                  <div>
+                  <div style={{display:'flex', gap:8}}>
+                    <input type="checkbox" checked={selectedIds.has(a.id)} onChange={() => toggleSelect(a.id)} style={{ marginTop:4 }} />
+                    <div>
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,flexWrap:'wrap'}}>
                       <span style={{fontSize:18}}>{cat.icon}</span>
                       <code style={{fontSize:10,background:'var(--bg-tertiary)',padding:'2px 6px',borderRadius:4}}>{a.assetNo}</code>
@@ -262,6 +306,7 @@ export default function AssetsPage() {
                     </div>
                     <h3 style={{margin:0,fontSize:14,fontWeight:700,color:'var(--text-primary)'}}>{lang==='ar'?a.name:(a.nameEn||a.name)}</h3>
                     <div style={{fontSize:11,color:'var(--text-secondary)',marginTop:2}}>{a.brand} {a.model}</div>
+                    </div>
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,fontSize:11,color:'var(--text-secondary)',marginBottom:10}}>
@@ -297,7 +342,19 @@ export default function AssetsPage() {
       {view==='table'&&(
         <table style={{width:'100%',borderCollapse:'collapse',background:'var(--bg-secondary)',borderRadius:12,overflow:'hidden'}}>
           <thead>
-            <tr>{lang==='ar'?lang==='ar'?['رقم الأصل','الاسم','الفئة','الموقع','التكلفة (د.ع)','القيمة الحالية','الحالة','الصيانة القادمة','']:['Asset No','Name','Category','Location','Cost (IQD)','Value (IQD)','Status','Next Service','']:['Asset No','Name','Category','Location','Cost (IQD)','Current Value','Status','Next Service',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr>
+            <tr>
+              <th style={{...S.th, width:32}}>
+                <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(a => selectedIds.has(a.id))} onChange={() => {
+                  setSelectedIds(prev => {
+                    const allSelected = pageItems.every(a => prev.has(a.id));
+                    const next = new Set(prev);
+                    pageItems.forEach(a => allSelected ? next.delete(a.id) : next.add(a.id));
+                    return next;
+                  });
+                }} />
+              </th>
+              {(lang==='ar'?['رقم الأصل','الاسم','الفئة','الموقع','التكلفة (د.ع)','القيمة الحالية','الحالة','الصيانة القادمة','']:['Asset No','Name','Category','Location','Cost (IQD)','Current Value','Status','Next Service','']).map(h=><th key={h} style={S.th}>{h}</th>)}
+            </tr>
           </thead>
           <tbody>
             {pageItems.map(a=>{
@@ -306,6 +363,7 @@ export default function AssetsPage() {
               const days=daysTo(a.nextMaintenance);
               return (
                 <tr key={a.id}>
+                  <td style={S.td}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={() => toggleSelect(a.id)} /></td>
                   <td style={S.td}><code style={{fontSize:10,background:'var(--bg-tertiary)',padding:'2px 6px',borderRadius:4}}>{a.assetNo}</code></td>
                   <td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{a.name}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{a.brand} {a.model}</div></td>
                   <td style={S.td}><span style={S.badge(cat.color,cat.color+'22')}>{cat.icon} {lang==='ar'?cat.ar:cat.en}</span></td>
@@ -328,6 +386,20 @@ export default function AssetsPage() {
       )}
 
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />
+
+      {bulkDeleteConfirm && (
+        <div style={S.modal} onClick={() => !bulkDeleting && setBulkDeleteConfirm(false)}>
+          <div style={{...S.mbox, maxWidth:420, textAlign:'center', padding:40}}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+            <h3 style={{ fontSize: 20, marginBottom: 8 }}>{lang==='ar' ? `حذف ${selectedIds.size} أصل؟` : `Delete ${selectedIds.size} assets?`}</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting} style={S.btn('#6b7280')}>{L('إلغاء','Cancel')}</button>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} style={S.btn('#ef4444')}>{bulkDeleting ? '...' : L('حذف','Delete')}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal&&(
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
@@ -397,7 +469,7 @@ export default function AssetsPage() {
                   <div key={m.id} style={{border:'1px solid var(--border)',borderRadius:8,padding:10}}>
                     <div style={{display:'flex',justifyContent:'space-between',fontSize:12,fontWeight:600,marginBottom:4}}>
                       <span>{m.date}</span>
-                      {m.cost && <span style={{color:'#f59e0b'}}>{Number(m.cost).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('د.ع','IQD')}</span>}
+                      {m.cost && <span style={{color:'#f59e0b'}}>{Number(m.cost).toLocaleString('en-US')} {L('د.ع','IQD')}</span>}
                     </div>
                     <div style={{fontSize:12,color:'var(--text-primary)'}}>{m.description}</div>
                     {m.performedBy && <div style={{fontSize:11,color:'var(--text-secondary)',marginTop:2}}>👤 {m.performedBy}</div>}

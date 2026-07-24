@@ -17,7 +17,7 @@ const initTransactions = [];
 const initPromotions = [];
 const initAllowances = [];
 
-const ACCT_CATS = { income:['revenue','donation','grant'], expense:['salaries','supplies','maintenance','rent','utilities','other'] };
+const ACCT_CATS = { 'دخل':['revenue','donation','grant'], 'مصروف':['salaries','supplies','maintenance','rent','utilities','other'] };
 const METHODS_KEYS = ['cash','bank','card','check'];
 
 // Grade translation map for display
@@ -51,7 +51,10 @@ const displayValue = (value, tr) => ({
   'مُنجَز': tr('acc_status_done'),
   'مستحق': tr('acc_status_due'),
   'مستحقة': tr('acc_status_due'),
-  'مُصرَف': tr('acc_status_paid'),
+  'مدفوع': tr('acc_status_paid'),
+  // ── ملاحظة: "مصروف" أصلاً موجودة أعلاه كترجمة لنوع الحركة المالية (Expense
+  // بالمعاملات العامة). حالة "مدفوع" (البدلات/الرواتب) صارت كلمة منفصلة
+  // بالكامل الآن، فما فيه تعارض إطلاقاً — ترجمتها تشتغل صحيحة بكل الواجهتين.
   'معلق': tr('acc_status_pending'),
   'قيد المعالجة': tr('acc_status_process'),
   'مرفوض': tr('leave_status_rej2'),

@@ -5,6 +5,8 @@ import { api } from '../api';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import { FaPlus, FaEdit, FaTrash, FaDumbbell, FaWalking } from 'react-icons/fa';
+import ExcelImportModal from '../components/ExcelImportModal';
+import ExcelExportButton from '../components/ExcelExportButton';
 
 const emptyEquip = { name: '', nameEn: '', type: '', status: 'available', notes: '' };
 const emptySession = { patientName: '', therapist: '', date: new Date().toISOString().split('T')[0], equipmentUsed: '', treatmentType: '', duration: '', notes: '', progress: '' };
@@ -67,6 +69,8 @@ export default function PhysicalTherapyPage() {
   const [editingSess, setEditingSess] = useState(null);
   const [sessForm, setSessForm] = useState(emptySession);
   const [search, setSearch] = useState('');
+  const [showEquipImport, setShowEquipImport] = useState(false);
+  const [showSessImport, setShowSessImport] = useState(false);
   const openAddSess = () => { setEditingSess(null); setSessForm(emptySession); setShowSessModal(true); };
   const openEditSess = (s) => { setEditingSess(s); setSessForm({ ...s }); setShowSessModal(true); };
   const saveSess = async () => {
@@ -133,9 +137,13 @@ export default function PhysicalTherapyPage() {
 
       {tab === 'equipment' && (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <h3 style={{ margin: 0 }}>{L('أجهزة العلاج الطبيعي', 'Physical Therapy Equipment')}</h3>
-            <button onClick={openAddEquip} className="btn btn-primary"><FaPlus /> {L('جهاز جديد', 'New Equipment')}</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowEquipImport(true)} className="btn btn-outline">📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+              <ExcelExportButton apiName="ptEquipment" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button onClick={openAddEquip} className="btn btn-primary"><FaPlus /> {L('جهاز جديد', 'New Equipment')}</button>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
             {equipment.map(e => (
@@ -159,9 +167,13 @@ export default function PhysicalTherapyPage() {
 
       {tab === 'sessions' && (
         <>
-          <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L('بحث باسم المريض...', 'Search by patient name...')} className="form-control" style={{ flex: 1 }} />
-            <button onClick={openAddSess} className="btn btn-primary"><FaPlus /> {L('جلسة جديدة', 'New Session')}</button>
+          <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L('بحث باسم المريض...', 'Search by patient name...')} className="form-control" style={{ flex: 1, minWidth: 180 }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowSessImport(true)} className="btn btn-outline">📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+              <ExcelExportButton apiName="ptSessions" lang={lang} onError={(m) => showToast(m, 'error')} />
+              <button onClick={openAddSess} className="btn btn-primary"><FaPlus /> {L('جلسة جديدة', 'New Session')}</button>
+            </div>
           </div>
           <div className="card" style={{ padding: 0 }}>
             <div style={{ overflowX: 'auto' }}>
@@ -289,6 +301,36 @@ export default function PhysicalTherapyPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showEquipImport && (
+        <ExcelImportModal
+          apiName="ptEquipment"
+          title={L('استيراد أجهزة من Excel', 'Import Equipment from Excel')}
+          lang={lang}
+          onClose={() => setShowEquipImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/ptEquipment');
+              if (Array.isArray(fresh)) setEquipment(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
+      )}
+
+      {showSessImport && (
+        <ExcelImportModal
+          apiName="ptSessions"
+          title={L('استيراد جلسات من Excel', 'Import Sessions from Excel')}
+          lang={lang}
+          onClose={() => setShowSessImport(false)}
+          onImported={async () => {
+            try {
+              const fresh = await api.get('/ptSessions');
+              if (Array.isArray(fresh)) setSessions(fresh);
+            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+          }}
+        />
       )}
     </div>
   );

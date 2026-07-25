@@ -4409,5 +4409,219 @@
     "table": "quality_ncs",
     "count": 0,
     "userId": 1
+  },
+  {
+    "id": 518,
+    "timestamp": "2026-07-24T19:00:55.695Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "pgadmin"
+    }
+  },
+  {
+    "id": 519,
+    "timestamp": "2026-07-24T19:01:34.398Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 520,
+    "timestamp": "2026-07-24T19:03:31.971Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 521,
+    "timestamp": "2026-07-24T19:05:16.820Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 522,
+    "timestamp": "2026-07-24T19:07:05.291Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 523,
+    "timestamp": "2026-07-24T19:20:01.933Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 524,
+    "timestamp": "2026-07-24T19:24:46.228Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "pgadmin"
+    }
+  },
+  {
+    "id": 525,
+    "timestamp": "2026-07-24T19:36:46.841Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "cloud"
+    }
+  },
+  {
+    "id": 526,
+    "timestamp": "2026-07-24T19:39:28.286Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 527,
+    "timestamp": "2026-07-24T19:52:55.558Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 528,
+    "timestamp": "2026-07-24T19:53:35.685Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 529,
+    "timestamp": "2026-07-24T19:55:16.197Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 530,
+    "timestamp": "2026-07-24T19:55:55.340Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 531,
+    "timestamp": "2026-07-24T19:56:30.423Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 532,
+    "timestamp": "2026-07-24T20:04:57.513Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 533,
+    "timestamp": "2026-07-24T20:05:42.609Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 534,
+    "timestamp": "2026-07-24T20:05:55.579Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 535,
+    "timestamp": "2026-07-24T20:06:38.556Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 536,
+    "timestamp": "2026-07-25T05:56:20.740Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
+  },
+  {
+    "id": 537,
+    "timestamp": "2026-07-25T06:02:54.694Z",
+    "module": "system",
+    "action": "manual_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "destination": "computer"
+    }
   }
 ]

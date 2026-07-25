@@ -145,7 +145,26 @@ export default function SettingsPage() {
   setBackupRunning(true);
   try {
     if (destination === 'computer') {
-     const response = await fetch(`${SERVER_BASE_URL}/api/backups/run`, {
+      // نطلب من المستخدم مكان الحفظ *قبل* أي await، لأن المتصفح يشترط إن
+      // showSaveFilePicker يُستدعى مباشرة داخل سلسلة استدعاء ناتجة عن ضغطة
+      // المستخدم (user activation) — لو استدعيناها بعد fetch (أي بعد await)،
+      // بعض المتصفحات ترفضها بخطأ "not allowed".
+      let fileHandle = null;
+      const supportsFilePicker = typeof window.showSaveFilePicker === 'function';
+      if (supportsFilePicker) {
+        try {
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'sihatuna_backup.sql',
+            types: [{ description: 'SQL Backup', accept: { 'application/sql': ['.sql'] } }],
+          });
+        } catch (pickerErr) {
+          // المستخدم ألغى نافذة الاختيار — نوقف العملية بهدوء بدون رسالة خطأ
+          if (pickerErr.name === 'AbortError') { setBackupRunning(false); setShowBackupModal(false); return; }
+          throw pickerErr;
+        }
+      }
+
+      const response = await fetch(`${SERVER_BASE_URL}/api/backups/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -156,12 +175,23 @@ export default function SettingsPage() {
         throw new Error(data.message || tr('backup_failed'));
       }
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'sihatuna_backup.sql';
-      a.click();
-      window.URL.revokeObjectURL(url);
+
+      if (fileHandle) {
+        // مسار المتصفحات الحديثة (Chrome/Edge): كتابة الملف مباشرة بالمكان
+        // اللي اختاره المستخدم بالضبط — بدون المرور بمجلد Downloads إطلاقاً
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        // مسار احتياطي (Firefox/Safari اللي ما تدعم showSaveFilePicker):
+        // نرجع لطريقة التنزيل التلقائي القديمة لمجلد Downloads
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sihatuna_backup.sql';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
       showToast(tr('backup_created'), 'success');
     } else {
       const res = await api.post('/backups/run', { destination, cloudUrl });

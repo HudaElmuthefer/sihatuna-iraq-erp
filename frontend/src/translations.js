@@ -42,6 +42,7 @@ const translations = {
   nav_documents:        { ar: 'ضبط الوثائق',                  en: 'Document Control' },
   nav_documents:        { ar: 'الوثائق والمراسلات',           en: 'Documents' },
   nav_quality:          { ar: 'إدارة الجودة ISO',             en: 'Quality Management' },
+  nav_medical_codes:    { ar: 'الرموز الطبية',                en: 'Medical Codes' },
 
   // ─── أزرار عامة / Common Buttons ────────────────────────────────────────────
   btn_add:              { ar: 'إضافة',           en: 'Add' },

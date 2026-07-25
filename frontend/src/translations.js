@@ -39,7 +39,6 @@ const translations = {
   nav_ambulance:        { ar: 'الإسعاف والمركبات',             en: 'Ambulance & Vehicles' },
   nav_assets:           { ar: 'الأصول والأجهزة الطبية',       en: 'Medical Assets' },
   nav_projects:         { ar: 'إدارة المشاريع',               en: 'Projects' },
-  nav_documents:        { ar: 'ضبط الوثائق',                  en: 'Document Control' },
   nav_documents:        { ar: 'الوثائق والمراسلات',           en: 'Documents' },
   nav_quality:          { ar: 'إدارة الجودة ISO',             en: 'Quality Management' },
   nav_medical_codes:    { ar: 'الرموز الطبية',                en: 'Medical Codes' },

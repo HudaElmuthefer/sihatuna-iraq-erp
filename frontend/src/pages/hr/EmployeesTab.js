@@ -28,8 +28,7 @@ function EmployeesTab({ lang }) {
   // بقاعدة البيانات). القائمة الكاملة (employees أعلاه) تبقى محمَّلة كما هي —
   // تحتاجها AlertBanner (تنبيهات العلاوة/الترفيع/التقاعد) لكل الموظفين دفعة
   // وحدة، بغض النظر عن الصفحة المعروضة حالياً بالجدول.
-  const { data: empPageItems, page: empCurrentPage, setPage: setEmpCurrentPage, total: empTotalItems, totalPages: empTotalPages, loading: empLoading, refetch: refetchEmployees } =
-    useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50 });
+ 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);

@@ -11,7 +11,6 @@
 // API account through Meta — a separate, bigger project if ever needed.
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
-import { useT } from '../translations';
 import { api } from '../api';
 
 // Iraq-specific: local numbers are written starting with 0 (e.g.
@@ -99,7 +98,6 @@ function printCombined(title, items) {
 
 export default function ResultsPage() {
   const { lang } = useApp();
-  const tr = useT(lang);
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 
   const [search, setSearch] = useState('');
@@ -107,8 +105,7 @@ export default function ResultsPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientLabResults, setPatientLabResults] = useState([]);
   const [patientRadiologyResults, setPatientRadiologyResults] = useState([]);
-  const [loadingResults, setLoadingResults] = useState(false);
-  const [selectedLabIds, setSelectedLabIds] = useState(new Set());
+  const [, setLoadingResults] = useState(false);  const [selectedLabIds, setSelectedLabIds] = useState(new Set());
   const [selectedRadIds, setSelectedRadIds] = useState(new Set());
   const [doctors, setDoctors] = useState([]);
 

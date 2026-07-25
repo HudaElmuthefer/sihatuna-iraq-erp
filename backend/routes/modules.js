@@ -16,8 +16,8 @@ const { DEFAULT_COLUMNS } = pgCrud;
 // ── أعمدة مُرقّاة من JSONB لأعمدة حقيقية (دفعة أولى) ─────────────────────────
 // راجعي migration_promote_columns.sql — لازم يُطبَّق على قاعدة البيانات أولاً
 // قبل ما يشتغل هذا الكود صح (وإلا الأعمدة الجديدة غير موجودة أصلاً بالجدول).
-const PATIENT_COLUMNS = [...DEFAULT_COLUMNS, { field: 'patientId', column: 'patient_code' }, { field: 'bloodType', column: 'blood_type' }, { field: 'nationalId', column: 'national_id' }];
-const DOCTOR_COLUMNS = [...DEFAULT_COLUMNS, { field: 'specialization', column: 'specialization' }];
+const PATIENT_COLUMNS = DEFAULT_COLUMNS; // إصلاح: patient_code/blood_type/national_id ليست أعمدة حقيقية بجدول patients (JSONB بحت لهذي الحقول) — أُزيلت من هنا وأُضيفت كـ extraFilterFields بدلاً عنها بتسجيل pgCrud('patients', ...)
+const DOCTOR_COLUMNS = DEFAULT_COLUMNS; // إصلاح: specialization ليس عموداً حقيقياً بجدول doctors — أُضيف كـ extraFilterFields بدلاً عنه بتسجيل pgCrud('doctors', ...)
 const registerExcelImport = require('./excelImportRoutes');
 const { importLimiter } = require('../config/rateLimiters');
 const { pool } = require('../config/database');
@@ -420,7 +420,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'radiology',
     tableName: 'radiology',
-    indexedColumns: [{ field: 'status', column: 'status' }, { field: 'modality', column: 'modality' }],
+    indexedColumns: [], // إصلاح: radiology جدول JSONB بحت — status/modality لا عمودين حقيقيين
     limiter: importLimiter,
     duplicateCheck: ['reqNo'],
     template: [
@@ -465,7 +465,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'pharmacy',
     tableName: 'pharmacy_orders',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['prescNo'],
     afterParse: (row) => {
@@ -634,7 +634,7 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'accounts',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['name', 'decisionNo'],
     afterParse: (row) => {
@@ -665,7 +665,7 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'accounts',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['name', 'decisionNo'],
     afterParse: (row) => {
@@ -802,7 +802,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'medical-leave',
     tableName: 'medical_leaves',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['employee', 'from', 'to'],
     // ── إصلاح: الواجهة تفلتر الإحصائيات بمقارنة صارمة على مفاتيح إنجليزية
@@ -849,7 +849,7 @@ const registerAllModules = (router) => {
     'مسؤول المعالجة': 'assignedTo', 'Assigned To': 'assignedTo',
   }, {
     hospitalScoped: true, permission: 'documents',
-    indexedColumns: [{ field: 'type', column: 'type' }, { field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }],
+    indexedColumns: [], // إصلاح: documents جدول JSONB بحت — type/status/priority لا أعمدة حقيقية
     limiter: importLimiter,
     duplicateCheck: ['docNo'],
     afterParse: (row) => ({ ...row, tags: row.tags || [] }),
@@ -880,7 +880,7 @@ const registerAllModules = (router) => {
     'الحالة': 'status', 'Status': 'status',
   }, {
     hospitalScoped: true, permission: 'procurement',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['poNo'],
     template: [
@@ -1125,7 +1125,7 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'delivery',
-    indexedColumns: [{ field: 'stage', column: 'stage' }, { field: 'babyStatus', column: 'baby_status' }],
+    indexedColumns: [], // إصلاح: deliveries جدول JSONB بحت — stage/babyStatus لا عمودين حقيقيين
     limiter: importLimiter,
     duplicateCheck: ['motherName', 'admissionDate'],
     afterParse: (row) => ({ ...row, stage: row.stage || (row.deliveryDate ? 'delivered' : 'admitted') }),
@@ -1151,7 +1151,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'physiotherapy',
     tableName: 'pt_equipment',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['name'],
     template: [
@@ -1173,7 +1173,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'physiotherapy',
     tableName: 'pt_sessions',
-    indexedColumns: [{ field: 'status', column: 'status' }, { field: 'date', column: 'date' }],
+    indexedColumns: [], // إصلاح: pt_sessions جدول JSONB بحت — status/date لا عمودين حقيقيين
     limiter: importLimiter,
     duplicateCheck: ['patientName', 'date'],
     template: [
@@ -1202,7 +1202,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'ambulance',
     tableName: 'ambulance_missions',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['address', 'callTime'],
     template: [
@@ -1214,8 +1214,8 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'] });
-  pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'] });
+  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId'] });
+  pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'] });
   pgCrud(router, 'appointments', collectionSchemas.appointments, [
     { field: 'patient', column: 'patient' },
     { field: 'doctor', column: 'doctor' },
@@ -1313,7 +1313,7 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'vaccinations',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: status ليس عموداً حقيقياً بهذا الجدول (JSONB بحت)
     limiter: importLimiter,
     duplicateCheck: ['patient', 'vaccine', 'date'],
     afterParse: (row) => ({ ...row, status: row.status || 'completed' }),
@@ -1326,32 +1326,32 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'vaccinations', collectionSchemas.vaccinations, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'vaccinations' });
-  pgCrud(router, 'medicalLeaves', collectionSchemas.medicalLeaves, [{ field: 'status', column: 'status' }], 'medical_leaves', { hospitalScoped: true, permission: 'medical-leave' });
+  pgCrud(router, 'vaccinations', collectionSchemas.vaccinations, [], undefined, { hospitalScoped: true, permission: 'vaccinations', extraFilterFields: ['status'] });
+  pgCrud(router, 'medicalLeaves', collectionSchemas.medicalLeaves, [], 'medical_leaves', { hospitalScoped: true, permission: 'medical-leave', extraFilterFields: ['status'] });
   pgCrud(router, 'dossiers', collectionSchemas.dossiers, [], undefined, { hospitalScoped: true, permission: 'hr' });
   pgCrud(router, 'labTests', collectionSchemas.labTests, [], 'lab_tests', { hospitalScoped: true, permission: 'laboratory', extraFilterFields: ['status', 'priority'] });
-  pgCrud(router, 'radiology', collectionSchemas.radiology, [{ field: 'status', column: 'status' }, { field: 'modality', column: 'modality' }], undefined, { hospitalScoped: true, permission: 'radiology' });
-  pgCrud(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, [{ field: 'status', column: 'status' }], 'pharmacy_orders', { hospitalScoped: true, permission: 'pharmacy' });
+  pgCrud(router, 'radiology', collectionSchemas.radiology, [], undefined, { hospitalScoped: true, permission: 'radiology', extraFilterFields: ['status', 'modality'] });
+  pgCrud(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, [], 'pharmacy_orders', { hospitalScoped: true, permission: 'pharmacy', extraFilterFields: ['status'] });
   pgCrud(router, 'assets', collectionSchemas.assets, [], undefined, { hospitalScoped: true, permission: 'assets', searchFields: ['assetNo'], extraFilterFields: ['category', 'status'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'assetMaintenanceLog', collectionSchemas.assetMaintenanceLog, [
     { field: 'assetId', column: 'asset_id' },
   ], 'asset_maintenance_log', { hospitalScoped: true, permission: 'assets' });
   pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'] });
-  pgCrud(router, 'procurement', collectionSchemas.procurement, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'procurement' });
+  pgCrud(router, 'procurement', collectionSchemas.procurement, [], undefined, { hospitalScoped: true, permission: 'procurement', extraFilterFields: ['status'] });
   pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
-  pgCrud(router, 'documents', collectionSchemas.documents, [{ field: 'type', column: 'type' }, { field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }], undefined, { hospitalScoped: true, permission: 'documents' });
-  pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [{ field: 'category', column: 'category' }], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
+  pgCrud(router, 'documents', collectionSchemas.documents, [], undefined, { hospitalScoped: true, permission: 'documents', extraFilterFields: ['type', 'status', 'priority'] });
+  pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
   pgCrud(router, 'transactions', collectionSchemas.transactions, [], undefined, { hospitalScoped: true, permission: 'accounts' });
-  pgCrud(router, 'promotions', collectionSchemas.promotions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
-  pgCrud(router, 'allowances', collectionSchemas.allowances, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
+  pgCrud(router, 'promotions', collectionSchemas.promotions, [], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
+  pgCrud(router, 'allowances', collectionSchemas.allowances, [], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });
-  pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [{ field: 'status', column: 'status' }], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance' });
+  pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'ambulanceMaintenanceLog', collectionSchemas.ambulanceMaintenanceLog, [
     { field: 'vehicleId', column: 'vehicle_id' },
   ], 'ambulance_maintenance_log', { hospitalScoped: true, permission: 'ambulance' });
-  pgCrud(router, 'ambulanceMissions', collectionSchemas.ambulanceMissions, [{ field: 'status', column: 'status' }], 'ambulance_missions', { hospitalScoped: true, permission: 'ambulance' });
+  pgCrud(router, 'ambulanceMissions', collectionSchemas.ambulanceMissions, [], 'ambulance_missions', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
 
   // CRM المرضى — indexedColumns تختلف عن الاسم الافتراضي (name/phone/status)
   pgCrud(router, 'crmInteractions', collectionSchemas.crmInteractions, [
@@ -1413,7 +1413,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'wards',
     tableName: 'medication_orders',
-    indexedColumns: [{ field: 'admissionId', column: 'admission_id' }],
+    indexedColumns: [], // إصلاح: medication_orders جدول JSONB بحت — admission_id ليس عموداً حقيقياً
     limiter: importLimiter,
     duplicateCheck: ['admissionId', 'drugName', 'startDate'],
     afterParse: async (row, hospitalId) => {
@@ -1458,15 +1458,15 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'medicationOrders', collectionSchemas.medicationOrders, [{ field: 'admissionId', column: 'admission_id' }], 'medication_orders', { hospitalScoped: true, permission: 'wards' });
-  pgCrud(router, 'medicationAdministrations', collectionSchemas.medicationAdministrations, [{ field: 'orderId', column: 'order_id' }], 'medication_administrations', { hospitalScoped: true, permission: 'wards' });
+  pgCrud(router, 'medicationOrders', collectionSchemas.medicationOrders, [], 'medication_orders', { hospitalScoped: true, permission: 'wards', extraFilterFields: ['admissionId'] });
+  pgCrud(router, 'medicationAdministrations', collectionSchemas.medicationAdministrations, [], 'medication_administrations', { hospitalScoped: true, permission: 'wards', extraFilterFields: ['orderId'] });
 
   // ── صالة الولادة ──────────────────────────────────────────────────────────
-  pgCrud(router, 'deliveries', collectionSchemas.deliveries, [{ field: 'stage', column: 'stage' }, { field: 'babyStatus', column: 'baby_status' }], undefined, { hospitalScoped: true, permission: 'delivery' });
+  pgCrud(router, 'deliveries', collectionSchemas.deliveries, [], undefined, { hospitalScoped: true, permission: 'delivery', extraFilterFields: ['stage', 'babyStatus'] });
 
   // ── العلاج الطبيعي ────────────────────────────────────────────────────────
-  pgCrud(router, 'ptEquipment', collectionSchemas.ptEquipment, [{ field: 'status', column: 'status' }], 'pt_equipment', { hospitalScoped: true, permission: 'physiotherapy' });
-  pgCrud(router, 'ptSessions', collectionSchemas.ptSessions, [{ field: 'status', column: 'status' }, { field: 'date', column: 'date' }], 'pt_sessions', { hospitalScoped: true, permission: 'physiotherapy' });
+  pgCrud(router, 'ptEquipment', collectionSchemas.ptEquipment, [], 'pt_equipment', { hospitalScoped: true, permission: 'physiotherapy', extraFilterFields: ['status'] });
+  pgCrud(router, 'ptSessions', collectionSchemas.ptSessions, [], 'pt_sessions', { hospitalScoped: true, permission: 'physiotherapy', extraFilterFields: ['status', 'date'] });
 
   // ── إدارة الطابور ─────────────────────────────────────────────────────────
   // ── إدارة الطابور (queueTickets) ─────────────────────────────────────────────
@@ -1488,7 +1488,7 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'queue',
     tableName: 'queue_tickets',
-    indexedColumns: [{ field: 'department', column: 'department' }, { field: 'status', column: 'status' }],
+    indexedColumns: [], // إصلاح: queue_tickets جدول JSONB بحت — department/status لا عمودين حقيقيين
     limiter: importLimiter,
     duplicateCheck: ['patientName', 'department', 'createdAt'],
     // ── إصلاح: كانت calledAt/servedAt تُصفَّر دائماً بغض النظر عن الحالة —
@@ -1522,7 +1522,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'queueTickets', collectionSchemas.queueTickets, [{ field: 'department', column: 'department' }, { field: 'status', column: 'status' }], 'queue_tickets', { hospitalScoped: true, permission: 'queue', extraFilterFields: ['department'] });
+  pgCrud(router, 'queueTickets', collectionSchemas.queueTickets, [], 'queue_tickets', { hospitalScoped: true, permission: 'queue', extraFilterFields: ['department', 'status'] });
 
 };
 

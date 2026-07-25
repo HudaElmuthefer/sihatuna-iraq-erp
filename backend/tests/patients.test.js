@@ -117,8 +117,11 @@ describe('GET /api/patients — الجلب المُرقَّم من السيرف�
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'ززز_اسم_فريد_للبحث', phone: '07799998888', status: 'active' });
 
+    // إصلاح: نص عربي خام داخل رابط URL مباشرة يسبب
+    // "TypeError: Request path contains unescaped characters" — يجب ترميزه
+    // بـ encodeURIComponent أولاً، بنفس ما يفعله المتصفح فعلياً عند بناء رابط بحث.
     const res = await request(app)
-      .get('/api/patients?page=1&limit=10&search=ززز_اسم_فريد_للبحث')
+      .get(`/api/patients?page=1&limit=10&search=${encodeURIComponent('ززز_اسم_فريد_للبحث')}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);

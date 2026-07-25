@@ -32,10 +32,15 @@ beforeAll(async () => {
   }
 
   // إنشاء مستخدم مربوط بكل منشأة، وتسجيل دخول كل واحد للحصول على توكن خاص به
+  // إصلاح: requirePermission.js يتحقق فقط من مصفوفة permissions الصريحة —
+  // لا يوجد ربط تلقائي بين role:'doctor' وأي صلاحية افتراضية (الإدمن فقط
+  // يتجاوز الفحص). بدون permissions:['patients'] هنا، أي محاولة POST/DELETE
+  // على /api/patients من staffA/staffB كانت تُرفض بـ403 قبل ما توصل أصلاً
+  // لمنطق عزل المنشآت اللي هذا الاختبار مصمَّم يفحصه تحديداً.
   await request(app).post('/api/users').set('Authorization', `Bearer ${adminToken}`)
-    .send({ username: 'staffA', password: 'testpass123', name: 'موظف أ', role: 'doctor', hospitalId: hospA.body.id });
+    .send({ username: 'staffA', password: 'testpass123', name: 'موظف أ', role: 'doctor', hospitalId: hospA.body.id, permissions: ['patients'] });
   await request(app).post('/api/users').set('Authorization', `Bearer ${adminToken}`)
-    .send({ username: 'staffB', password: 'testpass123', name: 'موظف ب', role: 'doctor', hospitalId: hospB.body.id });
+    .send({ username: 'staffB', password: 'testpass123', name: 'موظف ب', role: 'doctor', hospitalId: hospB.body.id, permissions: ['patients'] });
 
   const loginA = await request(app).post('/api/auth/login').send({ username: 'staffA', password: 'testpass123' });
   const loginB = await request(app).post('/api/auth/login').send({ username: 'staffB', password: 'testpass123' });

@@ -188,6 +188,9 @@ router.get('/queue-display', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 router.use(require('./routes/usersRoutes'));
+// إصلاح: مسار "الإضابير الشخصية" (رفع/عرض/حذف وثيقة موظف بملف مرفق حقيقي)
+// كان غير مسجَّل بالسيرفر إطلاقاً — راجعي التعليق أعلى employeeDossierRoutes.js.
+router.use(require('./routes/employeeDossierRoutes'));
 router.use(require('./routes/aiDiagnosisRoutes'));
 router.use(require('./routes/drugInteractionRoutes'));
 require('./routes/modules')(router); // يسجّل كل موديولات pgCrud + استيراد Excel (41 موديول)

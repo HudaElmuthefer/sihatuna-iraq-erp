@@ -10,7 +10,7 @@
 // موديول. هذا الاختبار يمنع رجوع نفس الثغرة بالخطأ مستقبلاً (مثلاً لو حد
 // نسى يمرّر permission عند إضافة موديول جديد لاحقاً بـ routes/modules.js).
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -33,8 +33,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('RBAC — فرض الصلاحيات على موديولات pgCrud الحقيقية', () => {

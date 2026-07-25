@@ -4,7 +4,7 @@
 // عملياً (بدون مفاتيح API مُعدَّة): يجب أن يرجع available:false بأمان تام
 // بدل أي خطأ، حتى يعرف الفرونت إند يستخدم الجدول المحلي الاحتياطي بثقة.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -23,8 +23,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('GET /api/drug-interactions/status', () => {

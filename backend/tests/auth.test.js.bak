@@ -1,6 +1,6 @@
 // backend/tests/auth.test.js
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -12,8 +12,6 @@ beforeAll(() => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST /api/auth/login', () => {

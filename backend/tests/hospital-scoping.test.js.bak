@@ -5,7 +5,7 @@
 // حتى لو خمّن معرّف السجل مباشرة. يحتاج اتصالاً حقيقياً بـ PostgreSQL —
 // يفشل الملف كاملاً بخطأ واضح لو تعذّر (لا يُتجاوز بصمت)، بنفس نمط بقية الاختبارات.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -45,8 +45,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('عزل بيانات المرضى بين المنشآت', () => {

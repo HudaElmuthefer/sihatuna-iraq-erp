@@ -4,7 +4,7 @@
 // -> patient_id فقط، بدون name/phone/status الافتراضية)، واسم جدول مختلف عن
 // اسم المسار (crm_interactions).
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -22,8 +22,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST /api/crmInteractions', () => {

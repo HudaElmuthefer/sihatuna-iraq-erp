@@ -5,7 +5,7 @@
 // available:false بأمان تام بدل أي خطأ أو استثناء، حتى يعرف الفرونت إند
 // يستخدم النظام المحلي الاحتياطي بثقة.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -29,8 +29,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('GET /api/ai-diagnosis/status', () => {

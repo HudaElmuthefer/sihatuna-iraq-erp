@@ -5,7 +5,7 @@
 // الصفحة، وحتى الملف المرفق نفسه كان معاينة محلية بس (blob URL) ما يُرفَع
 // لأي مكان. يتحقق من إن الوثيقة (بملف مرفق حقيقي) تُحفَظ وتبقى بعد إعادة الجلب.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -20,8 +20,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('GET/POST/DELETE /api/employees/:id/dossier', () => {

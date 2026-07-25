@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const bcrypt = require('bcryptjs');
-const { pool } = require('../server/config/database');
+const { pool } = require('../config/database');
 
 function setupTestEnv(testFileName) {
   const dbPath = path.join(os.tmpdir(), `sihatuna-test-db-${testFileName}-${Date.now()}.json`);

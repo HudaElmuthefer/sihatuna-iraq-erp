@@ -4,7 +4,7 @@
 // تغطية اختبارية. يغطي: الحفظ الأساسي، رفض حقل مطلوب ناقص، وفرض صلاحية
 // "accounts" (لا يوصله إلا محاسب أو إدمن).
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -26,8 +26,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST /api/transactions', () => {

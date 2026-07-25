@@ -4,7 +4,7 @@
 // إطلاقاً قبل هذا الإصلاح (البيانات تُفقَد بمجرد تحديث الصفحة). يتحقق من
 // الحفظ الفعلي والاستمرارية عبر PostgreSQL الحقيقي.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -22,8 +22,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST/GET /api/qualityAudits — استمرارية حقيقية (كانت تُفقَد قبل الإصلاح)', () => {

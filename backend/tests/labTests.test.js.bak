@@ -4,7 +4,7 @@
 // تخزين JSONB بحت بدون أعمدة مفهرسة إطلاقاً، بعكس أغلب الموديولات الأخرى
 // المُختبَرة سابقاً) — يستاهل تغطية مستقلة للتأكد إن هذا النمط يشتغل صح.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -22,8 +22,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST /api/labTests — موديول بـ indexedColumns فاضية (JSONB بحت)', () => {

@@ -4,7 +4,7 @@
 // محدَّد) يجب ألا يشوف أو يدير مستخدمين بمنشآت ثانية غيره، بينما إدمن عام
 // (بدون hospitalId — مستوى الوزارة) يشوف ويدير الجميع كالمعتاد.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -40,8 +40,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('إدمن محلي (hospitalId محدَّد) — يشوف ويدير بس منشأته', () => {

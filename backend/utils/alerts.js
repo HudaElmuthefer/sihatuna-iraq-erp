@@ -29,6 +29,17 @@ function logAlertLocally(alert) {
 }
 
 async function sendEmailAlert(subject, message) {
+  // ── إصلاح: تعطيل البريد الفعلي أثناء الاختبارات الآلية (Jest) فقط ──────────
+  // أثناء npm test، أخطاء 500 كثيرة تُثار عمداً للتحقق من سلوك الكود (ليست
+  // أحداثاً حقيقية بالنظام)، وكل واحد منها كان يفتح اتصال SMTP حقيقي فعلياً
+  // (يرسل بريداً فعلياً لصندوق واردك، ويبقي الاتصال مفتوحاً بعد انتهاء
+  // الاختبارات فيمنع Jest من الخروج طبيعياً). هذا لا يؤثر إطلاقاً على
+  // التنبيهات الحقيقية بالسيرفر المنشور فعلياً — هناك NODE_ENV تكون
+  // 'production' أو غير مضبوطة، وليست 'test'، فالبريد يُرسَل هناك كالمعتاد.
+  if (process.env.NODE_ENV === 'test') {
+    return { sent: false, reason: 'معطَّل أثناء بيئة الاختبار (NODE_ENV=test)' };
+  }
+
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, ALERT_EMAIL_TO } = process.env;
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !ALERT_EMAIL_TO) {
     return { sent: false, reason: 'SMTP غير مُعدّ بملف .env (راجعي SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };

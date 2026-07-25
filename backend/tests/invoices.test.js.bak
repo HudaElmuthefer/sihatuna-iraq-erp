@@ -5,7 +5,7 @@
 // بصمت) — بما فيها اختبارات التحقق من البيانات اللي لا تحتاج مريضاً حقيقياً،
 // لأن فشلاً واضحاً بكل الملف أوضح وأأمن من نجاح جزئي مضلِّل.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, assertPgAvailable } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -36,8 +36,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-
-  await closeDbPool();
 });
 
 describe('POST /api/invoices — حفظ فاتورة جديدة', () => {

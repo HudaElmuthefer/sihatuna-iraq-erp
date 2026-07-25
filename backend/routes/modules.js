@@ -361,7 +361,11 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'laboratory',
     tableName: 'lab_tests',
-    indexedColumns: [{ field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }],
+    // إصلاح: lab_tests جدول JSONB بحت — لا يملك أعمدة status/priority حقيقية
+    // بقاعدة البيانات (كان هذا يسبب "column status of relation lab_tests
+    // does not exist" عند أي POST/PUT). نفس نمط الإصلاح المطبَّق على
+    // assets/inventory/projects بالأسفل.
+    indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['reqNo'],
     // ── إصلاح: النتيجة تُخزَّن فعلياً بكائن متداخل results:{value, notes}
@@ -576,7 +580,11 @@ const registerAllModules = (router) => {
     'المرجع': 'ref', 'Reference': 'ref',
   }, {
     hospitalScoped: true, permission: 'accounts',
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    // إصلاح: transactions لا يملك عمود status حقيقي بقاعدة البيانات أصلاً
+    // (ولا حتى حقل status ممسوح بـ columnMap أعلاه) — هذا الإدخال كان زائداً
+    // خطأً ويسبب "column status of relation transactions does not exist"
+    // عند أي POST/PUT.
+    indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['ref'],
     // ── إصلاح: type بالواجهة قيمته الفعلية عربية (دخل/مصروف)، بينما category
@@ -1321,7 +1329,7 @@ const registerAllModules = (router) => {
   pgCrud(router, 'vaccinations', collectionSchemas.vaccinations, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'vaccinations' });
   pgCrud(router, 'medicalLeaves', collectionSchemas.medicalLeaves, [{ field: 'status', column: 'status' }], 'medical_leaves', { hospitalScoped: true, permission: 'medical-leave' });
   pgCrud(router, 'dossiers', collectionSchemas.dossiers, [], undefined, { hospitalScoped: true, permission: 'hr' });
-  pgCrud(router, 'labTests', collectionSchemas.labTests, [{ field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }], 'lab_tests', { hospitalScoped: true, permission: 'laboratory' });
+  pgCrud(router, 'labTests', collectionSchemas.labTests, [], 'lab_tests', { hospitalScoped: true, permission: 'laboratory', extraFilterFields: ['status', 'priority'] });
   pgCrud(router, 'radiology', collectionSchemas.radiology, [{ field: 'status', column: 'status' }, { field: 'modality', column: 'modality' }], undefined, { hospitalScoped: true, permission: 'radiology' });
   pgCrud(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, [{ field: 'status', column: 'status' }], 'pharmacy_orders', { hospitalScoped: true, permission: 'pharmacy' });
   pgCrud(router, 'assets', collectionSchemas.assets, [], undefined, { hospitalScoped: true, permission: 'assets', searchFields: ['assetNo'], extraFilterFields: ['category', 'status'] });
@@ -1334,7 +1342,7 @@ const registerAllModules = (router) => {
   pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
   pgCrud(router, 'documents', collectionSchemas.documents, [{ field: 'type', column: 'type' }, { field: 'status', column: 'status' }, { field: 'priority', column: 'priority' }], undefined, { hospitalScoped: true, permission: 'documents' });
   pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [{ field: 'category', column: 'category' }], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
-  pgCrud(router, 'transactions', collectionSchemas.transactions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
+  pgCrud(router, 'transactions', collectionSchemas.transactions, [], undefined, { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'promotions', collectionSchemas.promotions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'allowances', collectionSchemas.allowances, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });

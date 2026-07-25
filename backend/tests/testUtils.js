@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const bcrypt = require('bcryptjs');
+const { pool } = require('../server/config/database');
 
 function setupTestEnv(testFileName) {
   const dbPath = path.join(os.tmpdir(), `sihatuna-test-db-${testFileName}-${Date.now()}.json`);
@@ -71,4 +72,12 @@ function assertPgAvailable(probeResponse, label, expectedStatus = 200) {
   }
 }
 
-module.exports = { setupTestEnv, cleanupTestEnv, assertPgAvailable };
+// إغلاق اتصال PostgreSQL بعد انتهاء اختبارات كل ملف — ضروري فقط لبيئة
+// الاختبارات (Jest)، ولا علاقة له بإغلاق أي اتصال بالتطبيق الحقيقي المنشور
+// فعلياً. بدون هذا، Jest ينتظر إلى الأبد لأن الاتصال يبقى مفتوحاً بالذاكرة
+// (تحذير "Jest did not exit one second after the test run has completed").
+async function closeDbPool() {
+  await pool.end();
+}
+
+module.exports = { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool };

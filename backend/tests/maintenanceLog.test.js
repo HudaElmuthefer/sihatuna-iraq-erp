@@ -28,7 +28,15 @@ afterAll(async () => {
 
 describe('POST/GET /api/assetMaintenanceLog — سجلات متعددة تبقى محفوظة كلها', () => {
   test('3 سجلات صيانة متتالية لنفس الأصل تبقى الثلاثة محفوظة (مو آخر وحدة بس)', async () => {
-    const assetId = 999; // معرّف وهمي — الاختبار يركّز على منطق السجل نفسه لا على وجود أصل حقيقي
+    // ── إصلاح: كان معرّفاً ثابتاً (999) — بما إن اختبارات PostgreSQL هنا تكتب
+    // فعلياً على القاعدة الحقيقية (بلا عزل مثل db.json)، أي تشغيل ثانٍ لـ
+    // npm test بنفس القاعدة يتراكم فوق سجلات التشغيل السابق بنفس المعرّف،
+    // فيفشل الفحص لاحقاً (forThisAsset.length يصير 6 بدل 3 مثلاً) رغم إن
+    // الكود المختبَر سليم تماماً. معرّف فريد بكل تشغيل يمنع هذا التراكم.
+    // ملاحظة: asset_id عمود INTEGER بقاعدة البيانات (حد أقصى ~2.1 مليار) —
+    // Date.now() وحده (13 رقماً) يتجاوزه ويسبب خطأ "value out of range"،
+    // فنُبقي الرقم ضمن المجال المسموح بـ %.
+    const assetId = Date.now() % 2000000000;
 
     for (const desc of ['تغيير زيت', 'فحص دوري', 'استبدال قطعة غيار']) {
       const res = await request(app)
@@ -54,7 +62,9 @@ describe('POST/GET /api/assetMaintenanceLog — سجلات متعددة تبقى
 
 describe('POST/GET /api/ambulanceMaintenanceLog — نفس المبدأ للمركبات', () => {
   test('سجلات متعددة لنفس المركبة تبقى محفوظة كلها', async () => {
-    const vehicleId = 888;
+    // نفس إصلاح assetId أعلاه: معرّف فريد بكل تشغيل بدل ثابت (888) يمنع
+    // تراكم سجلات تشغيلات سابقة على نفس القاعدة الحقيقية، وضمن مجال INTEGER.
+    const vehicleId = (Date.now() % 2000000000) + 1;
 
     await request(app).post('/api/ambulanceMaintenanceLog').set('Authorization', `Bearer ${token}`)
       .send({ vehicleId, date: '2026-06-01', description: 'صيانة أولى' });

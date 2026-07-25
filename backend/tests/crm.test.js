@@ -33,10 +33,22 @@ describe('POST /api/crmInteractions', () => {
   });
 
   test('حفظ تفاعل صحيح ينجح ويُخزَّن بجدول crm_interactions', async () => {
+    // ── إصلاح: كان يفترض وجود مريض بمعرّف 1 (قيمة ثابتة)، وهو افتراض غير
+    // موثوق — crm_interactions.patient_id مرجع فعلي (FOREIGN KEY) لجدول
+    // patients، فأي بيئة بدون مريض بهذا المعرّف بالضبط (شائع جداً، مثلاً بعد
+    // حذف بيانات تجريبية) يفشل هذا الاختبار بخطأ قيد مرجعي بدل خطأ الاختبار
+    // نفسه. الآن ننشئ مريضاً حقيقياً أولاً ونستخدم معرّفه الفعلي، بنفس نمط
+    // سلاسل dossiers/admissions بملف moduleSanity.test.js.
+    const patientRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: `مريض اختبار CRM ${Date.now()}`, phone: '07700000000' });
+    expect(patientRes.status).toBe(201);
+
     const res = await request(app)
       .post('/api/crmInteractions')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ patientId: 1, type: 'call', notes: 'اتصال متابعة' });
+      .send({ patientId: patientRes.body.id, type: 'call', notes: 'اتصال متابعة' });
     expect(res.status).toBe(201);
     expect(res.body.id).toBeDefined();
   });

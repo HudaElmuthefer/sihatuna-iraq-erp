@@ -248,12 +248,20 @@ CREATE TABLE IF NOT EXISTS documents (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- عمود "category" صريح (وليس JSONB فقط) لأن routes/modules.js يسجّله كـ
+-- indexedColumns حقيقي عند استيراد Excel (registerExcelImport('servicePrices', ...))
+-- — بدونه، أول استيراد Excel لأسعار الخدمات يفشل بخطأ "column category of
+-- relation service_prices does not exist" على أي قاعدة بيانات مُنشأة من هذا
+-- الملف فقط (كان مضافاً سابقاً فقط عبر migrations-sql/004_promote_batch2.sql
+-- على القواعد الموجودة مسبقاً، وغائباً عن هذا الملف الأساسي لتنصيب جديد).
 CREATE TABLE IF NOT EXISTS service_prices (
     id              SERIAL PRIMARY KEY,
+    category        VARCHAR(50),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_service_prices_category ON service_prices(category);
 
 CREATE TABLE IF NOT EXISTS transactions (
     id              SERIAL PRIMARY KEY,

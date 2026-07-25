@@ -2,6 +2,12 @@
 // اتصال PostgreSQL عبر مكتبة pg (خفيفة، بدون ORM ثقيل، متوافقة مع النمط الحالي للمشروع)
 // ثبّت المكتبة أولاً: npm install pg
 
+// لازم نحمّل .env هنا مباشرة (مو نعتمد على أن server.js حمّله قبلنا) — بملفات
+// الاختبار (tests/testUtils.js)، هذا الملف يُستورَد قبل require('../server')،
+// فلو انتظرنا dotenv.config() من server.js، الـ Pool تحته يتبنى فعلياً بكلمة
+// مرور فارغة (القيمة الافتراضية) بدل القيمة الحقيقية من .env — لأن إعدادات
+// pg.Pool تُلتقط لحظة الإنشاء، مو بشكل كسول لاحق.
+require('dotenv').config();
 const { Pool } = require('pg');
 
 const pool = new Pool({

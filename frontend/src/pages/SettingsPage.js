@@ -16,6 +16,7 @@ import { useT } from '../translations';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
 import { api, SERVER_BASE_URL } from '../api';
 import BackupDestinationModal from '../components/BackupDestinationModal';
+import { getDefaultHeaderText, getDefaultFooterText } from '../utils/printDefaults';
 const ROLES = ['admin','doctor','nurse','receptionist','accountant','hr'];
 const ROLE_LABELS = (tr) => ({
   admin: tr('role_admin'),
@@ -29,7 +30,7 @@ const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', 
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings } = useApp();
   const tr = useT(lang);
   const [tab, setTab] = useState('users');
   const [showModal, setShowModal] = useState(false);
@@ -121,6 +122,7 @@ export default function SettingsPage() {
     { key: 'users',      labelKey: 'set_tab_users',      icon: '👥' },
     { key: 'appearance', labelKey: 'set_tab_appearance',  icon: '🎨' },
     { key: 'system',     labelKey: 'set_tab_system',      icon: '⚙️' },
+    { key: 'print',      labelKey: 'set_tab_print',       icon: '🖨️' },
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
@@ -520,6 +522,84 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 <button onClick={() => showToast(tr('msg_saved'),'success')} className="btn btn-primary" style={{ width:'fit-content' }}>💾 {tr('set_save_settings')}</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── PRINT SETTINGS TAB ── */}
+          {tab === 'print' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🖨️ {tr('set_tab_print')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('print_settings_desc')}</p>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{tr('print_paper_size')}</h4>
+                <div style={{ display:'flex', gap:12 }}>
+                  {['A4','Letter'].map(size => (
+                    <button key={size} onClick={() => setPrintSettings(p => ({ ...p, paperSize: size }))} style={{ padding:'10px 22px', borderRadius:10, border:`2px solid ${printSettings.paperSize===size?'#1a6bab':'var(--border)'}`, background:printSettings.paperSize===size?'rgba(26,107,171,0.1)':'transparent', color:printSettings.paperSize===size?'#1a6bab':'var(--text-primary)', cursor:'pointer', fontSize:13, fontWeight:printSettings.paperSize===size?700:400 }}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{tr('print_orientation')}</h4>
+                <div style={{ display:'flex', gap:12 }}>
+                  {[{ key:'portrait', label:tr('print_portrait') }, { key:'landscape', label:tr('print_landscape') }].map(o => (
+                    <button key={o.key} onClick={() => setPrintSettings(p => ({ ...p, orientation: o.key }))} style={{ padding:'10px 22px', borderRadius:10, border:`2px solid ${printSettings.orientation===o.key?'#1a6bab':'var(--border)'}`, background:printSettings.orientation===o.key?'rgba(26,107,171,0.1)':'transparent', color:printSettings.orientation===o.key?'#1a6bab':'var(--text-primary)', cursor:'pointer', fontSize:13, fontWeight:printSettings.orientation===o.key?700:400 }}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{lang === 'ar' ? 'العناصر الافتراضية بكل طبعة' : 'Default elements for every print'}</h4>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeHeader} onChange={() => setPrintSettings(p => ({ ...p, includeHeader: !p.includeHeader }))} />
+                    {tr('print_include_header')}
+                  </label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeFooter} onChange={() => setPrintSettings(p => ({ ...p, includeFooter: !p.includeFooter }))} />
+                    {tr('print_include_footer')}
+                  </label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeLogo} onChange={() => setPrintSettings(p => ({ ...p, includeLogo: !p.includeLogo }))} />
+                    {tr('print_include_logo')}
+                  </label>
+                  <p style={{ fontSize:11, color:'var(--text-secondary)', margin:'4px 0 0' }}>{tr('print_logo_note')}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ margin:'0 0 6px', fontSize:14 }}>{lang === 'ar' ? 'نص الترويسة والتذييل الافتراضي (اختياري)' : 'Default header & footer text (optional)'}</h4>
+                <p style={{ fontSize:12, color:'var(--text-secondary)', margin:'0 0 14px', maxWidth:480 }}>{tr('print_global_text_desc')}</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  <div>
+                    <label className="form-label">{tr('print_header_text')}</label>
+                    <input
+                      type="text"
+                      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                      value={printSettings.headerText}
+                      onChange={e => setPrintSettings(p => ({ ...p, headerText: e.target.value }))}
+                      placeholder={getDefaultHeaderText(tr)}
+                      className="form-control"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">{tr('print_footer_text')}</label>
+                    <input
+                      type="text"
+                      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                      value={printSettings.footerText}
+                      onChange={e => setPrintSettings(p => ({ ...p, footerText: e.target.value }))}
+                      placeholder={getDefaultFooterText(lang)}
+                      className="form-control"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

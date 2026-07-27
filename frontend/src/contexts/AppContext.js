@@ -86,6 +86,26 @@ export const translateDays = (days, lang) => days.map(d => {
   return lang === 'en' && i >= 0 ? DAYS_EN[i] : d;
 });
 
+// ─── إعدادات الطباعة الافتراضية العامة ────────────────────────────────────
+// تُستخدم كقيمة أولية لكل زر طباعة بالنظام (PrintButton) ما لم يعدّلها
+// المستخدم لهذي الطبعة تحديداً عبر لوحة الخيارات المسبقة. logo: false افتراضياً
+// لأن رفع الشعار الفعلي يأتي بمرحلة لاحقة — الخيار موجود هنا مسبقاً حتى
+// يشتغل تلقائياً بمجرد إضافة الشعار بدون أي تعديل إضافي بهذا الملف.
+export const DEFAULT_PRINT_SETTINGS = {
+  paperSize: 'A4',       // 'A4' | 'Letter'
+  orientation: 'portrait', // 'portrait' | 'landscape'
+  includeHeader: true,
+  includeFooter: true,
+  includeLogo: true,
+  // '' means "no global override" — falls back to the original hardcoded
+  // default text (see utils/printDefaults.js). Setting either of these gives
+  // a *persistent* replacement for that default, without having to retype a
+  // per-print override every time (see PrintButton.js's precedence: per-print
+  // text > this global default > the original hardcoded default).
+  headerText: '',
+  footerText: '',
+};
+
 export const initialDoctors = [
   { id:1, name:'د. أحمد سالم الراشدي', nameEn:'Dr. Ahmed Salem Al-Rashidi', specialization:'باطنية وصدرية', specializationEn:'Internal/Chest Medicine', deptId:1, experience:15, phone:'07701234567', status:'active', rating:4.8, patients:1240, gender:'male', avatar:'أ', color:'#1a6bab', bio:'خبرة 15 سنة في الباطنية', bioEn:'15 years experience in internal medicine', availableDays:['السبت','الأحد','الاثنين','الثلاثاء'], workHours:'8:00 - 14:00', fee:25000 },
   { id:2, name:'د. فاطمة حسن العبيدي', nameEn:'Dr. Fatima Hassan Al-Obaidi', specialization:'نسائية وتوليد', specializationEn:'OB/GYN', deptId:5, experience:12, phone:'07702345678', status:'active', rating:4.9, patients:980, gender:'female', avatar:'ف', color:'#8b5cf6', bio:'متخصصة في صحة المرأة', bioEn:"Specialist in women's health", availableDays:['الأحد','الاثنين','الأربعاء'], workHours:'9:00 - 15:00', fee:35000 },
@@ -242,16 +262,28 @@ export function AppProvider({ children }) {
     const authUser  = localStorage.getItem('auth_user');
     const theme_    = localStorage.getItem('theme');
     const lang_     = localStorage.getItem('lang');
+    const printSettings_ = localStorage.getItem('print_settings');
     localStorage.clear();
     if (authUser)  localStorage.setItem('auth_user',  authUser);
     if (theme_)    localStorage.setItem('theme',      theme_);
     if (lang_)     localStorage.setItem('lang',       lang_);
+    if (printSettings_) localStorage.setItem('print_settings', printSettings_);
     localStorage.setItem('data_version', DATA_VERSION);
   }
   // ─────────────────────────────────────────────────────────────────────────
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'ar');
+  // إعدادات الطباعة العامة (افتراضية لكل طبعة، قابلة للتجاوز مؤقتاً من لوحة
+  // خيارات الطباعة قبل كل عملية طباعة دون تغيير هذي القيم المحفوظة)
+  const [printSettings, setPrintSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('print_settings'));
+      return saved ? { ...DEFAULT_PRINT_SETTINGS, ...saved } : DEFAULT_PRINT_SETTINGS;
+    } catch {
+      return DEFAULT_PRINT_SETTINGS;
+    }
+  });
   const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } });
   // ── إصلاح ────────────────────────────────────────────────────────────────
   // بعد الانتقال لـ httpOnly cookies، صار مصدر الحقيقة الفعلي لتسجيل الدخول
@@ -708,6 +740,7 @@ export function AppProvider({ children }) {
   useEffect(() => { localStorage.setItem('erp_invoices', JSON.stringify(invoices)); }, [invoices]);
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }, [theme]);
   useEffect(() => { document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; localStorage.setItem('lang', lang); }, [lang]);
+  useEffect(() => { localStorage.setItem('print_settings', JSON.stringify(printSettings)); }, [printSettings]);
   useEffect(() => { localStorage.setItem('system_users', JSON.stringify(systemUsers)); }, [systemUsers]);
 
   // إعداد موحّد لكل الموديولات المربوطة بالباك إند — إضافة موديول جديد هنا فقط
@@ -1157,6 +1190,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       theme, setTheme, toggleTheme, lang, setLang, toggleLang, t,
+      printSettings, setPrintSettings,
       user, login, logout, updateUser,
       toasts, addToast, showToast,
       confirmState, confirmDialog, resolveConfirm,

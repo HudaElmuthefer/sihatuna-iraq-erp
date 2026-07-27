@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import HealthBanner from './HealthBanner';
+import PrintButton from './PrintButton';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
 import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
+import { isPrintButtonHidden } from '../config/printConfig';
 
 const NAV_ICONS = {
   'dashboard': '🏠', 'services': '🎯', 'patients': '👥', 'doctors': '🩺',
@@ -24,7 +26,7 @@ const GROUP_LABELS = {
 };
 
 export default function Layout() {
-  const { user, logout, theme, toggleTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId } = useApp();
+  const { user, logout, theme, toggleTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings } = useApp();
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -32,6 +34,32 @@ export default function Layout() {
   const location = useLocation();
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // ── Universal print-to-PDF ──────────────────────────────────────────────
+  // printOverlay holds the per-print header/footer/logo overrides collected
+  // by PrintButton's options panel. It stays null until the user confirms a
+  // print, which mounts the print-only header/footer blocks below and fires
+  // window.print() on the next frame (so the browser captures them already
+  // rendered), then resets on 'afterprint' so they don't linger in the DOM.
+  const [printOverlay, setPrintOverlay] = useState(null);
+  const printButtonHidden = isPrintButtonHidden(location.pathname);
+
+  const handlePrint = (options) => setPrintOverlay(options);
+
+  React.useEffect(() => {
+    if (!printOverlay) return;
+    // setTimeout (not requestAnimationFrame) — rAF only fires on an actual
+    // paint tick and gets fully paused in backgrounded/non-rendering tabs,
+    // which would silently swallow the print call in that edge case.
+    const timer = setTimeout(() => window.print(), 0);
+    return () => clearTimeout(timer);
+  }, [printOverlay]);
+
+  React.useEffect(() => {
+    const resetOverlay = () => setPrintOverlay(null);
+    window.addEventListener('afterprint', resetOverlay);
+    return () => window.removeEventListener('afterprint', resetOverlay);
+  }, []);
 
   const unread = notifications.filter(n => !n.read).length;
   // الصفحات الظاهرة = صلاحيات الدور (كما كان) + صفحات منشأة المستخدم المفعّلة
@@ -149,7 +177,7 @@ export default function Layout() {
   );
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+    <div className="app-shell" style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       {/* Desktop Sidebar */}
       <aside style={{
         width: sidebarCollapsed ? 70 : 260,
@@ -157,7 +185,7 @@ export default function Layout() {
         display: 'flex', flexDirection: 'column',
         transition: 'width 0.3s ease',
         position: 'relative', flexShrink: 0,
-        zIndex: 100 }} className="desktop-sidebar">
+        zIndex: 100 }} className="desktop-sidebar no-print">
         {/* Collapse toggle */}
         <button onClick={toggleSidebar} style={{
           position: 'absolute', left: -14, top: 72, width: 28, height: 28,
@@ -171,20 +199,20 @@ export default function Layout() {
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
+        <div onClick={() => setMobileOpen(false)} className="no-print" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
       )}
       {/* Mobile sidebar */}
       <aside style={{
         position: 'fixed', right: mobileOpen ? 0 : -280, top: 0, bottom: 0, width: 260,
         background: 'linear-gradient(180deg,#0f1923 0%,#0d1e2e 100%)',
-        zIndex: 200, transition: 'right 0.3s ease' }} className="mobile-sidebar">
+        zIndex: 200, transition: 'right 0.3s ease' }} className="mobile-sidebar no-print">
         <SidebarContent />
       </aside>
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+      <div className="main-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* Top header */}
-        <header style={{
+        <header className="no-print" style={{
           height: 60, background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 20px', flexShrink: 0, zIndex: 50 }}>
@@ -296,6 +324,8 @@ export default function Layout() {
             <button onClick={toggleLang} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
               {lang === 'ar' ? 'EN' : 'AR'}
             </button>
+            {/* Universal print-to-PDF (hidden on pages with their own custom print/export flow — see printConfig.js) */}
+            <PrintButton hidden={printButtonHidden} onPrint={handlePrint} />
             {/* Notifications */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowNotif(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 16, position: 'relative' }}>
@@ -320,18 +350,53 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-          {location.pathname !== '/' && <HealthBanner />}
-          <Outlet />
+        <main className="page-main" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          {location.pathname !== '/' && <div className="no-print"><HealthBanner /></div>}
+          {/* printable-content is the only thing left visible when printing —
+              see the .no-print / @media print rules below */}
+          <div id="printable-content" className="printable-content">
+            {printOverlay && (printOverlay.includeHeader || printOverlay.includeLogo) && (
+              <div className="print-only-block" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '2px solid #1a6bab', paddingBottom: 10, marginBottom: 16 }}>
+                {printOverlay.includeLogo && (
+                  // No logo upload feature yet (comes in a later stage) — this
+                  // is just a stand-in icon so the toggle already has a visible
+                  // effect to test; swap for the uploaded image once available.
+                  <div style={{ width: 44, height: 44, borderRadius: 8, background: 'linear-gradient(135deg,#1a6bab,#0d3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#fff', flexShrink: 0 }}>🏥</div>
+                )}
+                {printOverlay.includeHeader && (
+                  // printOverlay.headerText already carries the resolved
+                  // per-print > global-default > hardcoded-default text — see
+                  // PrintButton.js's confirmPrint().
+                  <div style={{ flex: 1, fontWeight: 700, fontSize: 16, color: '#000' }}>{printOverlay.headerText}</div>
+                )}
+              </div>
+            )}
+
+            <Outlet />
+
+            {printOverlay?.includeFooter && (
+              // printOverlay.footerText already carries the resolved
+              // per-print > global-default > hardcoded-default text (the
+              // hardcoded default being the print date/time) — see
+              // PrintButton.js's confirmPrint(). Note: native browser print
+              // doesn't support reliable per-page page-number counters from
+              // page HTML/CSS (that needs a PDF generation library) — the
+              // browser's own print dialog "headers and footers" option can
+              // add those independently if enabled.
+              <div className="print-only-block" style={{ marginTop: 20, paddingTop: 10, borderTop: '1px solid #999', fontSize: 10, color: '#555', textAlign: 'center' }}>
+                {printOverlay.footerText}
+              </div>
+            )}
+          </div>
         </main>
 
         {/* Copyright footer */}
-        <footer style={{ padding: '8px 20px', textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 }}>
+        <footer className="no-print" style={{ padding: '8px 20px', textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 }}>
           All rights reserved © Eng. Huda Elmuthefer — SIHATUNA IRAQ
         </footer>
 
         {/* Mobile bottom nav */}
-        <nav className="bottom-nav" style={{ display: 'none', background: '#1565c0', padding: '8px 0', flexShrink: 0 }}>
+        <nav className="bottom-nav no-print" style={{ display: 'none', background: '#1565c0', padding: '8px 0', flexShrink: 0 }}>
           {visiblePages.slice(0, 4).map(p => (
             <NavLink key={p.key} to={p.path} end={p.path === '/'} style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textDecoration: 'none', color: isActive ? '#fff' : 'rgba(255,255,255,0.6)', padding: '4px 0' })}>
               <span style={{ fontSize: 20 }}>{NAV_ICONS[p.key]}</span>
@@ -347,6 +412,20 @@ export default function Layout() {
           .desktop-sidebar { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
           .bottom-nav { display: flex !important; }
+        }
+
+        /* Universal print-to-PDF (PrintButton) — paper size/orientation come
+           from the global Print Settings (SettingsPage); only .printable-content
+           (the current page's Outlet, i.e. everything except sidebar/nav/header/
+           footer/buttons) stays visible when printing. */
+        @page { size: ${printSettings.paperSize === 'Letter' ? 'letter' : 'A4'} ${printSettings.orientation}; margin: 12mm; }
+        .print-only-block { display: none; }
+        @media print {
+          .no-print { display: none !important; }
+          html, body { height: auto !important; overflow: visible !important; }
+          .app-shell, .main-column { display: block !important; height: auto !important; overflow: visible !important; }
+          .page-main { overflow: visible !important; height: auto !important; padding: 0 !important; }
+          .print-only-block { display: block !important; }
         }
       `}</style>
     </div>

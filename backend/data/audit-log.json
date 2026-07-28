@@ -4623,5 +4623,464 @@
     "after": {
       "destination": "computer"
     }
+  },
+  {
+    "id": 538,
+    "timestamp": "2026-07-27T21:05:30.618Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 539,
+    "timestamp": "2026-07-27T21:39:49.935Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 540,
+    "timestamp": "2026-07-27T21:44:48.812Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-afdab053-f230-4915-963b-138b50f6ee6d.png"
+    }
+  },
+  {
+    "id": 541,
+    "timestamp": "2026-07-27T21:45:42.907Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 542,
+    "timestamp": "2026-07-27T21:54:11.282Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 543,
+    "timestamp": "2026-07-27T22:08:52.394Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-6cca85e1-e24c-479c-9aaa-aa1a972dfb25.png"
+    }
+  },
+  {
+    "id": 544,
+    "timestamp": "2026-07-27T22:09:41.183Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 545,
+    "timestamp": "2026-07-27T22:10:05.139Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-0503bcf2-2c3a-437f-b42b-efff55b6c5f2.png"
+    }
+  },
+  {
+    "id": 546,
+    "timestamp": "2026-07-27T22:10:51.105Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 547,
+    "timestamp": "2026-07-28T05:15:12.555Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-543ec4c0-0e85-4921-a878-5ba88eef1647.jpg"
+    }
+  },
+  {
+    "id": 548,
+    "timestamp": "2026-07-28T06:03:29.709Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 549,
+    "timestamp": "2026-07-28T06:11:07.124Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 550,
+    "timestamp": "2026-07-28T06:38:28.683Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "مستشفى الاختبار",
+      "nameEn": "Test Hospital"
+    }
+  },
+  {
+    "id": 551,
+    "timestamp": "2026-07-28T06:39:44.680Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 552,
+    "timestamp": "2026-07-28T06:42:49.842Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 553,
+    "timestamp": "2026-07-28T06:58:50.786Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 554,
+    "timestamp": "2026-07-28T07:01:58.830Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "هوسبيتال",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 555,
+    "timestamp": "2026-07-28T07:02:25.912Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "صحتنا عراق",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 556,
+    "timestamp": "2026-07-28T07:18:11.157Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "مجمع الشفاء الطبي",
+      "nameEn": "Al-Shifa Medical Complex"
+    }
+  },
+  {
+    "id": 557,
+    "timestamp": "2026-07-28T07:20:02.408Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 558,
+    "timestamp": "2026-07-28T07:21:20.971Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 559,
+    "timestamp": "2026-07-28T08:15:37.142Z",
+    "module": "system",
+    "action": "manual_code_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "filename": "sihatuna_code_backup_2026-07-28_1115.zip"
+    }
+  },
+  {
+    "id": 560,
+    "timestamp": "2026-07-28T08:50:05.834Z",
+    "module": "system",
+    "action": "manual_code_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "filename": "sihatuna_code_backup_2026-07-28_1150.zip"
+    }
+  },
+  {
+    "id": 561,
+    "timestamp": "2026-07-28T10:41:38.716Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 562,
+    "timestamp": "2026-07-28T10:44:46.075Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-7bd4d788-15c6-4734-982f-1ebb8c9e04d9.png"
+    }
+  },
+  {
+    "id": 563,
+    "timestamp": "2026-07-28T10:50:24.538Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 3,
+    "userRole": "nurse"
+  },
+  {
+    "id": 564,
+    "timestamp": "2026-07-28T10:51:53.906Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 565,
+    "timestamp": "2026-07-28T11:50:55.969Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 3,
+    "userRole": "nurse"
+  },
+  {
+    "id": 566,
+    "timestamp": "2026-07-28T12:08:51.749Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 567,
+    "timestamp": "2026-07-28T12:08:51.992Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 568,
+    "timestamp": "2026-07-28T12:20:22.819Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 569,
+    "timestamp": "2026-07-28T12:54:13.363Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 570,
+    "timestamp": "2026-07-28T13:52:00.963Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-80d59bb2-185c-4c44-a98c-1d8588b034bb.png"
+    }
+  },
+  {
+    "id": 571,
+    "timestamp": "2026-07-28T13:53:16.372Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 572,
+    "timestamp": "2026-07-28T16:23:39.598Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 573,
+    "timestamp": "2026-07-28T16:24:31.012Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 574,
+    "timestamp": "2026-07-28T16:25:14.072Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-711e0f4d-1297-436b-b2cf-91b707fbd492.png"
+    }
+  },
+  {
+    "id": 575,
+    "timestamp": "2026-07-28T16:25:37.346Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "اختبار الاسم",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 576,
+    "timestamp": "2026-07-28T16:27:38.503Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 577,
+    "timestamp": "2026-07-28T16:31:36.826Z",
+    "module": "system",
+    "action": "manual_code_backup",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "filename": "sihatuna_code_backup_2026-07-28_1931.zip"
+    }
+  },
+  {
+    "id": 578,
+    "timestamp": "2026-07-28T16:44:03.282Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 2,
+    "userRole": "doctor"
+  },
+  {
+    "id": 579,
+    "timestamp": "2026-07-28T16:44:25.000Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 580,
+    "timestamp": "2026-07-28T18:49:37.750Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 581,
+    "timestamp": "2026-07-28T18:51:25.342Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "اختبار التحقق",
+      "nameEn": "Test Name EN"
+    }
+  },
+  {
+    "id": 582,
+    "timestamp": "2026-07-28T18:51:34.111Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 583,
+    "timestamp": "2026-07-28T20:00:07.274Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "attemptedUsername": "admin",
+      "reason": "wrong_password"
+    }
+  },
+  {
+    "id": 584,
+    "timestamp": "2026-07-28T20:00:16.864Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin"
   }
 ]

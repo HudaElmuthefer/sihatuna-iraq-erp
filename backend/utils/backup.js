@@ -33,6 +33,13 @@ const FILES_TO_BACKUP = ['db.json', 'audit-log.json'];
 const BACKUP_INTERVAL_MS = 60 * 60 * 1000; // كل ساعة
 const MAX_BACKUPS = 48; // نحتفظ بآخر 48 نسخة (يعني تغطية يومين تقريباً بمعدل كل ساعة)
 
+// نمط اسم مجلد نسخة البيانات الاحتياطية (من timestamp() تحت: ISO مع استبدال
+// : و . بـ -، مثل 2026-07-28T08-11-48-690Z). يُستخدم لاستثناء backups/code/
+// (مجلد نسخ كود المصدر المنفصل تماماً — utils/codeBackup.js) من قوائم/تنظيف
+// نسخ البيانات هنا، لأنه مجلد فرعي آخر بنفس BACKUPS_DIR لكنه لا يمثّل نسخة
+// بيانات حقيقية.
+const BACKUP_FOLDER_NAME_PATTERN = /^\d{4}-\d{2}-\d{2}T/;
+
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
@@ -157,7 +164,9 @@ async function runBackup() {
 function cleanupOldBackups() {
   if (!fs.existsSync(BACKUPS_DIR)) return;
   const backups = fs.readdirSync(BACKUPS_DIR)
-    .filter(name => fs.statSync(path.join(BACKUPS_DIR, name)).isDirectory())
+    // BACKUP_FOLDER_NAME_PATTERN مُعرَّف تحت — يستثني backups/code/ (نسخ كود
+    // المصدر المنفصلة) من هذا التنظيف الخاص بنسخ البيانات فقط
+    .filter(name => BACKUP_FOLDER_NAME_PATTERN.test(name) && fs.statSync(path.join(BACKUPS_DIR, name)).isDirectory())
     .sort(); // الأسماء مبنية على timestamp، فالترتيب الأبجدي = الترتيب الزمني
 
   if (backups.length > MAX_BACKUPS) {
@@ -174,7 +183,7 @@ function listBackups() {
   if (!fs.existsSync(BACKUPS_DIR)) return [];
   const externalRoot = process.env.EXTERNAL_BACKUP_DIR;
   return fs.readdirSync(BACKUPS_DIR)
-    .filter(name => fs.statSync(path.join(BACKUPS_DIR, name)).isDirectory())
+    .filter(name => BACKUP_FOLDER_NAME_PATTERN.test(name) && fs.statSync(path.join(BACKUPS_DIR, name)).isDirectory())
     .sort()
     .reverse()
     .map(name => ({

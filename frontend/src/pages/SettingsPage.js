@@ -44,6 +44,10 @@ export default function SettingsPage() {
   const [backupRunning, setBackupRunning] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [restoringName, setRestoringName] = useState(null);
+  // ── نسخة احتياطية لكود المصدر — منفصلة تماماً عن نسخ البيانات أعلاه ──────────
+  const [codeBackups, setCodeBackups] = useState([]);
+  const [codeBackupsLoading, setCodeBackupsLoading] = useState(false);
+  const [codeBackupRunning, setCodeBackupRunning] = useState(false);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [togglingMode, setTogglingMode] = useState(false);
   const [showHospModal, setShowHospModal] = useState(false);
@@ -316,8 +320,39 @@ export default function SettingsPage() {
     setRestoringName(null);
   };
 
+  // ── نسخة احتياطية لكود المصدر ────────────────────────────────────────────
+  const loadCodeBackups = async () => {
+    setCodeBackupsLoading(true);
+    try {
+      const list = await api.get('/code-backups');
+      setCodeBackups(list);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCodeBackupsLoading(false);
+  };
+
+  const runCodeBackup = async () => {
+    setCodeBackupRunning(true);
+    try {
+      const res = await api.post('/code-backups/run');
+      setCodeBackups(res.backups);
+      showToast(tr('code_backup_created'), 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCodeBackupRunning(false);
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  };
+
   React.useEffect(() => {
-    if (tab === 'backups') loadBackups();
+    if (tab === 'backups') { loadBackups(); loadCodeBackups(); }
     if (tab === 'recycle') loadRecycleBin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
@@ -921,6 +956,57 @@ export default function SettingsPage() {
                       >
                         {restoringName === b.name ? tr('restoring') : `♻️ ${tr('btn_restore')}`}
                       </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── CODE BACKUP (source code, separate from the data backup above) ── */}
+          {tab === 'backups' && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16 }}>
+                <div>
+                  <h3 style={{ margin:'0 0 6px' }}>🗂️ {tr('code_backup_title')}</h3>
+                  <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('code_backup_desc')}</p>
+                </div>
+                <button
+                  onClick={runCodeBackup}
+                  disabled={codeBackupRunning}
+                  className="btn btn-primary"
+                  style={{ whiteSpace:'nowrap' }}
+                >
+                  {codeBackupRunning ? `⏳ ${tr('code_backup_running')}` : `🗂️ ${tr('btn_code_backup_now')}`}
+                </button>
+              </div>
+
+              {codeBackupsLoading ? (
+                <p style={{ color:'var(--text-secondary)' }}>...</p>
+              ) : codeBackups.length === 0 ? (
+                <p style={{ color:'var(--text-secondary)' }}>{tr('no_code_backups_yet')}</p>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:420, overflowY:'auto' }}>
+                  {codeBackups.map(b => (
+                    <div key={b.name} style={{
+                      display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8,
+                      padding:'10px 14px', borderRadius:8, background:'var(--bg-card)',
+                    }}>
+                      <span style={{ fontSize:13, fontFamily:'monospace' }}>
+                        📦 {b.name}
+                        <span style={{ marginInlineStart:10, color:'var(--text-secondary)', fontSize:12 }}>
+                          {formatBytes(b.sizeBytes)} · {new Date(b.createdAt).toLocaleString(lang === 'ar' ? 'ar-IQ' : 'en-US')}
+                        </span>
+                      </span>
+                      <a
+                        href={`${SERVER_BASE_URL}/api/code-backups/${b.name}/download`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline"
+                        style={{ fontSize:12, padding:'6px 12px', textDecoration:'none' }}
+                      >
+                        ⬇️ {tr('btn_download')}
+                      </a>
                     </div>
                   ))}
                 </div>

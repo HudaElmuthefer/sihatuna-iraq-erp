@@ -100,6 +100,11 @@ export const translateDays = (days, lang) => days.map(d => {
 export const DEFAULT_APP_NAME_AR = 'صحتنا عراق';
 export const DEFAULT_APP_NAME_EN = 'Sihatuna Iraq';
 
+// ─── لوحة التحكم القابلة للتخصيص (Stage 5) ─────────────────────────────────
+// الترتيب الافتراضي = نفس ترتيب العرض الحالي بالضبط (كل الودجت ظاهرة)، حتى
+// أي مستخدم ما خصَّص شيئاً بعد يشوف نفس لوحة التحكم كما كانت دائماً.
+export const DEFAULT_DASHBOARD_WIDGETS = ['erp', 'stats', 'departments', 'appointments', 'doctors'];
+
 // ─── إعدادات الطباعة الافتراضية العامة ────────────────────────────────────
 // تُستخدم كقيمة أولية لكل زر طباعة بالنظام (PrintButton) ما لم يعدّلها
 // المستخدم لهذي الطبعة تحديداً عبر لوحة الخيارات المسبقة. logo: false افتراضياً
@@ -1034,6 +1039,34 @@ export function AppProvider({ children }) {
     });
   };
 
+  // ── لوحة التحكم القابلة للتخصيص (Stage 5) ────────────────────────────────
+  // dashboardLayout الفعلي المُطبَّق = تخصيص المستخدم (user.dashboardLayout)
+  // لو موجود، وإلا القائمة الافتراضية الكاملة — بدون أي طلب شبكة إضافي، لأن
+  // user (من تسجيل الدخول/auth-me) يحمل الحقل أصلاً.
+  const dashboardLayout = user?.dashboardLayout || DEFAULT_DASHBOARD_WIDGETS;
+
+  const saveDashboardLayout = async (widgets) => {
+    try {
+      await api.put('/users/me/dashboard-layout', { widgets });
+      updateUser({ dashboardLayout: widgets });
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  };
+
+  const resetDashboardLayout = async () => {
+    try {
+      await api.delete('/users/me/dashboard-layout');
+      updateUser({ dashboardLayout: undefined });
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  };
+
   const login = async (credentials) => {
     try {
       const data = await api.post('/auth/login', {
@@ -1280,6 +1313,7 @@ export function AppProvider({ children }) {
       printSettings, setPrintSettings,
       printOverlay, setPrintOverlay,
       user, login, logout, updateUser,
+      dashboardLayout, saveDashboardLayout, resetDashboardLayout,
       toasts, addToast, showToast,
       confirmState, confirmDialog, resolveConfirm,
       refreshNotifSources,

@@ -124,6 +124,12 @@ export default function SettingsPage() {
   }, [tab]);
 
   const handleAppNameSave = async () => {
+    // نفس نمط تحقّق حقول المنشأة (saveHospital أعلاه) — الحقلان مطلوبان معاً،
+    // إلا لو كانا فارغين كلاهما (يُعامَل عندها كإعادة ضبط للاسم الافتراضي،
+    // وهذا مسموح ومعالَج من الباك إند نفسه).
+    const arFilled = !!appNameForm.ar.trim();
+    const enFilled = !!appNameForm.en.trim();
+    if (arFilled !== enFilled) { showToast(tr('msg_required'), 'error'); return; }
     setAppNameSaving(true);
     try {
       await api.put('/branding/app-name', { nameAr: appNameForm.ar, nameEn: appNameForm.en });

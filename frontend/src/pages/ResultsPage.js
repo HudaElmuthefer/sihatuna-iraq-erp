@@ -12,6 +12,9 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #312e81 0%, #6366f1 100%)';
 
 // Iraq-specific: local numbers are written starting with 0 (e.g.
 // 07711234567). WhatsApp links need the international format without the
@@ -31,7 +34,7 @@ function openWhatsApp(phone, message) {
   return true;
 }
 
-function printContent(title, lines) {
+function printContent(title, lines, appNameAr) {
   const win = window.open('', '_blank', 'width=700,height=900');
   if (!win) return;
   win.document.write(`
@@ -51,7 +54,7 @@ function printContent(title, lines) {
       <body>
         <h1>${title}</h1>
         ${lines.map(([label, value]) => `<div class="row"><div class="label">${label}</div><div class="value">${value || '—'}</div></div>`).join('')}
-        <div class="footer">صحّتنا العراق — طُبع بتاريخ ${new Date().toLocaleString('ar-IQ')}</div>
+        <div class="footer">${appNameAr} — طُبع بتاريخ ${new Date().toLocaleString('ar-IQ')}</div>
       </body>
     </html>
   `);
@@ -60,7 +63,7 @@ function printContent(title, lines) {
   win.print();
 }
 
-function printCombined(title, items) {
+function printCombined(title, items, appNameAr) {
   const win = window.open('', '_blank', 'width=700,height=900');
   if (!win) return;
   win.document.write(`
@@ -87,7 +90,7 @@ function printCombined(title, items) {
             ${item.lines.map(([label, value]) => `<div class="row"><div class="label">${label}</div><div class="value">${value || '—'}</div></div>`).join('')}
           </div>
         `).join('')}
-        <div class="footer">صحّتنا العراق — طُبع بتاريخ ${new Date().toLocaleString('ar-IQ')}</div>
+        <div class="footer">${appNameAr} — طُبع بتاريخ ${new Date().toLocaleString('ar-IQ')}</div>
       </body>
     </html>
   `);
@@ -97,7 +100,7 @@ function printCombined(title, items) {
 }
 
 export default function ResultsPage() {
-  const { lang } = useApp();
+  const { lang, appNameAr, appNameEn } = useApp();
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 
   const [search, setSearch] = useState('');
@@ -164,7 +167,7 @@ export default function ResultsPage() {
       [L('تاريخ النتيجة', 'Result Date'), t.resultDate],
       [L('النتيجة', 'Result'), t.results?.value],
       [L('ملاحظات', 'Notes'), t.results?.notes || t.notes],
-    ]);
+    ], appNameAr);
   };
 
   const handlePrintRadiology = (r) => {
@@ -175,13 +178,13 @@ export default function ResultsPage() {
       [L('تاريخ الفحص', 'Exam Date'), r.examDate],
       [L('النتائج', 'Findings'), r.findings],
       [L('الانطباع', 'Impression'), r.impression],
-    ]);
+    ], appNameAr);
   };
 
   const sendLabToPatient = (t) => {
     const msg = L(
-      `مرحباً ${t.patientName}، نتيجة فحص ${t.testType} جاهزة: ${t.results?.value || 'راجعي المختبر لمزيد من التفاصيل'}. صحّتنا العراق.`,
-      `Hello ${t.patientName}, your ${t.testType} result is ready: ${t.results?.value || 'please visit the lab for details'}. SIHATUNA IRAQ.`
+      `مرحباً ${t.patientName}، نتيجة فحص ${t.testType} جاهزة: ${t.results?.value || 'راجعي المختبر لمزيد من التفاصيل'}. ${appNameAr}.`,
+      `Hello ${t.patientName}, your ${t.testType} result is ready: ${t.results?.value || 'please visit the lab for details'}. ${appNameEn.toUpperCase()}.`
     );
     if (!openWhatsApp(selectedPatient.phone, msg)) alert(L('رقم هاتف المريض غير مسجَّل', "Patient's phone number is not on file"));
   };
@@ -197,8 +200,8 @@ export default function ResultsPage() {
 
   const sendRadiologyToPatient = (r) => {
     const msg = L(
-      `مرحباً ${r.patientName}، تقرير ${r.modality} جاهز. الانطباع: ${r.impression || 'راجعي قسم الأشعة'}. صحّتنا العراق.`,
-      `Hello ${r.patientName}, your ${r.modality} report is ready. Impression: ${r.impression || 'please visit radiology'}. SIHATUNA IRAQ.`
+      `مرحباً ${r.patientName}، تقرير ${r.modality} جاهز. الانطباع: ${r.impression || 'راجعي قسم الأشعة'}. ${appNameAr}.`,
+      `Hello ${r.patientName}, your ${r.modality} report is ready. Impression: ${r.impression || 'please visit radiology'}. ${appNameEn.toUpperCase()}.`
     );
     if (!openWhatsApp(selectedPatient.phone, msg)) alert(L('رقم هاتف المريض غير مسجَّل', "Patient's phone number is not on file"));
   };
@@ -242,7 +245,7 @@ export default function ResultsPage() {
         ],
       })),
     ];
-    printCombined(L(`تقرير نتائج مجمَّع — ${selectedPatient.name}`, `Combined Results Report — ${selectedPatient.name}`), items);
+    printCombined(L(`تقرير نتائج مجمَّع — ${selectedPatient.name}`, `Combined Results Report — ${selectedPatient.name}`), items, appNameAr);
   };
 
   const buildCombinedMessage = (forDoctorName) => {
@@ -251,7 +254,7 @@ export default function ResultsPage() {
     const header = forDoctorName
       ? L(`د. ${forDoctorName}، نتائج المريض ${selectedPatient.name}:`, `Dr. ${forDoctorName}, results for patient ${selectedPatient.name}:`)
       : L(`مرحباً ${selectedPatient.name}، نتائجك جاهزة:`, `Hello ${selectedPatient.name}, your results are ready:`);
-    const footer = forDoctorName ? '' : L('\nصحّتنا العراق.', '\nSIHATUNA IRAQ.');
+    const footer = forDoctorName ? '' : L(`\n${appNameAr}.`, `\n${appNameEn.toUpperCase()}.`);
     return [header, ...labLines, ...radLines].join('\n') + footer;
   };
 
@@ -291,7 +294,7 @@ export default function ResultsPage() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ marginBottom: 16 }}>{L('نتائج التحاليل والأشعة', 'Lab & Radiology Results')}</h2>
+      <PageBanner icon="🧪" title={L('نتائج التحاليل والأشعة', 'Lab & Radiology Results')} subtitle={L('عرض وطباعة وإرسال نتائج المرضى', "View, print, and send patients' results")} gradient={BANNER_GRADIENT} />
 
       <div style={{ position: 'relative', maxWidth: 420, marginBottom: 20 }}>
         <input

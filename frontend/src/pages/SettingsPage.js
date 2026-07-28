@@ -13,9 +13,11 @@
 // ══════════════════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import { useT } from '../translations';
-import { useApp, ALL_PAGES } from '../contexts/AppContext';
-import { api, SERVER_BASE_URL } from '../api';
+import { useApp, ALL_PAGES, DEFAULT_APP_NAME_AR, DEFAULT_APP_NAME_EN } from '../contexts/AppContext';
+import { api, SERVER_BASE_URL, apiUploadFile } from '../api';
 import BackupDestinationModal from '../components/BackupDestinationModal';
+import AppLogo from '../components/AppLogo';
+import PageBanner from '../components/PageBanner';
 import { getDefaultHeaderText, getDefaultFooterText } from '../utils/printDefaults';
 const ROLES = ['admin','doctor','nurse','receptionist','accountant','hr'];
 const ROLE_LABELS = (tr) => ({
@@ -30,7 +32,7 @@ const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', 
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
   const [tab, setTab] = useState('users');
   const [showModal, setShowModal] = useState(false);
@@ -49,6 +51,99 @@ export default function SettingsPage() {
   const [hospForm, setHospForm] = useState({ nameAr:'', nameEn:'', address:'', phone:'', enabledPages: [] });
   const [resetPasswordResult, setResetPasswordResult] = useState(null); // { userName, tempPassword }
   const [resettingUserId, setResettingUserId] = useState(null);
+
+  // ── شعار المنظمة (Logo) ──────────────────────────────────────────────────
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoRemoving, setLogoRemoving] = useState(false);
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024; // 2MB — matches the backend's own limit (defense in depth, and a faster error for the user)
+  const LOGO_ALLOWED_EXT = ['.png', '.jpg', '.jpeg'];
+
+  const handleLogoFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) { setLogoFile(null); return; }
+    const ext = `.${f.name.split('.').pop().toLowerCase()}`;
+    if (!LOGO_ALLOWED_EXT.includes(ext)) {
+      showToast(lang === 'ar' ? 'الشعار لازم يكون PNG أو JPG' : 'Logo must be a PNG or JPG image', 'error');
+      e.target.value = '';
+      setLogoFile(null);
+      return;
+    }
+    if (f.size > LOGO_MAX_BYTES) {
+      showToast(lang === 'ar' ? 'حجم الملف أكبر من 2 ميغابايت' : 'File is larger than 2MB', 'error');
+      e.target.value = '';
+      setLogoFile(null);
+      return;
+    }
+    setLogoFile(f);
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile) return;
+    setLogoUploading(true);
+    try {
+      await apiUploadFile('/branding/logo', logoFile);
+      await reloadLogo();
+      setLogoFile(null);
+      showToast(lang === 'ar' ? 'تم رفع الشعار بنجاح' : 'Logo uploaded successfully', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setLogoUploading(false);
+  };
+
+  const handleLogoRemove = async () => {
+    if (!(await confirmDialog(lang === 'ar' ? 'إزالة الشعار الحالي والرجوع للأيقونة الافتراضية؟' : 'Remove the current logo and revert to the default icon?'))) return;
+    setLogoRemoving(true);
+    try {
+      await api.delete('/branding/logo');
+      await reloadLogo();
+      showToast(lang === 'ar' ? 'تمت إزالة الشعار' : 'Logo removed', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setLogoRemoving(false);
+  };
+
+  // ── اسم النظام القابل للتعديل (App Name) ────────────────────────────────
+  // مسودة محلية منفصلة عن appNameAr/appNameEn (القيم المُطبَّقة فعلياً) —
+  // بس تُحفَظ فعلياً لما تضغط "حفظ"، نفس نمط باقي حقول هذا التبويب (لا حفظ
+  // تلقائي بمجرد الكتابة).
+  const [appNameForm, setAppNameForm] = useState({ ar: '', en: '' });
+  const [appNameSaving, setAppNameSaving] = useState(false);
+  const [appNameResetting, setAppNameResetting] = useState(false);
+  // تُهيَّأ من القيمة الحالية أول ما نفتح تبويب "اسم النظام" (لا تُعاد التهيئة
+  // بعدها كل رندر، حتى ما تُمحى كتابة المستخدم وهو لسا يعدّل)
+  React.useEffect(() => {
+    if (tab === 'appname') setAppNameForm({ ar: appNameAr, en: appNameEn });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const handleAppNameSave = async () => {
+    setAppNameSaving(true);
+    try {
+      await api.put('/branding/app-name', { nameAr: appNameForm.ar, nameEn: appNameForm.en });
+      await reloadAppName();
+      showToast(lang === 'ar' ? 'تم حفظ اسم النظام' : 'App name saved', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setAppNameSaving(false);
+  };
+
+  const handleAppNameReset = async () => {
+    if (!(await confirmDialog(lang === 'ar' ? 'الرجوع للاسم الافتراضي "صحتنا عراق"؟' : 'Revert to the default name "SIHATUNA IRAQ"?'))) return;
+    setAppNameResetting(true);
+    try {
+      await api.delete('/branding/app-name');
+      await reloadAppName();
+      setAppNameForm({ ar: DEFAULT_APP_NAME_AR, en: DEFAULT_APP_NAME_EN });
+      showToast(lang === 'ar' ? 'تمت إعادة اسم النظام للافتراضي' : 'App name reset to default', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setAppNameResetting(false);
+  };
 
   const openAdd = () => { setEditing(null); setForm(emptyUser); setShowModal(true); };
   const openEdit = (u) => { setEditing(u); setForm({ ...u, password: u.password || '' }); setShowModal(true); };
@@ -123,6 +218,8 @@ export default function SettingsPage() {
     { key: 'appearance', labelKey: 'set_tab_appearance',  icon: '🎨' },
     { key: 'system',     labelKey: 'set_tab_system',      icon: '⚙️' },
     { key: 'print',      labelKey: 'set_tab_print',       icon: '🖨️' },
+    ...(user?.role === 'admin' ? [{ key: 'logo', labelKey: 'set_tab_logo', icon: '🖼️' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'appname', labelKey: 'set_tab_appname', icon: '🏷️' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
@@ -366,13 +463,7 @@ export default function SettingsPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background:'linear-gradient(135deg,#0f172a,#1e293b)', borderRadius:16, padding:'24px 28px', marginBottom:24, color:'#fff', display:'flex', alignItems:'center', gap:16 }}>
-        <span style={{ fontSize:36 }}>⚙️</span>
-        <div>
-          <h1 style={{ margin:0, fontSize:22 }}>{tr('set_title')}</h1>
-          <p style={{ margin:'4px 0 0', opacity:0.7, fontSize:13 }}>{tr('set_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner icon="⚙️" title={tr('set_title')} subtitle={tr('set_subtitle')} gradient="linear-gradient(135deg,#0f172a,#1e293b)" />
 
       <div style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:20 }}>
         {/* Sidebar tabs */}
@@ -510,7 +601,6 @@ export default function SettingsPage() {
               <h3 style={{ margin:'0 0 20px' }}>{tr('set_title')}</h3>
               <div style={{ display:'grid', gap:14 }}>
                 {[
-                  { labelKey:'set_hospital_name', val:'مستشفى البصرة التعليمي' },
                   { labelKey:'set_license_no', val:'MOH-2024-001' },
                   { labelKey:'set_location', val:'البصرة، العراق' },
                   { labelKey:'set_official_email', val:'info@basrahospital.iq' },
@@ -584,7 +674,7 @@ export default function SettingsPage() {
                       dir={lang === 'ar' ? 'rtl' : 'ltr'}
                       value={printSettings.headerText}
                       onChange={e => setPrintSettings(p => ({ ...p, headerText: e.target.value }))}
-                      placeholder={getDefaultHeaderText(tr)}
+                      placeholder={getDefaultHeaderText(tr, appName)}
                       className="form-control"
                     />
                   </div>
@@ -599,6 +689,89 @@ export default function SettingsPage() {
                       className="form-control"
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── LOGO TAB (admin-only, same gating as hospitals/backups/recycle below) ── */}
+          {tab === 'logo' && user?.role === 'admin' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🖼️ {tr('set_tab_logo')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('logo_section_desc')}</p>
+
+              <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:24 }}>
+                <div>
+                  <div style={{ fontSize:11, color:'var(--text-secondary)', marginBottom:8 }}>{tr('logo_current_preview')}</div>
+                  <div style={{ padding:14, borderRadius:12, background:'var(--bg-secondary)', border:'1px solid var(--border)', display:'inline-flex' }}>
+                    <AppLogo size={72} radius={12} fontSize={34} />
+                  </div>
+                </div>
+                {logoUrl && (
+                  <button onClick={handleLogoRemove} disabled={logoRemoving} className="btn btn-outline" style={{ color:'#ef4444', borderColor:'#ef4444', alignSelf:'flex-end' }}>
+                    🗑️ {logoRemoving ? (lang==='ar'?'جارٍ الإزالة...':'Removing...') : tr('logo_remove_btn')}
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="form-label">{tr('logo_upload_label')}</label>
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  onChange={handleLogoFileChange}
+                  style={{ width:'100%', padding:8, borderRadius:8, border:'1.5px solid var(--border)', background:'var(--bg-primary)', color:'var(--text-primary)' }}
+                />
+                <p style={{ fontSize:11, color:'var(--text-secondary)', margin:'6px 0 0' }}>{tr('logo_upload_hint')}</p>
+                <button
+                  onClick={handleLogoUpload}
+                  disabled={!logoFile || logoUploading}
+                  className="btn btn-primary"
+                  style={{ marginTop:12 }}
+                >
+                  📤 {logoUploading ? (lang==='ar'?'جارٍ الرفع...':'Uploading...') : tr('logo_upload_btn')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── APP NAME TAB (admin-only) — moved out of the Logo tab so it's
+               fully visible without scrolling; was previously a sub-section
+               below the logo upload UI and got cut off below the fold. ── */}
+          {tab === 'appname' && user?.role === 'admin' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🏷️ {tr('set_tab_appname')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:480 }}>{tr('app_name_section_desc')}</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:14, maxWidth:420 }}>
+                <div>
+                  <label className="form-label">{tr('app_name_label_ar')}</label>
+                  <input
+                    type="text"
+                    dir="rtl"
+                    value={appNameForm.ar}
+                    onChange={e => setAppNameForm(p => ({ ...p, ar: e.target.value }))}
+                    placeholder={DEFAULT_APP_NAME_AR}
+                    className="form-control"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">{tr('app_name_label_en')}</label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={appNameForm.en}
+                    onChange={e => setAppNameForm(p => ({ ...p, en: e.target.value }))}
+                    placeholder={DEFAULT_APP_NAME_EN}
+                    className="form-control"
+                  />
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={handleAppNameSave} disabled={appNameSaving} className="btn btn-primary">
+                    💾 {appNameSaving ? (lang==='ar'?'جارٍ الحفظ...':'Saving...') : tr('app_name_save_btn')}
+                  </button>
+                  <button onClick={handleAppNameReset} disabled={appNameResetting} className="btn btn-outline">
+                    ↺ {appNameResetting ? (lang==='ar'?'جارٍ الإعادة...':'Resetting...') : tr('app_name_reset_btn')}
+                  </button>
                 </div>
               </div>
             </div>
@@ -839,7 +1012,7 @@ export default function SettingsPage() {
             <div>
               <div className="card" style={{ marginBottom:16, textAlign:'center', padding:'40px 20px' }}>
                 <div style={{ width:80, height:80, borderRadius:'50%', background:'linear-gradient(135deg,#1a6bab,#0d3460)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 16px' }}>🏥</div>
-                <h2 style={{ margin:'0 0 6px', fontSize:24 }}>SIHATUNA IRAQ</h2>
+                <h2 style={{ margin:'0 0 6px', fontSize:24 }}>{appNameEn.toUpperCase()}</h2>
                 <div style={{ color:'var(--text-secondary)', fontSize:14, marginBottom:4 }}>{tr('app_subtitle')}</div>
                 <div style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', display:'inline-block', padding:'3px 14px', borderRadius:12, fontSize:12, fontWeight:700 }}>{tr('set_version')} v3.0</div>
               </div>

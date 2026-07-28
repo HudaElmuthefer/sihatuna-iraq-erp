@@ -9,6 +9,12 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api
 // localhost:3000/uploads/... (غير موجود بالفرونت إند، فيرجّعك الموجّه
 // [React Router] للصفحة الرئيسية بصمت) بدل الملف الفعلي على الباك إند.
 export const SERVER_BASE_URL = API_BASE_URL.replace('/api', '');
+// Constant URL that always serves whichever logo is currently uploaded (see
+// backend/routes/brandingRoutes.js) — deliberately public/no-auth so it can
+// render on the login page and the print header. Callers append a cache-bust
+// query param (e.g. `?v=${updatedAt}`) so replacing the logo doesn't keep
+// showing a stale cached image.
+export const LOGO_IMAGE_URL = `${SERVER_BASE_URL}/api/branding/logo`;
 
 // ── إصلاح أمني ────────────────────────────────────────────────────────────────
 // كان التوكن يُقرأ من localStorage ويُرسَل يدوياً بـ Authorization header —

@@ -5,7 +5,10 @@ import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #334155 0%, #64748b 100%)';
 
 const CATEGORIES = {
   radiology:   { ar:'أشعة وتصوير',   en:'Radiology',   icon:'📡', color:'#1a6bab' },
@@ -186,11 +189,11 @@ export default function AssetsPage() {
   const S = {
     page:{padding:24,direction:dir},
     stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20},
-    card:(c)=>({background:'var(--bg-secondary)',borderRadius:12,padding:'14px 18px',borderTop:`3px solid ${c}`}),
+    card:(c)=>({background:'var(--bg-card)',borderRadius:12,padding:'14px 18px',borderTop:`3px solid ${c}`}),
     tb:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'},
     inp:{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-secondary)',color:'var(--text-primary)',fontSize:13},
     btn:(c='#1a6bab')=>({padding:'8px 16px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
-    aCard:{background:'var(--bg-secondary)',borderRadius:12,padding:18,border:'1px solid var(--border)'},
+    aCard:{background:'var(--bg-card)',borderRadius:12,padding:18,border:'1px solid var(--border)'},
     badge:(c,bg)=>({display:'inline-block',padding:'2px 9px',borderRadius:20,fontSize:10,fontWeight:600,color:c,background:bg}),
     modal:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999},
     mbox:{background:'var(--bg-primary)',borderRadius:16,padding:28,width:'100%',maxWidth:580,maxHeight:'90vh',overflowY:'auto',direction:dir},
@@ -203,19 +206,18 @@ export default function AssetsPage() {
 
   return (
     <div style={S.page}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <div>
-          <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>{lang==='ar'?'🏗 الأصول والأجهزة الطبية':'🏗 Medical Assets & Equipment'}</h1>
-          <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة وتتبع الأصول الثابتة والأجهزة الطبية وصيانتها':'Track and manage fixed assets, medical equipment and maintenance'}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
-            📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}
-          </button>
-          <ExcelExportButton apiName="assets" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ إضافة أصل':'+ Add Asset'}</button>
-        </div>
-      </div>
+      <PageBanner
+        icon="🏗"
+        title={lang==='ar'?'الأصول والأجهزة الطبية':'Medical Assets & Equipment'}
+        subtitle={lang==='ar'?'إدارة وتتبع الأصول الثابتة والأجهزة الطبية وصيانتها':'Track and manage fixed assets, medical equipment and maintenance'}
+        gradient={BANNER_GRADIENT}
+      >
+        <button style={{ ...S.btn(), background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowImport(true)}>
+          📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}
+        </button>
+        <ExcelExportButton apiName="assets" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button style={{ ...S.btn(), background: '#fff', color: '#334155' }} onClick={openAdd}>{lang==='ar'?'+ إضافة أصل':'+ Add Asset'}</button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

@@ -3,8 +3,11 @@ import { useT } from '../translations';
 import { useApp, translateDays } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
 import { FaFileExcel } from 'react-icons/fa';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg,#0f1923,#1a2940)';
 
 const emptyDept = { name: '', nameEn: '', icon: '🏥', description: '', head: '', color: '#1a6bab', status: 'active' };
 
@@ -250,33 +253,24 @@ export default function DepartmentsPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg,#0f1923,#1a2940)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>🏢</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{tr('dept_management')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.7, fontSize: 13 }}>{tr('dept_subtitle')}</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => setShowImport(true)} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <FaFileExcel /> {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
-          </button>
-          <button onClick={loadDefaultDepartments} disabled={seeding} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            🏥 {seeding ? (lang === 'ar' ? 'جارٍ الإضافة...' : 'Adding...') : (lang === 'ar' ? 'تحميل الأقسام الافتراضية' : 'Load Default Departments')}
-          </button>
-          <button onClick={syncDoctorsToDepartments} disabled={syncingDoctors} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            🔗 {syncingDoctors ? (lang === 'ar' ? 'جارٍ الربط...' : 'Linking...') : (lang === 'ar' ? 'ربط الأطباء بأقسامهم' : 'Link Doctors to Departments')}
-          </button>
-          <button onClick={openSmartLink} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            🧭 {lang === 'ar' ? 'ربط ذكي حسب التخصص' : 'Smart Link by Specialization'}
-          </button>
-          <ExcelExportButton apiName="departments" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button onClick={openAdd} style={{ background: '#fff', color: '#0f1923', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-            ＋ {tr('dept_add')}
-          </button>
-        </div>
-      </div>
+      <PageBanner icon="🏢" title={tr('dept_management')} subtitle={tr('dept_subtitle')} gradient={BANNER_GRADIENT}>
+        <button onClick={() => setShowImport(true)} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FaFileExcel /> {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
+        </button>
+        <button onClick={loadDefaultDepartments} disabled={seeding} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          🏥 {seeding ? (lang === 'ar' ? 'جارٍ الإضافة...' : 'Adding...') : (lang === 'ar' ? 'تحميل الأقسام الافتراضية' : 'Load Default Departments')}
+        </button>
+        <button onClick={syncDoctorsToDepartments} disabled={syncingDoctors} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          🔗 {syncingDoctors ? (lang === 'ar' ? 'جارٍ الربط...' : 'Linking...') : (lang === 'ar' ? 'ربط الأطباء بأقسامهم' : 'Link Doctors to Departments')}
+        </button>
+        <button onClick={openSmartLink} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          🧭 {lang === 'ar' ? 'ربط ذكي حسب التخصص' : 'Smart Link by Specialization'}
+        </button>
+        <ExcelExportButton apiName="departments" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)' }} />
+        <button onClick={openAdd} style={{ background: '#fff', color: '#0f1923', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          ＋ {tr('dept_add')}
+        </button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

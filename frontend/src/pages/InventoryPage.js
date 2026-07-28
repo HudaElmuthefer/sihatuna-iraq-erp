@@ -6,7 +6,10 @@ import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #78350f 0%, #b45309 100%)';
 
 const STATUS_CONFIG = {
   active: { label: 'متوفر', labelEn: 'Available', color: '#10b981', bg: '#d1fae5' },
@@ -119,14 +122,14 @@ export default function InventoryPage() {
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 },
     title: { fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 },
     stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 20 },
-    statCard: (c) => ({ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', borderTop: `3px solid ${c}` }),
+    statCard: (c) => ({ background: 'var(--bg-card)', borderRadius: 12, padding: '16px 20px', borderTop: `3px solid ${c}` }),
     statNum: { fontSize: 26, fontWeight: 700, color: 'var(--text-primary)' },
     statLabel: { fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 },
     toolbar: { display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' },
     input: { padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13 },
     select: { padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13 },
     btn: (c='#1a6bab') => ({ padding: '8px 16px', background: c, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }),
-    table: { width: '100%', borderCollapse: 'collapse', background: 'var(--bg-secondary)', borderRadius: 12, overflow: 'hidden' },
+    table: { width: '100%', borderCollapse: 'collapse', background: 'var(--bg-card)', borderRadius: 12, overflow: 'hidden' },
     th: { padding: '12px 14px', textAlign: dir === 'rtl' ? 'right' : 'left', background: 'var(--bg-tertiary)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' },
     td: { padding: '12px 14px', borderBottom: '1px solid var(--border)', fontSize: 13, color: 'var(--text-primary)' },
     badge: (c, bg) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: c, background: bg }),
@@ -142,19 +145,18 @@ export default function InventoryPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.header}>
-        <div>
-          <h1 style={S.title}>📦 {lang === 'ar' ? 'المخزون والمستودعات' : 'Inventory & Warehouse'}</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '4px 0 0' }}>{lang === 'ar' ? 'إدارة الأدوية والمستلزمات والمعدات' : 'Manage medicines, supplies and equipment'}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
-            📊 {L('استيراد من Excel', 'Import from Excel')}
-          </button>
-          <ExcelExportButton apiName="inventory" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btn()} onClick={openAdd}>+ {L('إضافة صنف','Add Item')}</button>
-        </div>
-      </div>
+      <PageBanner
+        icon="📦"
+        title={lang === 'ar' ? 'المخزون والمستودعات' : 'Inventory & Warehouse'}
+        subtitle={lang === 'ar' ? 'إدارة الأدوية والمستلزمات والمعدات' : 'Manage medicines, supplies and equipment'}
+        gradient={BANNER_GRADIENT}
+      >
+        <button style={{ ...S.btn(), background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowImport(true)}>
+          📊 {L('استيراد من Excel', 'Import from Excel')}
+        </button>
+        <ExcelExportButton apiName="inventory" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button style={{ ...S.btn(), background: '#fff', color: '#78350f' }} onClick={openAdd}>+ {L('إضافة صنف','Add Item')}</button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

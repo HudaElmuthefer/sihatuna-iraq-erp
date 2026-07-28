@@ -454,7 +454,7 @@ export function ERPDashboardBanner({ inventory, procurement, projects, documents
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
         {erp.map(({ icon, label, value, color, path }) => (
           <a key={path} href={path} style={{ textDecoration: 'none' }}>
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', borderTop: `3px solid ${color}`, transition: 'box-shadow 0.2s' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '12px 14px', borderTop: `3px solid ${color}`, transition: 'box-shadow 0.2s' }}>
               <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{label}</div>

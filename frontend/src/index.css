@@ -148,7 +148,15 @@ a { text-decoration: none; color: inherit; }
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   overflow: hidden;
-  transition: var(--transition);
+  /* Scoped to box-shadow only (the one thing that actually changes on
+     :hover below) — NOT `transition: var(--transition)` (all 0.3s...).
+     Confirmed via live testing: transitioning `background`/`border-color`
+     when they're driven by CSS custom properties (--bg-card/--border) can
+     get stuck showing the pre-toggle light-mode value after a dark-mode
+     switch, because the browser treats the custom-property change as an
+     attempted (but not properly completing) transition instead of an
+     instant snap. Scoping to box-shadow avoids the whole bug class. */
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card:hover { box-shadow: var(--shadow-lg); }
 

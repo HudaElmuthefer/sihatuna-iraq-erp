@@ -76,7 +76,7 @@ const translations = {
   status_female:        { ar: 'أنثى',            en: 'Female' },
 
   // ─── الصفحة الرئيسية / Dashboard ────────────────────────────────────────────
-  dash_welcome:         { ar: 'مرحباً بك في تطبيق صحتنا العراقي',  en: 'Welcome to SIHATUNA IRAQ ERP' },
+  dash_welcome:         { ar: 'مرحباً بك في تطبيق صحتنا عراقي',  en: 'Welcome to SIHATUNA IRAQ ERP' },
   dash_subtitle:        { ar: 'حيث يمكنك الوصول إلى الخدمات الصحية بشكل سهل وسريع', en: 'Access health services easily and quickly' },
   dash_total_patients:  { ar: 'إجمالي المرضى',   en: 'Total Patients' },
   dash_active_doctors:  { ar: 'الأطباء النشطون', en: 'Active Doctors' },
@@ -308,6 +308,19 @@ const translations = {
   print_options_title:  { ar: 'خيارات هذي الطبعة',        en: 'Options for this print' },
   print_options_desc:   { ar: 'تنطبق هذي الخيارات على هذي الطبعة فقط، بدون تغيير الإعدادات الافتراضية العامة.', en: 'These options apply to this print only, without changing the global defaults.' },
   print_confirm:        { ar: 'طباعة',                    en: 'Print' },
+  set_tab_logo:         { ar: 'الشعار',                   en: 'Logo' },
+  set_tab_appname:      { ar: 'اسم النظام',               en: 'System Name' },
+  logo_section_desc:    { ar: 'الشعار المرفوع هنا يظهر تلقائياً بالترويسة الجانبية بكل الصفحات، بصفحة تسجيل الدخول، بترويسة كل صفحة، وبترويسة الطباعة (لو فُعِّل خيار الشعار). بدون رفع شعار، تظهر الأيقونة الافتراضية بكل هذي الأماكن.', en: 'The logo uploaded here automatically appears in the sidebar header on every page, on the login page, in every page banner, and in the print header (when the logo option is enabled there). Without a custom logo, the default icon appears in all these places.' },
+  logo_current_preview: { ar: 'المعاينة الحالية',          en: 'Current preview' },
+  logo_remove_btn:      { ar: 'إزالة الشعار',              en: 'Remove logo' },
+  logo_upload_label:    { ar: 'رفع/استبدال الشعار',        en: 'Upload / replace logo' },
+  logo_upload_hint:     { ar: 'PNG أو JPG، بحجم أقل من 2 ميغابايت.', en: 'PNG or JPG, under 2MB.' },
+  logo_upload_btn:      { ar: 'رفع الشعار',                en: 'Upload logo' },
+  app_name_section_desc:  { ar: 'اسم النظام المخصَّص هنا يظهر تلقائياً بالسايدبار، صفحة تسجيل الدخول، الشريط العلوي، ترويسة الطباعة، وعنوان تبويب المتصفح. اتركيه فارغاً لاستخدام الاسم الافتراضي "صحتنا عراق" / "SIHATUNA IRAQ".', en: 'The custom app name here automatically appears in the sidebar, login page, top info bar, print header, and browser tab title. Leave blank to use the default name "صحتنا عراق" / "SIHATUNA IRAQ".' },
+  app_name_label_ar:      { ar: 'اسم النظام (عربي)',       en: 'App Name (Arabic)' },
+  app_name_label_en:      { ar: 'اسم النظام (إنكليزي)',    en: 'App Name (English)' },
+  app_name_save_btn:      { ar: 'حفظ الاسم',               en: 'Save name' },
+  app_name_reset_btn:     { ar: 'إعادة للاسم الافتراضي',   en: 'Reset to default' },
   recycle_empty:        { ar: 'سلة المحذوفات فارغة',      en: 'Recycle bin is empty' },
   recycle_restore:      { ar: 'استرجاع',                  en: 'Restore' },
   recycle_purge:        { ar: 'حذف نهائي',                en: 'Delete permanently' },
@@ -534,7 +547,7 @@ const translations = {
   rep_doctor_count:   { ar: 'طبيب', en: 'doctor(s)' },
 
   // ─── Layout ──────────────────────────────────────────────────────────────────
-  app_name:           { ar: 'صحتنا العراق ERP', en: 'Sihatuna Iraq ERP' },
+  app_name:           { ar: 'صحتنا عراق ERP', en: 'Sihatuna Iraq ERP' },
   app_subtitle:       { ar: 'نظام ERP الصحي المتكامل', en: 'Integrated Health ERP System' },
 
   // ─── Settings extra ──────────────────────────────────────────────────────────
@@ -550,7 +563,6 @@ const translations = {
   set_edit_user:      { ar: 'تعديل مستخدم', en: 'Edit User' },
   set_email:          { ar: 'البريد الإلكتروني', en: 'Email' },
   set_role:           { ar: 'الدور', en: 'Role' },
-  set_hospital_name:  { ar: 'اسم المستشفى', en: 'Hospital Name' },
   set_location:       { ar: 'الموقع', en: 'Location' },
   set_sys_name:       { ar: 'نظام إدارة المعلومات الصحية المتكامل', en: 'Integrated Health Information Management System' },
   set_version:        { ar: 'الإصدار', en: 'Version' },
@@ -819,7 +831,7 @@ const translations = {
   auto_pair_94: { ar: "ملغي", en: "Cancelled" },
   auto_pair_95: { ar: "مكتمل", en: "Completed" },
   auto_pair_96: { ar: "وزارة الصحة العراقية", en: "Iraqi Ministry of Health" },
-  auto_pair_97: { ar: "مرحباً بك في تطبيق صحتنا العراقي", en: "Welcome to Sihatuna Iraq" },
+  auto_pair_97: { ar: "مرحباً بك في تطبيق صحتنا عراقي", en: "Welcome to Sihatuna Iraq" },
   auto_pair_98: { ar: "🔍 ابحث عن طبيبك", en: "🔍 Search for your doctor" },
   auto_pair_99: { ar: "إجمالي المرضى", en: "Total Patients" },
   auto_pair_100: { ar: "+12 هذا الشهر", en: "+12 this month" },
@@ -848,7 +860,7 @@ const translations = {
   auto_pair_123: { ar: "أدخل الأدوية للبدء", en: "Add drugs to start" },
   auto_pair_124: { ar: "يرجى ملء جميع الحقول", en: "Please fill all fields" },
   auto_pair_125: { ar: "خطأ في تسجيل الدخول", en: "Login failed" },
-  auto_pair_126: { ar: "صحتنا العراق", en: "Sihatuna Iraq" },
+  auto_pair_126: { ar: "صحتنا عراق", en: "Sihatuna Iraq" },
   auto_pair_127: { ar: "نظام الإدارة الصحية المتكامل", en: "Integrated Healthcare Management System" },
   auto_pair_128: { ar: "وزارة الصحة العراقية", en: "Iraqi Ministry of Health" },
   auto_pair_129: { ar: "اسم المستخدم", en: "Username" },

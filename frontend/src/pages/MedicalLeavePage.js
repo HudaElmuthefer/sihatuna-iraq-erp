@@ -8,6 +8,9 @@ import { api } from '../api';
 import { FaPlus, FaEdit, FaTrash, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)';
 
 const init = [
   { id: 1, employee: 'محمد علي حسن', employeeEn:'Mohammed Ali Hassan', dept: 'قسم الطوارئ', deptEn:'Emergency Dept.', type: 'sick', from: '2024-06-01', to: '2024-06-05', days: 5, diagnosis: 'التهاب حاد', diagnosisEn:'Acute Inflammation', doctor: 'د. أحمد الكريم', status: 'approved', notes: '' },
@@ -131,14 +134,7 @@ export default function MedicalLeavePage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>📋</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{tr('leave_management')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: 13 }}>{tr('leave_subtitle')}</p>
-          </div>
-        </div>
+      <PageBanner icon="📋" title={tr('leave_management')} subtitle={tr('leave_subtitle')} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
             📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
@@ -148,7 +144,7 @@ export default function MedicalLeavePage() {
             <FaPlus /> {tr('leave_add')}
           </button>
         </div>
-      </div>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

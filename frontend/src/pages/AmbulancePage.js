@@ -4,6 +4,13 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+// Not red — the page already uses solid red for its "Emergency Mission"
+// button (a meaningful, semantic urgency color that shouldn't be diluted or
+// clashed against by the banner itself), so the banner uses a neutral
+// gunmetal instead.
+const BANNER_GRADIENT = 'linear-gradient(135deg, #1f2937 0%, #374151 100%)';
 
 const VEH_STATUS = {
   available:   { ar:'متاحة',       en:'Available',    color:'#10b981', bg:'#d1fae5' },
@@ -233,10 +240,10 @@ export default function AmbulancePage() {
   const S = {
     page:  { padding: 24, direction: dir },
     stats: { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:20 },
-    sCard: c => ({ background:'var(--bg-secondary)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
+    sCard: c => ({ background:'var(--bg-card)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
     btn:   (c='#1a6bab') => ({ padding:'8px 16px', background:c, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }),
     smBtn: (c='#6b7280') => ({ padding:'4px 10px', background:c, color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:11, fontWeight:600 }),
-    vCard: { background:'var(--bg-secondary)', borderRadius:12, padding:18, border:'1px solid var(--border)' },
+    vCard: { background:'var(--bg-card)', borderRadius:12, padding:18, border:'1px solid var(--border)' },
     badge: (c, bg) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, fontSize:11, fontWeight:600, color:c, background:bg }),
     modal: { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 },
     mbox:  (w=500) => ({ background:'var(--bg-primary)', borderRadius:16, padding:28, width:'100%', maxWidth:w, maxHeight:'90vh', overflowY:'auto', direction:dir }),
@@ -248,29 +255,28 @@ export default function AmbulancePage() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>🚑 {L('الإسعاف والمركبات','Ambulance & Vehicles')}</h1>
-          <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة سيارات الإسعاف والمأموريات الطارئة','Manage ambulances and emergency missions')}</p>
-        </div>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {tab === 'vehicles' ? (
-            <>
-              <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
-              <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
-              <ExcelExportButton apiName="ambulanceVehicles" lang={lang} onError={(m) => showToast(m, 'error')} />
-              <button style={S.btn()} onClick={openAddVeh}>+ {L('مركبة','Vehicle')}</button>
-            </>
-          ) : (
-            <>
-              {/* ── إضافة: استيراد/تصدير Excel لتبويب المأموريات ── */}
-              <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowMissImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
-              <ExcelExportButton apiName="ambulanceMissions" lang={lang} onError={(m) => showToast(m, 'error')} />
-              <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageBanner
+        icon="🚑"
+        title={L('الإسعاف والمركبات','Ambulance & Vehicles')}
+        subtitle={L('إدارة سيارات الإسعاف والمأموريات الطارئة','Manage ambulances and emergency missions')}
+        gradient={BANNER_GRADIENT}
+      >
+        {tab === 'vehicles' ? (
+          <>
+            <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
+            <button style={{ ...S.btn(), background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
+            <ExcelExportButton apiName="ambulanceVehicles" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+            <button style={{ ...S.btn(), background: '#fff', color: '#1f2937' }} onClick={openAddVeh}>+ {L('مركبة','Vehicle')}</button>
+          </>
+        ) : (
+          <>
+            {/* ── إضافة: استيراد/تصدير Excel لتبويب المأموريات ── */}
+            <button style={{ ...S.btn(), background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowMissImport(true)}>📊 {L('استيراد من Excel','Import from Excel')}</button>
+            <ExcelExportButton apiName="ambulanceMissions" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+            <button style={S.btn('#ef4444')} onClick={() => openAddMiss()}>🆘 {L('مأمورية طارئة','Emergency Mission')}</button>
+          </>
+        )}
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

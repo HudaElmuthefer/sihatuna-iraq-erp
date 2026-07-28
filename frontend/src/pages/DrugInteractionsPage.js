@@ -3,6 +3,9 @@ import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { FaPlus, FaTimes, FaExclamationTriangle, FaCheckCircle, FaSearch, FaRobot, FaListAlt } from 'react-icons/fa';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #4c0519 0%, #9f1239 100%)';
 
 const drugDatabaseBilingual = [
   {ar:'أسبرين',en:'Aspirin'},{ar:'إيبوبروفين',en:'Ibuprofen'},{ar:'باراسيتامول',en:'Paracetamol'},
@@ -116,14 +119,7 @@ export default function DrugInteractionsPage() {
 
   return (
     <div className="page-content">
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #4c0519 0%, #9f1239 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ fontSize: 40 }}>💊</span>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22 }}>{tr('drug_title')}</h1>
-          <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: 13 }}>{tr('drug_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner icon="💊" title={tr('drug_title')} subtitle={tr('drug_subtitle')} gradient={BANNER_GRADIENT} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Left - Drug selector */}

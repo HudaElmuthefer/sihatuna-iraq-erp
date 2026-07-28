@@ -10,12 +10,14 @@
 // Most browsers/TVs support pressing F11 for true full-screen.
 import React, { useState, useEffect, useCallback } from 'react';
 import { SERVER_BASE_URL } from '../api';
+import { useApp } from '../contexts/AppContext';
 
 const REFRESH_MS = 4000;
 
 const DEPT_COLORS = ['#2a9d8f', '#e76f51', '#457b9d', '#e9c46a', '#8338ec', '#118ab2'];
 
 export default function QueueDisplayPage() {
+  const { appNameAr } = useApp();
   const [tickets, setTickets] = useState([]);
   const [now, setNow] = useState(new Date());
   const [flash, setFlash] = useState(null); // department name that just got a new "called" ticket, for a brief highlight
@@ -59,7 +61,7 @@ export default function QueueDisplayPage() {
       <header style={styles.header}>
         <div style={styles.headerTitle}>
           <span style={styles.logoDot} />
-          صحّتنا العراق — شاشة الطابور
+          {appNameAr} — شاشة الطابور
         </div>
         <div style={styles.clock}>
           {now.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

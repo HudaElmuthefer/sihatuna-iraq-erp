@@ -3,6 +3,9 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #881337 0%, #be123c 100%)';
 
 const FOLLOWUP_TYPES = {
   appointment:  { ar:'موعد',            en:'Appointment' },
@@ -52,7 +55,7 @@ export default function CRMPage() {
     tabBtn:(active)=>({padding:'10px 16px',border:'none',borderBottom:active?'3px solid #1a6bab':'3px solid transparent',background:'transparent',fontWeight:active?700:500,cursor:'pointer',fontSize:13,color:'var(--text-primary)'}),
     tb:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'},
     btn:(c='#1a6bab')=>({padding:'8px 16px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
-    table:{width:'100%',borderCollapse:'collapse',background:'var(--bg-secondary)',borderRadius:12,overflow:'hidden'},
+    table:{width:'100%',borderCollapse:'collapse',background:'var(--bg-card)',borderRadius:12,overflow:'hidden'},
     th:{padding:'10px 12px',textAlign:dir==='rtl'?'right':'left',background:'var(--bg-tertiary)',fontSize:11,fontWeight:600,color:'var(--text-secondary)',borderBottom:'1px solid var(--border)'},
     td:{padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:12,color:'var(--text-primary)'},
     badge:(c,bg)=>({display:'inline-block',padding:'2px 8px',borderRadius:20,fontSize:10,fontWeight:600,color:c,background:bg}),
@@ -112,14 +115,12 @@ export default function CRMPage() {
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>
-          {L('📇 إدارة علاقات المرضى (CRM)', '📇 Patient CRM')}
-        </h1>
-        <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>
-          {L('متابعات، تذكيرات، وحملات توعية صحية للمرضى', 'Follow-ups, reminders and awareness campaigns')}
-        </p>
-      </div>
+      <PageBanner
+        icon="📇"
+        title={L('إدارة علاقات المرضى (CRM)', 'Patient CRM')}
+        subtitle={L('متابعات، تذكيرات، وحملات توعية صحية للمرضى', 'Follow-ups, reminders and awareness campaigns')}
+        gradient={BANNER_GRADIENT}
+      />
 
       <div style={S.tabs}>
         <button style={S.tabBtn(tab==='followups')} onClick={() => setTab('followups')}>{L('المتابعات والتذكيرات','Follow-ups')}</button>

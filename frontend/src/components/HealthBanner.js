@@ -1,10 +1,11 @@
 import React from 'react';
 import { useApp } from '../contexts/AppContext';
+import AppLogo from './AppLogo';
 
 // بانر صحي عام — رسوم SVG توضيحية طبية (بدون شعارات حكومية رسمية أو صور أشخاص حقيقيين)
 // hero=true يعرض نسخة كبيرة (للوحة التحكم)، hero=false يعرض شريط رفيع (لبقية الصفحات)
 export default function HealthBanner({ hero = false }) {
-  const { lang } = useApp();
+  const { lang, appName } = useApp();
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 
   if (hero) {
@@ -39,20 +40,11 @@ export default function HealthBanner({ hero = false }) {
       background:'linear-gradient(90deg, rgba(26,107,171,0.12), rgba(20,160,133,0.12))',
       border:'1px solid rgba(26,107,171,0.2)',
     }}>
-      <StripeIcon />
+      <AppLogo size={24} radius={6} fontSize={13} />
       <span style={{ fontSize:12, fontWeight:600, color:'var(--text-primary)' }}>
-        {L('صحّتنا العراق — منصة صحية متكاملة لخدمة المرضى والكادر الطبي', 'Sihatuna Iraq — Integrated healthcare platform for patients and staff')}
+        {appName} — {L('منصة صحية متكاملة لخدمة المرضى والكادر الطبي', 'Integrated healthcare platform for patients and staff')}
       </span>
     </div>
-  );
-}
-
-function StripeIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="11" fill="#1a6bab" opacity="0.15" />
-      <path d="M12 6v12M6 12h12" stroke="#1a6bab" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
   );
 }
 

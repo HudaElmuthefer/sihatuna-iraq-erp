@@ -8,6 +8,9 @@ import { api } from '../api';
 import { FaPlus, FaEdit, FaTrash, FaSyringe, FaCheckCircle, FaClock } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #047857 100%)';
 
 const initialVaccinations = [
   { id: 1, patient: 'Ahmed Mohammed Ali', vaccine: 'COVID-19 (Pfizer)', dose: 'First Dose', date: '2024-01-15', nextDate: '2024-02-05', status: 'completed', provider: 'د. سالم المنصوري', notes: '' },
@@ -134,24 +137,15 @@ export default function VaccinationsPage() {
   return (
     <div className="page-content">
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>💉</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{tr("vac_management")}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: 13 }}>{tr("vac_subtitle")}</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
-          </button>
-          <ExcelExportButton apiName="vaccinations" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
-          <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            <FaPlus /> {tr('vac_add_btn')}
-          </button>
-        </div>
-      </div>
+      <PageBanner icon="💉" title={tr("vac_management")} subtitle={tr("vac_subtitle")} gradient={BANNER_GRADIENT}>
+        <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+          📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
+        </button>
+        <ExcelExportButton apiName="vaccinations" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+          <FaPlus /> {tr('vac_add_btn')}
+        </button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

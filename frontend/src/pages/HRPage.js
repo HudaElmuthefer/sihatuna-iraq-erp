@@ -15,6 +15,9 @@ import IncomingTab from './hr/IncomingTab';
 import RetiredTab from './hr/RetiredTab';
 import DossiersTab from './hr/DossiersTab';
 import BarcodeTab from './hr/BarcodeTab';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg,#1c1917,#44403c)';
 
 export default function HRPage() {
   const { lang } = useApp();
@@ -32,13 +35,7 @@ export default function HRPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background:'linear-gradient(135deg,#1c1917,#44403c)', borderRadius:16, padding:'24px 28px', marginBottom:24, color:'#fff', display:'flex', alignItems:'center', gap:16 }}>
-        <span style={{ fontSize:36 }}>👔</span>
-        <div>
-          <h1 style={{ margin:0, fontSize:22 }}>{L('hr_title')}</h1>
-          <p style={{ margin:'4px 0 0', opacity:0.7, fontSize:13 }}>{L('hr_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner icon="👔" title={L('hr_title')} subtitle={L('hr_subtitle')} gradient={BANNER_GRADIENT} />
       <div style={{ display:'flex', gap:6, marginBottom:24, flexWrap:'wrap' }}>
         {HR_TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{ padding:'9px 18px', borderRadius:10, border:`2px solid ${tab===t.key?'#1a6bab':'var(--border)'}`, background:tab===t.key?'#1a6bab':'var(--bg-secondary)', color:tab===t.key?'#fff':'var(--text-primary)', cursor:'pointer', fontSize:13, fontWeight:tab===t.key?700:400, display:'flex', alignItems:'center', gap:6, fontFamily:'inherit' }}>

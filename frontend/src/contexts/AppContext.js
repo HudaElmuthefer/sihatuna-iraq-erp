@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api, checkBackendReachable } from '../api';
+import { api, checkBackendReachable, LOGO_IMAGE_URL } from '../api';
 
 const AppContext = createContext(null);
 export { AppContext };
@@ -85,6 +85,20 @@ export const translateDays = (days, lang) => days.map(d => {
   const i = DAYS_AR.indexOf(d);
   return lang === 'en' && i >= 0 ? DAYS_EN[i] : d;
 });
+
+// ─── اسم النظام الافتراضي (قبل أي تخصيص من الإدارة) ───────────────────────
+// هذي القيمة بالضبط اللي يشوفها كل مستخدم اليوم بالسايدبار وصفحة تسجيل
+// الدخول — لازم تبقى كما هي حرفياً حتى ما يتغيّر شي لمن ما يلمس أحد هذا
+// الإعداد إطلاقاً (راجعي "App Name" بتبويب الشعار في SettingsPage.js).
+//
+// NOTE (English casing): the codebase has always shown the English name in
+// TWO different castings — Title Case "Sihatuna Iraq" (sidebar, login page)
+// and ALL CAPS "SIHATUNA IRAQ" (copyright footer, browser tab title, About
+// page). This constant matches the Title Case form; the three all-caps
+// spots apply `.toUpperCase()` at their own call site so every location's
+// unset default still renders pixel-identical to what it shows today.
+export const DEFAULT_APP_NAME_AR = 'صحتنا عراق';
+export const DEFAULT_APP_NAME_EN = 'Sihatuna Iraq';
 
 // ─── إعدادات الطباعة الافتراضية العامة ────────────────────────────────────
 // تُستخدم كقيمة أولية لكل زر طباعة بالنظام (PrintButton) ما لم يعدّلها
@@ -536,6 +550,74 @@ export function AppProvider({ children }) {
     }
   }, [user]);
   useEffect(() => { loadHospitalsAndMode(); }, [user?.id, loadHospitalsAndMode]);
+
+  // ── شعار المنظمة (Logo) ──────────────────────────────────────────────────
+  // يُحمَّل بدون انتظار تسجيل الدخول (بخلاف loadHospitalsAndMode أعلاه) —
+  // الشعار لازم يظهر بصفحة تسجيل الدخول نفسها، فمسار الجلب (logo-info) عام
+  // بالباك إند (بدون auth) قصداً. logoUrl = null يعني ما فيه شعار مرفوع بعد،
+  // فتستخدم كل الأماكن (Layout, LoginPage, PageBanner, PrintButton) الأيقونة
+  // الافتراضية.
+  //
+  // ملاحظة: الجلب يعيد المحاولة تلقائياً (مرة بعد فشل أول محاولة، ومرة أخرى
+  // عند كل تسجيل دخول) — إصلاح لمشكلة سابقة كانت تخلي الشعار عالقاً على
+  // الأيقونة الافتراضية لبقية الجلسة لو فشلت أول محاولة جلب لأي سبب عابر
+  // (الباك إند لسا يقلع، أو انقطاع شبكة لحظي عند أول تحميل).
+  const [logoInfo, setLogoInfo] = useState({ hasLogo: false, updatedAt: null });
+  const reloadLogo = useCallback(async () => {
+    try {
+      const info = await api.get('/branding/logo-info');
+      setLogoInfo(info);
+      return true;
+    } catch (err) {
+      console.warn('⚠️ Could not load logo info:', err.message);
+      return false;
+    }
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    reloadLogo().then(ok => {
+      if (!ok && !cancelled) setTimeout(() => { if (!cancelled) reloadLogo(); }, 2000);
+    });
+    return () => { cancelled = true; };
+  }, [reloadLogo, user?.id]);
+  // Cache-bust with updatedAt so replacing the logo doesn't keep showing the
+  // previous cached image at this same constant URL.
+  const logoUrl = logoInfo.hasLogo ? `${LOGO_IMAGE_URL}?v=${encodeURIComponent(logoInfo.updatedAt || '')}` : null;
+
+  // ── اسم النظام القابل للتعديل (App Name) ────────────────────────────────
+  // نفس نمط الشعار أعلاه بالضبط (جلب عام بدون auth + إعادة محاولة تلقائية عند
+  // الفشل/تسجيل الدخول) — لأنه أيضاً لازم يظهر بصفحة تسجيل الدخول قبل أي
+  // مصادقة. nameAr/nameEn = null يعني ما فيه تخصيص، فيُستخدَم الاسم الافتراضي
+  // (DEFAULT_APP_NAME_AR/EN) بدون أي تغيير عن سلوك النظام الحالي.
+  const [appNameOverride, setAppNameOverride] = useState({ nameAr: null, nameEn: null });
+  const reloadAppName = useCallback(async () => {
+    try {
+      const info = await api.get('/branding/app-name');
+      setAppNameOverride(info);
+      return true;
+    } catch (err) {
+      console.warn('⚠️ Could not load app name override:', err.message);
+      return false;
+    }
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    reloadAppName().then(ok => {
+      if (!ok && !cancelled) setTimeout(() => { if (!cancelled) reloadAppName(); }, 2000);
+    });
+    return () => { cancelled = true; };
+  }, [reloadAppName, user?.id]);
+  const appNameAr = appNameOverride.nameAr || DEFAULT_APP_NAME_AR;
+  const appNameEn = appNameOverride.nameEn || DEFAULT_APP_NAME_EN;
+  const appName = lang === 'ar' ? appNameAr : appNameEn;
+
+  // Keeps the browser tab title in sync with the (possibly customized) app
+  // name — index.html's static <title> is only the pre-JS default. Uppercased
+  // English half to match the original static title's "SIHATUNA IRAQ" casing
+  // exactly when nothing has been customized (see appNameEn's own comment —
+  // the stored/default value itself is Title Case, matching the sidebar and
+  // login page; this one spot has always been all-caps).
+  useEffect(() => { document.title = `${appNameAr} | ${appNameEn.toUpperCase()}`; }, [appNameAr, appNameEn]);
 
   const togglePaymentGateway = async (providerCode) => {
     const exists = paymentGateways.find(g => g.providerCode === providerCode);
@@ -1229,6 +1311,8 @@ export function AppProvider({ children }) {
       paymentGateways, togglePaymentGateway, savePaymentCredentials,
       fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin,
       hospitals, multiHospitalEnabled, reloadHospitalsAndMode: loadHospitalsAndMode,
+      logoUrl, reloadLogo,
+      appName, appNameAr, appNameEn, reloadAppName,
       viewingHospitalId, setViewingHospitalId, filterByViewingHospital,
       // Billing
       servicePrices: filterByViewingHospital(servicePrices), updateServicePrice, addServicePrice, deleteServicePrice,

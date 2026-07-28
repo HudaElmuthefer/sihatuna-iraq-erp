@@ -6,6 +6,9 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #7c2d12 0%, #c2410c 100%)';
 
 const STATUS_CONFIG = {
   pending:   { ar:'بانتظار الموافقة', en:'Pending Approval', color:'#f59e0b', bg:'#fef3c7' },
@@ -241,12 +244,12 @@ export default function ProcurementPage() {
     page: { padding:24, direction:dir },
     header: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 },
     stats: { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:14, marginBottom:20 },
-    sCard: c => ({ background:'var(--bg-secondary)', borderRadius:12, padding:'16px 20px', borderTop:`3px solid ${c}` }),
+    sCard: c => ({ background:'var(--bg-card)', borderRadius:12, padding:'16px 20px', borderTop:`3px solid ${c}` }),
     tb: { display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'center' },
     inp: { padding:'8px 12px', border:'1px solid var(--border)', borderRadius:8, background:'var(--bg-secondary)', color:'var(--text-primary)', fontSize:13 },
     btn: (c='#1a6bab') => ({ padding:'8px 16px', background:c, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }),
     smBtn: (c='#1a6bab') => ({ padding:'5px 12px', background:c, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:12, fontWeight:600 }),
-    card: { background:'var(--bg-secondary)', borderRadius:12, padding:18, marginBottom:12, border:'1px solid var(--border)' },
+    card: { background:'var(--bg-card)', borderRadius:12, padding:18, marginBottom:12, border:'1px solid var(--border)' },
     badge: (c,bg) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, fontSize:11, fontWeight:600, color:c, background:bg }),
     modal: { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 },
     mbox: { background:'var(--bg-primary)', borderRadius:16, padding:28, width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto', direction:dir },
@@ -257,19 +260,15 @@ export default function ProcurementPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.header}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>🛒 {L('المشتريات','Procurement')}</h1>
-          <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة أوامر الشراء والموردين','Manage purchase orders and suppliers')}</p>
-        </div>
+      <PageBanner icon="🛒" title={L('المشتريات','Procurement')} subtitle={L('إدارة أوامر الشراء والموردين','Manage purchase orders and suppliers')} gradient={BANNER_GRADIENT}>
         <div style={{ display:'flex', gap:8 }}>
-          <button style={{ ...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
+          <button style={{ padding:'8px 16px', background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => setShowImport(true)}>
             📊 {L('استيراد من Excel','Import from Excel')}
           </button>
-          <ExcelExportButton apiName="procurement" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btn()} onClick={openAdd}>+ {L('أمر شراء جديد','New PO')}</button>
+          <ExcelExportButton apiName="procurement" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} />
+          <button style={{ padding:'8px 16px', background:'#fff', color:'#c2410c', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={openAdd}>+ {L('أمر شراء جديد','New PO')}</button>
         </div>
-      </div>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal
@@ -371,7 +370,7 @@ export default function ProcurementPage() {
       })}
 
       {filtered.length===0 && (
-        <div style={{ textAlign:'center', padding:48, color:'var(--text-secondary)', background:'var(--bg-secondary)', borderRadius:12 }}>
+        <div style={{ textAlign:'center', padding:48, color:'var(--text-secondary)', background:'var(--bg-card)', borderRadius:12 }}>
           <div style={{ fontSize:36, marginBottom:8 }}>🛒</div>
           <p>{L('لا توجد أوامر شراء','No purchase orders found')}</p>
         </div>

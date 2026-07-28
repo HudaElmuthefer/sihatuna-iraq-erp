@@ -5,7 +5,10 @@ import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { FaFileExcel, FaTrash } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)';
 
 const MODALITIES = {
   xray:      { ar:'أشعة سينية',         en:'X-Ray',       icon:'📡', color:'#1a6bab' },
@@ -143,11 +146,11 @@ export default function RadiologyPage() {
   const S = {
     page:{padding:24,direction:dir},
     stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:20},
-    card:(c)=>({background:'var(--bg-secondary)',borderRadius:12,padding:'14px 18px',borderTop:`3px solid ${c}`}),
+    card:(c)=>({background:'var(--bg-card)',borderRadius:12,padding:'14px 18px',borderTop:`3px solid ${c}`}),
     tb:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'},
     inp:{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-secondary)',color:'var(--text-primary)',fontSize:13},
     btn:(c='#1a6bab')=>({padding:'7px 14px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
-    table:{width:'100%',borderCollapse:'collapse',background:'var(--bg-secondary)',borderRadius:12,overflow:'hidden'},
+    table:{width:'100%',borderCollapse:'collapse',background:'var(--bg-card)',borderRadius:12,overflow:'hidden'},
     th:{padding:'10px 12px',textAlign:dir==='rtl'?'right':'left',background:'var(--bg-tertiary)',fontSize:11,fontWeight:600,color:'var(--text-secondary)',borderBottom:'1px solid var(--border)'},
     td:{padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:12,color:'var(--text-primary)'},
     badge:(c,bg)=>({display:'inline-block',padding:'2px 8px',borderRadius:20,fontSize:10,fontWeight:600,color:c,background:bg}),
@@ -160,18 +163,17 @@ export default function RadiologyPage() {
 
   return (
     <div style={S.page}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <div>
-          <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>{lang==='ar'?'📡 الأشعة والتصوير الطبي':'📡 Radiology & Medical Imaging'}</h1>
-          <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{lang==='ar'?'إدارة الأشعة السينية • السونار • المفراس (CT) • الرنين المغناطيسي (MRI)':'Manage X-Ray • Ultrasound • CT Scan • MRI'}</p>
-        </div>
-        <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
-          <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={() => setShowImport(true)}>
-            <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
-          </button>
-          <button style={S.btn()} onClick={openAdd}>{lang==='ar'?'+ طلب تصوير جديد':'+ New Imaging Request'}</button>
-        </div>
-      </div>
+      <PageBanner
+        icon="📡"
+        title={lang==='ar'?'الأشعة والتصوير الطبي':'Radiology & Medical Imaging'}
+        subtitle={lang==='ar'?'إدارة الأشعة السينية • السونار • المفراس (CT) • الرنين المغناطيسي (MRI)':'Manage X-Ray • Ultrasound • CT Scan • MRI'}
+        gradient={BANNER_GRADIENT}
+      >
+        <button style={{...S.btn(), background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)'}} onClick={() => setShowImport(true)}>
+          <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+        </button>
+        <button style={{...S.btn(), background:'#fff', color:'#1e3a8a'}} onClick={openAdd}>{lang==='ar'?'+ طلب تصوير جديد':'+ New Imaging Request'}</button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

@@ -5,6 +5,9 @@ import { api } from '../api';
 import { FaPlus, FaTrash, FaBullhorn, FaCheckCircle, FaUserClock, FaExclamationTriangle } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
 
 const empty = { patientName: '', department: '', priority: 'normal', notes: '' };
 
@@ -109,7 +112,7 @@ export default function QueuePage() {
   const statusLabel = (s) => ({ waiting: L('بالانتظار', 'Waiting'), called: L('تم النداء', 'Called'), served: L('تم الاستلام', 'Served'), noshow: L('لم يحضر', 'No-show') }[s] || s);
 
   const TicketCard = ({ t }) => (
-    <div style={{ padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', border: t.priority === 'emergency' ? '2px solid #ef4444' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+    <div style={{ padding: 14, borderRadius: 10, background: 'var(--bg-card)', border: t.priority === 'emergency' ? '2px solid #ef4444' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8 }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20, fontWeight: 700 }}>#{t.ticketNo}</span>
@@ -139,21 +142,14 @@ export default function QueuePage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>🎫</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{L('إدارة الطابور', 'Queue Management')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('إصدار تذاكر ومتابعة دور المرضى', 'Issue tickets and manage patient turns')}</p>
-          </div>
-        </div>
+      <PageBanner icon="🎫" title={L('إدارة الطابور', 'Queue Management')} subtitle={L('إصدار تذاكر ومتابعة دور المرضى', 'Issue tickets and manage patient turns')} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => window.open('/queue-display', '_blank')} className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>🖥️ {L('فتح شاشة العرض', 'Open Display Screen')}</button>
           <button onClick={() => setShowImport(true)} className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>📊 {L('استيراد من Excel', 'Import from Excel')}</button>
           <ExcelExportButton apiName="queueTickets" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
           <button onClick={openAdd} className="btn" style={{ background: '#fff', color: '#047857', fontWeight: 600 }}><FaPlus /> {L('تذكرة جديدة', 'New Ticket')}</button>
         </div>
-      </div>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { useApp, translateDays } from '../contexts/AppContext';
 import { api } from '../api';
 import { FaSearch, FaCalendarAlt, FaUserMd, FaArrowRight } from 'react-icons/fa';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg,#0f2340 0%,#1a6bab 100%)';
 
 export default function PersonalServicesPage() {
   const navigate = useNavigate();
@@ -122,17 +125,14 @@ export default function PersonalServicesPage() {
   return (
     <div className="page-content">
       {/* Hero */}
-      <div style={{ background:'linear-gradient(135deg,#0f2340 0%,#1a6bab 100%)', borderRadius:16, padding:'32px', marginBottom:24, color:'#fff', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:-20, left:-20, fontSize:140, opacity:0.06 }}>🏥</div>
-        <h1 style={{ margin:'0 0 6px', fontSize:28, fontWeight:900 }}>{tr('svc_title')}</h1>
-        <p style={{ margin:'0 0 20px', opacity:0.75, fontSize:14 }}>{tr('svc_subtitle')}</p>
-        <div style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.12)', border:'2px solid rgba(255,255,255,0.25)', borderRadius:12, padding:'12px 16px', maxWidth:480, backdropFilter:'blur(8px)' }}>
+      <PageBanner icon="🏥" title={tr('svc_title')} subtitle={tr('svc_subtitle')} gradient={BANNER_GRADIENT}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.12)', border:'2px solid rgba(255,255,255,0.25)', borderRadius:12, padding:'10px 16px', minWidth:280, backdropFilter:'blur(8px)' }}>
           <FaSearch style={{ color:'rgba(255,255,255,0.6)', flexShrink:0 }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('svc_search')}
             style={{ background:'none', border:'none', outline:'none', color:'#fff', fontFamily:'inherit', fontSize:15, flex:1 }} />
           {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:16 }}>×</button>}
         </div>
-      </div>
+      </PageBanner>
 
       {/* Departments */}
       <div className="card" style={{ marginBottom:24 }}>
@@ -201,7 +201,7 @@ export default function PersonalServicesPage() {
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
             {filtered.map(doc => (
-              <div key={doc.id} style={{ padding:20, borderRadius:12, border:'1.5px solid var(--border)', background:'var(--bg-secondary)', display:'flex', flexDirection:'column', alignItems:'center', transition:'all 0.2s' }}
+              <div key={doc.id} style={{ padding:20, borderRadius:12, border:'1.5px solid var(--border)', background:'var(--bg-card)', display:'flex', flexDirection:'column', alignItems:'center', transition:'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='#1a6bab'; e.currentTarget.style.transform='translateY(-3px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.transform='none'; }}>
                 <div style={{ width:56, height:56, borderRadius:'50%', background:doc.color, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:700, marginBottom:10 }}>{doc.avatar}</div>
@@ -239,7 +239,7 @@ export default function PersonalServicesPage() {
               <button onClick={() => setBookModal(null)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer' }}>×</button>
             </div>
             <div className="modal-body">
-              <div style={{ display:'flex', gap:12, padding:14, background:'var(--bg-secondary)', borderRadius:10, marginBottom:16, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:12, padding:14, background:'var(--bg-card)', borderRadius:10, marginBottom:16, alignItems:'center' }}>
                 <div style={{ width:48, height:48, borderRadius:'50%', background:bookModal.color, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:700 }}>{bookModal.avatar}</div>
                 <div>
                   <div style={{ fontWeight:700 }}>{lang==="ar"?bookModal.name:bookModal.nameEn||bookModal.name}</div>

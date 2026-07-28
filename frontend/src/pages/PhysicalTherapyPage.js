@@ -7,6 +7,9 @@ import Pagination from '../components/Pagination';
 import { FaPlus, FaEdit, FaTrash, FaDumbbell, FaWalking } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)';
 
 const emptyEquip = { name: '', nameEn: '', type: '', status: 'available', notes: '' };
 const emptySession = { patientName: '', therapist: '', date: new Date().toISOString().split('T')[0], equipmentUsed: '', treatmentType: '', duration: '', notes: '', progress: '' };
@@ -116,19 +119,12 @@ export default function PhysicalTherapyPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>🏃</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{L('العلاج الطبيعي', 'Physical Therapy')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('إدارة الأجهزة وجلسات العلاج', 'Manage equipment and treatment sessions')}</p>
-          </div>
-        </div>
+      <PageBanner icon="🏃" title={L('العلاج الطبيعي', 'Physical Therapy')} subtitle={L('إدارة الأجهزة وجلسات العلاج', 'Manage equipment and treatment sessions')} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 20 }}>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700 }}>{stats.available}/{stats.equipCount}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{L('أجهزة متاحة', 'Available equipment')}</div></div>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700 }}>{stats.sessionsToday}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{L('جلسات اليوم', "Today's sessions")}</div></div>
         </div>
-      </div>
+      </PageBanner>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button onClick={() => setTab('sessions')} className={tab === 'sessions' ? 'btn btn-primary' : 'btn btn-outline'}>{L('الجلسات', 'Sessions')}</button>
@@ -147,7 +143,7 @@ export default function PhysicalTherapyPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
             {equipment.map(e => (
-              <div key={e.id} style={{ padding: 16, borderRadius: 10, background: 'var(--bg-secondary)' }}>
+              <div key={e.id} style={{ padding: 16, borderRadius: 10, background: 'var(--bg-card)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong><FaDumbbell /> {lang === 'ar' ? e.name : (e.nameEn || e.name)}</strong>
                   <div style={{ display: 'flex', gap: 8 }}>

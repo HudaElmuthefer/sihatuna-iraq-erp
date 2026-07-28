@@ -48,6 +48,16 @@ export default function SettingsPage() {
   const [codeBackups, setCodeBackups] = useState([]);
   const [codeBackupsLoading, setCodeBackupsLoading] = useState(false);
   const [codeBackupRunning, setCodeBackupRunning] = useState(false);
+  // ── نظام التحديثات (Stage 4) — git differential update ──────────────────
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [updateStatusLoading, setUpdateStatusLoading] = useState(false);
+  const [sourceInput, setSourceInput] = useState('');
+  const [savingSource, setSavingSource] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+  const [installResult, setInstallResult] = useState(null);
+  const [rollingBack, setRollingBack] = useState(false);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [togglingMode, setTogglingMode] = useState(false);
   const [showHospModal, setShowHospModal] = useState(false);
@@ -232,6 +242,7 @@ export default function SettingsPage() {
     ...(user?.role === 'admin' ? [{ key: 'appname', labelKey: 'set_tab_appname', icon: '🏷️' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'updates', labelKey: 'set_tab_updates', icon: '🔄' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
     { key: 'about',      labelKey: 'set_tab_about',       icon: 'ℹ️' },
   ];
@@ -359,9 +370,78 @@ export default function SettingsPage() {
 
   React.useEffect(() => {
     if (tab === 'backups') { loadBackups(); loadCodeBackups(); }
+    if (tab === 'updates') loadUpdateStatus();
     if (tab === 'recycle') loadRecycleBin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // ── نظام التحديثات (Stage 4) ─────────────────────────────────────────────
+  const loadUpdateStatus = async () => {
+    setUpdateStatusLoading(true);
+    try {
+      const status = await api.get('/git-update/status');
+      setUpdateStatus(status);
+      setSourceInput((prev) => (prev ? prev : status.source || ''));
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setUpdateStatusLoading(false);
+  };
+
+  const saveUpdateSource = async () => {
+    setSavingSource(true);
+    try {
+      await api.put('/git-update/source', { sourcePath: sourceInput });
+      showToast(tr('update_source_saved'), 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setSavingSource(false);
+  };
+
+  const checkForUpdate = async () => {
+    setCheckingUpdate(true);
+    setCheckResult(null);
+    try {
+      const result = await api.post('/git-update/check');
+      setCheckResult(result);
+      showToast(result.updateAvailable ? tr('update_available') : tr('update_up_to_date'), result.updateAvailable ? 'info' : 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCheckingUpdate(false);
+  };
+
+  const installUpdateNow = async () => {
+    if (!(await confirmDialog(tr('confirm_install_update')))) return;
+    setInstallingUpdate(true);
+    setInstallResult(null);
+    try {
+      const result = await api.post('/git-update/install');
+      setInstallResult(result);
+      showToast(result.alreadyUpToDate ? tr('update_up_to_date') : tr('update_installed'), 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setInstallingUpdate(false);
+  };
+
+  const rollbackUpdate = async () => {
+    if (!(await confirmDialog(tr('confirm_rollback')))) return;
+    setRollingBack(true);
+    try {
+      await api.post('/git-update/rollback');
+      showToast(tr('rollback_done'), 'success');
+      setInstallResult(null);
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setRollingBack(false);
+  };
 
   // ── سلة المحذوفات ────────────────────────────────────────────────────────
   const [recycleItems, setRecycleItems] = useState([]);
@@ -1015,6 +1095,126 @@ export default function SettingsPage() {
                       </a>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── UPDATES TAB (Stage 4: git-based differential update) ── */}
+          {tab === 'updates' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <div className="card">
+                <h3 style={{ margin:'0 0 6px' }}>🔄 {tr('set_tab_updates')}</h3>
+                <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-secondary)', maxWidth:560 }}>{tr('update_source_desc')}</p>
+
+                <label className="form-label">{tr('update_source_label')}</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  className="form-control"
+                  value={sourceInput}
+                  onChange={(e) => setSourceInput(e.target.value)}
+                  placeholder="E:\sihatuna-updates.git  |  \\SERVER\share\sihatuna-updates.git  |  https://github.com/..."
+                  style={{ marginBottom:8 }}
+                />
+                <p style={{ margin:'0 0 12px', fontSize:12, color:'var(--text-secondary)' }}>{tr('update_source_hint')}</p>
+                <button onClick={saveUpdateSource} disabled={savingSource || !sourceInput.trim()} className="btn btn-primary" style={{ fontSize:13 }}>
+                  {savingSource ? '⏳' : '💾'} {tr('btn_save_source')}
+                </button>
+
+                <div style={{ marginTop:20, paddingTop:16, borderTop:'1px solid var(--border)', display:'flex', flexWrap:'wrap', gap:24 }}>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_current_version')}</div>
+                    <div style={{ fontSize:13, fontFamily:'monospace' }}>
+                      {updateStatusLoading ? '...' : updateStatus ? `${updateStatus.currentBranch}@${updateStatus.currentCommit?.slice(0, 7)}` : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_source_configured')}</div>
+                    <div style={{ fontSize:13, fontFamily:'monospace', wordBreak:'break-all', maxWidth:320 }}>
+                      {updateStatusLoading ? '...' : (updateStatus?.source || tr('update_no_source_configured'))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_last_checked')}</div>
+                    <div style={{ fontSize:13 }}>
+                      {updateStatusLoading ? '...' : (updateStatus?.lastCheck?.checkedAt ? new Date(updateStatus.lastCheck.checkedAt).toLocaleString(lang === 'ar' ? 'ar-IQ' : 'en-US') : tr('update_never_checked'))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:12 }}>
+                  <h3 style={{ margin:0 }}>{tr('update_check_title')}</h3>
+                  <button onClick={checkForUpdate} disabled={checkingUpdate || !updateStatus?.source} className="btn btn-outline">
+                    {checkingUpdate ? `⏳ ${tr('checking_updates')}` : `🔍 ${tr('btn_check_updates')}`}
+                  </button>
+                </div>
+
+                {checkResult && (
+                  <div style={{ padding:'12px 14px', borderRadius:8, background:'var(--bg-secondary)' }}>
+                    {checkResult.updateAvailable ? (
+                      <>
+                        <div style={{ fontWeight:600, marginBottom:8 }}>
+                          🆕 {tr('update_available')} — {checkResult.commitsBehind} {tr('update_commits_suffix')}
+                        </div>
+                        {checkResult.changelog.length > 0 && (
+                          <ul style={{ margin:0, paddingInlineStart:20, fontSize:13, fontFamily:'monospace' }}>
+                            {checkResult.changelog.map((line, i) => <li key={i} style={{ marginBottom:4 }}>{line}</li>)}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <div>✅ {tr('update_up_to_date')}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="card">
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:12 }}>
+                  <div>
+                    <h3 style={{ margin:'0 0 6px' }}>{tr('update_install_title')}</h3>
+                    <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('update_install_desc')}</p>
+                  </div>
+                  <button onClick={installUpdateNow} disabled={installingUpdate || !updateStatus?.source} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
+                    {installingUpdate ? `⏳ ${tr('installing_update')}` : `⬇️ ${tr('btn_install_update')}`}
+                  </button>
+                </div>
+
+                {installResult && !installResult.alreadyUpToDate && (
+                  <div style={{ padding:'12px 14px', borderRadius:8, background:'var(--bg-secondary)', fontSize:13 }}>
+                    <div style={{ marginBottom:6 }}>
+                      <strong>{tr('update_current_version')}:</strong>{' '}
+                      <span style={{ fontFamily:'monospace' }}>{installResult.beforeCommit?.slice(0,7)} → {installResult.afterCommit?.slice(0,7)}</span>
+                    </div>
+                    <div style={{ marginBottom:6 }}>
+                      <strong>{tr('update_files_changed')}:</strong> {installResult.filesChanged.length}
+                    </div>
+                    {(installResult.npmInstallRan?.backend || installResult.npmInstallRan?.frontend) && (
+                      <div>
+                        <strong>npm install:</strong>{' '}
+                        {[installResult.npmInstallRan.backend && 'backend', installResult.npmInstallRan.frontend && 'frontend'].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {updateStatus?.lastInstall?.beforeCommit && (
+                <div className="card">
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+                    <div>
+                      <h3 style={{ margin:'0 0 6px' }}>{tr('update_rollback_title')}</h3>
+                      <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)' }}>
+                        {tr('update_rollback_desc')} <span style={{ fontFamily:'monospace' }}>{updateStatus.lastInstall.beforeCommit.slice(0,7)}</span>
+                      </p>
+                    </div>
+                    <button onClick={rollbackUpdate} disabled={rollingBack} className="btn btn-danger" style={{ whiteSpace:'nowrap' }}>
+                      {rollingBack ? '⏳' : '⏪'} {tr('btn_rollback')}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

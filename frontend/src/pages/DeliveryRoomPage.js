@@ -9,7 +9,9 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
-const BANNER_GRADIENT = 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)';
+// إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 6.03:1/7.31:1.
+const BANNER_GRADIENT = 'linear-gradient(135deg, #9d174d 0%, #831843 100%)';
 
 const today = new Date().toISOString().split('T')[0];
 

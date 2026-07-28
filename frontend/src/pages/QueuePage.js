@@ -7,7 +7,9 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
-const BANNER_GRADIENT = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+// إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 6.04:1/7.49:1.
+const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)';
 
 const empty = { patientName: '', department: '', priority: 'normal', notes: '' };
 

@@ -9,7 +9,9 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
-const BANNER_GRADIENT = 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)';
+// إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 5.77:1/7.34:1.
+const BANNER_GRADIENT = 'linear-gradient(135deg, #155e75 0%, #0c4a6e 100%)';
 
 const emptyEquip = { name: '', nameEn: '', type: '', status: 'available', notes: '' };
 const emptySession = { patientName: '', therapist: '', date: new Date().toISOString().split('T')[0], equipmentUsed: '', treatmentType: '', duration: '', notes: '', progress: '' };

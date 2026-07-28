@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import HealthBanner from './HealthBanner';
 import PrintButton from './PrintButton';
+import AppLogo from './AppLogo';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
 import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
@@ -26,7 +27,7 @@ const GROUP_LABELS = {
 };
 
 export default function Layout() {
-  const { user, logout, theme, toggleTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings } = useApp();
+  const { user, logout, theme, toggleTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -36,12 +37,13 @@ export default function Layout() {
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   // ── Universal print-to-PDF ──────────────────────────────────────────────
-  // printOverlay holds the per-print header/footer/logo overrides collected
-  // by PrintButton's options panel. It stays null until the user confirms a
-  // print, which mounts the print-only header/footer blocks below and fires
-  // window.print() on the next frame (so the browser captures them already
-  // rendered), then resets on 'afterprint' so they don't linger in the DOM.
-  const [printOverlay, setPrintOverlay] = useState(null);
+  // printOverlay (from AppContext) holds the per-print header/footer/logo
+  // overrides collected by PrintButton's options panel — or, on pages with
+  // their own custom PDF export button (e.g. Smart Reports), collected by
+  // that page reusing the same PrintOptionsModal component. It stays null
+  // until confirmed, which mounts the print-only header/footer blocks below
+  // and fires window.print() on the next frame (so the browser captures them
+  // already rendered), then resets on 'afterprint' so they don't linger in the DOM.
   const printButtonHidden = isPrintButtonHidden(location.pathname);
 
   const handlePrint = (options) => setPrintOverlay(options);
@@ -59,7 +61,7 @@ export default function Layout() {
     const resetOverlay = () => setPrintOverlay(null);
     window.addEventListener('afterprint', resetOverlay);
     return () => window.removeEventListener('afterprint', resetOverlay);
-  }, []);
+  }, [setPrintOverlay]);
 
   const unread = notifications.filter(n => !n.read).length;
   // الصفحات الظاهرة = صلاحيات الدور (كما كان) + صفحات منشأة المستخدم المفعّلة
@@ -83,10 +85,10 @@ export default function Layout() {
       {/* Logo */}
       <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#1a6bab,#0d3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏥</div>
+          <AppLogo size={38} radius={10} fontSize={20} />
           {!sidebarCollapsed && (
             <div>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>{tr("app_name")}</div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>{appName} ERP</div>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>{tr("app_subtitle")}</div>
             </div>
           )}
@@ -358,10 +360,9 @@ export default function Layout() {
             {printOverlay && (printOverlay.includeHeader || printOverlay.includeLogo) && (
               <div className="print-only-block" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '2px solid #1a6bab', paddingBottom: 10, marginBottom: 16 }}>
                 {printOverlay.includeLogo && (
-                  // No logo upload feature yet (comes in a later stage) — this
-                  // is just a stand-in icon so the toggle already has a visible
-                  // effect to test; swap for the uploaded image once available.
-                  <div style={{ width: 44, height: 44, borderRadius: 8, background: 'linear-gradient(135deg,#1a6bab,#0d3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#fff', flexShrink: 0 }}>🏥</div>
+                  // Uses the uploaded organization logo if one exists,
+                  // falling back to the built-in icon otherwise — see AppLogo.js.
+                  <AppLogo size={44} radius={8} fontSize={22} />
                 )}
                 {printOverlay.includeHeader && (
                   // printOverlay.headerText already carries the resolved
@@ -392,7 +393,7 @@ export default function Layout() {
 
         {/* Copyright footer */}
         <footer className="no-print" style={{ padding: '8px 20px', textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', background: 'var(--bg-primary)', flexShrink: 0 }}>
-          All rights reserved © Eng. Huda Elmuthefer — SIHATUNA IRAQ
+          All rights reserved © Eng. Huda Elmuthefer — {appNameEn.toUpperCase()}
         </footer>
 
         {/* Mobile bottom nav */}

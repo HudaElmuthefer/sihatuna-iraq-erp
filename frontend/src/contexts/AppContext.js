@@ -298,6 +298,11 @@ export function AppProvider({ children }) {
       return DEFAULT_PRINT_SETTINGS;
     }
   });
+  // مساحة مشتركة لخيارات الطباعة المؤقتة (رأس/تذييل/شعار) بين لوحة الطباعة
+  // العامة (PrintButton بالـ Layout) وأي صفحة عندها تصدير PDF خاص بها (مثل
+  // التقارير الذكية) — حتى تُعيد استخدام نفس آلية الطباعة الموحَّدة بدل بناء
+  // واحدة منفصلة لكل صفحة.
+  const [printOverlay, setPrintOverlay] = useState(null);
   const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } });
   // ── إصلاح ────────────────────────────────────────────────────────────────
   // بعد الانتقال لـ httpOnly cookies، صار مصدر الحقيقة الفعلي لتسجيل الدخول
@@ -1273,6 +1278,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       theme, setTheme, toggleTheme, lang, setLang, toggleLang, t,
       printSettings, setPrintSettings,
+      printOverlay, setPrintOverlay,
       user, login, logout, updateUser,
       toasts, addToast, showToast,
       confirmState, confirmDialog, resolveConfirm,

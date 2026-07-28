@@ -373,7 +373,14 @@ export default function DepartmentsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16 }}>
             {departments.map(dept => (
               <div key={dept.id} onClick={() => setSelected(selected?.id === dept.id ? null : dept)}
-                style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: `2px solid ${selected?.id === dept.id ? dept.color : 'var(--border)'}`, cursor: 'pointer', overflow: 'hidden', transition: 'all 0.2s', transform: selected?.id === dept.id ? 'scale(1.02)' : 'scale(1)', boxShadow: selected?.id === dept.id ? `0 6px 24px ${dept.color}30` : 'none' }}>
+                // إصلاح تباين الوضع الليلي: كان background:var(--bg-secondary)
+                // (غير متسق مع باقي البطاقات المشابهة اللي تستخدم --bg-card)
+                // مع transition:'all 0.2s' يشمل الخلفية نفسها — نفس فئة مشكلة
+                // --transition الموثَّقة بـ index.css (انتقال خاصية معتمدة على
+                // متغيّر CSS يعلق أحياناً على القيمة القديمة عند تبديل الثيم).
+                // الآن background:var(--bg-card) (نفس بقية البطاقات)، والانتقال
+                // مقتصر على transform/box-shadow فقط (الشيئين الفعليين المتغيّرين هنا).
+                style={{ background: 'var(--bg-card)', borderRadius: 14, border: `2px solid ${selected?.id === dept.id ? dept.color : 'var(--border)'}`, cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s', transform: selected?.id === dept.id ? 'scale(1.02)' : 'scale(1)', boxShadow: selected?.id === dept.id ? `0 6px 24px ${dept.color}30` : 'none' }}>
                 <div style={{ height: 5, background: dept.color }} />
                 <div style={{ padding: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

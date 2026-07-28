@@ -24,6 +24,8 @@ const GROUP_LABELS = {
   projects:  { ar: 'المشاريع', en: 'Projects' },
   documents: { ar: 'الوثائق', en: 'Documents' },
   reports:   { ar: 'التقارير', en: 'Reports' },
+  // بلا عنوان مجموعة (زي 'core') — عنصر واحد فقط ("الإعدادات")، لا يحتاج ترويسة
+  settingsFooter: { ar: '', en: '' },
 };
 
 export default function Layout() {
@@ -121,8 +123,12 @@ export default function Layout() {
           return groups.map(group => {
             const pages = visiblePages.filter(p => (p.group || 'core') === group);
             const gLabel = GROUP_LABELS[group] || { ar: group, en: group };
+            // فاصل بصري رفيع قبل مجموعة "الإعدادات" المثبَّتة بآخر القائمة —
+            // توضح أنها عنصر منفصل عن باقي التنقل الرئيسي، لا مجرد آخر عنصر
+            // اتفاقاً بسبب الترتيب.
+            const isSettingsFooter = group === 'settingsFooter';
             return (
-              <div key={group}>
+              <div key={group} style={isSettingsFooter ? { marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' } : undefined}>
                 {!sidebarCollapsed && gLabel.ar && (
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', padding: '10px 14px 4px', letterSpacing: '0.05em' }}>
                     {lang === 'ar' ? gLabel.ar : gLabel.en}

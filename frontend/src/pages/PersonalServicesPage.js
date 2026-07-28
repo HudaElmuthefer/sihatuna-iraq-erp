@@ -201,7 +201,11 @@ export default function PersonalServicesPage() {
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
             {filtered.map(doc => (
-              <div key={doc.id} style={{ padding:20, borderRadius:12, border:'1.5px solid var(--border)', background:'var(--bg-card)', display:'flex', flexDirection:'column', alignItems:'center', transition:'all 0.2s' }}
+              // إصلاح تباين الوضع الليلي: transition:'all' يشمل background
+              // (المعتمد على var(--bg-card)) — نفس فئة مشكلة --transition
+              // الموثَّقة بـ index.css. الحد من الانتقال لـ transform/border-color
+              // فقط (الخاصيتان الفعليتان المتحرّكتان بمعالجات hover أدناه).
+              <div key={doc.id} style={{ padding:20, borderRadius:12, border:'1.5px solid var(--border)', background:'var(--bg-card)', display:'flex', flexDirection:'column', alignItems:'center', transition:'transform 0.2s, border-color 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='#1a6bab'; e.currentTarget.style.transform='translateY(-3px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.transform='none'; }}>
                 <div style={{ width:56, height:56, borderRadius:'50%', background:doc.color, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:700, marginBottom:10 }}>{doc.avatar}</div>

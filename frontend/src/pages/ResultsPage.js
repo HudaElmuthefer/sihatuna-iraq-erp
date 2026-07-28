@@ -304,14 +304,17 @@ export default function ResultsPage() {
           onChange={(e) => { setSearch(e.target.value); setSelectedPatient(null); }}
         />
         {matchingPatients.length > 0 && (
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, marginTop: 4, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          // إصلاح تباين الوضع الليلي: خلفية بيضاء ثابتة + نص موروث
+          // color:var(--text-primary) من body (فاتح بالوضع الليلي) = نص غير
+          // مقروء. نفس متغيرات .form-control/.modal الموحَّدة بالتطبيق.
+          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             {matchingPatients.map((p) => (
               <div
                 key={p.id}
                 onClick={() => { setSelectedPatient(p); setSearch(p.name); }}
-                style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' }}
+                style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
               >
-                {p.name} <span style={{ color: '#999', fontSize: 12 }}>({p.phone})</span>
+                {p.name} <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>({p.phone})</span>
               </div>
             ))}
           </div>
@@ -322,7 +325,12 @@ export default function ResultsPage() {
         <>
           {totalSelected > 0 && (
             <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fffbe6', border: '1px solid #f0d876', borderRadius: 10, padding: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, fontSize: 13 }}>{L(`${totalSelected} نتيجة محدَّدة`, `${totalSelected} result(s) selected`)}</span>
+              {/* إصلاح تباين الوضع الليلي: هذا الشريط تنبيهي بلون أصفر ثابت
+                  عمداً (بغض النظر عن الثيم، مثل شارات النجاح الخضراء الثابتة
+                  بباقي الصفحات) — لكن نصه كان بلا لون صريح فيرث color من
+                  body، فيصير فاتحاً وغير مقروء بالوضع الليلي على هذي الخلفية
+                  الفاتحة. لون بني داكن ثابت هنا مناسب لنفس الخلفية بكل الأحوال. */}
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#78350f' }}>{L(`${totalSelected} نتيجة محدَّدة`, `${totalSelected} result(s) selected`)}</span>
               <button style={bulkBtnStyle} onClick={handlePrintSelected}>🖨️ {L('طباعة الكل', 'Print All')}</button>
               <button style={bulkWaStyle} onClick={handleSendSelectedToPatient}>📱 {L('إرسال الكل للمريض', 'Send All to Patient')}</button>
               {doctorGroups.map((g) => (

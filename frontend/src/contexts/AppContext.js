@@ -49,8 +49,13 @@ export const ALL_PAGES = [
   { key: 'assets',           navKey: 'nav_assets',           label: 'الأصول والأجهزة الطبية', labelEn: 'Medical Assets',        path: '/assets',                icon: '🏗', group: 'assets' },
   // ── التقارير والتحليلات ──
   { key: 'smart-reports',    navKey: 'nav_smart_reports',    label: 'التقارير والتحليلات',  labelEn: 'Reports & Analytics',            path: '/smart-reports',         icon: '📊', group: 'reports' },
-  // ── الإعدادات ──
-  { key: 'settings',         navKey: 'nav_settings',         label: 'الإعدادات',            labelEn: 'Settings',                     path: '/settings',              icon: '⚙️', group: 'core' },
+  // ── الإعدادات ── (مجموعة خاصة بها، مو 'core' مثل لوحة التحكم — حتى تُعرَض
+  // دائماً كآخر عنصر بالقائمة الجانبية، بغض النظر عن ترتيبها هنا بالمصفوفة.
+  // انظر Layout.js: التجميع يعتمد على أول ظهور لاسم المجموعة أثناء المرور
+  // على الصفحات، فلو بقيت 'core' نفسها المستخدَمة مع "لوحة التحكم" (أول
+  // عنصر بالمصفوفة)، كانت "الإعدادات" ستُعرَض مباشرة بعد لوحة التحكم أعلى
+  // القائمة، رغم كونها آخر عنصر هنا فعلياً.
+  { key: 'settings',         navKey: 'nav_settings',         label: 'الإعدادات',            labelEn: 'Settings',                     path: '/settings',              icon: '⚙️', group: 'settingsFooter' },
 ];
 
 // ERP Role definitions

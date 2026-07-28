@@ -67,17 +67,22 @@ export default function DiagnosisPicker({ diagnoses, onChange, lang }) {
           onFocus={() => setShowSuggestions(true)}
         />
         {showSuggestions && (
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, marginTop: 4, zIndex: 20, maxHeight: 260, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          // إصلاح تباين الوضع الليلي: كانت الخلفية بيضاء ثابتة (#fff) بينما
+          // النص يرث color:var(--text-primary) من body — بالوضع الليلي هذي
+          // القيمة فاتحة تقريباً، فيصير النص غير مقروء على الخلفية البيضاء
+          // الثابتة. var(--bg-card)/var(--border) نفس المتغيرات المستخدَمة
+          // بكل القوائم المنسدلة المشابهة الأخرى بالتطبيق.
+          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 20, maxHeight: 260, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             {suggestions.length === 0 ? (
-              <div style={{ padding: 10, fontSize: 12, color: '#999' }}>{L('لا توجد نتائج', 'No results')}</div>
+              <div style={{ padding: 10, fontSize: 12, color: 'var(--text-secondary)' }}>{L('لا توجد نتائج', 'No results')}</div>
             ) : suggestions.map((s) => (
-              <div key={s.code} onClick={() => addDiagnosis(s)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+              <div key={s.code} onClick={() => addDiagnosis(s)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                 <span style={{ fontFamily: 'monospace', color: '#1a6bab', marginInlineEnd: 8 }}>{s.code}</span>
                 {L(s.nameAr, s.nameEn)}
               </div>
             ))}
             <div style={{ padding: '6px 12px', textAlign: 'center' }}>
-              <button type="button" onClick={() => setShowSuggestions(false)} style={{ fontSize: 11, color: '#999', background: 'none', border: 'none', cursor: 'pointer' }}>{L('إغلاق', 'Close')}</button>
+              <button type="button" onClick={() => setShowSuggestions(false)} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>{L('إغلاق', 'Close')}</button>
             </div>
           </div>
         )}

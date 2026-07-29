@@ -52,7 +52,17 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
   const devClone = path.join(root, 'dev-clone');
   const serverClone = path.join(root, 'server-clone');
   const realProjectRoot = path.join(__dirname, '..', '..');
-  let branch;
+  // A fixed, definite branch name — NOT whatever `git rev-parse --abbrev-ref
+  // HEAD` reports on realProjectRoot. That matters here specifically because
+  // CI (actions/checkout@v4, for a pull_request-triggered run) checks the
+  // repo out at a specific commit in DETACHED HEAD state, not on a branch —
+  // in that state rev-parse reports the literal string "HEAD", and
+  // `git push flash-drive HEAD` then fails with "not a full refname" (the
+  // exact failure that took down all 12 tests in CI: it happened in
+  // beforeAll, which cascades to every test in the file). `checkout -B`
+  // right after cloning guarantees a real local branch regardless of
+  // whatever state the source repo's own HEAD happens to be in.
+  const branch = 'update-test-branch';
   let backupFilenamesCreated = [];
   let realProjectHeadBefore;
   let realProjectStatusBefore;
@@ -72,15 +82,21 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
 
     // "Developer's machine": clone the real project (read-only source of
     // history for this test — never written back to) so both sides of the
-    // test share real, meaningful history, then point it at the bare repo.
+    // test share real, meaningful history, then land on a definite branch
+    // name (see the comment on `branch` above for why this can't just be
+    // whatever realProjectRoot's HEAD currently is), then point it at the
+    // bare repo.
     git(['clone', realProjectRoot, devClone]);
-    branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], devClone);
+    git(['checkout', '-B', branch], devClone);
     git(['remote', 'add', 'flash-drive', bareRepo], devClone);
     git(['push', 'flash-drive', branch], devClone);
 
     // "Hospital server": a separate clone of the same starting point,
-    // BEFORE the release commit below exists anywhere.
-    git(['clone', '--branch', branch, realProjectRoot, serverClone]);
+    // BEFORE the release commit below exists anywhere. Cloned from
+    // dev-clone (which is definitely on a real branch by now), not from
+    // realProjectRoot directly (which may be detached, and in any case has
+    // no branch named `branch` at all).
+    git(['clone', '--branch', branch, devClone, serverClone]);
 
     // A small, harmless release commit, made on the "developer's machine"
     // clone and pushed to the flash drive — this is the update the server
@@ -103,9 +119,11 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
   });
 
   test('no source configured yet: checkForUpdates throws NO_SOURCE', async () => {
-    // A brand new clone with no "update-source" remote at all.
+    // A brand new clone with no "update-source" remote at all. Cloned from
+    // dev-clone (a real branch), not realProjectRoot directly — see the
+    // comment on `branch` above for why.
     const freshClone = path.join(root, 'fresh-no-source');
-    git(['clone', '--branch', branch, realProjectRoot, freshClone]);
+    git(['clone', '--branch', branch, devClone, freshClone]);
     await expect(checkForUpdates(freshClone)).rejects.toMatchObject({ code: 'NO_SOURCE' });
   });
 
@@ -126,8 +144,10 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
   });
 
   test('unreachable source: checkForUpdates gives a friendly message, not a raw git error', async () => {
+    // Cloned from dev-clone (a real branch), not realProjectRoot directly —
+    // see the comment on `branch` above for why.
     const unreachableClone = path.join(root, 'unreachable-test-clone');
-    git(['clone', '--branch', branch, realProjectRoot, unreachableClone]);
+    git(['clone', '--branch', branch, devClone, unreachableClone]);
     await configureUpdateSource(path.join(root, 'this-path-does-not-exist.git'), unreachableClone);
     await expect(checkForUpdates(unreachableClone)).rejects.toMatchObject({ code: 'UNREACHABLE' });
     try {

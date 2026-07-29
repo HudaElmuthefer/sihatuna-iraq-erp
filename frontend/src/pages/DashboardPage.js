@@ -84,7 +84,7 @@ function AppointmentRow({ apt, tr, lang, theme }) {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { lang, theme, doctors, patients, appointments, departments, inventory, procurement, projects, documents, dashboardLayout, saveDashboardLayout, resetDashboardLayout, showToast, confirmDialog } = useApp();
+  const { lang, theme, doctors, patients, appointments, departments, inventory, procurement, projects, documents, dashboardLayout, saveDashboardLayout, resetDashboardLayout, showToast, confirmDialog, appNameAr, appNameEn } = useApp();
   const tr = useT(lang);
   const [searchQ, setSearchQ] = useState('');
 
@@ -253,10 +253,22 @@ export default function DashboardPage() {
       )}
       {/* ─── HERO BANNER ───────────────────────────────────── */}
       <div className="hero-banner">
+        <div className="hero-decor">
+          <div className="hero-circle hero-circle-1" />
+          <div className="hero-circle hero-circle-2" />
+        </div>
+        {/* ── الشعار بالترويسة الرئيسية للوحة التحكم فقط (استثناء مقصود) ──────
+            كل الصفحات الثانية تعرض الشعار بجانب الشريط الرمادي الرفيع فقط
+            (راجعي HealthBanner.js وPageBanner.js) — هذي البانر الوحيدة اللي
+            يظهر فيها الشعار بحجم كبير وبارز في مركز الترويسة، لأنها "واجهة"
+            النظام الرئيسية. */}
         <div className="hero-content">
+          <div className="hero-logo-wrap">
+            <AppLogo size={116} radius={26} fontSize={58} />
+          </div>
           <div className="hero-badge">🏥 {tr('auto_pair_96')}</div>
           <h1 className="hero-title">
-            {tr('auto_pair_97')}
+            {lang === 'ar' ? `مرحباً بك في تطبيق ${appNameAr}` : `Welcome to ${appNameEn}`}
           </h1>
           <p className="hero-sub">
             {lang === 'ar'
@@ -271,17 +283,6 @@ export default function DashboardPage() {
               onChange={e => setSearchQ(e.target.value)}
               placeholder={tr('auto_pair_98')}
             />
-          </div>
-        </div>
-        {/* ── الشعار بالترويسة الرئيسية للوحة التحكم فقط (استثناء مقصود) ──────
-            كل الصفحات الثانية تعرض الشعار بجانب الشريط الرمادي الرفيع فقط
-            (راجعي HealthBanner.js وPageBanner.js) — هذي البانر الوحيدة اللي
-            يظهر فيها الشعار بحجم كبير وبارز، لأنها "واجهة" النظام الرئيسية. */}
-        <div className="hero-illustration">
-          <div className="hero-circle hero-circle-1" />
-          <div className="hero-circle hero-circle-2" />
-          <div className="hero-logo-wrap">
-            <AppLogo size={100} radius={20} fontSize={52} />
           </div>
         </div>
       </div>
@@ -385,17 +386,31 @@ export default function DashboardPage() {
         .hero-banner {
           background: linear-gradient(135deg, #0f2340 0%, #1a6bab 60%, #0d4a7a 100%);
           border-radius: var(--radius-lg);
-          padding: 36px 40px;
+          padding: 40px 40px 36px;
           margin-bottom: 28px;
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: center;
           overflow: hidden;
           position: relative;
           min-height: 220px;
         }
 
-        .hero-content { position: relative; z-index: 2; flex: 1; }
+        .hero-content {
+          position: relative;
+          z-index: 2;
+          width: 100%;
+          max-width: 520px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+        }
+
+        .hero-logo-wrap {
+          margin-bottom: 16px;
+          filter: drop-shadow(0 4px 14px rgba(0,0,0,0.25));
+        }
 
         .hero-badge {
           display: inline-flex;
@@ -427,7 +442,9 @@ export default function DashboardPage() {
 
         .hero-search {
           position: relative;
+          width: 100%;
           max-width: 380px;
+          margin: 0 auto;
         }
 
         .hs-icon {
@@ -459,29 +476,23 @@ export default function DashboardPage() {
           background: rgba(255,255,255,0.18);
         }
 
-        .hero-illustration {
-          position: relative;
-          width: 160px;
-          height: 160px;
-          flex-shrink: 0;
+        .hero-decor {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
         }
 
         .hero-circle {
           position: absolute;
+          top: 50%;
+          left: 50%;
           border-radius: 50%;
           border: 2px solid rgba(255,255,255,0.12);
         }
 
-        .hero-circle-1 { width: 140px; height: 140px; top: 10px; right: 10px; }
-        .hero-circle-2 { width: 100px; height: 100px; top: 30px; right: 30px; }
-
-        .hero-logo-wrap {
-          position: absolute;
-          top: 50%;
-          right: 50%;
-          transform: translate(50%, -50%);
-          filter: drop-shadow(0 4px 14px rgba(0,0,0,0.25));
-        }
+        .hero-circle-1 { width: 220px; height: 220px; transform: translate(-50%, -60%); }
+        .hero-circle-2 { width: 160px; height: 160px; transform: translate(-50%, -60%); }
 
         /* ── Department Cards ── */
         .dept-grid {
@@ -578,7 +589,6 @@ export default function DashboardPage() {
 
         @media (max-width: 900px) {
           .dashboard-bottom { grid-template-columns: 1fr; }
-          .hero-illustration { display: none; }
           .hero-banner { padding: 28px 24px; }
           .hero-title { font-size: 20px; }
         }

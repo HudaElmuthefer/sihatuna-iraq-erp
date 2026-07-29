@@ -17,6 +17,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  # يسمح بتشغيل هذا الـ workflow يدوياً من تبويب Actions بصفحة المستودع (زر
+  # "Run workflow")، على أي فرع تختارينه — بدل انتظار push أو Pull Request.
+  workflow_dispatch:
 
 jobs:
   test-backend:

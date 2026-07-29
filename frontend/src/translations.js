@@ -76,7 +76,7 @@ const translations = {
   status_female:        { ar: 'أنثى',            en: 'Female' },
 
   // ─── الصفحة الرئيسية / Dashboard ────────────────────────────────────────────
-  dash_welcome:         { ar: 'مرحباً بك في تطبيق صحتنا عراقي',  en: 'Welcome to SIHATUNA IRAQ ERP' },
+  dash_welcome:         { ar: 'مرحباً بك في تطبيق صحتنا عراق',  en: 'Welcome to SIHATUNA IRAQ ERP' },
   dash_subtitle:        { ar: 'حيث يمكنك الوصول إلى الخدمات الصحية بشكل سهل وسريع', en: 'Access health services easily and quickly' },
   dash_total_patients:  { ar: 'إجمالي المرضى',   en: 'Total Patients' },
   dash_active_doctors:  { ar: 'الأطباء النشطون', en: 'Active Doctors' },
@@ -878,7 +878,7 @@ const translations = {
   auto_pair_94: { ar: "ملغي", en: "Cancelled" },
   auto_pair_95: { ar: "مكتمل", en: "Completed" },
   auto_pair_96: { ar: "وزارة الصحة العراقية", en: "Iraqi Ministry of Health" },
-  auto_pair_97: { ar: "مرحباً بك في تطبيق صحتنا عراقي", en: "Welcome to Sihatuna Iraq" },
+  auto_pair_97: { ar: "مرحباً بك في تطبيق صحتنا عراق", en: "Welcome to Sihatuna Iraq" },
   auto_pair_98: { ar: "🔍 ابحث عن طبيبك", en: "🔍 Search for your doctor" },
   auto_pair_99: { ar: "إجمالي المرضى", en: "Total Patients" },
   auto_pair_100: { ar: "+12 هذا الشهر", en: "+12 this month" },

@@ -6400,5 +6400,123 @@
       "symptomsCount": 2,
       "provider": "gemini"
     }
+  },
+  {
+    "id": 731,
+    "timestamp": "2026-07-29T05:19:45.586Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_logo_path",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "logoPath": "/uploads/logo-e641fa4b-6202-41b8-be64-d5fbadc13049.png"
+    }
+  },
+  {
+    "id": 732,
+    "timestamp": "2026-07-29T05:23:15.548Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 733,
+    "timestamp": "2026-07-29T05:23:47.686Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "صحتنا",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 734,
+    "timestamp": "2026-07-29T05:23:55.144Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 735,
+    "timestamp": "2026-07-29T05:24:09.795Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "صحتنا عراق",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 736,
+    "timestamp": "2026-07-29T05:26:08.601Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 737,
+    "timestamp": "2026-07-29T05:39:42.293Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "مستشفى تجريبي",
+      "nameEn": "Test Hospital"
+    }
+  },
+  {
+    "id": 738,
+    "timestamp": "2026-07-29T05:40:45.580Z",
+    "module": "system_settings",
+    "action": "delete",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 739,
+    "timestamp": "2026-07-29T05:43:15.278Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "هدى هيلث",
+      "nameEn": "Sihatuna Iraq"
+    }
+  },
+  {
+    "id": 740,
+    "timestamp": "2026-07-29T05:43:49.394Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 741,
+    "timestamp": "2026-07-29T05:44:06.744Z",
+    "module": "system_settings",
+    "action": "update",
+    "recordId": "app_name_override",
+    "userId": 1,
+    "userRole": "admin",
+    "after": {
+      "nameAr": "صحتنا عراق",
+      "nameEn": "Sihatuna Iraq"
+    }
   }
 ]

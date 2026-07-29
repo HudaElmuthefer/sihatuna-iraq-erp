@@ -77,17 +77,28 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
 
     fs.mkdirSync(root, { recursive: true });
 
-    // The bare repo stands in for the flash drive / network folder.
-    git(['init', '--bare', bareRepo]);
-
     // "Developer's machine": clone the real project (read-only source of
     // history for this test — never written back to) so both sides of the
     // test share real, meaningful history, then land on a definite branch
     // name (see the comment on `branch` above for why this can't just be
-    // whatever realProjectRoot's HEAD currently is), then point it at the
-    // bare repo.
+    // whatever realProjectRoot's HEAD currently is).
     git(['clone', realProjectRoot, devClone]);
     git(['checkout', '-B', branch], devClone);
+
+    // The bare repo stands in for the flash drive / network folder — created
+    // as a CLONE of dev-clone (not `git init --bare` followed by a push),
+    // and deliberately in that order (after dev-clone exists, not before).
+    // realProjectRoot on a CI runner is a *shallow* checkout (actions/checkout@v4
+    // defaults to fetch-depth: 1), and cloning locally from a shallow source
+    // propagates that same shallow boundary to dev-clone. Pushing a shallow
+    // branch into a repo made via plain `init --bare` (which has no history
+    // at all, shallow or otherwise, to reconcile against) is rejected by git
+    // itself: "shallow update not allowed" — a real, reproduced CI failure,
+    // not a hypothetical one. `clone --bare` instead negotiates the shallow
+    // boundary explicitly as part of the transfer, which git allows; every
+    // push after that point is an ordinary incremental fast-forward on top
+    // of history both sides already agree on, so it's unaffected.
+    git(['clone', '--bare', devClone, bareRepo]);
     git(['remote', 'add', 'flash-drive', bareRepo], devClone);
     git(['push', 'flash-drive', branch], devClone);
 

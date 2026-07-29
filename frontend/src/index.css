@@ -36,8 +36,18 @@
   --bottom-nav-bg: #1565c0;
   --bottom-nav-height: 60px;
 
-  /* Transitions */
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions — scoped to transform/box-shadow/border-color only, NOT
+     "all". Several shared classes (.btn, .form-control, .stat-card,
+     .dropdown-item, .tab, etc.) use `transition: var(--transition)` on
+     elements whose background/color come from CSS custom properties
+     (--bg-card, --text-primary...). Transitioning those specific properties
+     can get stuck showing the pre-toggle theme's value instead of snapping
+     instantly when data-theme changes (confirmed live: body's `color` and
+     .stat-card's `background` both showed stale light-mode values while in
+     dark mode, across a fresh page load — not just a lingering animation).
+     Excluding background/color here fixes every current usage of this
+     variable at once, the same fix already applied locally to .card earlier. */
+  --transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 16px;
@@ -49,7 +59,10 @@
   --bg-card: #1a2332;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* إصلاح تباين: كانت #64748b تعطي 3.32:1 فقط مقابل --bg-card الغامقة (يحتاج
+     4.5:1 لـ WCAG AA) — مستخدَمة بـ50+ موضع بالنظام (تواريخ، أسماء أقسام
+     بالجداول، تسميات إحصاءات...). القيمة الجديدة تعطي 4.93:1. */
+  --text-muted: #8291a8;
   --border: #1e2d3f;
   --shadow: 0 2px 15px rgba(0,0,0,0.3);
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
@@ -73,7 +86,13 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
-  transition: var(--transition);
+  /* لا transition هنا عمداً (كان `transition: var(--transition)` أي "all") —
+     نفس مشكلة .card الموثَّقة أعلاه: تحويل background/color (المعتمدين على
+     متغيرات CSS) عبر transition يجعلهما "عالقين" على القيمة القديمة عند
+     تبديل data-theme، بما إن كل نص الصفحة تقريباً يرث color من هنا (بلا لون
+     صريح خاص به) — أي عنصر بلا h1..h6 (اللي لها قاعدة مباشرة منفصلة بلا
+     transition) يتأثر. تبديل الثيم يجب أن يكون فورياً هنا، لا يحتاج انتقالاً
+     سلساً أصلاً. */
 }
 
 body.en {
@@ -148,7 +167,15 @@ a { text-decoration: none; color: inherit; }
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   overflow: hidden;
-  transition: var(--transition);
+  /* Scoped to box-shadow only (the one thing that actually changes on
+     :hover below) — NOT `transition: var(--transition)` (all 0.3s...).
+     Confirmed via live testing: transitioning `background`/`border-color`
+     when they're driven by CSS custom properties (--bg-card/--border) can
+     get stuck showing the pre-toggle light-mode value after a dark-mode
+     switch, because the browser treats the custom-property change as an
+     attempted (but not properly completing) transition instead of an
+     instant snap. Scoping to box-shadow avoids the whole bug class. */
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card:hover { box-shadow: var(--shadow-lg); }
 

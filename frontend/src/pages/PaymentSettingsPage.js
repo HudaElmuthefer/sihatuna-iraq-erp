@@ -1,6 +1,9 @@
 /* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
 import { useApp, PAYMENT_PROVIDERS } from '../contexts/AppContext';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #713f12 0%, #a16207 100%)';
 
 const TYPE_LABELS = {
   cash:          { ar:'نقدي',            en:'Cash' },
@@ -19,7 +22,7 @@ export default function PaymentSettingsPage() {
     page:{padding:24,direction:dir},
     section:{marginBottom:28},
     sectionTitle:{fontSize:14,fontWeight:700,borderBottom:'2px solid #d4af37',paddingBottom:8,marginBottom:12,color:'var(--text-primary)'},
-    row:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',border:'1px solid var(--border)',borderRadius:10,marginBottom:8,background:'var(--bg-secondary)'},
+    row:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',border:'1px solid var(--border)',borderRadius:10,marginBottom:8,background:'var(--bg-card)'},
     btn:(c='#1a6bab')=>({padding:'7px 14px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:600}),
     btnGhost:{padding:'7px 14px',background:'transparent',color:'var(--text-primary)',border:'1px solid var(--border)',borderRadius:8,cursor:'pointer',fontSize:12},
     modal:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999},
@@ -55,14 +58,12 @@ export default function PaymentSettingsPage() {
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>
-          {L('💳 إعدادات بوابات الدفع', '💳 Payment Gateway Settings')}
-        </h1>
-        <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>
-          {L('فعّل أي بوابة دفع تريدها حسب اتفاقيات المستشفى', 'Enable payment gateways per your hospital agreements')}
-        </p>
-      </div>
+      <PageBanner
+        icon="💳"
+        title={L('إعدادات بوابات الدفع', 'Payment Gateway Settings')}
+        subtitle={L('فعّل أي بوابة دفع تريدها حسب اتفاقيات المستشفى', 'Enable payment gateways per your hospital agreements')}
+        gradient={BANNER_GRADIENT}
+      />
 
       <div style={S.warn}>
         {L(

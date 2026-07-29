@@ -30,7 +30,7 @@ async function migrateHospital(client) {
   if (existing.rowCount > 0) return existing.rows[0].id;
   const result = await client.query(
     `INSERT INTO hospitals (name_ar, name_en) VALUES ($1,$2) RETURNING id`,
-    ['مستشفى صحتنا العراق', 'Sihatuna Iraq Hospital'] // عدّل الاسم الفعلي إذا يختلف
+    ['مستشفى صحتنا عراق', 'Sihatuna Iraq Hospital'] // عدّل الاسم الفعلي إذا يختلف
   );
   devLog('✅ Default hospital record created');
   return result.rows[0].id;

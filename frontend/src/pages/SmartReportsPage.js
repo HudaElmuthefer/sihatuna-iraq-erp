@@ -3,6 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
 import DiagnosisStatsWidget from '../components/DiagnosisStatsWidget';
+import PageBanner from '../components/PageBanner';
+import PrintOptionsModal from '../components/PrintOptionsModal';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)';
 
 // ── إصلاح جذري: كانت كل الأرقام بهذي الصفحة وهمية ثابتة بالكود ──────────────
 // قبل هذا، monthlyData وdeptStats وtopDoctors كانت مصفوفات ثابتة بأرقام
@@ -36,9 +40,10 @@ const BarChart = ({ data, color, lang }) => (
 const PERIOD_MONTHS = { month: 1, '3months': 3, '6months': 6, year: 12 };
 
 export default function SmartReportsPage() {
-  const { showToast, lang, patients, appointments, doctors, departments, invoices } = useApp();
+  const { showToast, lang, patients, appointments, doctors, departments, invoices, setPrintOverlay } = useApp();
   const tr = useT(lang);
   const [period, setPeriod] = useState('6months');
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
 
   const monthsBack = PERIOD_MONTHS[period] || 6;
 
@@ -117,15 +122,7 @@ export default function SmartReportsPage() {
 
   return (
     <div className="page-content">
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>📊</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{tr('rep_title')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.8, fontSize: 13 }}>{L('بيانات حقيقية مباشرة من النظام','Real-time data directly from the system')}</p>
-          </div>
-        </div>
+      <PageBanner icon="📊" title={tr('rep_title')} subtitle={L('بيانات حقيقية مباشرة من النظام','Real-time data directly from the system')} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 10 }}>
           <select value={period} onChange={e => setPeriod(e.target.value)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>
             <option value="month" style={{ background: '#312e81' }}>{tr('auto_pair_139')}</option>
@@ -133,14 +130,21 @@ export default function SmartReportsPage() {
             <option value="6months" style={{ background: '#312e81' }}>{tr('auto_pair_141')}</option>
             <option value="year" style={{ background: '#312e81' }}>{tr('auto_pair_142')}</option>
           </select>
-          {/* ── إصلاح: زر التصدير كان يعرض رسالة "جاري التصدير" بدون أي ملف يُنتَج فعلياً ──
-              الآن يستخدم نافذة الطباعة الفعلية بالمتصفح (تقدر تُحفَظ كـ PDF من خيارات
-              الطباعة القياسية بويندوز) بدل ادّعاء تصدير وهمي. */}
-          <button className="btn" onClick={() => window.print()} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
+          {/* ── إصلاح: زر التصدير كان يستدعي window.print() مباشرة بدون أي تحكّم
+              بالرأس/التذييل/الشعار — الآن يفتح نفس لوحة خيارات الطباعة المستخدَمة
+              بباقي الصفحات (PrintOptionsModal) قبل الطباعة الفعلية، بنفس منطق
+              الأولوية الثلاثي (لكل طباعة > افتراضي عام > افتراضي مبرمَج). */}
+          <button className="btn" onClick={() => setShowPrintOptions(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
             📥 {tr('btn_export_pdf')}
           </button>
         </div>
-      </div>
+      </PageBanner>
+
+      <PrintOptionsModal
+        show={showPrintOptions}
+        onClose={() => setShowPrintOptions(false)}
+        onConfirm={(options) => { setShowPrintOptions(false); setPrintOverlay(options); }}
+      />
 
       <DiagnosisStatsWidget lang={lang} />
 

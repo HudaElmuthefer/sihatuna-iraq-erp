@@ -7,7 +7,10 @@ import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)';
 
 const statusConfig = {
   confirmed: { ar: 'مؤكد',       en: 'Confirmed', class: 'badge-success' },
@@ -107,22 +110,15 @@ export default function AppointmentsPage() {
   return (
     <div className="fade-in">
       {/* Header */}
-      <div className="page-header">
-        <div className="page-title">
-          <div className="icon"><FaCalendarAlt /></div>
-          {tr('apt_management')}
-          <span className="badge badge-info" style={{ fontSize:13 }}>{(apts||[]).length}</span>
-        </div>
-        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-          <button className="btn btn-outline" onClick={() => setShowImport(true)}>
-            <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
-          </button>
-          <ExcelExportButton apiName="appointments" lang={lang} onError={(m) => addToast(m, 'error')} />
-          <button className="btn btn-primary" onClick={openAdd}>
-            <FaPlus /> {tr('apt_add')}
-          </button>
-        </div>
-      </div>
+      <PageBanner icon={<FaCalendarAlt />} title={tr('apt_management')} count={(apts||[]).length} gradient={BANNER_GRADIENT}>
+        <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>
+          <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+        </button>
+        <ExcelExportButton apiName="appointments" lang={lang} onError={(m) => addToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#134e4a', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+          <FaPlus /> {tr('apt_add')}
+        </button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

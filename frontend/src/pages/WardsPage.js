@@ -7,6 +7,9 @@ import Pagination from '../components/Pagination';
 import { FaPlus, FaEdit, FaTrash, FaBed, FaPills, FaSignOutAlt } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)';
 
 const emptyWard = { name: '', nameEn: '', bedCount: 10, notes: '' };
 const emptyAdmission = { patientName: '', wardId: '', bedNo: '', admissionDate: new Date().toISOString().split('T')[0], diagnosis: '', treatingDoctor: '', status: 'admitted', dischargeDate: '', dischargeNotes: '' };
@@ -257,20 +260,13 @@ export default function WardsPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>🛏️</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{L('الردهات', 'Wards')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('إدارة المرضى الداخليين، الأسرّة، والأدوية', 'Manage inpatients, beds, and medications')}</p>
-          </div>
-        </div>
+      <PageBanner icon="🛏️" title={L('الردهات', 'Wards')} subtitle={L('إدارة المرضى الداخليين، الأسرّة، والأدوية', 'Manage inpatients, beds, and medications')} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 20 }}>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700 }}>{stats.admitted}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{L('مُدخَلون حالياً', 'Currently admitted')}</div></div>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700 }}>{stats.totalBeds}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{L('إجمالي الأسرّة', 'Total beds')}</div></div>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 24, fontWeight: 700 }}>{stats.wardsCount}</div><div style={{ fontSize: 11, opacity: 0.8 }}>{L('عدد الردهات', 'Wards')}</div></div>
         </div>
-      </div>
+      </PageBanner>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button onClick={() => setTab('admissions')} className={tab === 'admissions' ? 'btn btn-primary' : 'btn btn-outline'}>{L('حالات الإدخال', 'Admissions')}</button>
@@ -366,7 +362,7 @@ export default function WardsPage() {
             {wards.map(w => {
               const occupied = admissions.filter(a => a.wardId === w.id && a.status === 'admitted').length;
               return (
-                <div key={w.id} style={{ padding: 16, borderRadius: 10, background: 'var(--bg-secondary)' }}>
+                <div key={w.id} style={{ padding: 16, borderRadius: 10, background: 'var(--bg-card)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <strong>{lang === 'ar' ? w.name : (w.nameEn || w.name)}</strong>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -539,7 +535,7 @@ export default function WardsPage() {
                 <FaPlus /> {L('وصفة دواء جديدة', 'New Medication Order')}
               </button>
               {ordersFor(medAdm.id).map(o => (
-                <div key={o.id} style={{ padding: 12, borderRadius: 8, background: 'var(--bg-secondary)', marginBottom: 10 }}>
+                <div key={o.id} style={{ padding: 12, borderRadius: 8, background: 'var(--bg-card)', marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <strong>{o.drugName}</strong> — {o.dose} {o.route && `· ${routeLabel(o.route)}`} {o.timesPerDay && `(${frequencyLabel(o.timesPerDay)})`}

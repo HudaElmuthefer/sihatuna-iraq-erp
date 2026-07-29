@@ -8,6 +8,9 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%)';
 
 export default function MedicalCodesPage() {
   const { lang, showToast } = useApp();
@@ -71,20 +74,21 @@ export default function MedicalCodesPage() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ marginBottom: 4 }}>{L('إدارة رموز التصنيف الطبي', 'Medical Classification Codes')}</h2>
-      <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-muted)' }}>{L('ابحث عن رمز موجود، أو أضف رمزاً جديداً غير موجود بالقائمة.', 'Search for an existing code, or add a new one not in the list.')}</p>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button onClick={() => { setSystem('icd'); setPage(1); }} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', cursor: 'pointer', background: system === 'icd' ? '#1a6bab' : '#fff', color: system === 'icd' ? '#fff' : '#333', fontSize: 13 }}>ICD-10</button>
-        <button onClick={() => { setSystem('snomed'); setPage(1); }} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', cursor: 'pointer', background: system === 'snomed' ? '#1a6bab' : '#fff', color: system === 'snomed' ? '#fff' : '#333', fontSize: 13 }}>SNOMED CT</button>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setShowImport(true)} style={{ padding: '6px 16px', borderRadius: 6, border: '1px solid #1a6bab', background: 'transparent', color: '#1a6bab', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>📊 {L('استيراد من Excel', 'Import from Excel')}</button>
-        <ExcelExportButton apiName={`medical-codes-${system}`} lang={lang} onError={(m) => showToast(m, 'error')} />
-        <button onClick={openAdd} style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#16a34a', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>+ {L('إضافة رمز جديد', 'Add New Code')}</button>
-      </div>
+      <PageBanner
+        icon="🏷️"
+        title={L('إدارة رموز التصنيف الطبي', 'Medical Classification Codes')}
+        subtitle={L('ابحث عن رمز موجود، أو أضف رمزاً جديداً غير موجود بالقائمة.', 'Search for an existing code, or add a new one not in the list.')}
+        gradient={BANNER_GRADIENT}
+      >
+        <button onClick={() => { setSystem('icd'); setPage(1); }} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.5)', cursor: 'pointer', background: system === 'icd' ? '#fff' : 'rgba(255,255,255,0.15)', color: system === 'icd' ? '#4c1d95' : '#fff', fontSize: 13, fontWeight: 600 }}>ICD-10</button>
+        <button onClick={() => { setSystem('snomed'); setPage(1); }} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.5)', cursor: 'pointer', background: system === 'snomed' ? '#fff' : 'rgba(255,255,255,0.15)', color: system === 'snomed' ? '#4c1d95' : '#fff', fontSize: 13, fontWeight: 600 }}>SNOMED CT</button>
+        <button onClick={() => setShowImport(true)} style={{ padding: '6px 16px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>📊 {L('استيراد من Excel', 'Import from Excel')}</button>
+        <ExcelExportButton apiName={`medical-codes-${system}`} lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button onClick={openAdd} style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#fff', color: '#4c1d95', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>+ {L('إضافة رمز جديد', 'Add New Code')}</button>
+      </PageBanner>
 
       {/* ── ربط رموز بمرضى — مختلف عن إدارة قائمة الرموز نفسها أعلاه ── */}
-      <div style={{ background: 'var(--bg-secondary, #f9fafb)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: '1px solid var(--border)' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 13, fontWeight: 700 }}>{L('ربط تشخيصات بمرضى', 'Link Diagnoses to Patients')}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{L('يضيف رمزاً لملف مريض حقيقي — منفصل عن قائمة الرموز أعلاه، ويُستخدَم لتغذية تقرير "أكثر التشخيصات شيوعاً".', 'Adds a code to a real patient\'s file — separate from the code list above, feeds the "Most Common Diagnoses" report.')}</div>
@@ -107,34 +111,38 @@ export default function MedicalCodesPage() {
         <button onClick={handleSearch} style={{ padding: '0 16px', borderRadius: 8, border: 'none', background: '#1a6bab', color: '#fff', cursor: 'pointer' }}>{L('بحث', 'Search')}</button>
       </div>
 
-      {loading ? (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{L('جارٍ التحميل...', 'Loading...')}</p>
-      ) : rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{L('لا توجد نتائج — أضف رمزاً جديداً بالزر أعلاه.', 'No results — add a new code with the button above.')}</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
-              <th style={{ textAlign: 'start', padding: 8 }}>{L('الرمز', 'Code')}</th>
-              <th style={{ textAlign: 'start', padding: 8 }}>{L('بالعربي', 'Arabic')}</th>
-              <th style={{ textAlign: 'start', padding: 8 }}>{L('بالإنكليزي', 'English')}</th>
-              <th style={{ padding: 8 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color, #f3f4f6)' }}>
-                <td style={{ padding: 8, fontFamily: 'monospace', color: '#1a6bab' }}>{r.code}</td>
-                <td style={{ padding: 8 }}>{r.nameAr}</td>
-                <td style={{ padding: 8 }}>{r.nameEn}</td>
-                <td style={{ padding: 8, textAlign: 'end' }}>
-                  <button onClick={() => remove(r.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}>🗑</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="card">
+        <div className="table-wrapper">
+          {loading ? (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: 16 }}>{L('جارٍ التحميل...', 'Loading...')}</p>
+          ) : rows.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: 16 }}>{L('لا توجد نتائج — أضف رمزاً جديداً بالزر أعلاه.', 'No results — add a new code with the button above.')}</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
+                  <th style={{ textAlign: 'start', padding: 8 }}>{L('الرمز', 'Code')}</th>
+                  <th style={{ textAlign: 'start', padding: 8 }}>{L('بالعربي', 'Arabic')}</th>
+                  <th style={{ textAlign: 'start', padding: 8 }}>{L('بالإنكليزي', 'English')}</th>
+                  <th style={{ padding: 8 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color, #f3f4f6)' }}>
+                    <td style={{ padding: 8, fontFamily: 'monospace', color: '#1a6bab' }}>{r.code}</td>
+                    <td style={{ padding: 8 }}>{r.nameAr}</td>
+                    <td style={{ padding: 8 }}>{r.nameEn}</td>
+                    <td style={{ padding: 8, textAlign: 'end' }}>
+                      <button onClick={() => remove(r.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}>🗑</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>

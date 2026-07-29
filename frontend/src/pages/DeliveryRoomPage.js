@@ -7,6 +7,11 @@ import Pagination from '../components/Pagination';
 import { FaPlus, FaEdit, FaTrash, FaBaby, FaSyringe, FaBed, FaFileExcel } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+// إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 6.03:1/7.31:1.
+const BANNER_GRADIENT = 'linear-gradient(135deg, #9d174d 0%, #831843 100%)';
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -142,14 +147,7 @@ export default function DeliveryRoomPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 36 }}>👶</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22 }}>{L('صالة الولادة', 'Delivery Room')}</h1>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13 }}>{L('من دخول الأم قبل الولادة إلى تسجيل الطفل ولقاحه الأول', "From the mother's admission through the baby's first vaccine")}</p>
-          </div>
-        </div>
+      <PageBanner icon="👶" title={L('صالة الولادة', 'Delivery Room')} subtitle={L('من دخول الأم قبل الولادة إلى تسجيل الطفل ولقاحه الأول', "From the mother's admission through the baby's first vaccine")} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => setShowImport(true)} className="btn" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 600, border: '1px solid rgba(255,255,255,0.5)' }}>
             <FaFileExcel /> {L('استيراد من Excel', 'Import from Excel')}
@@ -157,7 +155,7 @@ export default function DeliveryRoomPage() {
           <ExcelExportButton apiName="deliveries" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
           <button onClick={openAddAdmission} className="btn" style={{ background: '#fff', color: '#db2777', fontWeight: 600 }}><FaBed /> {L('دخول أم جديدة', 'New Mother Admission')}</button>
         </div>
-      </div>
+      </PageBanner>
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
         {[

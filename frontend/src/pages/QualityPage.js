@@ -4,6 +4,9 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)';
 
 // ── Status configs with ar+en ──────────────────────────────────────────────────
 const AUDIT_STATUS = {
@@ -214,11 +217,11 @@ export default function QualityPage() {
   const S = {
     page:   { padding:24, direction:dir },
     stats:  { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:12, marginBottom:20 },
-    sCard:  c => ({ background:'var(--bg-secondary)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
+    sCard:  c => ({ background:'var(--bg-card)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
     btn:    (c='#1a6bab') => ({ padding:'8px 16px', background:c, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }),
     smBtn:  (c='#6b7280') => ({ padding:'4px 8px', background:c, color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:11 }),
     badge:  (c,bg) => ({ display:'inline-block', padding:'2px 9px', borderRadius:20, fontSize:10, fontWeight:600, color:c, background:bg }),
-    table:  { width:'100%', borderCollapse:'collapse', background:'var(--bg-secondary)', borderRadius:12, overflow:'hidden' },
+    table:  { width:'100%', borderCollapse:'collapse', background:'var(--bg-card)', borderRadius:12, overflow:'hidden' },
     th:     { padding:'10px 14px', textAlign:dir==='rtl'?'right':'left', background:'var(--bg-tertiary)', fontSize:11, fontWeight:600, color:'var(--text-secondary)', borderBottom:'1px solid var(--border)' },
     td:     { padding:'10px 14px', borderBottom:'1px solid var(--border)', fontSize:12, color:'var(--text-primary)' },
     modal:  { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 },
@@ -230,22 +233,17 @@ export default function QualityPage() {
 
   return (
     <div style={S.page}>
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>🏅 {L('إدارة الجودة','Quality Management')}</h1>
-          <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('نظام إدارة الجودة ISO 9001 — مؤشرات الأداء · المراجعات · عدم المطابقة','ISO 9001 Quality Management — KPIs · Audits · Non-Conformance')}</p>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button style={{ ...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
+      <PageBanner icon="🏅" title={L('إدارة الجودة','Quality Management')} subtitle={L('نظام إدارة الجودة ISO 9001 — مؤشرات الأداء · المراجعات · عدم المطابقة','ISO 9001 Quality Management — KPIs · Audits · Non-Conformance')} gradient={BANNER_GRADIENT}>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          <button style={{ padding:'8px 16px', background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => setShowImport(true)}>
             📊 {L('استيراد من Excel','Import from Excel')}
           </button>
-          <ExcelExportButton apiName={tab === 'kpi' ? 'qualityKPIs' : tab === 'audits' ? 'qualityAudits' : 'qualityNCs'} lang={lang} onError={(m) => showToast(m, 'error')} />
-          {tab === 'kpi'    && <button style={S.btn('#10b981')} onClick={() => { setKpiForm({ period: `${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth()+1)/3)}`, trend:'stable', lowerIsBetter:false, unit:'%' }); setShowKpiModal(true); }}>+ {L('مؤشر جديد','New KPI')}</button>}
-          {tab === 'audits' && <button style={S.btn()} onClick={() => { setAuditForm({ date: new Date().toISOString().split('T')[0], status:'planned', type:'internal' }); setShowAuditModal(true); }}>+ {L('مراجعة جديدة','New Audit')}</button>}
-          {tab === 'ncs'    && <button style={S.btn('#ef4444')} onClick={() => { setNCForm({ openDate: new Date().toISOString().split('T')[0], status:'open', classification:'minor' }); setShowNCModal(true); }}>+ {L('عدم مطابقة','New NC')}</button>}
+          <ExcelExportButton apiName={tab === 'kpi' ? 'qualityKPIs' : tab === 'audits' ? 'qualityAudits' : 'qualityNCs'} lang={lang} onError={(m) => showToast(m, 'error')} style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} />
+          {tab === 'kpi'    && <button style={{ padding:'8px 16px', background:'#fff', color:'#b91c1c', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => { setKpiForm({ period: `${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth()+1)/3)}`, trend:'stable', lowerIsBetter:false, unit:'%' }); setShowKpiModal(true); }}>+ {L('مؤشر جديد','New KPI')}</button>}
+          {tab === 'audits' && <button style={{ padding:'8px 16px', background:'#fff', color:'#b91c1c', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => { setAuditForm({ date: new Date().toISOString().split('T')[0], status:'planned', type:'internal' }); setShowAuditModal(true); }}>+ {L('مراجعة جديدة','New Audit')}</button>}
+          {tab === 'ncs'    && <button style={{ padding:'8px 16px', background:'#fff', color:'#b91c1c', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => { setNCForm({ openDate: new Date().toISOString().split('T')[0], status:'open', classification:'minor' }); setShowNCModal(true); }}>+ {L('عدم مطابقة','New NC')}</button>}
         </div>
-      </div>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

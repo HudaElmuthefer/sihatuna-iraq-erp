@@ -143,12 +143,15 @@ router.get('/health', async (req, res) => {
 });
 
 router.use(require('./routes/hospitalsRoutes'));
+router.use(require('./routes/brandingRoutes'));
 router.use(require('./routes/dicomWebhookRoutes'));
 router.use(require('./routes/invoiceReaderRoutes'));
 router.use(require('./routes/documentLookupRoutes'));
 router.use(require('./routes/bookingRoutes'));
 router.use(require('./routes/medicalCodesRoutes'));
 router.use(require('./routes/backupsRoutes'));
+router.use(require('./routes/codeBackupRoutes'));
+router.use(require('./routes/gitUpdateRoutes'));
 router.use(require('./routes/authRoutes'));
 
 // -- Public queue display endpoint (no login required) ----------------------

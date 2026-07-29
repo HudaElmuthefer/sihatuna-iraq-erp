@@ -3,6 +3,9 @@ import React, { useState, useMemo } from 'react';
 import { useApp, PAYMENT_PROVIDERS } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #475569 0%, #1e293b 100%)';
 
 const CATEGORY_LABELS = {
   consultation: { ar:'كشفية',  en:'Consultation', icon:'🩺' },
@@ -37,7 +40,7 @@ export default function BillingPage() {
 
   const S = {
     page:{padding:24,direction:dir},
-    card:{background:'var(--bg-secondary)',borderRadius:14,padding:20,marginBottom:20,border:'1px solid var(--border)'},
+    card:{background:'var(--bg-card)',borderRadius:14,padding:20,marginBottom:20,border:'1px solid var(--border)'},
     label:{fontSize:12,color:'var(--text-secondary)',marginBottom:6,display:'block'},
     fi:{width:'100%',padding:'8px 10px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-primary)',color:'var(--text-primary)',fontSize:13,boxSizing:'border-box'},
     btn:(c='#1a6bab')=>({padding:'9px 18px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
@@ -112,29 +115,24 @@ export default function BillingPage() {
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: 20, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>
-            {L('🧾 الفوترة والدفع', '🧾 Billing & Payment')}
-          </h1>
-          <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>
-            {L('اختر المريض، اجمع خدماته، واستلم الدفع', "Select patient, add services, and collect payment")}
-          </p>
-        </div>
-        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-          <button style={S.btnGhost} onClick={() => setShowInvoiceImport(true)}>
-            📊 {L('استيراد فواتير من Excel','Import Invoices from Excel')}
-          </button>
-          <ExcelExportButton apiName="invoices" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btnGhost} onClick={() => setShowImport(true)}>
-            📊 {L('استيراد قائمة الأسعار من Excel','Import Price List from Excel')}
-          </button>
-          <ExcelExportButton apiName="servicePrices" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btnGhost} onClick={() => setManagePrices(!managePrices)}>
-            {managePrices ? L('إخفاء قائمة الأسعار','Hide Price List') : L('⚙️ تعديل الأسعار الافتراضية','⚙️ Edit Default Prices')}
-          </button>
-        </div>
-      </div>
+      <PageBanner
+        icon="🧾"
+        title={L('الفوترة والدفع', 'Billing & Payment')}
+        subtitle={L('اختر المريض، اجمع خدماته، واستلم الدفع', "Select patient, add services, and collect payment")}
+        gradient={BANNER_GRADIENT}
+      >
+        <button style={{ ...S.btnGhost, background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowInvoiceImport(true)}>
+          📊 {L('استيراد فواتير من Excel','Import Invoices from Excel')}
+        </button>
+        <ExcelExportButton apiName="invoices" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} />
+        <button style={{ ...S.btnGhost, background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} onClick={() => setShowImport(true)}>
+          📊 {L('استيراد قائمة الأسعار من Excel','Import Price List from Excel')}
+        </button>
+        <ExcelExportButton apiName="servicePrices" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} />
+        <button style={{ ...S.btnGhost, background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} onClick={() => setManagePrices(!managePrices)}>
+          {managePrices ? L('إخفاء قائمة الأسعار','Hide Price List') : L('⚙️ تعديل الأسعار الافتراضية','⚙️ Edit Default Prices')}
+        </button>
+      </PageBanner>
 
       {managePrices && (
         <div style={S.card}>

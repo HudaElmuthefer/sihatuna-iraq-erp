@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import AppLogo from '../components/AppLogo';
 
 export default function LoginPage() {
-  const { login, addToast, lang, toggleLang, theme, toggleTheme } = useApp();
+  const { login, addToast, lang, toggleLang, theme, toggleTheme, appName } = useApp();
   const tr = useT(lang);
   const [form, setForm] = useState({ username: 'admin', password: 'admin' });
   const [showPw, setShowPw] = useState(false);
@@ -49,14 +50,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="login-logo">
           <div className="login-logo-icon">
-            <svg width="50" height="50" viewBox="0 0 60 60" fill="none">
-              <circle cx="30" cy="30" r="30" fill="rgba(26,107,171,0.12)" />
-              <circle cx="30" cy="30" r="22" fill="rgba(26,107,171,0.18)" />
-              <path d="M30 14 L30 46 M14 30 L46 30" stroke="#1a6bab" strokeWidth="5" strokeLinecap="round" />
-            </svg>
+            <AppLogo size={60} radius={14} fontSize={28} />
           </div>
           <h1 className="login-title">
-            {tr('auto_pair_126')}
+            {appName}
           </h1>
           <p className="login-subtitle">
             {tr('auto_pair_127')}

@@ -5,7 +5,10 @@ import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #581c87 0%, #7e22ce 100%)';
 
 const STATUS_CONFIG = {
   planning:  { ar:'تخطيط',  en:'Planning',   color:'#6b7280', bg:'#f3f4f6' },
@@ -36,7 +39,7 @@ const toMspDateTime = (dateStr, hour = 8) => {
 };
 const PRIORITY_TO_MSP = { high: 700, normal: 500, low: 300 };
 
-function buildPrimaveraXML(projectsList, lang) {
+function buildPrimaveraXML(projectsList, lang, appNameAr, appNameEn) {
   const managerResources = [];
   const managerUid = (name) => {
     if (!name) return null;
@@ -125,7 +128,7 @@ function buildPrimaveraXML(projectsList, lang) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Project xmlns="http://schemas.microsoft.com/project">
   <Name>SIHATUNA-Projects-${new Date().toISOString().split('T')[0]}.xml</Name>
-  <Title>${xmlEscape(lang === 'ar' ? 'مشاريع صحّتنا العراق' : 'SIHATUNA IRAQ Projects')}</Title>
+  <Title>${xmlEscape(lang === 'ar' ? `مشاريع ${appNameAr}` : `${appNameEn.toUpperCase()} Projects`)}</Title>
   <CreationDate>${new Date().toISOString()}</CreationDate>
   <CurrencySymbol>IQD</CurrencySymbol>
   <SaveVersion>14</SaveVersion>
@@ -138,8 +141,8 @@ function buildPrimaveraXML(projectsList, lang) {
 </Project>`;
 }
 
-function downloadPrimaveraXML(projectsList, lang) {
-  const xml = buildPrimaveraXML(projectsList, lang);
+function downloadPrimaveraXML(projectsList, lang, appNameAr, appNameEn) {
+  const xml = buildPrimaveraXML(projectsList, lang, appNameAr, appNameEn);
   const blob = new Blob([xml], { type: 'application/xml' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -152,7 +155,7 @@ function downloadPrimaveraXML(projectsList, lang) {
 }
 
 export default function ProjectsPage() {
-  const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, appNameAr, appNameEn } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
@@ -248,12 +251,12 @@ export default function ProjectsPage() {
   const S = {
     page:{padding:24,direction:dir},
     stats:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:14,marginBottom:20},
-    sCard:c=>({background:'var(--bg-secondary)',borderRadius:12,padding:'16px 20px',borderTop:`3px solid ${c}`}),
+    sCard:c=>({background:'var(--bg-card)',borderRadius:12,padding:'16px 20px',borderTop:`3px solid ${c}`}),
     tb:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'},
     inp:{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--bg-secondary)',color:'var(--text-primary)',fontSize:13},
     btn:(c='#1a6bab')=>({padding:'8px 16px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}),
     smBtn:(c='#6b7280')=>({padding:'5px 12px',background:c,color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:600}),
-    card:{background:'var(--bg-secondary)',borderRadius:14,padding:20,marginBottom:14,border:'1px solid var(--border)'},
+    card:{background:'var(--bg-card)',borderRadius:14,padding:20,marginBottom:14,border:'1px solid var(--border)'},
     badge:(c,bg)=>({display:'inline-block',padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:600,color:c,background:bg}),
     modal:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999},
     mbox:{background:'var(--bg-primary)',borderRadius:16,padding:28,width:'100%',maxWidth:580,maxHeight:'90vh',overflowY:'auto',direction:dir},
@@ -266,29 +269,25 @@ export default function ProjectsPage() {
 
   return (
     <div style={S.page}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <div>
-          <h1 style={{fontSize:22,fontWeight:700,color:'var(--text-primary)',margin:0}}>📐 {L('إدارة المشاريع','Project Management')}</h1>
-          <p style={{color:'var(--text-secondary)',fontSize:13,margin:'4px 0 0'}}>{L('تخطيط ومتابعة مشاريع المؤسسة | متوافق مع Primavera P6','Project planning & tracking | Primavera P6 compatible')}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button style={{ ...S.btn(), background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }} onClick={() => setShowImport(true)}>
+      <PageBanner icon="📐" title={L('إدارة المشاريع','Project Management')} subtitle={L('تخطيط ومتابعة مشاريع المؤسسة | متوافق مع Primavera P6','Project planning & tracking | Primavera P6 compatible')} gradient={BANNER_GRADIENT}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button style={{ padding:'8px 16px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={() => setShowImport(true)}>
             📊 {L('استيراد من Excel','Import from Excel')}
           </button>
-          <ExcelExportButton apiName="projects" lang={lang} onError={(m) => showToast(m, 'error')} />
+          <ExcelExportButton apiName="projects" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
           <button
-            style={{ ...S.btn('#7c3aed') }}
+            style={{ padding:'8px 16px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }}
             onClick={() => {
               if (!projects || projects.length === 0) { showToast(L('لا توجد مشاريع للتصدير','No projects to export'), 'error'); return; }
-              downloadPrimaveraXML(projects, lang);
+              downloadPrimaveraXML(projects, lang, appNameAr, appNameEn);
               showToast(L('تم تصدير ملف XML — افتحيه من Primavera P6 عبر File → Import','XML exported — open it in Primavera P6 via File → Import'), 'success');
             }}
           >
             📤 {L('تصدير Primavera P6 (XML)','Export Primavera P6 (XML)')}
           </button>
-          <button style={S.btn()} onClick={openAdd}>+ {L('مشروع جديد','New Project')}</button>
+          <button style={{ padding:'8px 16px', background: '#fff', color: '#7e22ce', border: 'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }} onClick={openAdd}>+ {L('مشروع جديد','New Project')}</button>
         </div>
-      </div>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal
@@ -391,7 +390,7 @@ export default function ProjectsPage() {
       })}
 
       {view==='gantt' && (
-        <div style={{background:'var(--bg-secondary)',borderRadius:14,padding:20,overflowX:'auto'}}>
+        <div style={{background:'var(--bg-card)',borderRadius:14,padding:20,overflowX:'auto'}}>
           <h3 style={{margin:'0 0 16px',color:'var(--text-secondary)',fontSize:14}}>{L('مخطط غانت (عرض مبسط)','Gantt Chart (Simplified View)')}</h3>
           <table style={{width:'100%',borderCollapse:'collapse',minWidth:600}}>
             <thead>
@@ -434,7 +433,7 @@ export default function ProjectsPage() {
         <div style={{textAlign:'center',padding:48,color:'var(--text-secondary)'}}>{lang==='ar'?'جاري التحميل...':'Loading...'}</div>
       )}
       {!loading && filtered.length===0 && (
-        <div style={{textAlign:'center',padding:48,color:'var(--text-secondary)',background:'var(--bg-secondary)',borderRadius:12}}>
+        <div style={{textAlign:'center',padding:48,color:'var(--text-secondary)',background:'var(--bg-card)',borderRadius:12}}>
           <div style={{fontSize:40,marginBottom:8}}>📐</div>
           <p>{L('لا توجد مشاريع','No projects found')}</p>
         </div>

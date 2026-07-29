@@ -5,6 +5,9 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { buildFallback } from '../utils/fallbackDiagnosis';
 import { FaBrain, FaPlus, FaTimes, FaChevronRight, FaExclamationTriangle, FaCheckCircle, FaFileMedical, FaUserMd, FaPhone, FaRobot, FaListAlt } from 'react-icons/fa';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #0f1923 0%, #1a2940 50%, #0d3460 100%)';
 
 const SYMPTOMS_DATA = [
   {ar:'صداع',en:'Headache'},{ar:'حمى',en:'Fever'},{ar:'سعال',en:'Cough'},{ar:'ضيق تنفس',en:'Shortness of breath'},
@@ -178,13 +181,12 @@ export default function AIDiagnosisPage() {
   return (
     <div className="page-content">
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #0f1923 0%, #1a2940 50%, #0d3460 100%)', borderRadius: 16, padding: '28px 32px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', gap: 20 }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🧠</div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{tr('ai_title')}</h1>
-          <p style={{ margin: '4px 0 0', opacity: 0.7, fontSize: 14 }}>{tr('ai_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner
+        icon={<div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🧠</div>}
+        title={tr('ai_title')}
+        subtitle={tr('ai_subtitle')}
+        gradient={BANNER_GRADIENT}
+      />
 
       {/* ── إصلاح: تلميح مبكر وصادق قبل ما يبدأ المستخدم أصلاً ────────────────────
           يعرف المستخدم من أول لحظة هل التشخيص القادم بذكاء اصطناعي حقيقي أو
@@ -343,7 +345,7 @@ export default function AIDiagnosisPage() {
               </div>
             </div>
             {(result.diagnoses || []).map((d, i) => (
-              <div key={i} style={{ background: i === 0 ? 'rgba(26,107,171,0.06)' : 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px', marginBottom: 8, border: i === 0 ? '1px solid rgba(26,107,171,0.2)' : '1px solid var(--border)' }}>
+              <div key={i} style={{ background: i === 0 ? 'rgba(26,107,171,0.06)' : 'var(--bg-card)', borderRadius: 10, padding: '12px 16px', marginBottom: 8, border: i === 0 ? '1px solid rgba(26,107,171,0.2)' : '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: 15 }}>{i + 1}. {d.name}</span>
                   {d.probability && <span style={{ background: '#1a6bab', color: '#fff', borderRadius: 10, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>{d.probability}</span>}
@@ -385,7 +387,7 @@ export default function AIDiagnosisPage() {
                 <FaUserMd color="#1a6bab" /> {L('أطباء متخصصون في البصرة','Specialist Doctors in Basra')}
               </h4>
               {result.doctors.map((doc, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: 'var(--bg-secondary)', borderRadius: 10, marginBottom: 8, border: '1px solid var(--border)' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: 'var(--bg-card)', borderRadius: 10, marginBottom: 8, border: '1px solid var(--border)' }}>
                   <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#1a6bab', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
                     {doc.name.charAt(doc.name.indexOf('.')+2)}
                   </div>

@@ -114,18 +114,30 @@ const styles = {
     justifyContent: 'center',
     zIndex: 1000,
   },
+  // ── إصلاح تباين الوضع الليلي ─────────────────────────────────────────────
+  // هذي النافذة مبنية بأنماط محلية سابقة لنظام الألوان الموحَّد (var(--bg-card)
+  // إلخ المستخدَم بباقي نوافذ التطبيق عبر صنف .modal بـ index.css) — كانت
+  // خلفية الصندوق بيضاء ثابتة (#fff) بينما نصوصها (العنوان h3، خيارات الراديو)
+  // بلا لون صريح، فتَرِث color:var(--text-primary) من قاعدة index.css العامة
+  // (h3{color:var(--text-primary)}) — بالوضع الليلي هذي القيمة تصير فاتحة/بيضاء
+  // تقريباً، فيصير النص أبيض على خلفية بيضاء (غير مرئي عملياً). نفس المشكلة
+  // بالضبط بحقل الإدخال (input بلا background/color صريحين، فيرث خلفية بيضاء
+  // افتراضية من المتصفح + نص فاتح موروث). الحل: نفس متغيرات الثيم المستخدَمة
+  // بصنف .form-control الموحَّد (var(--bg-secondary)/var(--text-primary)).
   box: {
-    background: '#fff',
+    background: 'var(--bg-card)',
     borderRadius: 8,
     padding: '24px 28px',
     width: 380,
     direction: 'rtl',
     fontFamily: 'Tahoma, Arial, sans-serif',
     boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+    color: 'var(--text-primary)',
   },
   title: {
     margin: '0 0 16px',
     fontSize: 18,
+    color: 'var(--text-primary)',
   },
   option: {
     display: 'flex',
@@ -134,15 +146,18 @@ const styles = {
     padding: '8px 0',
     fontSize: 14,
     cursor: 'pointer',
+    color: 'var(--text-primary)',
   },
   input: {
     width: '100%',
     marginTop: 8,
     padding: '8px 10px',
     fontSize: 14,
-    border: '1px solid #ccc',
+    border: '1px solid var(--border)',
     borderRadius: 4,
     boxSizing: 'border-box',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
   },
   error: {
     color: '#c0392b',
@@ -165,8 +180,8 @@ const styles = {
     cursor: 'pointer',
   },
   btnSecondary: {
-    background: '#f1f1f1',
-    color: '#333',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: 4,
     padding: '8px 16px',

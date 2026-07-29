@@ -13,9 +13,12 @@
 // ══════════════════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import { useT } from '../translations';
-import { useApp, ALL_PAGES } from '../contexts/AppContext';
-import { api, SERVER_BASE_URL } from '../api';
+import { useApp, ALL_PAGES, DEFAULT_APP_NAME_AR, DEFAULT_APP_NAME_EN } from '../contexts/AppContext';
+import { api, SERVER_BASE_URL, apiUploadFile } from '../api';
 import BackupDestinationModal from '../components/BackupDestinationModal';
+import AppLogo from '../components/AppLogo';
+import PageBanner from '../components/PageBanner';
+import { getDefaultHeaderText, getDefaultFooterText } from '../utils/printDefaults';
 const ROLES = ['admin','doctor','nurse','receptionist','accountant','hr'];
 const ROLE_LABELS = (tr) => ({
   admin: tr('role_admin'),
@@ -29,7 +32,7 @@ const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', 
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
   const [tab, setTab] = useState('users');
   const [showModal, setShowModal] = useState(false);
@@ -41,6 +44,20 @@ export default function SettingsPage() {
   const [backupRunning, setBackupRunning] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [restoringName, setRestoringName] = useState(null);
+  // ── نسخة احتياطية لكود المصدر — منفصلة تماماً عن نسخ البيانات أعلاه ──────────
+  const [codeBackups, setCodeBackups] = useState([]);
+  const [codeBackupsLoading, setCodeBackupsLoading] = useState(false);
+  const [codeBackupRunning, setCodeBackupRunning] = useState(false);
+  // ── نظام التحديثات (Stage 4) — git differential update ──────────────────
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [updateStatusLoading, setUpdateStatusLoading] = useState(false);
+  const [sourceInput, setSourceInput] = useState('');
+  const [savingSource, setSavingSource] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+  const [installResult, setInstallResult] = useState(null);
+  const [rollingBack, setRollingBack] = useState(false);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [togglingMode, setTogglingMode] = useState(false);
   const [showHospModal, setShowHospModal] = useState(false);
@@ -48,6 +65,105 @@ export default function SettingsPage() {
   const [hospForm, setHospForm] = useState({ nameAr:'', nameEn:'', address:'', phone:'', enabledPages: [] });
   const [resetPasswordResult, setResetPasswordResult] = useState(null); // { userName, tempPassword }
   const [resettingUserId, setResettingUserId] = useState(null);
+
+  // ── شعار المنظمة (Logo) ──────────────────────────────────────────────────
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoRemoving, setLogoRemoving] = useState(false);
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024; // 2MB — matches the backend's own limit (defense in depth, and a faster error for the user)
+  const LOGO_ALLOWED_EXT = ['.png', '.jpg', '.jpeg'];
+
+  const handleLogoFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) { setLogoFile(null); return; }
+    const ext = `.${f.name.split('.').pop().toLowerCase()}`;
+    if (!LOGO_ALLOWED_EXT.includes(ext)) {
+      showToast(lang === 'ar' ? 'الشعار لازم يكون PNG أو JPG' : 'Logo must be a PNG or JPG image', 'error');
+      e.target.value = '';
+      setLogoFile(null);
+      return;
+    }
+    if (f.size > LOGO_MAX_BYTES) {
+      showToast(lang === 'ar' ? 'حجم الملف أكبر من 2 ميغابايت' : 'File is larger than 2MB', 'error');
+      e.target.value = '';
+      setLogoFile(null);
+      return;
+    }
+    setLogoFile(f);
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile) return;
+    setLogoUploading(true);
+    try {
+      await apiUploadFile('/branding/logo', logoFile);
+      await reloadLogo();
+      setLogoFile(null);
+      showToast(lang === 'ar' ? 'تم رفع الشعار بنجاح' : 'Logo uploaded successfully', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setLogoUploading(false);
+  };
+
+  const handleLogoRemove = async () => {
+    if (!(await confirmDialog(lang === 'ar' ? 'إزالة الشعار الحالي والرجوع للأيقونة الافتراضية؟' : 'Remove the current logo and revert to the default icon?'))) return;
+    setLogoRemoving(true);
+    try {
+      await api.delete('/branding/logo');
+      await reloadLogo();
+      showToast(lang === 'ar' ? 'تمت إزالة الشعار' : 'Logo removed', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setLogoRemoving(false);
+  };
+
+  // ── اسم النظام القابل للتعديل (App Name) ────────────────────────────────
+  // مسودة محلية منفصلة عن appNameAr/appNameEn (القيم المُطبَّقة فعلياً) —
+  // بس تُحفَظ فعلياً لما تضغط "حفظ"، نفس نمط باقي حقول هذا التبويب (لا حفظ
+  // تلقائي بمجرد الكتابة).
+  const [appNameForm, setAppNameForm] = useState({ ar: '', en: '' });
+  const [appNameSaving, setAppNameSaving] = useState(false);
+  const [appNameResetting, setAppNameResetting] = useState(false);
+  // تُهيَّأ من القيمة الحالية أول ما نفتح تبويب "اسم النظام" (لا تُعاد التهيئة
+  // بعدها كل رندر، حتى ما تُمحى كتابة المستخدم وهو لسا يعدّل)
+  React.useEffect(() => {
+    if (tab === 'appname') setAppNameForm({ ar: appNameAr, en: appNameEn });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const handleAppNameSave = async () => {
+    // نفس نمط تحقّق حقول المنشأة (saveHospital أعلاه) — الحقلان مطلوبان معاً،
+    // إلا لو كانا فارغين كلاهما (يُعامَل عندها كإعادة ضبط للاسم الافتراضي،
+    // وهذا مسموح ومعالَج من الباك إند نفسه).
+    const arFilled = !!appNameForm.ar.trim();
+    const enFilled = !!appNameForm.en.trim();
+    if (arFilled !== enFilled) { showToast(tr('msg_required'), 'error'); return; }
+    setAppNameSaving(true);
+    try {
+      await api.put('/branding/app-name', { nameAr: appNameForm.ar, nameEn: appNameForm.en });
+      await reloadAppName();
+      showToast(lang === 'ar' ? 'تم حفظ اسم النظام' : 'App name saved', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setAppNameSaving(false);
+  };
+
+  const handleAppNameReset = async () => {
+    if (!(await confirmDialog(lang === 'ar' ? 'الرجوع للاسم الافتراضي "صحتنا عراق"؟' : 'Revert to the default name "SIHATUNA IRAQ"?'))) return;
+    setAppNameResetting(true);
+    try {
+      await api.delete('/branding/app-name');
+      await reloadAppName();
+      setAppNameForm({ ar: DEFAULT_APP_NAME_AR, en: DEFAULT_APP_NAME_EN });
+      showToast(lang === 'ar' ? 'تمت إعادة اسم النظام للافتراضي' : 'App name reset to default', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setAppNameResetting(false);
+  };
 
   const openAdd = () => { setEditing(null); setForm(emptyUser); setShowModal(true); };
   const openEdit = (u) => { setEditing(u); setForm({ ...u, password: u.password || '' }); setShowModal(true); };
@@ -121,8 +237,12 @@ export default function SettingsPage() {
     { key: 'users',      labelKey: 'set_tab_users',      icon: '👥' },
     { key: 'appearance', labelKey: 'set_tab_appearance',  icon: '🎨' },
     { key: 'system',     labelKey: 'set_tab_system',      icon: '⚙️' },
+    { key: 'print',      labelKey: 'set_tab_print',       icon: '🖨️' },
+    ...(user?.role === 'admin' ? [{ key: 'logo', labelKey: 'set_tab_logo', icon: '🖼️' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'appname', labelKey: 'set_tab_appname', icon: '🏷️' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'updates', labelKey: 'set_tab_updates', icon: '🔄' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
     { key: 'about',      labelKey: 'set_tab_about',       icon: 'ℹ️' },
   ];
@@ -217,11 +337,111 @@ export default function SettingsPage() {
     setRestoringName(null);
   };
 
+  // ── نسخة احتياطية لكود المصدر ────────────────────────────────────────────
+  const loadCodeBackups = async () => {
+    setCodeBackupsLoading(true);
+    try {
+      const list = await api.get('/code-backups');
+      setCodeBackups(list);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCodeBackupsLoading(false);
+  };
+
+  const runCodeBackup = async () => {
+    setCodeBackupRunning(true);
+    try {
+      const res = await api.post('/code-backups/run');
+      setCodeBackups(res.backups);
+      showToast(tr('code_backup_created'), 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCodeBackupRunning(false);
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  };
+
   React.useEffect(() => {
-    if (tab === 'backups') loadBackups();
+    if (tab === 'backups') { loadBackups(); loadCodeBackups(); }
+    if (tab === 'updates') loadUpdateStatus();
     if (tab === 'recycle') loadRecycleBin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // ── نظام التحديثات (Stage 4) ─────────────────────────────────────────────
+  const loadUpdateStatus = async () => {
+    setUpdateStatusLoading(true);
+    try {
+      const status = await api.get('/git-update/status');
+      setUpdateStatus(status);
+      setSourceInput((prev) => (prev ? prev : status.source || ''));
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setUpdateStatusLoading(false);
+  };
+
+  const saveUpdateSource = async () => {
+    setSavingSource(true);
+    try {
+      await api.put('/git-update/source', { sourcePath: sourceInput });
+      showToast(tr('update_source_saved'), 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setSavingSource(false);
+  };
+
+  const checkForUpdate = async () => {
+    setCheckingUpdate(true);
+    setCheckResult(null);
+    try {
+      const result = await api.post('/git-update/check');
+      setCheckResult(result);
+      showToast(result.updateAvailable ? tr('update_available') : tr('update_up_to_date'), result.updateAvailable ? 'info' : 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setCheckingUpdate(false);
+  };
+
+  const installUpdateNow = async () => {
+    if (!(await confirmDialog(tr('confirm_install_update')))) return;
+    setInstallingUpdate(true);
+    setInstallResult(null);
+    try {
+      const result = await api.post('/git-update/install');
+      setInstallResult(result);
+      showToast(result.alreadyUpToDate ? tr('update_up_to_date') : tr('update_installed'), 'success');
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setInstallingUpdate(false);
+  };
+
+  const rollbackUpdate = async () => {
+    if (!(await confirmDialog(tr('confirm_rollback')))) return;
+    setRollingBack(true);
+    try {
+      await api.post('/git-update/rollback');
+      showToast(tr('rollback_done'), 'success');
+      setInstallResult(null);
+      await loadUpdateStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+    setRollingBack(false);
+  };
 
   // ── سلة المحذوفات ────────────────────────────────────────────────────────
   const [recycleItems, setRecycleItems] = useState([]);
@@ -364,13 +584,7 @@ export default function SettingsPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background:'linear-gradient(135deg,#0f172a,#1e293b)', borderRadius:16, padding:'24px 28px', marginBottom:24, color:'#fff', display:'flex', alignItems:'center', gap:16 }}>
-        <span style={{ fontSize:36 }}>⚙️</span>
-        <div>
-          <h1 style={{ margin:0, fontSize:22 }}>{tr('set_title')}</h1>
-          <p style={{ margin:'4px 0 0', opacity:0.7, fontSize:13 }}>{tr('set_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner icon="⚙️" title={tr('set_title')} subtitle={tr('set_subtitle')} gradient="linear-gradient(135deg,#0f172a,#1e293b)" />
 
       <div style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:20 }}>
         {/* Sidebar tabs */}
@@ -508,7 +722,6 @@ export default function SettingsPage() {
               <h3 style={{ margin:'0 0 20px' }}>{tr('set_title')}</h3>
               <div style={{ display:'grid', gap:14 }}>
                 {[
-                  { labelKey:'set_hospital_name', val:'مستشفى البصرة التعليمي' },
                   { labelKey:'set_license_no', val:'MOH-2024-001' },
                   { labelKey:'set_location', val:'البصرة، العراق' },
                   { labelKey:'set_official_email', val:'info@basrahospital.iq' },
@@ -520,6 +733,167 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 <button onClick={() => showToast(tr('msg_saved'),'success')} className="btn btn-primary" style={{ width:'fit-content' }}>💾 {tr('set_save_settings')}</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── PRINT SETTINGS TAB ── */}
+          {tab === 'print' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🖨️ {tr('set_tab_print')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('print_settings_desc')}</p>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{tr('print_paper_size')}</h4>
+                <div style={{ display:'flex', gap:12 }}>
+                  {['A4','Letter'].map(size => (
+                    <button key={size} onClick={() => setPrintSettings(p => ({ ...p, paperSize: size }))} style={{ padding:'10px 22px', borderRadius:10, border:`2px solid ${printSettings.paperSize===size?'#1a6bab':'var(--border)'}`, background:printSettings.paperSize===size?'rgba(26,107,171,0.1)':'transparent', color:printSettings.paperSize===size?'#1a6bab':'var(--text-primary)', cursor:'pointer', fontSize:13, fontWeight:printSettings.paperSize===size?700:400 }}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{tr('print_orientation')}</h4>
+                <div style={{ display:'flex', gap:12 }}>
+                  {[{ key:'portrait', label:tr('print_portrait') }, { key:'landscape', label:tr('print_landscape') }].map(o => (
+                    <button key={o.key} onClick={() => setPrintSettings(p => ({ ...p, orientation: o.key }))} style={{ padding:'10px 22px', borderRadius:10, border:`2px solid ${printSettings.orientation===o.key?'#1a6bab':'var(--border)'}`, background:printSettings.orientation===o.key?'rgba(26,107,171,0.1)':'transparent', color:printSettings.orientation===o.key?'#1a6bab':'var(--text-primary)', cursor:'pointer', fontSize:13, fontWeight:printSettings.orientation===o.key?700:400 }}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom:24 }}>
+                <h4 style={{ margin:'0 0 12px', fontSize:14 }}>{lang === 'ar' ? 'العناصر الافتراضية بكل طبعة' : 'Default elements for every print'}</h4>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeHeader} onChange={() => setPrintSettings(p => ({ ...p, includeHeader: !p.includeHeader }))} />
+                    {tr('print_include_header')}
+                  </label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeFooter} onChange={() => setPrintSettings(p => ({ ...p, includeFooter: !p.includeFooter }))} />
+                    {tr('print_include_footer')}
+                  </label>
+                  <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13 }}>
+                    <input type="checkbox" checked={printSettings.includeLogo} onChange={() => setPrintSettings(p => ({ ...p, includeLogo: !p.includeLogo }))} />
+                    {tr('print_include_logo')}
+                  </label>
+                  <p style={{ fontSize:11, color:'var(--text-secondary)', margin:'4px 0 0' }}>{tr('print_logo_note')}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ margin:'0 0 6px', fontSize:14 }}>{lang === 'ar' ? 'نص الترويسة والتذييل الافتراضي (اختياري)' : 'Default header & footer text (optional)'}</h4>
+                <p style={{ fontSize:12, color:'var(--text-secondary)', margin:'0 0 14px', maxWidth:480 }}>{tr('print_global_text_desc')}</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  <div>
+                    <label className="form-label">{tr('print_header_text')}</label>
+                    <input
+                      type="text"
+                      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                      value={printSettings.headerText}
+                      onChange={e => setPrintSettings(p => ({ ...p, headerText: e.target.value }))}
+                      placeholder={getDefaultHeaderText(tr, appName)}
+                      className="form-control"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">{tr('print_footer_text')}</label>
+                    <input
+                      type="text"
+                      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                      value={printSettings.footerText}
+                      onChange={e => setPrintSettings(p => ({ ...p, footerText: e.target.value }))}
+                      placeholder={getDefaultFooterText(lang)}
+                      className="form-control"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── LOGO TAB (admin-only, same gating as hospitals/backups/recycle below) ── */}
+          {tab === 'logo' && user?.role === 'admin' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🖼️ {tr('set_tab_logo')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('logo_section_desc')}</p>
+
+              <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:24 }}>
+                <div>
+                  <div style={{ fontSize:11, color:'var(--text-secondary)', marginBottom:8 }}>{tr('logo_current_preview')}</div>
+                  <div style={{ padding:14, borderRadius:12, background:'var(--bg-secondary)', border:'1px solid var(--border)', display:'inline-flex' }}>
+                    <AppLogo size={72} radius={12} fontSize={34} />
+                  </div>
+                </div>
+                {logoUrl && (
+                  <button onClick={handleLogoRemove} disabled={logoRemoving} className="btn btn-outline" style={{ color:'#ef4444', borderColor:'#ef4444', alignSelf:'flex-end' }}>
+                    🗑️ {logoRemoving ? (lang==='ar'?'جارٍ الإزالة...':'Removing...') : tr('logo_remove_btn')}
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="form-label">{tr('logo_upload_label')}</label>
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  onChange={handleLogoFileChange}
+                  style={{ width:'100%', padding:8, borderRadius:8, border:'1.5px solid var(--border)', background:'var(--bg-primary)', color:'var(--text-primary)' }}
+                />
+                <p style={{ fontSize:11, color:'var(--text-secondary)', margin:'6px 0 0' }}>{tr('logo_upload_hint')}</p>
+                <button
+                  onClick={handleLogoUpload}
+                  disabled={!logoFile || logoUploading}
+                  className="btn btn-primary"
+                  style={{ marginTop:12 }}
+                >
+                  📤 {logoUploading ? (lang==='ar'?'جارٍ الرفع...':'Uploading...') : tr('logo_upload_btn')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── APP NAME TAB (admin-only) — moved out of the Logo tab so it's
+               fully visible without scrolling; was previously a sub-section
+               below the logo upload UI and got cut off below the fold. ── */}
+          {tab === 'appname' && user?.role === 'admin' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🏷️ {tr('set_tab_appname')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:480 }}>{tr('app_name_section_desc')}</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:14, maxWidth:420 }}>
+                <div>
+                  <label className="form-label">{tr('app_name_label_ar')}</label>
+                  <input
+                    type="text"
+                    dir="rtl"
+                    value={appNameForm.ar}
+                    onChange={e => setAppNameForm(p => ({ ...p, ar: e.target.value }))}
+                    placeholder={DEFAULT_APP_NAME_AR}
+                    className="form-control"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">{tr('app_name_label_en')}</label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={appNameForm.en}
+                    onChange={e => setAppNameForm(p => ({ ...p, en: e.target.value }))}
+                    placeholder={DEFAULT_APP_NAME_EN}
+                    className="form-control"
+                  />
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={handleAppNameSave} disabled={appNameSaving} className="btn btn-primary">
+                    💾 {appNameSaving ? (lang==='ar'?'جارٍ الحفظ...':'Saving...') : tr('app_name_save_btn')}
+                  </button>
+                  <button onClick={handleAppNameReset} disabled={appNameResetting} className="btn btn-outline">
+                    ↺ {appNameResetting ? (lang==='ar'?'جارٍ الإعادة...':'Resetting...') : tr('app_name_reset_btn')}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -675,6 +1049,177 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* ── CODE BACKUP (source code, separate from the data backup above) ── */}
+          {tab === 'backups' && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16 }}>
+                <div>
+                  <h3 style={{ margin:'0 0 6px' }}>🗂️ {tr('code_backup_title')}</h3>
+                  <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('code_backup_desc')}</p>
+                </div>
+                <button
+                  onClick={runCodeBackup}
+                  disabled={codeBackupRunning}
+                  className="btn btn-primary"
+                  style={{ whiteSpace:'nowrap' }}
+                >
+                  {codeBackupRunning ? `⏳ ${tr('code_backup_running')}` : `🗂️ ${tr('btn_code_backup_now')}`}
+                </button>
+              </div>
+
+              {codeBackupsLoading ? (
+                <p style={{ color:'var(--text-secondary)' }}>...</p>
+              ) : codeBackups.length === 0 ? (
+                <p style={{ color:'var(--text-secondary)' }}>{tr('no_code_backups_yet')}</p>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:420, overflowY:'auto' }}>
+                  {codeBackups.map(b => (
+                    <div key={b.name} style={{
+                      display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8,
+                      padding:'10px 14px', borderRadius:8, background:'var(--bg-card)',
+                    }}>
+                      <span style={{ fontSize:13, fontFamily:'monospace' }}>
+                        📦 {b.name}
+                        <span style={{ marginInlineStart:10, color:'var(--text-secondary)', fontSize:12 }}>
+                          {formatBytes(b.sizeBytes)} · {new Date(b.createdAt).toLocaleString(lang === 'ar' ? 'ar-IQ' : 'en-US')}
+                        </span>
+                      </span>
+                      <a
+                        href={`${SERVER_BASE_URL}/api/code-backups/${b.name}/download`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline"
+                        style={{ fontSize:12, padding:'6px 12px', textDecoration:'none' }}
+                      >
+                        ⬇️ {tr('btn_download')}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── UPDATES TAB (Stage 4: git-based differential update) ── */}
+          {tab === 'updates' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <div className="card">
+                <h3 style={{ margin:'0 0 6px' }}>🔄 {tr('set_tab_updates')}</h3>
+                <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-secondary)', maxWidth:560 }}>{tr('update_source_desc')}</p>
+
+                <label className="form-label">{tr('update_source_label')}</label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  className="form-control"
+                  value={sourceInput}
+                  onChange={(e) => setSourceInput(e.target.value)}
+                  placeholder="E:\sihatuna-updates.git  |  \\SERVER\share\sihatuna-updates.git  |  https://github.com/..."
+                  style={{ marginBottom:8 }}
+                />
+                <p style={{ margin:'0 0 12px', fontSize:12, color:'var(--text-secondary)' }}>{tr('update_source_hint')}</p>
+                <button onClick={saveUpdateSource} disabled={savingSource || !sourceInput.trim()} className="btn btn-primary" style={{ fontSize:13 }}>
+                  {savingSource ? '⏳' : '💾'} {tr('btn_save_source')}
+                </button>
+
+                <div style={{ marginTop:20, paddingTop:16, borderTop:'1px solid var(--border)', display:'flex', flexWrap:'wrap', gap:24 }}>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_current_version')}</div>
+                    <div style={{ fontSize:13, fontFamily:'monospace' }}>
+                      {updateStatusLoading ? '...' : updateStatus ? `${updateStatus.currentBranch}@${updateStatus.currentCommit?.slice(0, 7)}` : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_source_configured')}</div>
+                    <div style={{ fontSize:13, fontFamily:'monospace', wordBreak:'break-all', maxWidth:320 }}>
+                      {updateStatusLoading ? '...' : (updateStatus?.source || tr('update_no_source_configured'))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{tr('update_last_checked')}</div>
+                    <div style={{ fontSize:13 }}>
+                      {updateStatusLoading ? '...' : (updateStatus?.lastCheck?.checkedAt ? new Date(updateStatus.lastCheck.checkedAt).toLocaleString(lang === 'ar' ? 'ar-IQ' : 'en-US') : tr('update_never_checked'))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:12 }}>
+                  <h3 style={{ margin:0 }}>{tr('update_check_title')}</h3>
+                  <button onClick={checkForUpdate} disabled={checkingUpdate || !updateStatus?.source} className="btn btn-outline">
+                    {checkingUpdate ? `⏳ ${tr('checking_updates')}` : `🔍 ${tr('btn_check_updates')}`}
+                  </button>
+                </div>
+
+                {checkResult && (
+                  <div style={{ padding:'12px 14px', borderRadius:8, background:'var(--bg-secondary)' }}>
+                    {checkResult.updateAvailable ? (
+                      <>
+                        <div style={{ fontWeight:600, marginBottom:8 }}>
+                          🆕 {tr('update_available')} — {checkResult.commitsBehind} {tr('update_commits_suffix')}
+                        </div>
+                        {checkResult.changelog.length > 0 && (
+                          <ul style={{ margin:0, paddingInlineStart:20, fontSize:13, fontFamily:'monospace' }}>
+                            {checkResult.changelog.map((line, i) => <li key={i} style={{ marginBottom:4 }}>{line}</li>)}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <div>✅ {tr('update_up_to_date')}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="card">
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:12 }}>
+                  <div>
+                    <h3 style={{ margin:'0 0 6px' }}>{tr('update_install_title')}</h3>
+                    <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)', maxWidth:520 }}>{tr('update_install_desc')}</p>
+                  </div>
+                  <button onClick={installUpdateNow} disabled={installingUpdate || !updateStatus?.source} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
+                    {installingUpdate ? `⏳ ${tr('installing_update')}` : `⬇️ ${tr('btn_install_update')}`}
+                  </button>
+                </div>
+
+                {installResult && !installResult.alreadyUpToDate && (
+                  <div style={{ padding:'12px 14px', borderRadius:8, background:'var(--bg-secondary)', fontSize:13 }}>
+                    <div style={{ marginBottom:6 }}>
+                      <strong>{tr('update_current_version')}:</strong>{' '}
+                      <span style={{ fontFamily:'monospace' }}>{installResult.beforeCommit?.slice(0,7)} → {installResult.afterCommit?.slice(0,7)}</span>
+                    </div>
+                    <div style={{ marginBottom:6 }}>
+                      <strong>{tr('update_files_changed')}:</strong> {installResult.filesChanged.length}
+                    </div>
+                    {(installResult.npmInstallRan?.backend || installResult.npmInstallRan?.frontend) && (
+                      <div>
+                        <strong>npm install:</strong>{' '}
+                        {[installResult.npmInstallRan.backend && 'backend', installResult.npmInstallRan.frontend && 'frontend'].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {updateStatus?.lastInstall?.beforeCommit && (
+                <div className="card">
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+                    <div>
+                      <h3 style={{ margin:'0 0 6px' }}>{tr('update_rollback_title')}</h3>
+                      <p style={{ margin:0, fontSize:13, color:'var(--text-secondary)' }}>
+                        {tr('update_rollback_desc')} <span style={{ fontFamily:'monospace' }}>{updateStatus.lastInstall.beforeCommit.slice(0,7)}</span>
+                      </p>
+                    </div>
+                    <button onClick={rollbackUpdate} disabled={rollingBack} className="btn btn-danger" style={{ whiteSpace:'nowrap' }}>
+                      {rollingBack ? '⏳' : '⏪'} {tr('btn_rollback')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── RECYCLE BIN TAB ── */}
           {tab === 'recycle' && (
             <div className="card">
@@ -759,7 +1304,7 @@ export default function SettingsPage() {
             <div>
               <div className="card" style={{ marginBottom:16, textAlign:'center', padding:'40px 20px' }}>
                 <div style={{ width:80, height:80, borderRadius:'50%', background:'linear-gradient(135deg,#1a6bab,#0d3460)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 16px' }}>🏥</div>
-                <h2 style={{ margin:'0 0 6px', fontSize:24 }}>SIHATUNA IRAQ</h2>
+                <h2 style={{ margin:'0 0 6px', fontSize:24 }}>{appNameEn.toUpperCase()}</h2>
                 <div style={{ color:'var(--text-secondary)', fontSize:14, marginBottom:4 }}>{tr('app_subtitle')}</div>
                 <div style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', display:'inline-block', padding:'3px 14px', borderRadius:12, fontSize:12, fontWeight:700 }}>{tr('set_version')} v3.0</div>
               </div>

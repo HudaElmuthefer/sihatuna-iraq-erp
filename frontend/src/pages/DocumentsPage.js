@@ -7,6 +7,9 @@ import { useT } from '../translations';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #164e63 0%, #0e7490 100%)';
 
 const STATUS_CONFIG = {
   pending:   { label: 'قيد المعالجة', en:'Pending',   color: '#f59e0b', bg: '#fef3c7' },
@@ -130,12 +133,12 @@ export default function DocumentsPage() {
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 },
     title: { fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 },
     stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 },
-    statCard: (c) => ({ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 18px', borderTop: `3px solid ${c}` }),
+    statCard: (c) => ({ background: 'var(--bg-card)', borderRadius: 12, padding: '14px 18px', borderTop: `3px solid ${c}` }),
     toolbar: { display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' },
     input: { padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13 },
     select: { padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13 },
     btn: (c='#1a6bab') => ({ padding: '8px 16px', background: c, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }),
-    docCard: (priority) => ({ background: 'var(--bg-secondary)', borderRadius: 12, padding: 16, marginBottom: 10, border: `1px solid var(--border)`, borderRight: priority === 'urgent' ? '4px solid #ef4444' : priority === 'high' ? '4px solid #f59e0b' : '1px solid var(--border)' }),
+    docCard: (priority) => ({ background: 'var(--bg-card)', borderRadius: 12, padding: 16, marginBottom: 10, border: `1px solid var(--border)`, borderRight: priority === 'urgent' ? '4px solid #ef4444' : priority === 'high' ? '4px solid #f59e0b' : '1px solid var(--border)' }),
     badge: (c, bg) => ({ display: 'inline-block', padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: c, background: bg }),
     modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
     modalBox: { background: 'var(--bg-primary)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', direction: dir },
@@ -146,19 +149,15 @@ export default function DocumentsPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.header}>
-        <div>
-          <h1 style={S.title}>📁 {L('ضبط الوثائق والمراسلات','Document Control')}</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '4px 0 0' }}>{lang === 'ar' ? 'إدارة الوارد والصادر وأرشفة الوثائق | متوافق مع ISO 9001' : 'Incoming, outgoing & document archiving | ISO 9001 compliant'}</p>
-        </div>
+      <PageBanner icon="📁" title={L('ضبط الوثائق والمراسلات','Document Control')} subtitle={lang === 'ar' ? 'إدارة الوارد والصادر وأرشفة الوثائق | متوافق مع ISO 9001' : 'Incoming, outgoing & document archiving | ISO 9001 compliant'} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button style={{ ...S.btn('var(--bg-tertiary)'), color: 'var(--text-primary)' }} onClick={() => setShowImport(true)}>
+          <button style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }} onClick={() => setShowImport(true)}>
             📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
           </button>
-          <ExcelExportButton apiName="documents" lang={lang} onError={(m) => showToast(m, 'error')} />
-          <button style={S.btn()} onClick={openAdd}>+ {lang === 'ar' ? 'وثيقة جديدة' : 'New Document'}</button>
+          <ExcelExportButton apiName="documents" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+          <button style={{ padding: '8px 16px', background: '#fff', color: '#0e7490', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }} onClick={openAdd}>+ {lang === 'ar' ? 'وثيقة جديدة' : 'New Document'}</button>
         </div>
-      </div>
+      </PageBanner>
 
       <div style={S.stats}>
         {[['إجمالي الوثائق', stats.total, '#1a6bab'],['وارد', stats.incoming, '#8b5cf6'],['صادر', stats.outgoing, '#10b981'],['قيد المعالجة', stats.pending, '#f59e0b'],['عاجل', stats.urgent, '#ef4444']].map(([lbl, val, c], i) => (
@@ -229,7 +228,7 @@ export default function DocumentsPage() {
       })}
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
+        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: 12 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>📁</div>
           <p>لا توجد وثائق</p>
         </div>

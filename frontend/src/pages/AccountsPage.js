@@ -12,6 +12,9 @@ import GeneralTab from './accounts/GeneralTab';
 import SalariesTab from './accounts/SalariesTab';
 import PromotionsTab from './accounts/PromotionsTab';
 import AllowancesTab from './accounts/AllowancesTab';
+import PageBanner from '../components/PageBanner';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg,#064e3b,#059669)';
 
 const ACCT_TABS = [
   { key:'general',    labelKey:'acc_tab_general',   icon:'💰' },
@@ -46,13 +49,7 @@ export default function AccountsPage() {
 
   return (
     <div className="page-content">
-      <div style={{ background:'linear-gradient(135deg,#064e3b,#059669)', borderRadius:16, padding:'24px 28px', marginBottom:24, color:'#fff', display:'flex', alignItems:'center', gap:16 }}>
-        <span style={{ fontSize:36 }}>💰</span>
-        <div>
-          <h1 style={{ margin:0, fontSize:22 }}>{tr('acc_title')}</h1>
-          <p style={{ margin:'4px 0 0', opacity:0.7, fontSize:13 }}>{tr('acc_subtitle')}</p>
-        </div>
-      </div>
+      <PageBanner icon="💰" title={tr('acc_title')} subtitle={tr('acc_subtitle')} gradient={BANNER_GRADIENT} />
 
       <div style={{ display:'flex', gap:6, marginBottom:24, flexWrap:'wrap' }}>
         {ACCT_TABS.map(t => (

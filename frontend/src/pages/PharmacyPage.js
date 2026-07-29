@@ -6,7 +6,10 @@ import { useApp } from '../contexts/AppContext';
 import { FaFileExcel } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)';
 
 const RX_STATUS = {
   pending:   { ar:'بانتظار الصرف', en:'Pending Dispense', color:'#f59e0b', bg:'#fef3c7' },
@@ -264,16 +267,16 @@ export default function PharmacyPage() {
   const S = {
     page:   { padding: 24, direction: dir },
     stats:  { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:12, marginBottom:20 },
-    sCard:  c => ({ background:'var(--bg-secondary)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
+    sCard:  c => ({ background:'var(--bg-card)', borderRadius:12, padding:'14px 18px', borderTop:`3px solid ${c}` }),
     tabs:   { display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' },
     tabBtn: active => ({ padding:'9px 18px', borderRadius:8, cursor:'pointer', fontSize:13, border: active ? 'none' : '1px solid var(--border)', background: active ? '#1a6bab' : 'var(--bg-secondary)', color: active ? '#fff' : 'var(--text-secondary)', fontWeight: active ? 600 : 400, display:'flex', alignItems:'center', gap:8 }),
     tb:     { display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'center' },
     inp:    { padding:'8px 12px', border:'1px solid var(--border)', borderRadius:8, background:'var(--bg-secondary)', color:'var(--text-primary)', fontSize:13 },
     btn:    (c='#1a6bab') => ({ padding:'8px 16px', background:c, color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 }),
     smBtn:  (c='#6b7280') => ({ padding:'4px 10px', background:c, color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:11, fontWeight:600 }),
-    rxCard: { background:'var(--bg-secondary)', borderRadius:12, padding:18, marginBottom:12, border:'1px solid var(--border)' },
+    rxCard: { background:'var(--bg-card)', borderRadius:12, padding:18, marginBottom:12, border:'1px solid var(--border)' },
     badge:  (c,bg) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, fontSize:11, fontWeight:600, color:c, background:bg }),
-    table:  { width:'100%', borderCollapse:'collapse', background:'var(--bg-secondary)', borderRadius:12, overflow:'hidden' },
+    table:  { width:'100%', borderCollapse:'collapse', background:'var(--bg-card)', borderRadius:12, overflow:'hidden' },
     th:     { padding:'10px 12px', textAlign: dir==='rtl'?'right':'left', background:'var(--bg-tertiary)', fontSize:11, fontWeight:600, color:'var(--text-secondary)', borderBottom:'1px solid var(--border)' },
     td:     { padding:'10px 12px', borderBottom:'1px solid var(--border)', fontSize:12, color:'var(--text-primary)', verticalAlign:'middle' },
     modal:  { position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 },
@@ -289,24 +292,23 @@ export default function PharmacyPage() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text-primary)', margin:0 }}>💊 {L('الصيدلية','Pharmacy')}</h1>
-          <p style={{ color:'var(--text-secondary)', fontSize:13, margin:'4px 0 0' }}>{L('إدارة الوصفات الطبية وصرف الأدوية وإدارة المخزون','Manage prescriptions, drug dispensing and inventory')}</p>
-        </div>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {tab === 'prescriptions' && (
-            <>
-              <button style={{...S.btn(), background:'var(--bg-secondary)', color:'var(--text-primary)', border:'1.5px solid var(--border-color)'}} onClick={() => setShowImport(true)}>
-                <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
-              </button>
-              <ExcelExportButton apiName="pharmacyOrders" lang={lang} onError={(m) => showToast(m, 'error')} />
-              <button style={S.btn()} onClick={openAddRx}>+ {L('وصفة جديدة','New Prescription')}</button>
-            </>
-          )}
-          {(tab === 'available' || tab === 'shortage') && <button style={S.btn('#10b981')} onClick={openAddDrug}>+ {L('إضافة دواء','Add Drug')}</button>}
-        </div>
-      </div>
+      <PageBanner
+        icon="💊"
+        title={L('الصيدلية','Pharmacy')}
+        subtitle={L('إدارة الوصفات الطبية وصرف الأدوية وإدارة المخزون','Manage prescriptions, drug dispensing and inventory')}
+        gradient={BANNER_GRADIENT}
+      >
+        {tab === 'prescriptions' && (
+          <>
+            <button style={{...S.btn(), background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)'}} onClick={() => setShowImport(true)}>
+              <FaFileExcel style={{marginInlineEnd:6}} /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+            </button>
+            <ExcelExportButton apiName="pharmacyOrders" lang={lang} onError={(m) => showToast(m, 'error')} style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }} />
+            <button style={{...S.btn(), background:'#fff', color:'#14532d'}} onClick={openAddRx}>+ {L('وصفة جديدة','New Prescription')}</button>
+          </>
+        )}
+        {(tab === 'available' || tab === 'shortage') && <button style={{...S.btn(), background:'#fff', color:'#14532d'}} onClick={openAddDrug}>+ {L('إضافة دواء','Add Drug')}</button>}
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

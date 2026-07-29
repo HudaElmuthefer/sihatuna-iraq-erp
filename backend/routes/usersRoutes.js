@@ -139,4 +139,42 @@ router.put('/users/me/password', auth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── لوحة تحكم قابلة للتخصيص لكل مستخدم (Stage 5) ────────────────────────────
+// تُحفَظ التفضيلات على سجل المستخدم نفسه بـ db.json (نفس نمط باقي حقول
+// المستخدم — النظام لم ينقل موديول المستخدمين/تسجيل الدخول لـ PostgreSQL
+// بعد، راجعي utils/db.js) بدل جدول عام، لأن كل مستخدم يملك تخطيطه الخاص
+// المستقل تماماً عن باقي المستخدمين.
+//
+// dashboardLayout = مصفوفة من مفاتيح الودجت الظاهرة، بترتيب عرضها فعلياً —
+// حذف مفتاح من المصفوفة يعني إخفاء الودجت، وترتيب المصفوفة نفسه هو ترتيب
+// العرض (يغني عن حقل "ترتيب" منفصل). null/غير موجود = لم يخصِّص المستخدم
+// شيئاً بعد، فتُستخدَم القائمة الافتراضية الكاملة بالفرونت إند.
+const VALID_DASHBOARD_WIDGETS = ['erp', 'stats', 'departments', 'appointments', 'doctors'];
+
+router.put('/users/me/dashboard-layout', auth, (req, res) => {
+  const { widgets } = req.body;
+  if (!Array.isArray(widgets) || !widgets.every(w => VALID_DASHBOARD_WIDGETS.includes(w))) {
+    return res.status(400).json({ message: 'قائمة ودجت غير صالحة' });
+  }
+  // منع التكرار داخل نفس الطلب — احتياط بسيط ضد بيانات مشوَّهة من الواجهة
+  const deduped = [...new Set(widgets)];
+  const db = readDB();
+  const idx = (db.users || []).findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ message: 'غير موجود' });
+
+  db.users[idx].dashboardLayout = deduped;
+  writeDB(db);
+  res.json({ success: true, dashboardLayout: deduped });
+});
+
+router.delete('/users/me/dashboard-layout', auth, (req, res) => {
+  const db = readDB();
+  const idx = (db.users || []).findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ message: 'غير موجود' });
+
+  delete db.users[idx].dashboardLayout;
+  writeDB(db);
+  res.json({ success: true });
+});
+
 module.exports = router;

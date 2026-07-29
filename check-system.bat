@@ -51,7 +51,7 @@ node -e "require('dotenv').config(); require('./config/database').testConnection
 echo.
 
 echo  [backup] External backup destination
-findstr /R /C:"^EXTERNAL_BACKUP_DIR=.+" "%~dp0backend\.env" >nul 2>&1
+findstr /R /C:"^EXTERNAL_BACKUP_DIR=.*" "%~dp0backend\.env" >nul 2>&1
 if errorlevel 1 (
     echo    [!] Not configured - backups only exist on this machine's disk.
     echo        Add EXTERNAL_BACKUP_DIR to backend\.env to protect against disk failure.

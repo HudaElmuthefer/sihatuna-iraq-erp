@@ -8,7 +8,10 @@ import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+
+const BANNER_GRADIENT = 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)';
 
 const specs = [
   { ar:'باطنية وصدرية', en:'Internal/Chest Medicine' },
@@ -155,28 +158,21 @@ export default function DoctorsPage() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
-        <div className="page-title">
-          <div className="icon"><FaUserMd /></div>
-          {tr('doc_management')}
-          <span className="badge badge-info" style={{ fontSize: 13 }}>{doctors.length}</span>
+      <PageBanner icon={<FaUserMd />} title={tr('doc_management')} count={doctors.length} gradient={BANNER_GRADIENT}>
+        <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, overflow: 'hidden' }}>
+          {['cards', 'table'].map(v => (
+            <button key={v} onClick={() => setView(v)}
+              style={{ padding: '8px 14px', background: view === v ? '#fff' : 'rgba(255,255,255,0.15)', color: view === v ? '#0c4a6e' : '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}>
+              {v === 'cards' ? '⊞' : '☰'} {v === 'cards' ? (tr('doc_cards_view')) : (tr('doc_table_view'))}
+            </button>
+          ))}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ display: 'flex', border: '1.5px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-            {['cards', 'table'].map(v => (
-              <button key={v} onClick={() => setView(v)}
-                style={{ padding: '8px 14px', background: view === v ? 'var(--primary)' : 'var(--bg-secondary)', color: view === v ? 'white' : 'var(--text-muted)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}>
-                {v === 'cards' ? '⊞' : '☰'} {v === 'cards' ? (tr('doc_cards_view')) : (tr('doc_table_view'))}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-outline" onClick={() => setShowImport(true)}>
-            <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
-          </button>
-          <ExcelExportButton apiName="doctors" lang={lang} onError={(m) => addToast(m, 'error')} />
-          <button className="btn btn-primary" onClick={openAdd}><FaPlus /> {tr('doc_add')}</button>
-        </div>
-      </div>
+        <button className="btn" onClick={() => setShowImport(true)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>
+          <FaFileExcel /> {ar ? 'استيراد من Excel' : 'Import from Excel'}
+        </button>
+        <ExcelExportButton apiName="doctors" lang={lang} onError={(m) => addToast(m, 'error')} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)' }} />
+        <button className="btn" onClick={openAdd} style={{ background: '#fff', color: '#0c4a6e', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}><FaPlus /> {tr('doc_add')}</button>
+      </PageBanner>
 
       {showImport && (
         <ExcelImportModal

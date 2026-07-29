@@ -6,6 +6,7 @@ import { useApp } from '../contexts/AppContext';
 import { FaUsers, FaPlus, FaSearch, FaEdit, FaTrash, FaEye, FaTimes, FaFileExcel} from 'react-icons/fa';
 import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
+import DateRangeFilter from '../components/DateRangeFilter';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import DiagnosisPicker from '../components/DiagnosisPicker';
@@ -29,6 +30,8 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [selected, setSelected] = useState(null);
@@ -60,7 +63,7 @@ export default function PatientsPage() {
   // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
   // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذي الصفحة تحديداً.
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
-    useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50 });
+    useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { startDate: dateFrom, endDate: dateTo } });
 
   const openAdd = () => {
     // نعتمد على أعلى رقم مريض موجود فعلياً بدل عدد السجلات — الاعتماد على
@@ -194,6 +197,8 @@ export default function PatientsPage() {
                 </button>
               ))}
             </div>
+            <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+              label={ar ? 'تاريخ التسجيل:' : 'Registration date:'} />
           </div>
         </div>
       </div>

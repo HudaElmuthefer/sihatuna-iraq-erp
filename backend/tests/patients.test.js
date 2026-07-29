@@ -145,3 +145,38 @@ describe('GET /api/patients — الجلب المُرقَّم من السيرف�
     expect(res.body.data.length).toBeLessThanOrEqual(200);
   });
 });
+
+describe('GET /api/patients — date-range filter (?startDate=&endDate=, registration date created_at)', () => {
+  test('a range covering today includes a patient just created', async () => {
+    const create = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Date filter test patient', phone: '07700001111', status: 'active' });
+    expect(create.status).toBe(201);
+
+    const today = new Date().toISOString().split('T')[0];
+    const res = await request(app)
+      .get(`/api/patients?page=1&limit=200&startDate=${today}&endDate=${today}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.some(p => p.name === 'Date filter test patient')).toBe(true);
+  });
+
+  test('a range entirely in the past (before any test data existed) returns no results', async () => {
+    const res = await request(app)
+      .get('/api/patients?page=1&limit=200&startDate=2000-01-01&endDate=2000-01-31')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBe(0);
+  });
+
+  test('an invalid date format (?startDate=) is safely ignored instead of breaking the query (no 500)', async () => {
+    const res = await request(app)
+      .get('/api/patients?page=1&limit=5&startDate=not-a-date&endDate=also-not-a-date')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+  });
+});

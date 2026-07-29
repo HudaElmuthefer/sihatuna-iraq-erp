@@ -8,6 +8,7 @@ import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #164e63 0%, #0e7490 100%)';
 
@@ -48,20 +49,29 @@ export default function DocumentsPage() {
 
   const filtered = useMemo(() => documents.filter(d => {
     const q = search.toLowerCase();
-    const matchSearch = !q || d.title.includes(q) || d.docNo.toLowerCase().includes(q) || d.from.includes(q) || d.subject.includes(q);
-    const matchType = typeFilter === 'all' || d.type === typeFilter;
-    const matchStatus = statusFilter === 'all' || d.status === statusFilter;
-    const matchPriority = priorityFilter === 'all' || d.priority === priorityFilter;
+    // Fallback to '' before calling string methods: some records (e.g. bulk-
+    // imported/seeded data) can have a missing title, docNo, from, or
+    // subject, which would otherwise throw here and crash the whole page.
+    const matchSearch = !q || (d.title||'').includes(q) || (d.docNo||'').toLowerCase().includes(q) || (d.from||'').includes(q) || (d.subject||'').includes(q);
+    // Normalized the same way the card below resolves its displayed
+    // type/status/priority, so a record shown as e.g. "Incoming"/"Pending"
+    // (its real value doesn't match any known key) also matches when that
+    // same type/status/priority is selected as a filter.
+    const matchType = typeFilter === 'all' || normalizeLookupKey(d.type, TYPE_CONFIG, 'incoming') === typeFilter;
+    const matchStatus = statusFilter === 'all' || normalizeLookupKey(d.status, STATUS_CONFIG, 'pending') === statusFilter;
+    const matchPriority = priorityFilter === 'all' || normalizeLookupKey(d.priority, PRIORITY_CONFIG, 'normal') === priorityFilter;
     return matchSearch && matchType && matchStatus && matchPriority;
   }), [documents, search, typeFilter, statusFilter, priorityFilter]);
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   const stats = useMemo(() => ({
     total: documents.length,
-    incoming: documents.filter(d => d.type === 'incoming').length,
-    outgoing: documents.filter(d => d.type === 'outgoing').length,
-    pending: documents.filter(d => d.status === 'pending').length,
-    urgent: documents.filter(d => d.priority === 'urgent').length,
+    // Normalized the same way the card displays type/status, so these counts
+    // stay consistent with what selecting that same filter shows below.
+    incoming: documents.filter(d => normalizeLookupKey(d.type, TYPE_CONFIG, 'incoming') === 'incoming').length,
+    outgoing: documents.filter(d => normalizeLookupKey(d.type, TYPE_CONFIG, 'incoming') === 'outgoing').length,
+    pending: documents.filter(d => normalizeLookupKey(d.status, STATUS_CONFIG, 'pending') === 'pending').length,
+    urgent: documents.filter(d => normalizeLookupKey(d.priority, PRIORITY_CONFIG, 'normal') === 'urgent').length,
   }), [documents]);
 
   const openAdd = () => {
@@ -186,9 +196,9 @@ export default function DocumentsPage() {
       </div>
 
       {pageItems.map(doc => {
-        const st = STATUS_CONFIG[doc.status] || STATUS_CONFIG.pending;
-        const pr = PRIORITY_CONFIG[doc.priority] || PRIORITY_CONFIG.normal;
-        const tp = TYPE_CONFIG[doc.type] || TYPE_CONFIG.incoming;
+        const st = STATUS_CONFIG[normalizeLookupKey(doc.status, STATUS_CONFIG, 'pending')];
+        const pr = PRIORITY_CONFIG[normalizeLookupKey(doc.priority, PRIORITY_CONFIG, 'normal')];
+        const tp = TYPE_CONFIG[normalizeLookupKey(doc.type, TYPE_CONFIG, 'incoming')];
         return (
           <div key={doc.id} style={S.docCard(doc.priority)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>

@@ -8,7 +8,20 @@
 // مرور فارغة (القيمة الافتراضية) بدل القيمة الحقيقية من .env — لأن إعدادات
 // pg.Pool تُلتقط لحظة الإنشاء، مو بشكل كسول لاحق.
 require('dotenv').config();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Fix DATE column timezone shift at the source: by default, node-postgres
+// parses SQL DATE columns (OID 1082) into a JS Date object at local
+// midnight. When that Date object is later serialized via JSON.stringify
+// (res.json), it converts to UTC via toISOString(), which shifts the
+// calendar date backward by a day for any timezone ahead of UTC (Iraq is
+// UTC+3) — e.g. a stored "2026-07-15" would round-trip through the API as
+// "2026-07-14T21:00:00.000Z". Registering this parser makes DATE columns
+// come back as the raw "YYYY-MM-DD" string instead, skipping the Date/
+// timezone conversion entirely. This only affects how values are READ back
+// from a query result — it has no effect on INSERT/UPDATE, which already
+// send plain date strings as query parameters.
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 const pool = new Pool({
   host: process.env.PG_HOST || 'localhost',

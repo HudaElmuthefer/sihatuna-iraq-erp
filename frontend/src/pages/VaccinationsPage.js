@@ -8,6 +8,7 @@ import { api } from '../api';
 import { FaPlus, FaEdit, FaTrash, FaSyringe, FaCheckCircle, FaClock } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
+import DateRangeFilter from '../components/DateRangeFilter';
 import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #047857 100%)';
@@ -68,6 +69,8 @@ export default function VaccinationsPage() {
   const [form, setForm] = useState(empty);
   const [filterStatus, setFilterStatus] = useState('all');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const statusOptions = [
     { key: 'completed', label: tr('vac_done') },
     { key: 'upcoming', label: tr('vac_upcoming') },
@@ -121,9 +124,13 @@ export default function VaccinationsPage() {
   const statusColor = (s) => ({ completed: '#22c55e', upcoming: '#3b82f6', overdue: '#ef4444' }[normalizeStatus(s)] || '#6b7280');
   const statusIcon = (s) => normalizeStatus(s) === 'completed' ? <FaCheckCircle /> : normalizeStatus(s) === 'upcoming' ? <FaClock /> : <FaSyringe />;
 
+  // Fallback to '' before calling string methods: some records (e.g. bulk-
+  // imported/seeded data) can have a missing patient or vaccine field, which
+  // would otherwise throw here and crash the whole page.
   const filtered = filterByViewingHospital(records).filter(r =>
     (filterStatus === 'all' || normalizeStatus(r.status) === filterStatus) &&
-    (r.patient.includes(search) || r.vaccine.includes(search) || vaccineLabel(r.vaccine).toLowerCase().includes(search.toLowerCase()))
+    ((r.patient || '').includes(search) || (r.vaccine || '').includes(search) || (vaccineLabel(r.vaccine) || '').toLowerCase().includes(search.toLowerCase())) &&
+    (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo)
   );
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
@@ -189,6 +196,7 @@ export default function VaccinationsPage() {
               </button>
             ))}
           </div>
+          <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         </div>
       </div>
 

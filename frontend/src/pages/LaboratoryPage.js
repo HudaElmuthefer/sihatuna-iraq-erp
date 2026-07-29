@@ -5,7 +5,9 @@ import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { FaFileExcel, FaTrash } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
+import DateRangeFilter from '../components/DateRangeFilter';
 import PageBanner from '../components/PageBanner';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #701a75 0%, #a21caf 100%)';
@@ -77,6 +79,12 @@ export default function LaboratoryPage() {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  // requestDate is used as the date filter's field: it's always set at
+  // creation (openAdd defaults it to today), unlike sampleDate/resultDate
+  // which only populate later in the workflow (when a sample is taken /
+  // a result is entered) and are absent for pending requests.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(null);
   const [editId, setEditId] = useState(null);
@@ -99,17 +107,27 @@ export default function LaboratoryPage() {
 
   const filtered = useMemo(() => labTests.filter(t => {
     const q = search.toLowerCase();
-    return (!q || t.patientName.includes(q) || t.reqNo.toLowerCase().includes(q) || t.testType.includes(q))
-      && (catFilter === 'all' || t.category === catFilter)
-      && (statusFilter === 'all' || t.status === statusFilter);
-  }), [labTests, search, catFilter, statusFilter]);
+    // Fallback to '' before calling string methods: some records (e.g. bulk-
+    // imported/seeded data) can have a missing patientName, reqNo, or
+    // testType, which would otherwise throw here and crash the whole page.
+    return (!q || (t.patientName || '').includes(q) || (t.reqNo || '').toLowerCase().includes(q) || (t.testType || '').includes(q))
+      // Normalized the same way the table row below resolves its displayed
+      // category/status, so a record shown as e.g. "Other"/"Awaiting Sample"
+      // (its real value doesn't match any known key) also matches when that
+      // same category/status is selected as a filter.
+      && (catFilter === 'all' || normalizeLookupKey(t.category, CATEGORIES, 'other') === catFilter)
+      && (statusFilter === 'all' || normalizeLookupKey(t.status, STATUSES, 'pending') === statusFilter)
+      && (!dateFrom || t.requestDate >= dateFrom) && (!dateTo || t.requestDate <= dateTo);
+  }), [labTests, search, catFilter, statusFilter, dateFrom, dateTo]);
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   const stats = useMemo(() => ({
     total: labTests.length,
-    pending: labTests.filter(t=>t.status==='pending').length,
-    processing: labTests.filter(t=>t.status==='processing').length,
-    completed: labTests.filter(t=>t.status==='completed').length,
+    // Normalized the same way the table displays status, so this count stays
+    // consistent with what selecting that same status filter shows below.
+    pending: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='pending').length,
+    processing: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='processing').length,
+    completed: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='completed').length,
     urgent: labTests.filter(t=>t.priority==='urgent').length,
   }), [labTests]);
 
@@ -302,6 +320,8 @@ export default function LaboratoryPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
         </select>
+        <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+          label={L('تاريخ الطلب:', 'Request date:')} />
       </div>
 
       {selectedIds.size > 0 && (
@@ -332,8 +352,8 @@ export default function LaboratoryPage() {
         </thead>
         <tbody>
           {pageItems.map(t=>{
-            const st=STATUSES[t.status]||STATUSES.pending;
-            const cat=CATEGORIES[t.category]||CATEGORIES.other;
+            const st=STATUSES[normalizeLookupKey(t.status, STATUSES, 'pending')];
+            const cat=CATEGORIES[normalizeLookupKey(t.category, CATEGORIES, 'other')];
             return (
               <tr key={t.id}>
                 <td style={S.td}><input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)} /></td>

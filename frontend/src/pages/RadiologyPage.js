@@ -5,7 +5,9 @@ import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { FaFileExcel, FaTrash } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
+import DateRangeFilter from '../components/DateRangeFilter';
 import PageBanner from '../components/PageBanner';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)';
@@ -35,6 +37,12 @@ export default function RadiologyPage() {
   const [search, setSearch] = useState('');
   const [modFilter, setModFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  // requestDate is used as the date filter's field: it's always set at
+  // creation (openAdd defaults it to today), unlike examDate/reportDate
+  // which only populate later in the workflow (once examined / reported)
+  // and are absent for pending/scheduled requests.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showReport, setShowReport] = useState(null);
   const [editId, setEditId] = useState(null);
@@ -57,18 +65,28 @@ export default function RadiologyPage() {
 
   const filtered = useMemo(() => radiology.filter(r => {
     const q = search.toLowerCase();
-    return (!q || r.patientName.includes(q) || r.reqNo.toLowerCase().includes(q))
-      && (modFilter === 'all' || r.modality === modFilter)
-      && (statusFilter === 'all' || r.status === statusFilter);
-  }), [radiology, search, modFilter, statusFilter]);
+    // Fallback to '' before calling string methods: some records (e.g. bulk-
+    // imported/seeded data) can have a missing patientName or reqNo, which
+    // would otherwise throw here and crash the whole page.
+    return (!q || (r.patientName || '').includes(q) || (r.reqNo || '').toLowerCase().includes(q))
+      // Normalized the same way the table row below resolves its displayed
+      // modality/status, so a record shown as e.g. "Other"/"Pending" (its
+      // real value doesn't match any known key) also matches when that same
+      // modality/status is selected as a filter.
+      && (modFilter === 'all' || normalizeLookupKey(r.modality, MODALITIES, 'other') === modFilter)
+      && (statusFilter === 'all' || normalizeLookupKey(r.status, STATUSES, 'pending') === statusFilter)
+      && (!dateFrom || r.requestDate >= dateFrom) && (!dateTo || r.requestDate <= dateTo);
+  }), [radiology, search, modFilter, statusFilter, dateFrom, dateTo]);
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   const stats = useMemo(() => ({
     total: radiology.length,
-    pending: radiology.filter(r=>r.status==='pending'||r.status==='scheduled').length,
-    examined: radiology.filter(r=>r.status==='examined').length,
-    reported: radiology.filter(r=>r.status==='reported').length,
-    byModality: Object.keys(MODALITIES).map(m=>({ m, count: radiology.filter(r=>r.modality===m).length })).filter(x=>x.count>0),
+    // Normalized the same way the table displays status, so this count stays
+    // consistent with what selecting that same status filter shows below.
+    pending: radiology.filter(r=>{ const s = normalizeLookupKey(r.status, STATUSES, 'pending'); return s==='pending'||s==='scheduled'; }).length,
+    examined: radiology.filter(r=>normalizeLookupKey(r.status, STATUSES, 'pending')==='examined').length,
+    reported: radiology.filter(r=>normalizeLookupKey(r.status, STATUSES, 'pending')==='reported').length,
+    byModality: Object.keys(MODALITIES).map(m=>({ m, count: radiology.filter(r=>normalizeLookupKey(r.modality, MODALITIES, 'other')===m).length })).filter(x=>x.count>0),
   }), [radiology]);
 
   const openAdd = () => {
@@ -214,6 +232,8 @@ export default function RadiologyPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
         </select>
+        <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+          label={L('تاريخ الطلب:', 'Request date:')} />
       </div>
 
       {selectedIds.size > 0 && (
@@ -244,8 +264,8 @@ export default function RadiologyPage() {
         </thead>
         <tbody>
           {pageItems.map(r=>{
-            const st=STATUSES[r.status]||STATUSES.pending;
-            const mod=MODALITIES[r.modality]||MODALITIES.other;
+            const st=STATUSES[normalizeLookupKey(r.status, STATUSES, 'pending')];
+            const mod=MODALITIES[normalizeLookupKey(r.modality, MODALITIES, 'other')];
             return (
               <tr key={r.id}>
                 <td style={S.td}><input type="checkbox" checked={selectedIds.has(r.id)} onChange={() => toggleSelect(r.id)} /></td>

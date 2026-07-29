@@ -5,6 +5,7 @@ import { useApp } from '../contexts/AppContext';
 import { FaCalendarAlt, FaPlus, FaSearch, FaEdit, FaTrash, FaTimes, FaCheck, FaClock, FaFileExcel } from 'react-icons/fa';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
+import DateRangeFilter from '../components/DateRangeFilter';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
@@ -27,6 +28,8 @@ export default function AppointmentsPage() {
 
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom]       = useState('');
+  const [dateTo, setDateTo]           = useState('');
   const [modal, setModal]             = useState(null);
   const [form, setForm]               = useState({});
   const [selected, setSelected]       = useState(null);
@@ -42,7 +45,10 @@ export default function AppointmentsPage() {
                    (a.doctor||'').toLowerCase().includes(q) || (a.doctorEn||'').toLowerCase().includes(q) ||
                    (a.department||'').toLowerCase().includes(q) || (a.departmentEn||'').toLowerCase().includes(q);
     const matchS = statusFilter === 'all' || a.status === statusFilter;
-    return matchQ && matchS;
+    // a.date is a plain "YYYY-MM-DD" string, which sorts identically to a
+    // real date comparison.
+    const matchD = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
+    return matchQ && matchS && matchD;
   });
 
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
@@ -169,6 +175,7 @@ export default function AppointmentsPage() {
                 </button>
               ))}
             </div>
+            <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
           </div>
         </div>
       </div>

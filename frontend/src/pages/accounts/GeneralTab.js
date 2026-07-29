@@ -78,7 +78,10 @@ function GeneralTab() {
     setShowModal(false);
   };
 
-  const filtered = filterByViewingHospital(txs).filter(t=>(filter==='all'||t.type===filter)&&(t.desc.includes(search)||t.ref.includes(search)));
+  // Fallback to '' before calling string methods: some records (e.g. bulk-
+  // imported/seeded data) can have a missing desc or ref, which would
+  // otherwise throw here and crash the whole page.
+  const filtered = filterByViewingHospital(txs).filter(t=>(filter==='all'||t.type===filter)&&((t.desc||'').includes(search)||(t.ref||'').includes(search)));
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   return (

@@ -7,6 +7,7 @@ import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #7c2d12 0%, #c2410c 100%)';
 
@@ -160,15 +161,25 @@ export default function ProcurementPage() {
 
   const filtered = useMemo(() => procurement.filter(p => {
     const q = search.toLowerCase();
-    return (!q || p.title.includes(q) || p.poNo.toLowerCase().includes(q) || p.supplier.includes(q))
-      && (statusFilter === 'all' || p.status === statusFilter);
+    // Fallback to '' before calling string methods: some records (e.g. bulk-
+    // imported/seeded data) can have a missing title, poNo, or supplier,
+    // which would otherwise throw here and crash the whole page.
+    return (!q || (p.title||'').includes(q) || (p.poNo||'').toLowerCase().includes(q) || (p.supplier||'').includes(q))
+      // Normalized the same way the card below resolves its displayed
+      // status, so a record shown as e.g. "Pending Approval" (its real value
+      // doesn't match any known key) also matches when that same status is
+      // selected as a filter.
+      && (statusFilter === 'all' || normalizeLookupKey(p.status, STATUS_CONFIG, 'pending') === statusFilter);
   }), [procurement, search, statusFilter]);
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   const stats = useMemo(() => ({
     total: procurement.length,
-    pending: procurement.filter(p => p.status === 'pending').length,
-    approved: procurement.filter(p => p.status === 'approved').length,
+    // Normalized the same way the card below displays status, so these
+    // counts stay consistent with what selecting that same status filter
+    // shows below.
+    pending: procurement.filter(p => normalizeLookupKey(p.status, STATUS_CONFIG, 'pending') === 'pending').length,
+    approved: procurement.filter(p => normalizeLookupKey(p.status, STATUS_CONFIG, 'pending') === 'approved').length,
     totalValue: procurement.reduce((s, p) => s + (Number(p.totalAmount) || 0), 0),
   }), [procurement]);
 
@@ -330,7 +341,7 @@ export default function ProcurementPage() {
       )}
 
       {pageItems.map(po => {
-        const st = STATUS_CONFIG[po.status] || STATUS_CONFIG.pending;
+        const st = STATUS_CONFIG[normalizeLookupKey(po.status, STATUS_CONFIG, 'pending')];
         const pr = PRIORITY_CONFIG[po.priority] || PRIORITY_CONFIG.normal;
         return (
           <div key={po.id} style={S.card}>

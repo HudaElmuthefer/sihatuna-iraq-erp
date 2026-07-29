@@ -8,6 +8,7 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)';
 
@@ -68,8 +69,15 @@ export default function PharmacyPage() {
   // Filtered prescriptions
   const filteredRx = useMemo(() => pharmacyOrders.filter(rx => {
     const q = search.toLowerCase();
-    return (!q || rx.patientName.includes(q) || rx.prescNo.toLowerCase().includes(q))
-      && (statusFilter === 'all' || rx.status === statusFilter);
+    // Fallback to '' before calling string methods: some records (e.g. bulk-
+    // imported/seeded data) can have a missing patientName or prescNo, which
+    // would otherwise throw here and crash the whole page.
+    return (!q || (rx.patientName||'').includes(q) || (rx.prescNo||'').toLowerCase().includes(q))
+      // Normalized the same way the card below resolves its displayed
+      // status, so a record shown as e.g. "Pending Dispense" (its real value
+      // doesn't match any known key) also matches when that same status is
+      // selected as a filter.
+      && (statusFilter === 'all' || normalizeLookupKey(rx.status, RX_STATUS, 'pending') === statusFilter);
   }), [pharmacyOrders, search, statusFilter]);
   const { pageItems: rxPageItems, currentPage: rxCurrentPage, setCurrentPage: setRxCurrentPage, totalPages: rxTotalPages, totalItems: rxTotalItems } = usePagination(filteredRx, 50);
 
@@ -93,9 +101,12 @@ export default function PharmacyPage() {
 
   const stats = useMemo(() => ({
     total:     pharmacyOrders.length,
-    pending:   pharmacyOrders.filter(r => r.status === 'pending').length,
-    dispensed: pharmacyOrders.filter(r => r.status === 'dispensed').length,
-    revenue:   pharmacyOrders.filter(r => r.status === 'dispensed').reduce((s,r) => s + r.totalCost, 0),
+    // Normalized the same way the card below displays status, so these
+    // counts stay consistent with what selecting that same status filter
+    // shows below.
+    pending:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'pending').length,
+    dispensed: pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').length,
+    revenue:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').reduce((s,r) => s + r.totalCost, 0),
   }), [pharmacyOrders]);
 
   const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
@@ -369,7 +380,7 @@ export default function PharmacyPage() {
           </div>
         )}
         {rxPageItems.map(rx => {
-          const st = RX_STATUS[rx.status] || RX_STATUS.pending;
+          const st = RX_STATUS[normalizeLookupKey(rx.status, RX_STATUS, 'pending')];
           return (
             <div key={rx.id} style={S.rxCard}>
               <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>

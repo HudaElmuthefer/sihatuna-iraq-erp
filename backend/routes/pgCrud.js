@@ -82,7 +82,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     );
   }
   const tableName = sqlTableName; // اسم الجدول الفعلي بكل استعلامات SQL أدناه
-  const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [] } = options;
+  const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [], dateRangeField = null, dateRangeColumn = null } = options;
   moduleRegistry[apiName] = { ...moduleRegistry[apiName], tableName, indexedColumns, hospitalScoped, permission };
   // ── فحص صلاحيات (RBAC) على القراءة والكتابة ──────────────────────────────────
   // الكتابة (POST/PUT/DELETE): مقيّدة دائماً بصلاحية الموديول لو كانت محدَّدة.
@@ -180,6 +180,39 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
           conditions.push(promotedCol ? `${promotedCol} = $${params.length}` : `data->>'${field}' = $${params.length}`);
         }
       });
+
+      // Optional date-range filter (?startDate=&endDate=, format YYYY-MM-DD) —
+      // powers the shared DateRangeFilter UI component. Two alternative
+      // options, only one used per module depending on the field's nature:
+      //   - dateRangeField: a normal field (indexed column or JSONB) already
+      //     part of the record's editable data (e.g. "date" on appointments).
+      //   - dateRangeColumn: a raw SQL column name, for a column the database
+      //     manages automatically and that is NOT part of the editable fields
+      //     (e.g. created_at on patients). Deliberately kept separate from
+      //     indexedColumns: adding created_at there would make every POST/PUT
+      //     explicitly insert NULL instead of relying on DEFAULT now(), since
+      //     the frontend never sends this field — silently wiping out the
+      //     real registration date on every new patient and every edit.
+      // Validating the date format (YYYY-MM-DD) before using it in the query
+      // avoids an opaque SQL error (500) on a malformed value.
+      const isValidDateStr = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+      if (dateRangeField || dateRangeColumn) {
+        let dateExpr = null;
+        if (dateRangeColumn) {
+          dateExpr = `${dateRangeColumn}::date`;
+        } else {
+          const promotedCol = indexedColumns.find(c => c.field === dateRangeField)?.column;
+          dateExpr = promotedCol ? `${promotedCol}::date` : `(data->>'${dateRangeField}')::date`;
+        }
+        if (isValidDateStr(req.query.startDate)) {
+          params.push(req.query.startDate);
+          conditions.push(`${dateExpr} >= $${params.length}::date`);
+        }
+        if (isValidDateStr(req.query.endDate)) {
+          params.push(req.query.endDate);
+          conditions.push(`${dateExpr} <= $${params.length}::date`);
+        }
+      }
 
       let sql = `SELECT * FROM ${tableName}`;
       if (conditions.length > 0) sql += ` WHERE ${conditions.join(' AND ')}`;

@@ -1214,14 +1214,14 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId'] });
+  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId'], dateRangeColumn: 'created_at' });
   pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'] });
   pgCrud(router, 'appointments', collectionSchemas.appointments, [
     { field: 'patient', column: 'patient' },
     { field: 'doctor', column: 'doctor' },
     { field: 'date', column: 'date' },
     { field: 'status', column: 'status' },
-  ], undefined, { hospitalScoped: true, permission: 'appointments', openRead: true });
+  ], undefined, { hospitalScoped: true, permission: 'appointments', openRead: true, dateRangeField: 'date' });
   // ── الفوترة: الفواتير (invoices) — سجلات فواتير مدفوعة تاريخياً ──────────────
   // ── نفس أسلوب حل patientId المستخدم بـ crmFollowUps: تقبل "اسم المريض"
   // مباشرة وتحوّله لمعرّف رقمي حقيقي بالبحث بجدول patients. كل صف Excel يمثّل

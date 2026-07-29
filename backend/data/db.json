@@ -37,6 +37,13 @@
         "settings",
         "smart-reports",
         "vaccinations"
+      ],
+      "dashboardLayout": [
+        "erp",
+        "stats",
+        "departments",
+        "appointments",
+        "doctors"
       ]
     },
     {

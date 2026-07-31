@@ -267,7 +267,13 @@ select.form-control {
 
 .table tr:hover td { background: rgba(26,107,171,0.04); }
 
-.table.en th, .table.en td { text-align: left; }
+/* English mode: text-align stays hardcoded 'right' above regardless of
+   language, so headers/data cling to the wrong edge once direction flips to
+   ltr (see .app-shell in Layout.js). No page ever adds a ".en" class to its
+   table for the old rule this replaced to match, so key off the html[dir]
+   attribute instead — AppContext already keeps that in sync with the
+   language on every toggle, for every page, with no per-page changes. */
+html[dir="ltr"] .table th, html[dir="ltr"] .table td { text-align: left; }
 
 /* Badges */
 .badge {

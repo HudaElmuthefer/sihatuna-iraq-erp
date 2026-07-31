@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
@@ -10,14 +11,22 @@ const BANNER_GRADIENT = 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)';
 
 // ── Status configs with ar+en ──────────────────────────────────────────────────
 const AUDIT_STATUS = {
-  planned:   { ar:'مجدول',   en:'Planned',   color:'#1a6bab', bg:'#dbeafe' },
-  active:    { ar:'جاري',    en:'Active',     color:'#f59e0b', bg:'#fef3c7' },
-  completed: { ar:'مُنجَز',  en:'Completed',  color:'#10b981', bg:'#d1fae5' },
-  cancelled: { ar:'ملغي',    en:'Cancelled',  color:'#ef4444', bg:'#fee2e2' },
+  planned:     { ar:'مجدول',       en:'Planned',     color:'#1a6bab', bg:'#dbeafe' },
+  active:      { ar:'جاري',        en:'Active',       color:'#f59e0b', bg:'#fef3c7' },
+  // إصلاح: 6 من 64 مراجعة حقيقية بقيمة in_progress فعلياً (تحقّقنا عبر
+  // استعلام مباشر على /api/qualityAudits)، ولم يكن هذا المفتاح معرَّفاً
+  // إطلاقاً — فكانت تسقط صامتة لـdefault (مجدول) رغم كونها قيد التنفيذ فعلاً.
+  in_progress: { ar:'قيد التنفيذ', en:'In Progress',  color:'#f59e0b', bg:'#fef3c7' },
+  completed:   { ar:'مُنجَز',      en:'Completed',    color:'#10b981', bg:'#d1fae5' },
+  cancelled:   { ar:'ملغي',        en:'Cancelled',    color:'#ef4444', bg:'#fee2e2' },
 };
 const NC_STATUS = {
   open:       { ar:'مفتوحة',      en:'Open',        color:'#ef4444', bg:'#fee2e2' },
-  inprogress: { ar:'قيد المعالجة', en:'In Progress', color:'#f59e0b', bg:'#fef3c7' },
+  // إصلاح: المفتاح كان "inprogress" (بلا شرطة سفلية) بينما القيمة الحقيقية
+  // بقاعدة البيانات لكل الـ7 سجلات "قيد المعالجة" هي "in_progress" (بشرطة) —
+  // تحقّقنا عبر استعلام مباشر: صفر سجل يستخدم التهجئة القديمة بلا شرطة، لذا
+  // التصحيح المباشر للمفتاح هو الأسلم (لا حاجة لدالة توحيد بديلة).
+  in_progress: { ar:'قيد المعالجة', en:'In Progress', color:'#f59e0b', bg:'#fef3c7' },
   closed:     { ar:'مغلقة',       en:'Closed',       color:'#10b981', bg:'#d1fae5' },
   verified:   { ar:'مُوثَّقة',    en:'Verified',     color:'#8b5cf6', bg:'#ede9fe' },
 };
@@ -42,7 +51,23 @@ export default function QualityPage() {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
-  const [tab, setTab]           = useState('kpi');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams]          = useSearchParams();
+  const [tab, setTab]           = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ['kpi', 'audits', 'ncs'].includes(fromUrl) ? fromUrl : 'kpi';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['kpi', 'audits', 'ncs'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [audits, setAudits]     = useState([]);
   const [ncs, setNCs]           = useState([]);
   const [kpis, setKpis]         = useState([]);
@@ -78,9 +103,11 @@ export default function QualityPage() {
 
   const stats = useMemo(() => ({
     audits:   audits.length,
-    openNCs:  ncs.filter(n => n.status === 'open' || n.status === 'inprogress').length,
+    openNCs:  ncs.filter(n => n.status === 'open' || n.status === 'in_progress').length,
     majorNCs: ncs.filter(n => n.classification === 'major' && n.status !== 'closed' && n.status !== 'verified').length,
-    avgScore: (() => { const sc = audits.filter(a => a.score); return sc.length ? (sc.reduce((s,a)=>s+a.score,0)/sc.length).toFixed(0) : 0; })(),
+    // (a.score!==undefined && a.score!==null) بدل a.score الصرف — الأخير يستبعد
+    // درجة صفر حقيقية بحكم truthy الخاص بجافاسكربت، رغم كونها قيمة صالحة تماماً.
+    avgScore: (() => { const sc = audits.filter(a => a.score !== undefined && a.score !== null); return sc.length ? (sc.reduce((s,a)=>s+a.score,0)/sc.length).toFixed(0) : 0; })(),
   }), [audits, ncs]);
 
   // KPI helpers — use lowerIsBetter flag, no string matching
@@ -360,7 +387,7 @@ export default function QualityPage() {
                   <td style={S.td}><span style={S.badge(a.type==='internal'?'#1a6bab':'#8b5cf6', a.type==='internal'?'#dbeafe':'#ede9fe')}>{a.type==='internal'?L('داخلية','Internal'):L('خارجية','External')}</span></td>
                   <td style={{ ...S.td, textAlign:'center' }}>{a.findings || '—'}</td>
                   <td style={{ ...S.td, textAlign:'center' }}>{a.ncs > 0 ? <span style={{ color:'#ef4444', fontWeight:700 }}>{a.ncs}</span> : '—'}</td>
-                  <td style={S.td}>{a.score ? <span style={{ fontWeight:700, color: a.score>=90?'#10b981':a.score>=80?'#f59e0b':'#ef4444' }}>{a.score}%</span> : '—'}</td>
+                  <td style={S.td}>{(a.score !== undefined && a.score !== null) ? <span style={{ fontWeight:700, color: a.score>=90?'#10b981':a.score>=80?'#f59e0b':'#ef4444' }}>{a.score}%</span> : '—'}</td>
                   <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span></td>
                   <td style={S.td}><button onClick={() => deleteAudit(a.id)} style={S.smBtn('#ef4444')}>🗑</button></td>
                 </tr>
@@ -398,8 +425,8 @@ export default function QualityPage() {
                   <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span></td>
                   <td style={S.td}>
                     <div style={{ display:'flex', gap:4 }}>
-                      {nc.status === 'open'       && <button onClick={() => updateNCStatus(nc, 'inprogress')} style={S.smBtn('#f59e0b')}>{L('معالجة','Process')}</button>}
-                      {nc.status === 'inprogress' && <button onClick={() => updateNCStatus(nc, 'closed')} style={S.smBtn('#10b981')}>{L('إغلاق','Close')}</button>}
+                      {nc.status === 'open'        && <button onClick={() => updateNCStatus(nc, 'in_progress')} style={S.smBtn('#f59e0b')}>{L('معالجة','Process')}</button>}
+                      {nc.status === 'in_progress' && <button onClick={() => updateNCStatus(nc, 'closed')} style={S.smBtn('#10b981')}>{L('إغلاق','Close')}</button>}
                       <button onClick={() => deleteNC(nc.id)} style={S.smBtn('#ef4444')}>🗑</button>
                     </div>
                   </td>

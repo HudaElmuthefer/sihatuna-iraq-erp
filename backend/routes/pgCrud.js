@@ -49,6 +49,10 @@ const DEFAULT_COLUMNS = [
   { field: 'status', column: 'status' },
 ];
 
+// قيمة خاصة تُفهَم بمعالجة extraFilterFields أدناه كـ"الحقل غائب أو فارغ"،
+// بدل تطابق تام حرفي — راجعي التعليق عند استخدامها بالأسفل.
+const UNSET_FILTER_VALUE = '__unset__';
+
 // ── سجل الموديولات (Module Registry) ────────────────────────────────────────
 // كل استدعاء لـ pgCrud() يسجّل نفسه هنا (apiName -> { tableName, indexedColumns,
 // hospitalScoped }). سلة المحذوفات (recycleBinRoutes.js) تستخدم هذا السجل
@@ -172,9 +176,20 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       // بالمخزون) — تعمل فقط للحقول المُصرَّح بها صراحة بـ options.extraFilterFields
       // (قائمة بيضاء، حماية من فلترة عشوائية على أي اسم حقل يُرسَل بالطلب)
       // نفس تحسين الأداء أعلاه: نستخدم العمود الحقيقي لو الحقل مُرقّى.
+      //
+      // قيمة خاصة UNSET_FILTER_VALUE ('__unset__'): تطابق السجلات الناقصة
+      // (الحقل غائب أو فارغ) بدل تطابق تام حرفي — تُستخدَم مثلاً بصفحة
+      // الأصول (AssetsPage.js) لإيجاد سجلات مستوردة بحقل status/category فارغ،
+      // بدل أن تبقى مخفية بصمت (كانت تُعرَض بشارة "نشط" افتراضية رغم عدم
+      // تطابقها فعلياً مع فلتر "نشط" الحقيقي — تعارض عرض/فلترة). القيمة نفسها
+      // لا تُعرَض أو تُخزَّن أبداً كحقل حقيقي بأي سجل — راجعي frontend/src/pages/AssetsPage.js.
       extraFilterFields.forEach((field) => {
         const value = req.query[field];
-        if (value && value !== 'all') {
+        if (value === UNSET_FILTER_VALUE) {
+          const promotedCol = indexedColumns.find(c => c.field === field)?.column;
+          const colExpr = promotedCol || `data->>'${field}'`;
+          conditions.push(`(${colExpr} IS NULL OR ${colExpr} = '')`);
+        } else if (value && value !== 'all') {
           params.push(value);
           const promotedCol = indexedColumns.find(c => c.field === field)?.column;
           conditions.push(promotedCol ? `${promotedCol} = $${params.length}` : `data->>'${field}' = $${params.length}`);

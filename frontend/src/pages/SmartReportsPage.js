@@ -24,7 +24,7 @@ const BarChart = ({ data, color, lang }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
     {data.map((d, i) => (
       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 80, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'left', flexShrink: 0 }}>{d.name}</div>
+        <div style={{ width: 80, fontSize: 12, color: 'var(--text-secondary)', textAlign: lang==='ar'?'right':'left', flexShrink: 0 }}>{d.name}</div>
         <div style={{ flex: 1, height: 24, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${d.pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.6s ease', display: 'flex', alignItems: 'center', paddingRight: 8 }}>
             <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>{d.count}</span>
@@ -236,7 +236,7 @@ export default function SmartReportsPage() {
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{d.name}</div>
                     {d.specialty && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{d.specialty}</div>}
                   </div>
-                  <div style={{ textAlign: 'left' }}>
+                  <div style={{ textAlign: lang==='ar'?'right':'left' }}>
                     <div style={{ fontWeight: 600, color: '#1a6bab', fontSize: 13 }}>{d.count} {L('موعد','appts')}</div>
                   </div>
                 </div>

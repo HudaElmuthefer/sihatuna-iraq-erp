@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination';
 import { initOutgoing, I18N, printTable, today, useBackendLoad } from './shared';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
+import DateRangeFilter from '../../components/DateRangeFilter';
 import { api } from '../../api';
 
 export default
@@ -15,7 +16,13 @@ function OutgoingTab({ lang }) {
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [letters, setLetters] = useState(initOutgoing);
   useBackendLoad('outgoing', setLetters);
-  const visibleOutgoing = filterByViewingHospital(letters);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  // Fallback to '' before the range comparison: some records (e.g. bulk-
+  // imported/seeded data) can have a missing date.
+  const visibleOutgoing = filterByViewingHospital(letters).filter(l =>
+    (!dateFrom || (l.date || '') >= dateFrom) && (!dateTo || (l.date || '') <= dateTo)
+  );
   const { pageItems: outPageItems, currentPage: outCurrentPage, setCurrentPage: setOutCurrentPage, totalPages: outTotalPages, totalItems: outTotalItems } = usePagination(visibleOutgoing, 50);
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -84,12 +91,18 @@ function OutgoingTab({ lang }) {
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-        <h3 style={{ margin:0 }}>{L('out_list')} ({letters.length})</h3>
+        <h3 style={{ margin:0 }}>{L('out_list')} ({outTotalItems})</h3>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => printTable('out-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {L('print')}</button>
           <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
           <ExcelExportButton apiName="outgoing" lang={lang} onError={(m) => showToast(m, 'error')} />
           <button onClick={openAdd} className="btn btn-primary">＋ {L('add_out')}</button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-body" style={{ padding: '12px 16px' }}>
+          <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import usePagination from '../hooks/usePagination';
@@ -20,9 +21,40 @@ export default function PhysicalTherapyPage() {
   const { lang, showToast, syncToServer, confirmDialog, user, filterByViewingHospital, hospitals, multiHospitalEnabled } = useApp();
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
-  const [tab, setTab] = useState('sessions');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ['sessions', 'equipment'].includes(fromUrl) ? fromUrl : 'sessions';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['sessions', 'equipment'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [equipment, setEquipment] = useState([]);
   const [sessions, setSessions] = useState([]);
+
+  // A session's equipmentUsed is saved as whichever language string was
+  // showing in the dropdown at that moment (see the <select> below), not a
+  // stable equipment id — so a session saved in Arabic stayed stuck showing
+  // Arabic here even after switching to English, despite the equipment
+  // itself having a perfectly good nameEn. This re-resolves the saved
+  // string against the current equipment list and picks the name matching
+  // the active language; text that matches no known equipment (freely
+  // typed, or an equipment record since deleted) is shown as-is.
+  const equipmentLabel = (raw) => {
+    if (!raw) return '—';
+    const match = equipment.find(e => e.name === raw || e.nameEn === raw);
+    if (!match) return raw;
+    return lang === 'ar' ? match.name : (match.nameEn || match.name);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -194,7 +226,7 @@ export default function PhysicalTherapyPage() {
                       <td>{s.therapist || '—'}</td>
                       <td>{s.date}</td>
                       <td>{s.treatmentType || '—'}</td>
-                      <td>{s.equipmentUsed || '—'}</td>
+                      <td>{equipmentLabel(s.equipmentUsed)}</td>
                       <td>{s.duration ? `${s.duration} ${L('دقيقة', 'min')}` : '—'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 8 }}>

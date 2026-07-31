@@ -1288,7 +1288,7 @@ const registerAllModules = (router) => {
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },
     { field: 'status', column: 'status' },
-  ], undefined, { hospitalScoped: true, permission: 'hr' });
+  ], undefined, { hospitalScoped: true, permission: 'hr', dateRangeField: 'hireDate' });
   pgCrud(router, 'retired', collectionSchemas.retired, [
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },
@@ -1337,7 +1337,7 @@ const registerAllModules = (router) => {
   pgCrud(router, 'assetMaintenanceLog', collectionSchemas.assetMaintenanceLog, [
     { field: 'assetId', column: 'asset_id' },
   ], 'asset_maintenance_log', { hospitalScoped: true, permission: 'assets' });
-  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'] });
+  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'], dateRangeField: 'expiry' });
   pgCrud(router, 'procurement', collectionSchemas.procurement, [], undefined, { hospitalScoped: true, permission: 'procurement', extraFilterFields: ['status'] });
   pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
   pgCrud(router, 'documents', collectionSchemas.documents, [], undefined, { hospitalScoped: true, permission: 'documents', extraFilterFields: ['type', 'status', 'priority'] });

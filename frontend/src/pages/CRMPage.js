@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
@@ -41,7 +42,23 @@ export default function CRMPage() {
 
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => (lang === 'ar' ? ar : en);
-  const [tab, setTab] = useState('followups');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ['followups', 'campaigns', 'reports'].includes(fromUrl) ? fromUrl : 'followups';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['followups', 'campaigns', 'reports'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [fuFilter, setFuFilter] = useState('pending');
   const [showFuModal, setShowFuModal] = useState(false);
   const [fuForm, setFuForm] = useState({ patientId:'', followUpType:'checkup', title:'', dueDate:'', reminderChannel:'sms' });

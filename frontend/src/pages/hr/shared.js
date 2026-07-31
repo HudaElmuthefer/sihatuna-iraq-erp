@@ -158,10 +158,15 @@ const I18N = {
 // ── HELPERS ────────────────────────────────────────────────────────────────────
 const monthsAgo = (dateStr) => { if (!dateStr) return 999; const d = new Date(dateStr); return Math.floor((today - d) / (1000*60*60*24*30)); };
 const monthsUntil = (dateStr) => { if (!dateStr) return 999; const d = new Date(dateStr); return Math.floor((d - today) / (1000*60*60*24*30)); };
+// اتجاه نافذة الطباعة يتبع لغة الواجهة الحالية وقت الطباعة (نفس المصدر
+// المُعتمَد أصلاً لإصلاح محاذاة الجداول/الرسوم — document.documentElement.dir،
+// الذي يُحدَّثه AppContext عند كل تبديل لغة) بدل rtl الثابتة سابقاً.
 const printTable = (id) => {
   const el = document.getElementById(id); if (!el) return;
+  const dir = document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl';
+  const align = dir === 'rtl' ? 'right' : 'left';
   const w = window.open('','_blank');
-  w.document.write(`<html dir="rtl"><head><style>body{font-family:Arial;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:right}th{background:#1a6bab;color:#fff}</style></head><body>${el.outerHTML}</body></html>`);
+  w.document.write(`<html dir="${dir}"><head><style>body{font-family:Arial;direction:${dir}}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:${align}}th{background:#1a6bab;color:#fff}</style></head><body>${el.outerHTML}</body></html>`);
   w.document.close(); w.print();
 };
 

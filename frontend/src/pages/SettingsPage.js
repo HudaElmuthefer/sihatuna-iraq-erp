@@ -12,6 +12,7 @@
 //   السطر 531  تبويب حول النظام (about)
 // ══════════════════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useT } from '../translations';
 import { useApp, ALL_PAGES, DEFAULT_APP_NAME_AR, DEFAULT_APP_NAME_EN } from '../contexts/AppContext';
 import { api, SERVER_BASE_URL, apiUploadFile } from '../api';
@@ -34,7 +35,27 @@ const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef
 export default function SettingsPage() {
   const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
-  const [tab, setTab] = useState('users');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت. تبويبات الإدمن (logo/appname/
+  // hospitals/backups/updates/recycle) مقبولة هنا حتى لغير الإدمن دون أي
+  // أثر أمني — الصفحة نفسها (أدناه، بمصفوفة tabs) هي من تفرض الفحص الفعلي
+  // بعرض المحتوى، بنفس ما كانت عليه دائماً قبل هذا التغيير.
+  const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'backups', 'updates', 'recycle', 'about'];
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return SETTINGS_TAB_KEYS.includes(fromUrl) ? fromUrl : 'users';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (SETTINGS_TAB_KEYS.includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyUser);

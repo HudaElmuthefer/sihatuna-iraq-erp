@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import usePagination from '../hooks/usePagination';
 import Pagination from '../components/Pagination';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { FaFileExcel } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
@@ -39,7 +40,23 @@ export default function PharmacyPage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';
 
-  const [tab, setTab]           = useState('prescriptions');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams]          = useSearchParams();
+  const [tab, setTab]           = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ['prescriptions', 'available', 'shortage'].includes(fromUrl) ? fromUrl : 'prescriptions';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['prescriptions', 'available', 'shortage'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [search, setSearch]     = useState('');
   const [drugSearch, setDrugSearch] = useState('');
   // ── تحديد متعدد للحذف الجماعي (الوصفات والأدوية منفصلين) ─────────────────
@@ -99,15 +116,27 @@ export default function PharmacyPage() {
     ).filter(d => catFilter === 'all' || d.drugCat === catFilter);
   }, [drugs, drugSearch, catFilter]);
 
-  const stats = useMemo(() => ({
-    total:     pharmacyOrders.length,
-    // Normalized the same way the card below displays status, so these
-    // counts stay consistent with what selecting that same status filter
-    // shows below.
-    pending:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'pending').length,
-    dispensed: pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').length,
-    revenue:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').reduce((s,r) => s + r.totalCost, 0),
-  }), [pharmacyOrders]);
+  const stats = useMemo(() => {
+    // 2305 of 2305 real prescriptions checked have no `status` field at all
+    // (not even 'pending'). Git history shows the "New Prescription" form
+    // has defaulted status:'pending' since the very first commit, so these
+    // weren't created through that flow at any point — we genuinely don't
+    // know whether they were dispensed. Folding them into "confirmed"
+    // revenue would be a guess, so their cost is tracked separately as
+    // "potential" revenue instead (see the second revenue card below).
+    const noStatusOrders = pharmacyOrders.filter(r => r.status === undefined || r.status === null || r.status === '');
+    return {
+      total:     pharmacyOrders.length,
+      // Normalized the same way the card below displays status, so these
+      // counts stay consistent with what selecting that same status filter
+      // shows below.
+      pending:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'pending').length,
+      dispensed: pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').length,
+      revenue:   pharmacyOrders.filter(r => normalizeLookupKey(r.status, RX_STATUS, 'pending') === 'dispensed').reduce((s,r) => s + (Number(r.totalCost)||0), 0),
+      noStatusCount: noStatusOrders.length,
+      potentialRevenue: noStatusOrders.reduce((s,r) => s + (Number(r.totalCost)||0), 0),
+    };
+  }, [pharmacyOrders]);
 
   const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
 
@@ -344,10 +373,19 @@ export default function PharmacyPage() {
             <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:3 }}>{l}</div>
           </div>
         ))}
-        <div style={S.sCard('#8b5cf6')}>
+        <div style={S.sCard('#8b5cf6')} title={L('إيراد الوصفات المؤكَّدة الصرف فقط (status = تم الصرف)','Revenue from prescriptions confirmed dispensed only (status = Dispensed)')}>
           <div style={{ fontSize:18, fontWeight:700, color:'var(--text-primary)' }}>{n(stats.revenue)}</div>
-          <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:3 }}>{L('إيراد الصيدلية (د.ع)','Pharmacy Revenue (IQD)')}</div>
+          <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:3 }}>{L('إيراد مؤكَّد (د.ع)','Confirmed Revenue (IQD)')}</div>
         </div>
+        {stats.noStatusCount > 0 && (
+          <div style={S.sCard('#f59e0b')} title={L(
+            `${stats.noStatusCount} وصفة بلا حالة صرف مسجَّلة إطلاقاً — لا يُعرَف إن كانت صُرفت فعلاً أم لا، فلا تُحتسَب ضمن الإيراد المؤكَّد أعلاه`,
+            `${stats.noStatusCount} prescriptions have no dispense status recorded at all — it's unknown whether they were actually dispensed, so their cost isn't counted in Confirmed Revenue above`
+          )}>
+            <div style={{ fontSize:18, fontWeight:700, color:'var(--text-primary)' }}>{n(stats.potentialRevenue)}</div>
+            <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:3 }}>⚠️ {L(`إيراد محتمل (${stats.noStatusCount} وصفة بلا حالة)`,`Potential Revenue (${stats.noStatusCount} unstatused Rx)`)}</div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

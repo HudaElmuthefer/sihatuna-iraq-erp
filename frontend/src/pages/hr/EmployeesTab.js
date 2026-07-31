@@ -9,6 +9,7 @@ import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
 import { useBackendLoad, initEmployees, I18N, monthsAgo, monthsUntil, printTable } from './shared';
 import AlertBanner from './AlertBanner';
+import DateRangeFilter from '../../components/DateRangeFilter';
 
 export default
 function EmployeesTab({ lang }) {
@@ -23,13 +24,18 @@ function EmployeesTab({ lang }) {
     const t = setTimeout(() => setEmpDebouncedSearch(empSearch), 350);
     return () => clearTimeout(t);
   }, [empSearch]);
+  // Date filter defaults to hireDate: it's always set for every employee,
+  // unlike retirementDate (only meaningful once retirement is near/set) or
+  // birthDate (not really an operational filter people search by).
+  const [empDateFrom, setEmpDateFrom] = useState('');
+  const [empDateTo, setEmpDateTo] = useState('');
   // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
   // الجدول المعروض يجيب فقط الصفحة الحالية من الخادم (بحث بالاسم يصير
   // بقاعدة البيانات). القائمة الكاملة (employees أعلاه) تبقى محمَّلة كما هي —
   // تحتاجها AlertBanner (تنبيهات العلاوة/الترفيع/التقاعد) لكل الموظفين دفعة
   // وحدة، بغض النظر عن الصفحة المعروضة حالياً بالجدول.
   const { data: empPageItems, page: empCurrentPage, setPage: setEmpCurrentPage, total: empTotalItems, totalPages: empTotalPages, refetch: refetchEmployees } =
-    useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50 });
+    useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50, filters: { startDate: empDateFrom, endDate: empDateTo } });
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -106,6 +112,8 @@ function EmployeesTab({ lang }) {
           onChange={e => setEmpSearch(e.target.value)}
           style={{ padding:'8px 12px', borderRadius:8, border:'1px solid var(--border)', background:'var(--bg-primary)', color:'var(--text-primary)', minWidth:200 }}
         />
+        <DateRangeFilter lang={lang} from={empDateFrom} to={empDateTo} onChange={(f, t) => { setEmpDateFrom(f); setEmpDateTo(t); }}
+          label={lang==='ar' ? 'تاريخ التعيين:' : 'Hire date:'} />
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => printTable('emp-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {L('print')}</button>
           <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>

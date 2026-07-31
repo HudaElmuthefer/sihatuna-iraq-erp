@@ -9,6 +9,25 @@ import { FaPlus, FaEdit, FaTrash, FaCheckCircle, FaTimesCircle, FaClock } from '
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import DateRangeFilter from '../components/DateRangeFilter';
+
+// Canonical status mapping. The status filter tabs and the Accept/Reject
+// quick-action buttons in the table have always used English keys
+// ('approved'/'review'/'rejected' — see statusStyle below), while the
+// Add/Edit modal's own status <select> offered Arabic literals instead
+// ('موافق عليه'/'قيد المراجعة'/'مرفوض') as its option values. Records saved
+// through the modal without ever touching the quick-action buttons ended up
+// with an Arabic status that never matched statusStyle's lookup (falling to
+// a generic gray badge with no icon) and could never match a status filter
+// tab either. Every place that branches on leave status now normalizes
+// through this map first, and the modal's own options were switched to the
+// same canonical English keys so newly-saved records stay consistent too.
+const LEAVE_STATUS_ALIASES = {
+  approved: 'approved', 'موافق عليه': 'approved',
+  review: 'review', 'قيد المراجعة': 'review',
+  rejected: 'rejected', 'مرفوض': 'rejected',
+};
+const leaveStatus = (raw) => LEAVE_STATUS_ALIASES[raw] || raw;
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)';
 
@@ -35,20 +54,22 @@ export default function MedicalLeavePage() {
     { value: 'طارئة', label: tr('leave_type_urg') },
   ];
   const statusOptions = [
-    { value: 'موافق عليه', label: tr('leave_status_appr2') },
-    { value: 'قيد المراجعة', label: tr('leave_status_rev') },
-    { value: 'مرفوض', label: tr('leave_status_rej2') },
+    { value: 'approved', label: tr('leave_status_appr2') },
+    { value: 'review', label: tr('leave_status_rev') },
+    { value: 'rejected', label: tr('leave_status_rej2') },
   ];
+  // Normalizes through leaveStatus() first so old Arabic-valued records
+  // still translate correctly, not just newly-saved English-keyed ones.
   const displayValue = (value) => ({
     'مرضية': tr('leave_type_sick'),
     'ولادة': tr('leave_type_mat'),
     'عارضة': tr('leave_type_cas'),
     'اعتيادية': tr('leave_type_ann'),
     'طارئة': tr('leave_type_urg'),
-    'موافق عليه': tr('leave_status_appr2'),
-    'قيد المراجعة': tr('leave_status_rev'),
-    'مرفوض': tr('leave_status_rej2'),
-  }[value] || value);
+    approved: tr('leave_status_appr2'),
+    review: tr('leave_status_rev'),
+    rejected: tr('leave_status_rej2'),
+  }[leaveStatus(value)] || value);
   const [leaves, setLeaves] = useState(init);
   useEffect(() => {
     if (!user) return;
@@ -122,15 +143,31 @@ export default function MedicalLeavePage() {
     'review': { bg: '#fef9c3', color: '#854d0e', icon: <FaClock /> },
     'rejected': { bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> } }[s] || { bg: '#f3f4f6', color: '#374151', icon: null });
 
-  const filtered = filter === 'all' ? filterByViewingHospital(leaves) : filterByViewingHospital(leaves).filter(r => r.status === filter);
+  // Date filter design: a leave record has its own range (from/to), not a
+  // single point, so a plain "date === filter date" match doesn't make
+  // sense. Instead this uses interval overlap — a leave matches the
+  // selected from/to window if it was active at ANY point during that
+  // window, i.e. the leave started on/before the filter's end and ended
+  // on/after the filter's start. This is what "show me leaves during this
+  // period" intuitively means (including ones that started earlier and are
+  // still ongoing, or start inside the window and end later).
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const filtered = filterByViewingHospital(leaves).filter(r =>
+    (filter === 'all' || leaveStatus(r.status) === filter) &&
+    (!dateFrom || (r.to || '') >= dateFrom) &&
+    (!dateTo || (r.from || '') <= dateTo)
+  );
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
+  // Normalized the same way the table displays/filters status, so these
+  // counts stay consistent with what selecting that same status filter shows.
   const stats = {
     total: leaves.length,
-    approved: leaves.filter(r => r.status === 'approved').length,
-    pending: leaves.filter(r => r.status === 'review').length,
-    rejected: leaves.filter(r => r.status === 'rejected').length,
-    totalDays: leaves.filter(r => r.status === 'approved').reduce((s, r) => s + (parseInt(r.days) || 0), 0) };
+    approved: leaves.filter(r => leaveStatus(r.status) === 'approved').length,
+    pending: leaves.filter(r => leaveStatus(r.status) === 'review').length,
+    rejected: leaves.filter(r => leaveStatus(r.status) === 'rejected').length,
+    totalDays: leaves.filter(r => leaveStatus(r.status) === 'approved').reduce((s, r) => s + (parseInt(r.days) || 0), 0) };
 
   return (
     <div className="page-content">
@@ -179,10 +216,11 @@ export default function MedicalLeavePage() {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {[{ value:'all', label:tr('leave_filter_all') }, ...statusOptions].map(f => (
           <button key={f.value} onClick={() => setFilter(f.value)} style={{ padding: '8px 18px', borderRadius: 20, border: `2px solid ${filter === f.value ? '#1a6bab' : 'var(--border)'}`, background: filter === f.value ? '#1a6bab' : 'transparent', color: filter === f.value ? '#fff' : 'var(--text-primary)', cursor: 'pointer', fontSize: 13 }}>{f.label}</button>
         ))}
+        <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
       </div>
 
       {/* Table */}
@@ -204,7 +242,7 @@ export default function MedicalLeavePage() {
             </thead>
             <tbody>
               {pageItems.map(r => {
-                const st = statusStyle(r.status);
+                const st = statusStyle(leaveStatus(r.status));
                 return (
                   <tr key={r.id}>
                     <td style={{ fontWeight: 600 }}>{lang==='ar'?r.employee:(r.employeeEn||r.employee)}</td>
@@ -219,7 +257,7 @@ export default function MedicalLeavePage() {
                         <span style={{ background: st.bg, color: st.color, padding: '3px 8px', borderRadius: 10, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                           {st.icon} {displayValue(r.status)}
                         </span>
-                        {r.status === 'review' && (
+                        {leaveStatus(r.status) === 'review' && (
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button onClick={() => updateStatus(r.id, 'approved')} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', fontSize: 10 }}>{tr('btn_accept')}</button>
                             <button onClick={() => updateStatus(r.id, 'rejected')} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', fontSize: 10 }}>{tr('btn_reject')}</button>

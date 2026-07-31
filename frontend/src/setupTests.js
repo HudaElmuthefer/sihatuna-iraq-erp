@@ -24,3 +24,15 @@
 // click/keystroke produces) — not on internal state or implementation
 // details, which change more often than behavior does.
 import '@testing-library/jest-dom';
+
+// react-router-dom v7 references TextEncoder/TextDecoder at module-load
+// time (Web APIs available in real browsers and modern Node, but not
+// polyfilled by jsdom's test environment as configured by react-scripts 5,
+// which predates react-router v7). Node's own `util` module already
+// implements both — this just exposes them as globals before any test
+// file's imports run.
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}

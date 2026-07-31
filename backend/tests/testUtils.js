@@ -12,11 +12,28 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const bcrypt = require('bcryptjs');
-const { pool } = require('../config/database');
+// ── إصلاح عزل PostgreSQL (كان أخطر ثغرة عزل بهذا الملف) ──────────────────────
+// db.json/JWT/سجل التدقيق كانت الوحيدة المعزولة فعلياً — عمود PostgreSQL نفسه
+// (الجداول السريرية/الإدارية/المالية الحقيقية بقاعدة sihatuna_iraq) لم يكن
+// معزولاً إطلاقاً، فكل اختبار يكتب فعلياً على قاعدة التطوير الحقيقية بلا أي
+// تنظيف بمعظم الملفات — تراكم بيانات وهمية دائم (مؤكَّد: 10+ صف بجدول assets
+// وحده، بتواريخ تمتد لأيام، فضلاً عن جداول أخرى كثيرة).
+// السبب الجذري: كان هذا الملف نفسه يستورد config/database.js (فيبني Pool)
+// بأعلى الملف — أي قبل استدعاء setupTestEnv() بأي ملف اختبار فعلياً، فتضبيط
+// PG_DATABASE هنا لن ينفع لأن الـ Pool يكون قد بُني مسبقاً بقاعدة .env
+// الحقيقية. الحل: لا نستورد config/database.js هنا نهائياً بأعلى الملف — فقط
+// عند الحاجة الفعلية بـ closeDbPool()، بعد أن يكون كل ملف اختبار قد استدعى
+// setupTestEnv() (يضبط PG_DATABASE لقاعدة اختبار معزولة) ثم require('../server')
+// لاحقاً — عندها فقط يُبنى الـ Pool لأول مرة بهذا السجل (Jest module registry
+// الخاص بكل ملف اختبار على حدة)، فيلتقط القيمة الصحيحة المُعاد ضبطها.
 
 function setupTestEnv(testFileName) {
   const dbPath = path.join(os.tmpdir(), `sihatuna-test-db-${testFileName}-${Date.now()}.json`);
   process.env.DB_PATH = dbPath;
+  // عزل PostgreSQL: قاعدة اختبار منفصلة تماماً (sihatuna_iraq_test)، بنفس
+  // مخطط قاعدة التطوير الحقيقية (أُنشئت عبر pg_dump --schema-only) — أي بيانات
+  // وهمية تُنشَأ هنا لا تلمس sihatuna_iraq الحقيقية إطلاقاً بعد الآن.
+  process.env.PG_DATABASE = process.env.TEST_PG_DATABASE || 'sihatuna_iraq_test';
   // نفس مبدأ عزل db.json ينطبق على قائمة إبطال التوكنات (tokenRevocation.js) —
   // بدون هذا، اختبارات تسجيل الخروج كانت تكتب على نفس ملف الإبطال الحقيقي
   // بجهاز التطوير (backend/data/revoked-tokens.json).
@@ -77,6 +94,9 @@ function assertPgAvailable(probeResponse, label, expectedStatus = 200) {
 // فعلياً. بدون هذا، Jest ينتظر إلى الأبد لأن الاتصال يبقى مفتوحاً بالذاكرة
 // (تحذير "Jest did not exit one second after the test run has completed").
 async function closeDbPool() {
+  // يُستورَد هنا فقط (ليس بأعلى الملف) — راجعي التعليق الكبير بأعلى الملف
+  // لسبب هذا الترتيب المتعمَّد بالتحديد.
+  const { pool } = require('../config/database');
   await pool.end();
 }
 

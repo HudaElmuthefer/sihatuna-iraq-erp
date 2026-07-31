@@ -7,6 +7,7 @@
 // راجعي مجلد hr/ لتفاصيل كل تبويب. هذا الملف الحين مجرد نقطة تجميع تربط
 // التبويبات مع بعض.
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { I18N } from './hr/shared';
 import EmployeesTab from './hr/EmployeesTab';
@@ -18,11 +19,29 @@ import BarcodeTab from './hr/BarcodeTab';
 import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg,#1c1917,#44403c)';
+const HR_TAB_KEYS = ['employees', 'outgoing', 'incoming', 'retired', 'dossiers', 'barcode'];
 
 export default function HRPage() {
   const { lang } = useApp();
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
-  const [tab, setTab] = useState('employees');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (تصل من القائمة الجانبية القابلة
+  // للتوسّع — راجعي components/Layout.js وconfig/sidebarSubTabs.js) دون أي
+  // تغيير على سلوك التبديل اليدوي بين التبويبات داخل الصفحة نفسها. تُتجاهَل
+  // أي قيمة غير معروفة (رابط قديم/مُعدَّل يدوياً) بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return HR_TAB_KEYS.includes(fromUrl) ? fromUrl : 'employees';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فـHRPage يبقى مُثبَّتاً وrouter لا يُعيد تركيبه.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (HR_TAB_KEYS.includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
 
   const HR_TABS = [
     { key:'employees', label: L('tab_employees'), icon:'👥' },

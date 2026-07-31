@@ -151,8 +151,12 @@ export default function BarcodeTab({ lang }) {
     }
     const win = window.open('', '_blank', 'width=500,height=300');
     if (!win) return;
+    // اتجاه نافذة الطباعة يتبع لغة الواجهة الحالية وقت الطباعة (نفس منطق
+    // إصلاح printTable() بـ accounts/hr shared.js) بدل rtl/ar الثابتة سابقاً.
+    const dir = document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl';
+    const htmlLang = dir === 'rtl' ? 'ar' : 'en';
     win.document.write(`
-      <html dir="rtl" lang="ar">
+      <html dir="${dir}" lang="${htmlLang}">
         <head><meta charset="utf-8" /><title>${l.ref}</title>
           <style>
             body { font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; padding: 20px; }

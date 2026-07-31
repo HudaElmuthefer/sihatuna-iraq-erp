@@ -7,6 +7,7 @@ import { useT } from '../translations';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import DateRangeFilter from '../components/DateRangeFilter';
 import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #78350f 0%, #b45309 100%)';
@@ -35,6 +36,13 @@ export default function InventoryPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  // Filters by expiry directly (from/to range). Note: this is separate from
+  // the existing past-due red-text styling below (item.expiry < today) —
+  // that's a per-row display cue, this decides which rows are listed at
+  // all, so the two don't conflict. There's no separate "expiring soon"
+  // badge in this page today to worry about colliding with either.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -57,7 +65,7 @@ export default function InventoryPage() {
   // بالسياق العام تبقى محمَّلة كاملة كما هي — تحتاجها صفحة الصيدلية لخصم
   // المخزون عند صرف الوصفات، ولوحة التحكم للإحصائيات (stats تحتها بالأسفل).
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
-    useServerPagination('inventory', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter }, pageSize: 50 });
+    useServerPagination('inventory', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter, startDate: dateFrom, endDate: dateTo }, pageSize: 50 });
 
   const stats = useMemo(() => ({
     total: inventory.length,
@@ -205,6 +213,8 @@ export default function InventoryPage() {
           <option value="all">{L('كل الحالات','All Status')}</option>
           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{lang === 'ar' ? v.label : v.labelEn}</option>)}
         </select>
+        <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+          label={L('تاريخ الانتهاء:', 'Expiry date:')} />
         <span style={{ color: 'var(--text-secondary)', fontSize: 12, marginRight: 'auto' }}>{totalItems} {L('صنف','items')}</span>
       </div>
 
@@ -235,7 +245,7 @@ export default function InventoryPage() {
                 </td>
                 <td style={S.td}>{item.minQty} {item.unit}</td>
                 <td style={S.td}>{n(item.unitCost)} {L('د.ع','IQD')}</td>
-                <td style={S.td} title={item.supplier}><span style={{ fontSize: 12 }}>{item.supplier.length > 16 ? item.supplier.slice(0,16)+'…' : item.supplier}</span></td>
+                <td style={S.td} title={item.supplier}><span style={{ fontSize: 12 }}>{(item.supplier || '').length > 16 ? item.supplier.slice(0,16)+'…' : (item.supplier || '—')}</span></td>
                 <td style={S.td}><code style={{ fontSize: 11 }}>{item.location}</code></td>
                 <td style={S.td}><span style={{ fontSize: 12, color: item.expiry && new Date(item.expiry) < new Date() ? '#ef4444' : 'var(--text-secondary)' }}>{item.expiry || '—'}</span></td>
                 <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.label,st.labelEn)}</span></td>

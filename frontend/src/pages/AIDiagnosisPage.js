@@ -32,10 +32,10 @@ const commonSymptoms = [
 // جديد) كان يحتاج تعديل كود وبناء ونشر كامل. الآن تُجلَب من الباك إند
 // (GET /api/ai-diagnosis/referral-doctors) اللي يقرأها من ملف بيانات بسيط
 // (backend/data/basra-referral-doctors.json) يُعدَّل مباشرة بدون أي بناء.
-function getRecommendedDoctors(symptoms, doctorsList) {
+export function getRecommendedDoctors(symptoms, doctorsList) {
   if (!symptoms || symptoms.length === 0 || !doctorsList || doctorsList.length === 0) return [];
   const scored = doctorsList.map(doc => {
-    const matches = symptoms.filter(s => doc.keys.includes(s)).length;
+    const matches = symptoms.filter(s => (doc.keys||[]).includes(s)).length;
     return { ...doc, score: matches };
   }).filter(d => d.score > 0).sort((a, b) => b.score - a.score);
   return scored.slice(0, 5);

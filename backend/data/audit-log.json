@@ -6518,5 +6518,73 @@
       "nameAr": "صحتنا عراق",
       "nameEn": "Sihatuna Iraq"
     }
+  },
+  {
+    "id": 742,
+    "timestamp": "2026-07-30T05:45:59.488Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
+  },
+  {
+    "id": 743,
+    "timestamp": "2026-07-30T06:57:10.489Z",
+    "action": "CREATE",
+    "table": "invoices",
+    "recordId": 1262,
+    "userId": 1
+  },
+  {
+    "id": 744,
+    "timestamp": "2026-07-30T11:11:36.680Z",
+    "action": "UPDATE",
+    "table": "ambulance_missions",
+    "recordId": 120,
+    "userId": 1
+  },
+  {
+    "id": 745,
+    "timestamp": "2026-07-30T11:12:21.921Z",
+    "action": "UPDATE",
+    "table": "ambulance_missions",
+    "recordId": 120,
+    "userId": 1
+  },
+  {
+    "id": 746,
+    "timestamp": "2026-07-30T11:17:35.490Z",
+    "action": "UPDATE",
+    "table": "quality_ncs",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 747,
+    "timestamp": "2026-07-30T11:18:20.330Z",
+    "action": "UPDATE",
+    "table": "quality_ncs",
+    "recordId": 2,
+    "userId": 1
+  },
+  {
+    "id": 748,
+    "timestamp": "2026-07-31T10:39:48.422Z",
+    "module": "auth",
+    "action": "login_failed",
+    "userId": null,
+    "userRole": null,
+    "after": {
+      "attemptedUsername": "adminadmin",
+      "reason": "user_not_found"
+    }
+  },
+  {
+    "id": 749,
+    "timestamp": "2026-07-31T12:38:02.427Z",
+    "module": "auth",
+    "action": "login_success",
+    "userId": 1,
+    "userRole": "admin"
   }
 ]

@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import usePagination from '../hooks/usePagination';
@@ -45,7 +46,23 @@ export default function DeliveryRoomPage() {
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [tab, setTab] = useState('admitted'); // admitted | delivered
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => { // admitted | delivered
+    const fromUrl = searchParams.get('tab');
+    return ['admitted', 'delivered'].includes(fromUrl) ? fromUrl : 'admitted';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['admitted', 'delivered'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [showAdmModal, setShowAdmModal] = useState(false); // نافذة إدخال أم جديدة (قبل الولادة)
   const [showFullModal, setShowFullModal] = useState(false); // نافذة إتمام/تعديل الولادة كاملة
   const [editing, setEditing] = useState(null);

@@ -68,11 +68,16 @@ const displayValue = (value, tr) => ({
   'سلفة': tr('acc_advance'),
 }[value] || value);
 
+// اتجاه نافذة الطباعة يتبع لغة الواجهة الحالية وقت الطباعة (نفس المصدر
+// المُعتمَد أصلاً لإصلاح محاذاة الجداول/الرسوم — document.documentElement.dir،
+// الذي يُحدَّثه AppContext عند كل تبديل لغة) بدل rtl الثابتة سابقاً.
 const printTable = (id) => {
   const el = document.getElementById(id);
   if (!el) return;
+  const dir = document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl';
+  const align = dir === 'rtl' ? 'right' : 'left';
   const w = window.open('','_blank');
-  w.document.write(`<html dir="rtl"><head><style>body{font-family:Arial;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:right}th{background:#1a6bab;color:#fff}</style></head><body>${el.outerHTML}</body></html>`);
+  w.document.write(`<html dir="${dir}"><head><style>body{font-family:Arial;direction:${dir}}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:${align}}th{background:#1a6bab;color:#fff}</style></head><body>${el.outerHTML}</body></html>`);
   w.document.close(); w.print();
 };
 
@@ -103,14 +108,24 @@ function usePersistedTab(storageKey, backendKey, initialData) {
 // حقيقية الشكل) تظهر تلقائياً كـ"احتياط". تبدأ فاضية بصراحة الآن.
 const initSalaries = [];
 
+// إصلاح: 47 من 83 سجل راتب حقيقي بلا baseSalary (Number(undefined) = NaN)،
+// وكان NaN سطر واحد يُفسد كامل مجموع totalNet بصفحة الرواتب (يظهر "NaN د.ع"
+// بدل رقم حقيقي). كل حقل رقمي هنا يسقط لـ0 لو مفقود/غير رقمي بدل إفساد
+// المجموع — السجل نفسه يبقى ظاهراً بالجدول كما هو (لا نُخفيه)، فقط لا
+// يُحتسَب فيه راتب أساسي وهمي. hasBaseSalary تُصدَّر ليستخدمها العرض
+// لوضع شارة تنبيه بدل إخفاء المشكلة صامتاً.
+function hasBaseSalary(emp) {
+  return emp.baseSalary !== undefined && emp.baseSalary !== null && emp.baseSalary !== '' && !isNaN(Number(emp.baseSalary));
+}
+
 function calcNet(emp) {
-  const totalAdd = (emp.additions||[]).reduce((s,a) => s+Number(a.amount), 0);
-  const totalDed = (emp.deductions||[]).reduce((s,d) => s+Number(d.amount), 0);
-  return Number(emp.baseSalary) + totalAdd - totalDed;
+  const totalAdd = (emp.additions||[]).reduce((s,a) => s+(Number(a.amount)||0), 0);
+  const totalDed = (emp.deductions||[]).reduce((s,d) => s+(Number(d.amount)||0), 0);
+  return (Number(emp.baseSalary)||0) + totalAdd - totalDed;
 }
 
 export {
   today, initTransactions, initPromotions, initAllowances, initSalaries,
   ACCT_CATS, METHODS_KEYS, GRADE_EN, gradeEn,
-  TR_LABELS, displayValue, printTable, usePersistedTab, calcNet,
+  TR_LABELS, displayValue, printTable, usePersistedTab, calcNet, hasBaseSalary,
 };

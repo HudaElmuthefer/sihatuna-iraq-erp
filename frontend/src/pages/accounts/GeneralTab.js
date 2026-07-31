@@ -10,6 +10,17 @@ import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
 import { api } from '../../api';
 
+// Canonical transaction-type mapping. The Add/Edit form below has always
+// saved English values ('income'/'expense'), but a large share of existing
+// data (bulk-imported/legacy records — confirmed via a direct DB query: 175
+// 'دخل' + 225 'مصروف' vs only 44 'income', and zero 'expense') uses the
+// Arabic literals instead. Every place that branches on transaction type
+// must recognize both spellings as the same thing, so filtering, the
+// income/expense totals, and the amount color/sign all agree with each
+// other and with what the row's own label displays.
+const TX_TYPE_ALIASES = { income: 'income', 'دخل': 'income', expense: 'expense', 'مصروف': 'expense' };
+const txType = (raw) => TX_TYPE_ALIASES[raw] || raw;
+
 export default
 function GeneralTab() {
   const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled } = useApp();
@@ -18,7 +29,11 @@ function GeneralTab() {
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
-  const empty = { date:today, desc:'', category:'revenue', type:'دخل', amount:'', method:'cash', ref:'' };
+  // type:'income' matches the Add/Edit <select>'s actual option values below
+  // (previously 'دخل', which doesn't match either <option value>  — the
+  // dropdown visually showed the first option as selected regardless, but
+  // the real form state stayed 'دخل' until the user touched it).
+  const empty = { date:today, desc:'', category:'revenue', type:'income', amount:'', method:'cash', ref:'' };
   const [form, setForm] = useState(empty);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -28,8 +43,8 @@ function GeneralTab() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const totalIn = txs.filter(t=>t.type==='دخل').reduce((s,t)=>s+Number(t.amount),0);
-  const totalOut = txs.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount),0);
+  const totalIn = txs.filter(t=>txType(t.type)==='income').reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const totalOut = txs.filter(t=>txType(t.type)==='expense').reduce((s,t)=>s+(Number(t.amount)||0),0);
   const balance = totalIn - totalOut;
 
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
@@ -81,7 +96,7 @@ function GeneralTab() {
   // Fallback to '' before calling string methods: some records (e.g. bulk-
   // imported/seeded data) can have a missing desc or ref, which would
   // otherwise throw here and crash the whole page.
-  const filtered = filterByViewingHospital(txs).filter(t=>(filter==='all'||t.type===filter)&&((t.desc||'').includes(search)||(t.ref||'').includes(search)));
+  const filtered = filterByViewingHospital(txs).filter(t=>(filter==='all'||txType(t.type)===filter)&&((t.desc||'').includes(search)||(t.ref||'').includes(search)));
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
 
   return (
@@ -106,8 +121,13 @@ function GeneralTab() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
         <div style={{ display:'flex', gap:8 }}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr('acc_search')} className="form-control" style={{ width:200 }} />
-          {[{k:'all',l:tr('acc_filter_all')},{k:'دخل',l:tr('acc_filter_in')},{k:'مصروف',l:tr('acc_filter_out')}].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} style={{ padding:'7px 14px', borderRadius:20, border:`2px solid ${filter===f.k?'#1a6bab':'var(--border)'}`, background:filter===f.k?'#1a6bab':'transparent', color:filter===f.k?'#fff':'var(--text-primary)', cursor:'pointer', fontSize:12 }}>{f.l}</button>
+          {/* Bug fix: this used to call setFilter(f) (the whole {k,l} object)
+              and key={f} (also the object) instead of f.k — filter state
+              became a non-primitive, so `filter===f.k` and `t.type===filter`
+              could never match a string again after the first click, and
+              clicking either filter silently showed zero results. */}
+          {[{k:'all',l:tr('acc_filter_all')},{k:'income',l:tr('acc_filter_in')},{k:'expense',l:tr('acc_filter_out')}].map(f=>(
+            <button key={f.k} onClick={()=>setFilter(f.k)} style={{ padding:'7px 14px', borderRadius:20, border:`2px solid ${filter===f.k?'#1a6bab':'var(--border)'}`, background:filter===f.k?'#1a6bab':'transparent', color:filter===f.k?'#fff':'var(--text-primary)', cursor:'pointer', fontSize:12 }}>{f.l}</button>
           ))}
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -166,8 +186,8 @@ function GeneralTab() {
                   <td style={{ fontWeight:500 }}>{lang==='ar'?t.desc:t.descEn||t.desc}</td>
                   <td><span style={{ background:'var(--bg-primary)', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{TR_LABELS(tr)[t.category]||(lang==='ar'?t.category:t.categoryEn||t.category)}</span></td>
                   <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{TR_LABELS(tr)[t.method]||displayValue(t.method, tr)}</td>
-                  <td style={{ fontWeight:700, color:t.type==='income'?'#22c55e':'#ef4444' }}>{t.type==='income'?'+':'-'}{Number(t.amount).toLocaleString('en-US')}</td>
-                  <td><span style={{ background:t.type==='income'?'#dcfce7':'#fee2e2', color:t.type==='income'?'#166534':'#991b1b', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:600 }}>{TR_LABELS(tr)[t.type]||displayValue(t.type, tr)}</span></td>
+                  <td style={{ fontWeight:700, color:txType(t.type)==='income'?'#22c55e':'#ef4444' }}>{txType(t.type)==='income'?'+':'-'}{(Number(t.amount)||0).toLocaleString('en-US')}</td>
+                  <td><span style={{ background:txType(t.type)==='income'?'#dcfce7':'#fee2e2', color:txType(t.type)==='income'?'#166534':'#991b1b', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:600 }}>{TR_LABELS(tr)[t.type]||displayValue(t.type, tr)}</span></td>
                   <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(t)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(t.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
                 </tr>
               ))}

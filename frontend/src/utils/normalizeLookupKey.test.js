@@ -35,4 +35,20 @@ describe('normalizeLookupKey', () => {
     expect(STATUSES[displayKey]).toBeDefined();
     expect(displayKey === filterValue).toBe(true);
   });
+
+  // Edge case: uses Object.prototype.hasOwnProperty.call rather than `in` or
+  // `lookup.hasOwnProperty(...)` specifically so inherited properties every
+  // plain object has (toString, constructor, hasOwnProperty itself...) are
+  // never mistaken for a real lookup key — `'toString' in STATUSES` is true
+  // even though STATUSES never defines it.
+  test('inherited Object.prototype properties are not mistaken for real keys', () => {
+    expect(normalizeLookupKey('toString', STATUSES, 'pending')).toBe('pending');
+    expect(normalizeLookupKey('constructor', STATUSES, 'pending')).toBe('pending');
+    expect(normalizeLookupKey('hasOwnProperty', STATUSES, 'pending')).toBe('pending');
+  });
+
+  test('an empty lookup table always falls back to the default key', () => {
+    expect(normalizeLookupKey('pending', {}, 'fallback')).toBe('fallback');
+    expect(normalizeLookupKey(undefined, {}, 'fallback')).toBe('fallback');
+  });
 });

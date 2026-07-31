@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import usePagination from '../hooks/usePagination';
@@ -19,7 +20,23 @@ export default function WardsPage() {
   const { lang, showToast, syncToServer, confirmDialog, user, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources } = useApp();
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
-  const [tab, setTab] = useState('admissions'); // admissions | wards
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => { // admissions | schedule | wards
+    const fromUrl = searchParams.get('tab');
+    return ['admissions', 'schedule', 'wards'].includes(fromUrl) ? fromUrl : 'admissions';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['admissions', 'schedule', 'wards'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const [wards, setWards] = useState([]);
   const [admissions, setAdmissions] = useState([]);
   const [orders, setOrders] = useState([]);

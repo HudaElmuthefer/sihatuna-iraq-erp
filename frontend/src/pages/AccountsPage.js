@@ -5,6 +5,7 @@
 // shared.js للثوابت المشتركة). التقسيم نسخ حرفي بدون أي تغيير بالمنطق أو
 // السلوك — راجعي مجلد accounts/ لتفاصيل كل تبويب.
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
@@ -24,7 +25,23 @@ const ACCT_TABS = [
 ];
 
 export default function AccountsPage() {
-  const [tab, setTab] = useState('general');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (تصل من القائمة الجانبية القابلة
+  // للتوسّع — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع
+  // تجاهل أي قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ACCT_TABS.some(t => t.key === fromUrl) ? fromUrl : 'general';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (ACCT_TABS.some(t => t.key === fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   const { lang, user } = useApp();
   const tr = useT(lang);
 

@@ -1,10 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 // Not red — the page already uses solid red for its "Emergency Mission"
 // button (a meaningful, semantic urgency color that shouldn't be diluted or
@@ -34,6 +36,20 @@ const MISS_TYPE = {
   routine:   { ar:'دوري',        en:'Routine' },
 };
 
+// إصلاح: كل الـ120 مأمورية حقيقية بالقاعدة بلا status إطلاقاً. قبل هذا
+// الإصلاح، الأيقونة (فحص m.status === 'active' مباشرة) والشارة النصية
+// (MISS_STATUS[m.status] || MISS_STATUS.active) كانتا تتعاملان مع نفس
+// السجل بشكل مختلف — الأيقونة تعتبرها "غير نشطة" (⬜) بينما الشارة تسقط
+// صامتة لنص "نشطة" الافتراضي، فيظهر تناقض بصري بالسجل نفسه. الأسوأ: أزرار
+// "إنجاز/إلغاء" تستخدم نفس فحص الأيقونة الخام، فكانت لا تظهر أبداً لأي
+// مأمورية حقيقية — يستحيل تغيير حالتها من الواجهة. دالة واحدة الآن (نفس
+// مبدأ normalizeLookupKey) تُستخدَم بكل مكان: الإحصائية، الأيقونة، الشارة،
+// وشرط ظهور الأزرار — فلا تتكرر مشكلة "الأيقونة تناقض الشارة"، ولا يوجد
+// مكان آخر يقارن status الخام مباشرة. الافتراضي 'active' لمأمورية بلا حالة
+// مسجَّلة لأنها منطقياً لم تُغلَق بعد (لم تُنجَز ولم تُلغَ) — هذا لا يُعدِّل
+// أي شيء بقاعدة البيانات، فقط بطبقة العرض/المنطق.
+const missionStatus = (m) => normalizeLookupKey(m.status, MISS_STATUS, 'active');
+
 const EMPTY_VEH  = { code:'', plate:'', type:'advanced', model:'', crew:'', status:'available', lastService:'', nextService:'', km:0, fuel:100, location:'' };
 const EMPTY_MISS = { missionNo:'', vehicleId:'', type:'emergency', callTime:'', address:'', patient:'', status:'active', crew:'', notes:'' };
 
@@ -42,7 +58,23 @@ export default function AmbulancePage() {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
-  const [tab, setTab] = useState('vehicles');
+  // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
+  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    return ['vehicles', 'missions'].includes(fromUrl) ? fromUrl : 'vehicles';
+  });
+  // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
+  // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
+  // نفسه، ?tab= فقط يتغيّر)، فالصفحة تبقى مُثبَّتة وrouter لا يُعيد تركيبها.
+  // هذا الـeffect يُحدِّث التبويب كلما تغيّر ?tab= فعلياً بالرابط، دون التأثير
+  // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
+  React.useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (['vehicles', 'missions'].includes(fromUrl)) setTab(fromUrl);
+  }, [searchParams]);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -80,7 +112,7 @@ export default function AmbulancePage() {
     available:    vehicles.filter(v => v.status === 'available').length,
     onMission:    vehicles.filter(v => v.status === 'on_mission').length,
     maintenance:  vehicles.filter(v => v.status === 'maintenance').length,
-    activeMissions: missions.filter(m => m.status === 'active').length,
+    activeMissions: missions.filter(m => missionStatus(m) === 'active').length,
   }), [vehicles, missions]);
 
   // ── VEHICLE CRUD ────────────────────────────────────────────────────
@@ -111,7 +143,7 @@ export default function AmbulancePage() {
   const deleteVeh = async id => {
     // ── إصلاح: كان يقدر يحذف مركبة أثناء مأمورية نشطة مرتبطة فيها، تاركاً
     // المأمورية "معلّقة" بلا مركبة مرجعية بصمت بدون أي تحذير للمستخدم.
-    const activeMission = missions.find(m => m.vehicleId === id && m.status === 'active');
+    const activeMission = missions.find(m => m.vehicleId === id && missionStatus(m) === 'active');
     if (activeMission) {
       showToast(L(`لا يمكن حذف المركبة — مرتبطة بمأمورية نشطة (${activeMission.missionNo})`,`Cannot delete vehicle — linked to an active mission (${activeMission.missionNo})`), 'error');
       return;
@@ -235,7 +267,9 @@ export default function AmbulancePage() {
     showToast(L('تم الإلغاء','Cancelled'), 'info');
   };
 
-  const n = v => Number(v).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
+  // إصلاح: مركبات بلا km مسجَّل (Number(undefined) = NaN) كانت تعرض "ليس
+  // رقمًا" بدل "0" — السجل نفسه يبقى ظاهراً كما هو، فقط الرقم لا يُفسَد.
+  const n = v => (Number(v)||0).toLocaleString(lang==='ar'?'ar-IQ':'en-US');
 
   const S = {
     page:  { padding: 24, direction: dir },
@@ -393,17 +427,18 @@ export default function AmbulancePage() {
       {/* ── MISSIONS TAB ── */}
       {tab === 'missions' && (
         <div>
-          {[...missions].sort((a, b) => a.status === 'active' ? -1 : 1).map(m => {
-            const ms  = MISS_STATUS[m.status]  || MISS_STATUS.active;
+          {[...missions].sort((a, b) => missionStatus(a) === 'active' ? -1 : 1).map(m => {
+            const msKey = missionStatus(m);
+            const ms  = MISS_STATUS[msKey];
             const mt  = MISS_TYPE[m.type]      || MISS_TYPE.emergency;
             const veh = vehicles.find(v => v.id === m.vehicleId);
             return (
-              <div key={m.id} style={{ ...S.vCard, marginBottom:12, borderRight: m.status === 'active' ? '4px solid #ef4444' : '1px solid var(--border)' }}>
+              <div key={m.id} style={{ ...S.vCard, marginBottom:12, borderRight: msKey === 'active' ? '4px solid #ef4444' : '1px solid var(--border)' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
                   <div style={{ flex:1 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
-                      <span style={{ fontSize:14, fontWeight:700, color: m.status === 'active' ? '#ef4444' : 'var(--text-primary)' }}>
-                        {m.status === 'active' ? '🔴' : m.status === 'completed' ? '✅' : '⬜'} {m.missionNo}
+                      <span style={{ fontSize:14, fontWeight:700, color: msKey === 'active' ? '#ef4444' : 'var(--text-primary)' }}>
+                        {msKey === 'active' ? '🔴' : msKey === 'completed' ? '✅' : '⬜'} {m.missionNo}
                       </span>
                       <span style={S.badge(ms.color, ms.bg)}>{L(ms.ar, ms.en)}</span>
                       <span style={{ fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:12, background: m.type === 'emergency' ? '#fee2e2' : '#dbeafe', color: m.type === 'emergency' ? '#ef4444' : '#1a6bab' }}>
@@ -419,7 +454,7 @@ export default function AmbulancePage() {
                     {m.notes && <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:4 }}>📝 {m.notes}</div>}
                   </div>
                 </div>
-                {m.status === 'active' && (
+                {msKey === 'active' && (
                   <div style={{ display:'flex', gap:8, marginTop:10, borderTop:'1px solid var(--border)', paddingTop:8 }}>
                     <button onClick={() => completeMission(m.id)} style={S.btn('#10b981')}>✅ {L('إنجاز المأمورية','Complete Mission')}</button>
                     <button onClick={() => cancelMission(m.id)} style={S.btn('#ef4444')}>❌ {L('إلغاء','Cancel')}</button>

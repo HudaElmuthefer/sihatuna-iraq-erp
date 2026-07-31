@@ -5,7 +5,7 @@ import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
-import { today, initSalaries, calcNet, displayValue, gradeEn, printTable, usePersistedTab } from './shared';
+import { today, initSalaries, calcNet, hasBaseSalary, displayValue, gradeEn, printTable, usePersistedTab } from './shared';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
 import { api } from '../../api';
@@ -163,9 +163,9 @@ function SalariesTab() {
           </tr></thead>
           <tbody>
             {salPageItems.map(e => {
-              const totalAdd = (e.additions||[]).reduce((s,a)=>s+Number(a.amount),0);
-              const totalDed = (e.deductions||[]).reduce((s,a)=>s+Number(a.amount),0);
-              const net = Number(e.baseSalary) + totalAdd - totalDed;
+              const totalAdd = (e.additions||[]).reduce((s,a)=>s+(Number(a.amount)||0),0);
+              const totalDed = (e.deductions||[]).reduce((s,a)=>s+(Number(a.amount)||0),0);
+              const net = calcNet(e);
               return (
                 <React.Fragment key={e.id}>
                   <tr>
@@ -174,7 +174,13 @@ function SalariesTab() {
                     <td style={{ fontSize:12 }}>{lang==='ar'?e.jobTitle:e.jobTitleEn||({'طبيب اختصاص':'Specialist Physician','ممرضة أولى':'Senior Nurse','فني مختبر':'Lab Technician','سكرتيرة':'Secretary','محاسب':'Accountant','مدير':'Manager'})[e.jobTitle]||e.jobTitle}</td>
                     <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:11 }}>{lang==='ar'?e.dept:e.deptEn||({'الباطنية':'Internal Medicine','الجراحة':'Surgery','التحاليل':'Laboratory','الإدارة':'Administration','الأشعة':'Radiology','الطوارئ':'Emergency','الأطفال':'Pediatrics'})[e.dept]||e.dept}</span></td>
                     <td style={{ fontSize:12 }}>{lang==='ar'?e.grade:e.gradeEn||gradeEn(e.grade)||e.grade}</td>
-                    <td style={{ fontWeight:600 }}>{Number(e.baseSalary).toLocaleString('en-US')} {tr('iqd')}</td>
+                    <td style={{ fontWeight:600 }}>
+                      {hasBaseSalary(e) ? `${Number(e.baseSalary).toLocaleString('en-US')} ${tr('iqd')}` : (
+                        <span title={lang==='ar' ? 'الراتب الأساسي غير مُدخَل لهذا السجل — يُحتسَب كصفر بالإجمالي والمتوسط أعلاه' : 'Base salary not entered for this record — counted as zero in the total/average above'} style={{ color:'#f59e0b', cursor:'help', display:'inline-flex', alignItems:'center', gap:4 }}>
+                          ⚠️ {lang==='ar' ? 'غير مُدخَل' : 'Missing'}
+                        </span>
+                      )}
+                    </td>
                     <td style={{ color:'#22c55e', fontWeight:600 }}>+{totalAdd.toLocaleString('en-US')}</td>
                     <td style={{ color:'#ef4444', fontWeight:600 }}>-{totalDed.toLocaleString('en-US')}</td>
                     <td style={{ fontWeight:700, color:'#1a6bab', fontSize:14 }}>{net.toLocaleString('en-US')} {tr('iqd')}</td>
@@ -201,7 +207,7 @@ function SalariesTab() {
                             {(e.additions||[]).map((a,i) => (
                               <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'rgba(34,197,94,0.08)', borderRadius:8, marginBottom:4 }}>
                                 <span style={{ fontSize:13 }}>{displayValue(a.label, tr)}</span>
-                                <span style={{ fontWeight:700, color:'#22c55e' }}>+{Number(a.amount).toLocaleString('en-US')} {tr('iqd')}</span>
+                                <span style={{ fontWeight:700, color:'#22c55e' }}>+{(Number(a.amount)||0).toLocaleString('en-US')} {tr('iqd')}</span>
                               </div>
                             ))}
                           </div>
@@ -210,7 +216,7 @@ function SalariesTab() {
                             {(e.deductions||[]).map((d,i) => (
                               <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 10px', background:'rgba(239,68,68,0.08)', borderRadius:8, marginBottom:4 }}>
                                 <span style={{ fontSize:13 }}>{displayValue(d.label, tr)}</span>
-                                <span style={{ fontWeight:700, color:'#ef4444' }}>-{Number(d.amount).toLocaleString('en-US')} {tr('iqd')}</span>
+                                <span style={{ fontWeight:700, color:'#ef4444' }}>-{(Number(d.amount)||0).toLocaleString('en-US')} {tr('iqd')}</span>
                               </div>
                             ))}
                           </div>

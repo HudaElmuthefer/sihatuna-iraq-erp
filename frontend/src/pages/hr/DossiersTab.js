@@ -87,7 +87,7 @@ export default function DossiersTab({ lang }) {
         <h4 style={{ margin:'0 0 10px', fontSize:14 }}>{L('dos_employees')}</h4>
         <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:500, overflowY:'auto' }}>
           {employees.map(e => (
-            <button key={e.id} onClick={() => loadDocsFor(e.id)} style={{ padding:'10px 12px', borderRadius:9, border:`1px solid ${selected===e.id?'#1a6bab':'var(--border)'}`, background:selected===e.id?'rgba(26,107,171,0.1)':'var(--bg-secondary)', color:selected===e.id?'#1a6bab':'var(--text-primary)', cursor:'pointer', textAlign:'right', fontSize:13, fontFamily:'inherit', fontWeight:selected===e.id?700:400 }}>
+            <button key={e.id} onClick={() => loadDocsFor(e.id)} style={{ padding:'10px 12px', borderRadius:9, border:`1px solid ${selected===e.id?'#1a6bab':'var(--border)'}`, background:selected===e.id?'rgba(26,107,171,0.1)':'var(--bg-secondary)', color:selected===e.id?'#1a6bab':'var(--text-primary)', cursor:'pointer', textAlign:lang==='ar'?'right':'left', fontSize:13, fontFamily:'inherit', fontWeight:selected===e.id?700:400 }}>
               👤 {lang==='ar'?e.name:(e.nameEn||e.name)}
               <span style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginTop:2 }}>{(docsByEmployee[e.id]||[]).length} {L('docs_count')}</span>
             </button>

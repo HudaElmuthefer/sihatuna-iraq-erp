@@ -4,6 +4,7 @@ import { useApp, PAYMENT_PROVIDERS } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import DateRangeFilter from '../components/DateRangeFilter';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #475569 0%, #1e293b 100%)';
 
@@ -56,9 +57,20 @@ export default function BillingPage() {
     [invoices, selectedPatientId]
   );
 
+  // Filters by paidAt (not createdAt): this list is specifically "recent
+  // PAID invoices", and an invoice can sit unpaid for a while after
+  // creation — paidAt is what "recent" means here. Filtering happens before
+  // the slice(0,10) cap, so a date range narrows which invoices are
+  // eligible to appear rather than just hiding rows from the fixed last-10.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const paidInvoices = useMemo(
-    () => invoices.filter(inv => inv.status === 'paid').sort((a,b) => new Date(b.paidAt) - new Date(a.paidAt)).slice(0, 10),
-    [invoices]
+    () => invoices
+      .filter(inv => inv.status === 'paid')
+      .filter(inv => (!dateFrom || (inv.paidAt || '').slice(0, 10) >= dateFrom) && (!dateTo || (inv.paidAt || '').slice(0, 10) <= dateTo))
+      .sort((a,b) => new Date(b.paidAt) - new Date(a.paidAt))
+      .slice(0, 10),
+    [invoices, dateFrom, dateTo]
   );
 
   const activeGateways = paymentGateways.filter(g => g.isActive);
@@ -226,6 +238,10 @@ export default function BillingPage() {
 
       <div style={S.card}>
         <h3 style={{ marginTop:0, fontSize:14 }}>{L('آخر الفواتير المدفوعة','Recent Paid Invoices')}</h3>
+        <div style={{ marginBottom:12 }}>
+          <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+            label={L('تاريخ الدفع:', 'Payment date:')} />
+        </div>
         {paidInvoices.length === 0 ? (
           <p style={{ color:'var(--text-secondary)', fontSize:13 }}>{L('لا توجد فواتير مدفوعة بعد','No paid invoices yet')}</p>
         ) : paidInvoices.map(inv => {

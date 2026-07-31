@@ -7,9 +7,21 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 import { api } from '../api';
+import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #334155 0%, #64748b 100%)';
 
+// إصلاح تعارض عرض/فلترة: 49 من 109 أصل حقيقي (فحص مباشر بقاعدة البيانات)
+// بحقل status/category فارغ تماماً (دفعة مستوردة). كان `CATEGORIES[a.category]
+// || CATEGORIES.other` / `STATUSES[a.status] || STATUSES.active` يعرض هذه
+// السجلات بشارة "أخرى"/"نشط" حقيقية — افتراض خاطئ، وليس حالة فعلية — بينما
+// الفلتر الفعلي بالخادم يقارن القيمة الخام تطابقاً تاماً (`status = 'active'`)
+// فلا يطابق حقلاً فارغاً أبداً. النتيجة: سجل يظهر بشارة "نشط" لكنه يختفي فعلياً
+// عند اختيار فلتر "نشط" — نفس نمط التعارض المُصلَح سابقاً بصفحات أخرى.
+// الحل: مفتاح "unset" صريح ضمن نفس قاموس LOOKUP (تُستخدَم عبر normalizeLookupKey
+// — نفس الدالة لكل من العرض والفلترة، فلا يمكن أن يتعارضا بعد الآن)، مُستبعَد
+// عمداً من قوائم نموذج الإضافة/التعديل (ASSIGNABLE_* أدناه) حتى لا يُختار كقيمة
+// حقيقية يدوياً أبداً — الطريقة الوحيدة لظهوره هي غياب/فراغ الحقل فعلاً.
 const CATEGORIES = {
   radiology:   { ar:'أشعة وتصوير',   en:'Radiology',   icon:'📡', color:'#1a6bab' },
   ct:          { ar:'مفراس CT',       en:'CT Scanner',       icon:'🌀', color:'#f59e0b' },
@@ -21,6 +33,7 @@ const CATEGORIES = {
   vehicle:     { ar:'مركبات',         en:'Vehicles',         icon:'🚑', color:'#f97316' },
   it:          { ar:'أجهزة IT',       en:'IT Equipment',       icon:'💻', color:'#6366f1' },
   other:       { ar:'أخرى',          en:'Other', icon:'🔧', color:'#6b7280' },
+  unset:       { ar:'غير محدَّد',    en:'Unset', icon:'❓', color:'#9ca3af' },
 };
 const STATUSES = {
   active:      { ar:'مشغّل',     en:'Active',     color:'#10b981', bg:'#d1fae5' },
@@ -29,7 +42,14 @@ const STATUSES = {
   inactive:    { ar:'معطّل',     en:'Inactive',     color:'#ef4444', bg:'#fee2e2' },
   consumed:    { ar:'مستهلك',    en:'Consumed',    color:'#78350f', bg:'#fde68a' },
   retired:     { ar:'مُهمَل',    en:'Retired',    color:'#6b7280', bg:'#f3f4f6' },
+  unset:       { ar:'غير محدَّد', en:'Unset', color:'#6b7280', bg:'#f3f4f6' },
 };
+const ASSIGNABLE_CATEGORIES = Object.entries(CATEGORIES).filter(([k]) => k !== 'unset');
+const ASSIGNABLE_STATUSES = Object.entries(STATUSES).filter(([k]) => k !== 'unset');
+// يجب أن تطابق UNSET_FILTER_VALUE بـ backend/routes/pgCrud.js بالضبط — قيمة
+// خاصة يفهمها الخادم كـ"الحقل غائب أو فارغ" بدل تطابق تام حرفي بكلمة "unset"
+// (التي لا يُخزَّن بها أي سجل حقيقي أصلاً، فتطابقها التام لن يرجع شيئاً).
+const UNSET_FILTER_VALUE = '__unset__';
 const CONDITIONS = {
   excellent: { ar:'ممتاز', en:'Excellent', color:'#10b981' },
   good:      { ar:'جيد',   en:'Good',   color:'#1a6bab' },
@@ -182,8 +202,8 @@ export default function AssetsPage() {
     }
   };
 
-  const depr = (a) => a.purchaseCost>0 ? ((1-(a.currentValue/a.purchaseCost))*100).toFixed(0)+'%' : '—';
-  const n = v => Number(v).toLocaleString('en-US');
+  const depr = (a) => a.purchaseCost>0 ? ((1-((Number(a.currentValue)||0)/a.purchaseCost))*100).toFixed(0)+'%' : '—';
+  const n = v => (Number(v)||0).toLocaleString('en-US');
   const daysTo = (d) => { if(!d) return null; const diff=Math.ceil((new Date(d)-Date.now())/(1000*60*60*24)); return diff; };
 
   const S = {
@@ -253,11 +273,13 @@ export default function AssetsPage() {
         <input style={{...S.inp,minWidth:200}} placeholder={L('🔍 بحث...','🔍 Search...')} value={search} onChange={e=>setSearch(e.target.value)}/>
         <select style={S.inp} value={catFilter} onChange={e=>setCatFilter(e.target.value)}>
           <option value="all">{L('كل الفئات','All Categories')}</option>
-          {Object.entries(CATEGORIES).map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}
+          {ASSIGNABLE_CATEGORIES.map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}
+          <option value={UNSET_FILTER_VALUE}>{CATEGORIES.unset.icon} {L(CATEGORIES.unset.ar,CATEGORIES.unset.en)}</option>
         </select>
         <select style={S.inp} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
           <option value="all">{L('كل الحالات','All Status')}</option>
-          {Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
+          {ASSIGNABLE_STATUSES.map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}
+          <option value={UNSET_FILTER_VALUE}>{L(STATUSES.unset.ar,STATUSES.unset.en)}</option>
         </select>
         <div style={{marginRight:'auto',display:'flex',gap:6, alignItems:'center'}}>
           <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-secondary)', cursor:'pointer' }}>
@@ -290,8 +312,8 @@ export default function AssetsPage() {
       {view==='cards'&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:14}}>
           {pageItems.map(a=>{
-            const cat=CATEGORIES[a.category]||CATEGORIES.other;
-            const st=STATUSES[a.status]||STATUSES.active;
+            const cat=CATEGORIES[normalizeLookupKey(a.category, CATEGORIES, 'unset')];
+            const st=STATUSES[normalizeLookupKey(a.status, STATUSES, 'unset')];
             const con=CONDITIONS[a.condition]||CONDITIONS.good;
             const days=daysTo(a.nextMaintenance);
             return (
@@ -415,7 +437,7 @@ export default function AssetsPage() {
                   {hospitals.map(h=><option key={h.id} value={h.id}>{h.name_ar}</option>)}
                 </select></label>
               )}
-              <label>{L('الفئة','Category')}<select style={S.fi} value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}>{Object.entries(CATEGORIES).map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}</select></label>
+              <label>{L('الفئة','Category')}<select style={S.fi} value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}>{ASSIGNABLE_CATEGORIES.map(([k,v])=><option key={k} value={k}>{v.icon} {L(v.ar,v.en)}</option>)}</select></label>
               <label style={{gridColumn:'span 2'}}>{L('الاسم بالعربية','Name (Arabic)')}<input style={S.fi} value={form.name||''} onChange={e=>setForm(p=>({...p,name:e.target.value}))}/></label>
               <label style={{gridColumn:'span 2'}}>{L('الاسم بالإنجليزية','Name (English)')}<input style={S.fi} value={form.nameEn||''} onChange={e=>setForm(p=>({...p,nameEn:e.target.value}))}/></label>
               <label>{L('الماركة','Brand')}<input style={S.fi} value={form.brand||''} onChange={e=>setForm(p=>({...p,brand:e.target.value}))}/></label>
@@ -425,7 +447,7 @@ export default function AssetsPage() {
               <label>{L('تكلفة الشراء (د.ع)','Purchase Cost (IQD)')}<input type="number" style={S.fi} value={form.purchaseCost||0} onChange={e=>setForm(p=>({...p,purchaseCost:+e.target.value}))}/></label>
               <label><span style={S.fl}>{lang==='ar'?'القيمة الحالية (د.ع)':'Current Value (IQD)'}</span><input type="number" style={S.fi} value={form.currentValue||0} onChange={e=>setForm(p=>({...p,currentValue:+e.target.value}))}/></label>
               <label style={{gridColumn:'span 2'}}>{L('الموقع','Location')}<input style={S.fi} value={form.location||''} onChange={e=>setForm(p=>({...p,location:e.target.value}))}/></label>
-              <label>{L('الحالة','Status')}<select style={S.fi} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{Object.entries(STATUSES).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}</select></label>
+              <label>{L('الحالة','Status')}<select style={S.fi} value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>{ASSIGNABLE_STATUSES.map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}</select></label>
               <label>{L('الحالة الفنية','Condition')}<select style={S.fi} value={form.condition} onChange={e=>setForm(p=>({...p,condition:e.target.value}))}>{Object.entries(CONDITIONS).map(([k,v])=><option key={k} value={k}>{L(v.ar,v.en)}</option>)}</select></label>
               <label>{L('انتهاء الضمان','Warranty Expiry')}<input type="date" style={S.fi} value={form.warranty||''} onChange={e=>setForm(p=>({...p,warranty:e.target.value}))}/></label>
               <label>{L('آخر صيانة','Last Service')}<input type="date" style={S.fi} value={form.lastMaintenance||''} onChange={e=>setForm(p=>({...p,lastMaintenance:e.target.value}))}/></label>

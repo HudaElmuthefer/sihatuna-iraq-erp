@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import HealthBanner from './HealthBanner';
 import PrintButton from './PrintButton';
 import AppLogo from './AppLogo';
@@ -8,6 +8,7 @@ import { useApp, ALL_PAGES } from '../contexts/AppContext';
 import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
 import { isPrintButtonHidden } from '../config/printConfig';
+import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
 
 const NAV_ICONS = {
   'dashboard': '🏠', 'services': '🎯', 'patients': '👥', 'doctors': '🩺',
@@ -35,8 +36,28 @@ export default function Layout() {
   const [showNotif, setShowNotif] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // ── القوائم الفرعية القابلة للتوسّع (للصفحات ذات التبويبات الداخلية،
+  // مثل HR/الحسابات/الجودة) — مجموعة مفاتيح الصفحات المفتوحة حالياً. أكثر
+  // من عنصر يقدر يبقى مفتوحاً بالتوازي عمداً (بدل إغلاق تلقائي للباقي)، ولا
+  // نُزيل أي مفتاح تلقائياً — فقط نُضيف مفتاح الصفحة النشطة حالياً (لو كانت
+  // من ذوات التبويبات) عند كل تغيّر بمسار التنقّل، حتى يرى المستخدم مكانه
+  // بوضوح دون طيّ أي قائمة فتحها هو بنفسه سابقاً.
+  const [expandedNavKeys, setExpandedNavKeys] = useState(() => new Set());
+  React.useEffect(() => {
+    const activePage = ALL_PAGES.find(p => p.path === location.pathname);
+    if (activePage && SIDEBAR_SUB_TABS[activePage.key]) {
+      setExpandedNavKeys(prev => (prev.has(activePage.key) ? prev : new Set(prev).add(activePage.key)));
+    }
+  }, [location.pathname]);
+  const toggleNavExpanded = (key) => setExpandedNavKeys(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
 
   // ── Universal print-to-PDF ──────────────────────────────────────────────
   // printOverlay (from AppContext) holds the per-print header/footer/logo
@@ -134,27 +155,124 @@ export default function Layout() {
                     {lang === 'ar' ? gLabel.ar : gLabel.en}
                   </div>
                 )}
-                {pages.map(page => (
-                  <NavLink
-                    key={page.key}
-                    to={page.path}
-                    end={page.path === '/'}
-                    onClick={() => setMobileOpen(false)}
-                    style={({ isActive }) => ({
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: sidebarCollapsed ? '11px 0' : '9px 14px',
-                      justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                      borderRadius: 8, marginBottom: 2, textDecoration: 'none',
-                      background: isActive ? 'linear-gradient(90deg,#1a6bab,#1557a0)' : 'transparent',
-                      color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
-                      transition: 'all 0.2s',
-                      fontSize: 13 })}
-                    title={sidebarCollapsed ? page.label : ''}
-                  >
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{NAV_ICONS[page.key] || page.icon}</span>
-                    {!sidebarCollapsed && <span style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lang === 'ar' ? page.label : (page.labelEn || tr(page.navKey))}</span>}
-                  </NavLink>
-                ))}
+                {pages.map(page => {
+                  // القوائم الفرعية تُخفى بوضع القائمة المطوية (أيقونات فقط) —
+                  // لا مساحة كافية لعرضها، ونفس مبدأ أشجار التنقّل المطوية عادةً.
+                  const subTabs = sidebarCollapsed ? [] : (SIDEBAR_SUB_TABS[page.key] || []).filter(t => !t.adminOnly || user?.role === 'admin');
+                  const hasSubTabs = subTabs.length > 0;
+                  const isExpanded = expandedNavKeys.has(page.key);
+                  const isOnThisPage = location.pathname === page.path;
+                  const activeSubTabKey = isOnThisPage ? (searchParams.get('tab') || subTabs[0]?.key) : null;
+                  // إصلاح: العنصر الرئيسي لصفحة بها تبويبات فرعية ليس له فعلياً أي
+                  // محتوى "مستقل" خاص به — زيارة المسار وحده (بلا ?tab=) تعرض بالضبط
+                  // نفس محتوى أول تبويب فرعي (كل من HRPage/AccountsPage/... يبدأ
+                  // بنفس القيمة الافتراضية). فبدل NavLink ينقّل فوراً، الصف كاملاً
+                  // (أيقونة+نص+سهم) صار زر توسيع/طيّ واحد موحَّد بلا أي تنقّل — التنقّل
+                  // الفعلي يحدث فقط عند اختيار تبويب فرعي محدَّد بالقائمة الممتدة.
+                  const commonLabel = lang === 'ar' ? page.label : (page.labelEn || tr(page.navKey));
+                  const arrow = (
+                    <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: isOnThisPage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)' }}>▶</span>
+                  );
+                  return (
+                    <div key={page.key}>
+                      {hasSubTabs ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileOpen(false);
+                            toggleNavExpanded(page.key);
+                            // النقر على العنصر الرئيسي ينتقل أيضاً لصفحته
+                            // بتبويبها الافتراضي (بلا ?tab=) — لكن فقط لو لم
+                            // تكن الصفحة النشطة أصلاً، وإلا فالنقر المتكرر
+                            // وأنت بالفعل داخل أحد تبويباتها كان سيُعيدك
+                            // للتبويب الافتراضي بدل الإبقاء على تبويبك
+                            // الحالي، وهذا تنقّل غير مرغوب (فقط تبديل
+                            // الفتح/الإغلاق مطلوب بهذه الحالة).
+                            if (!isOnThisPage) navigate(page.path);
+                          }}
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? (lang === 'ar' ? `طيّ القائمة الفرعية: ${commonLabel}` : `Collapse submenu: ${commonLabel}`) : (lang === 'ar' ? `توسيع القائمة الفرعية: ${commonLabel}` : `Expand submenu: ${commonLabel}`)}
+                          title={sidebarCollapsed ? page.label : ''}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                            padding: sidebarCollapsed ? '11px 0' : '9px 14px',
+                            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                            borderRadius: 8, marginBottom: 2, border: 'none', cursor: 'pointer',
+                            background: isOnThisPage ? 'linear-gradient(90deg,#1a6bab,#1557a0)' : 'transparent',
+                            color: isOnThisPage ? '#fff' : 'rgba(255,255,255,0.65)',
+                            transition: 'all 0.2s', fontSize: 13, fontFamily: 'inherit',
+                            textAlign: lang === 'ar' ? 'right' : 'left',
+                          }}
+                        >
+                          <span style={{ fontSize: 16, flexShrink: 0 }}>{NAV_ICONS[page.key] || page.icon}</span>
+                          {!sidebarCollapsed && <span style={{ flex: 1, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
+                          {!sidebarCollapsed && arrow}
+                        </button>
+                      ) : (
+                        <NavLink
+                          to={page.path}
+                          end={page.path === '/'}
+                          onClick={() => setMobileOpen(false)}
+                          style={({ isActive }) => ({
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: sidebarCollapsed ? '11px 0' : '9px 14px',
+                            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                            borderRadius: 8, marginBottom: 2, textDecoration: 'none',
+                            background: isActive ? 'linear-gradient(90deg,#1a6bab,#1557a0)' : 'transparent',
+                            color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
+                            transition: 'all 0.2s',
+                            fontSize: 13 })}
+                          title={sidebarCollapsed ? page.label : ''}
+                        >
+                          <span style={{ fontSize: 16, flexShrink: 0 }}>{NAV_ICONS[page.key] || page.icon}</span>
+                          {!sidebarCollapsed && <span style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
+                        </NavLink>
+                      )}
+                      {hasSubTabs && isExpanded && (
+                        // تمييز بصري متعمَّد عن القائمة الرئيسية (وليس مجرد نسخة أصغر):
+                        // تظليل خفيف بنفس عائلة الأزرق الأساسي للنظام (#1a6bab) بدرجة
+                        // شفافية منخفضة (0.07) بدل الخلفية الداكنة الصرفة للقائمة
+                        // الرئيسية، مع شريط تمييز جانبي (يعتمد على اتجاه اللغة تلقائياً
+                        // عبر borderInlineStart المنطقي) — يوحي بصرياً بأن هذه كتلة
+                        // فرعية تابعة، لا عناصر مستقلة بنفس المستوى.
+                        <div className="sidebar-subtab-group" style={{ background: 'rgba(26,107,171,0.07)', borderInlineStart: '2px solid rgba(26,107,171,0.35)', borderRadius: 8, marginBottom: 4, paddingTop: 2, paddingBottom: 2 }}>
+                          {subTabs.map(sub => {
+                            const label = sub.labelKey ? tr(sub.labelKey) : (lang === 'ar' ? sub.ar : sub.en);
+                            const active = isOnThisPage && activeSubTabKey === sub.key;
+                            return (
+                              <Link
+                                key={sub.key}
+                                className="sidebar-subtab-link"
+                                to={`${page.path}?tab=${sub.key}`}
+                                onClick={() => setMobileOpen(false)}
+                                style={{
+                                  display: 'block',
+                                  paddingInlineStart: 40, paddingInlineEnd: 14,
+                                  paddingTop: 7, paddingBottom: 7,
+                                  fontSize: 11.5, fontWeight: active ? 500 : 400,
+                                  textDecoration: 'none',
+                                  // لون مختلف عن نص القائمة الرئيسية (rgba(255,255,255,...)
+                                  // محايد أبيض/رمادي) — أزرق فاتح من نفس عائلة #1a6bab،
+                                  // يبقى مقروءاً بوضوح فوق خلفية الشريط الجانبي الداكنة
+                                  // الثابتة (لا تتغيّر مع تبديل سمة فاتح/داكن — راجعي
+                                  // ملاحظة التقرير: الشريط الجانبي بالكامل غير متأثر
+                                  // بمتغيّر السمة أصلاً).
+                                  color: active ? '#ffffff' : 'rgba(159,199,232,0.8)',
+                                  background: active ? 'rgba(26,107,171,0.4)' : 'transparent',
+                                  borderRadius: 8,
+                                  marginBottom: 1,
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           });
@@ -202,7 +320,7 @@ export default function Layout() {
           color: '#fff', fontSize: 12, zIndex: 10, transition: 'all 0.3s' }}>
           {sidebarCollapsed ? '◁' : '▷'}
         </button>
-        <SidebarContent />
+        {SidebarContent()}
       </aside>
 
       {/* Mobile overlay */}
@@ -214,7 +332,7 @@ export default function Layout() {
         position: 'fixed', right: mobileOpen ? 0 : -280, top: 0, bottom: 0, width: 260,
         background: 'linear-gradient(180deg,#0f1923 0%,#0d1e2e 100%)',
         zIndex: 200, transition: 'right 0.3s ease' }} className="mobile-sidebar no-print">
-        <SidebarContent />
+        {SidebarContent()}
       </aside>
 
       {/* Main */}

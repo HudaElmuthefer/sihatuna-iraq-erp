@@ -7,6 +7,7 @@ import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
+import DateRangeFilter from '../../components/DateRangeFilter';
 import { initRetired, DOSSIER_TYPES_AR, DOSSIER_TYPES_EN, I18N, printTable, useBackendLoad } from './shared';
 
 export default
@@ -16,7 +17,15 @@ function RetiredTab({ lang }) {
   const [retired, setRetired] = useState(initRetired);
   useBackendLoad('retired', setRetired);
   const visibleRetired = filterByViewingHospital(retired);
-  const { pageItems: retPageItems, currentPage: retCurrentPage, setCurrentPage: setRetCurrentPage, totalPages: retTotalPages, totalItems: retTotalItems } = usePagination(visibleRetired, 50);
+  // فلترة بتاريخ التقاعد (retireDate) افتراضياً: هو الحقل الزمني الوحيد ذو
+  // المعنى الفعلي لسجل "متقاعد" (بعكس تاريخ التعيين مثلاً، الذي لا يظهر
+  // أصلاً بهذا الجدول) — (field||'') لأن سجلات مستوردة قد تكون بلا تاريخ.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const filteredRetired = visibleRetired.filter(r =>
+    (!dateFrom || (r.retireDate || '') >= dateFrom) && (!dateTo || (r.retireDate || '') <= dateTo)
+  );
+  const { pageItems: retPageItems, currentPage: retCurrentPage, setCurrentPage: setRetCurrentPage, totalPages: retTotalPages, totalItems: retTotalItems } = usePagination(filteredRetired, 50);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -191,8 +200,10 @@ function RetiredTab({ lang }) {
   }
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-        <h3 style={{ margin:0 }}>{L('ret_list')} ({retired.length})</h3>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0 }}>{L('ret_list')} ({retTotalItems})</h3>
+        <DateRangeFilter lang={lang} from={dateFrom} to={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+          label={lang==='ar' ? 'تاريخ التقاعد:' : 'Retirement date:'} />
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => printTable('ret-table')} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>🖨️ {L('print')}</button>
           <button onClick={() => setShowImport(true)} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer', fontSize:12 }}>📊 {lang==='ar'?'استيراد من Excel':'Import from Excel'}</button>
@@ -246,7 +257,7 @@ function RetiredTab({ lang }) {
               <td style={{ fontSize:13 }}>{lang==='ar'?r.jobTitle:r.jobTitleEn||r.jobTitle}</td>
               <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{lang==='ar'?r.dept:r.deptEn||r.dept}</span></td>
               <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{r.retireDate}</td>
-              <td style={{ fontWeight:600, color:'#8b5cf6' }}>{Number(r.retireSalary).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('iqd')}</td>
+              <td style={{ fontWeight:600, color:'#8b5cf6' }}>{(Number(r.retireSalary)||0).toLocaleString(lang==='ar'?'ar-IQ':'en-US')} {L('iqd')}</td>
               <td style={{ fontSize:12 }}>{r.phone}</td>
               <td><button onClick={() => setViewDossier(r)} style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', border:'1px solid rgba(26,107,171,0.3)', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
                 📂 {getDocs(r.id).length > 0 ? `${getDocs(r.id).length} ${L('docs_count')}` : lang==='ar'?'فتح':'Open'}

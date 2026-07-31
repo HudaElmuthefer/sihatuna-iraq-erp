@@ -34,11 +34,15 @@ function openWhatsApp(phone, message) {
   return true;
 }
 
-function printContent(title, lines, appNameAr) {
+export function printContent(title, lines, appNameAr) {
   const win = window.open('', '_blank', 'width=700,height=900');
   if (!win) return;
+  // اتجاه نافذة الطباعة يتبع لغة الواجهة الحالية وقت الطباعة (نفس منطق
+  // إصلاح printTable() بـ accounts/hr shared.js) بدل rtl/ar الثابتة سابقاً.
+  const dir = document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl';
+  const htmlLang = dir === 'rtl' ? 'ar' : 'en';
   win.document.write(`
-    <html dir="rtl" lang="ar">
+    <html dir="${dir}" lang="${htmlLang}">
       <head>
         <meta charset="utf-8" />
         <title>${title}</title>
@@ -63,11 +67,13 @@ function printContent(title, lines, appNameAr) {
   win.print();
 }
 
-function printCombined(title, items, appNameAr) {
+export function printCombined(title, items, appNameAr) {
   const win = window.open('', '_blank', 'width=700,height=900');
   if (!win) return;
+  const dir = document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl';
+  const htmlLang = dir === 'rtl' ? 'ar' : 'en';
   win.document.write(`
-    <html dir="rtl" lang="ar">
+    <html dir="${dir}" lang="${htmlLang}">
       <head>
         <meta charset="utf-8" />
         <title>${title}</title>

@@ -31,17 +31,22 @@ const ROLE_LABELS = (tr) => ({
 });
 const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', jobTitle:'', avatar:'م', color:'#1a6bab', permissions:[] };
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
+// تبويبات الإدمن (logo/appname/hospitals/backups/updates/recycle) مقبولة هنا
+// حتى لغير الإدمن دون أي أثر أمني — الصفحة نفسها (أدناه، بمصفوفة tabs) هي
+// من تفرض الفحص الفعلي بعرض المحتوى. مُعرَّفة بمستوى الملف (لا داخل المكوّن)
+// حتى تبقى مرجعاً ثابتاً بين كل الـrenders، بنفس نمط HR_TAB_KEYS بـHRPage.js —
+// لو بقيت داخل المكوّن لأصبحت مصفوفة جديدة بكل render، ما يجعل الاعتماد
+// عليها بـuseEffect (أدناه) إما يُسبّب تحذير react-hooks/exhaustive-deps
+// (لو أُغفلت) أو إعادة تنفيذ الـeffect بكل render (لو أُضيفت للاعتماديات).
+const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'backups', 'updates', 'recycle', 'about'];
 
 export default function SettingsPage() {
   const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
   // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
-  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت. تبويبات الإدمن (logo/appname/
-  // hospitals/backups/updates/recycle) مقبولة هنا حتى لغير الإدمن دون أي
-  // أثر أمني — الصفحة نفسها (أدناه، بمصفوفة tabs) هي من تفرض الفحص الفعلي
-  // بعرض المحتوى، بنفس ما كانت عليه دائماً قبل هذا التغيير.
-  const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'backups', 'updates', 'recycle', 'about'];
+  // قيمة غير معروفة بدل عرض صفحة فارغة بصمت (SETTINGS_TAB_KEYS مُعرَّفة
+  // بمستوى الملف أعلاه).
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
     const fromUrl = searchParams.get('tab');

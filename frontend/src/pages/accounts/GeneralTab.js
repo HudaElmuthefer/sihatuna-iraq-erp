@@ -33,7 +33,14 @@ function GeneralTab() {
   // (previously 'دخل', which doesn't match either <option value>  — the
   // dropdown visually showed the first option as selected regardless, but
   // the real form state stayed 'دخل' until the user touched it).
-  const empty = { date:today, desc:'', category:'revenue', type:'income', amount:'', method:'cash', ref:'' };
+  // status:'active' — transactions has no real status workflow (no badge,
+  // no dropdown anywhere in this file); every existing real transaction row
+  // has status='active' with no other value ever used. This just stamps
+  // the same default new rows so the real DB column (now correctly written
+  // via indexedColumns, see backend/routes/modules.js) doesn't end up NULL
+  // for transactions created through this form. Editing an existing record
+  // already carries its real status forward via openEdit's {...r} spread.
+  const empty = { date:today, desc:'', category:'revenue', type:'income', amount:'', method:'cash', ref:'', status:'active' };
   const [form, setForm] = useState(empty);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');

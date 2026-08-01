@@ -13,13 +13,6 @@ import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #047857 100%)';
 
-const initialVaccinations = [
-  { id: 1, patient: 'Ahmed Mohammed Ali', vaccine: 'COVID-19 (Pfizer)', dose: 'First Dose', date: '2024-01-15', nextDate: '2024-02-05', status: 'completed', provider: 'د. سالم المنصوري', notes: '' },
-  { id: 2, patient: 'Fatima Hassan', vaccine: 'Seasonal Flu', dose: 'Annual Dose', date: '2024-03-10', nextDate: '2025-03-10', status: 'completed', provider: 'د. نور الهاشمي', notes: 'لا آثار جانبية' },
-  { id: 3, patient: 'Ali Abdul-Razzaq', vaccine: 'Hepatitis B', dose: 'Second Dose', date: '2024-05-20', nextDate: '2024-11-20', status: 'upcoming', provider: 'د. رضا العامري', notes: '' },
-  { id: 4, patient: 'Zainab Al-Hussaini', vaccine: 'MMR', dose: 'Booster', date: '2024-06-01', nextDate: null, status: 'overdue', provider: '', notes: 'يجب المراجعة' },
-];
-
 const vaccines = [
   { ar: 'COVID-19 (فايزر)', en: 'COVID-19 (Pfizer)' },
   { ar: 'COVID-19 (موديرنا)', en: 'COVID-19 (Moderna)' },
@@ -50,14 +43,13 @@ const empty = { patient: '', vaccine: '', dose: '', date: '', nextDate: '', stat
 export default function VaccinationsPage() {
   const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const tr = useT(lang);
-  const [records, setRecords] = useState(initialVaccinations);
+  const [records, setRecords] = useState([]);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    // إصلاح: نفس خلل AppContext (`data.length > 0`) — لو كان عدد التطعيمات
-    // الحقيقي بقاعدة البيانات صفراً فعلاً، تبقى الصفحة تعرض بيانات تجريبية
-    // وهمية ثابتة (initialVaccinations) للأبد بدل الصفر الصحيح، وكأنها بيانات
-    // مرضى حقيقية. الآن نثق بأي رد صالح من الخادم، فارغاً كان أو لا.
+    // الحالة الأولية [] فارغة عمداً (بدل بيانات تجريبية وهمية) — تفادياً لأي
+    // ومضة إحصائيات خاطئة قبل وصول رد الخادم الفعلي. نثق بأي رد صالح من
+    // الخادم، فارغاً كان أو لا.
     api.get('/vaccinations').then(data => {
       if (!cancelled && Array.isArray(data)) setRecords(data);
     }).catch(() => {});

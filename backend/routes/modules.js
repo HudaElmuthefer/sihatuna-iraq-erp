@@ -17,7 +17,13 @@ const { DEFAULT_COLUMNS } = pgCrud;
 // راجعي migration_promote_columns.sql — لازم يُطبَّق على قاعدة البيانات أولاً
 // قبل ما يشتغل هذا الكود صح (وإلا الأعمدة الجديدة غير موجودة أصلاً بالجدول).
 const PATIENT_COLUMNS = DEFAULT_COLUMNS; // إصلاح: patient_code/blood_type/national_id ليست أعمدة حقيقية بجدول patients (JSONB بحت لهذي الحقول) — أُزيلت من هنا وأُضيفت كـ extraFilterFields بدلاً عنها بتسجيل pgCrud('patients', ...)
-const DOCTOR_COLUMNS = DEFAULT_COLUMNS; // إصلاح: specialization ليس عموداً حقيقياً بجدول doctors — أُضيف كـ extraFilterFields بدلاً عنه بتسجيل pgCrud('doctors', ...)
+// إصلاح: specialization عمود حقيقي فعلاً بجدول doctors (رُقِّي بـ
+// 002_promote_columns.sql، ومُعبَّأ بالكامل: 152/152 طبيب) — التعليق السابق
+// هنا كان خاطئاً (يدّعي أنه JSONB بحت)، فكان rowToRecord يُسقطه بصمت من كل
+// رد API رغم امتلاء العمود الحقيقي بالكامل، وبحث searchFields:['specialization']
+// كان يبحث فعلياً بمسار data->>'specialization' الفارغ دائماً بدل العمود
+// الحقيقي — الآن يُقرأ/يُكتب/يُبحَث فيه من العمود الحقيقي مباشرة.
+const DOCTOR_COLUMNS = [...DEFAULT_COLUMNS, { field: 'specialization', column: 'specialization' }];
 const registerExcelImport = require('./excelImportRoutes');
 const { importLimiter } = require('../config/rateLimiters');
 const { pool } = require('../config/database');
@@ -86,7 +92,10 @@ const registerAllModules = (router) => {
     'الملاحظات': 'notes', 'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'doctors',
-    indexedColumns: DEFAULT_COLUMNS,
+    // لازم يطابق DOCTOR_COLUMNS المستخدَمة بتسجيل pgCrud('doctors', ...)
+    // بالأسفل بالضبط — وإلا يُكتب specialization بجدول Excel المستورَد فقط
+    // بعمود JSONB، ثم rowToRecord (اللي يقرأ العمود الحقيقي الآن) يُفرغه لاحقاً.
+    indexedColumns: DOCTOR_COLUMNS,
     limiter: importLimiter,
     duplicateCheck: ['name', 'phone'],
     template: [
@@ -325,7 +334,12 @@ const registerAllModules = (router) => {
     limiter: importLimiter,
     duplicateCheck: ['plate'],
     tableName: 'ambulance_vehicles',
-    indexedColumns: [],
+    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
+    // ومسجَّل بتسجيل pgCrud أدناه). كان فارغاً (NULL) لكل الصفوف رغم وجود
+    // القيمة الصحيحة بـJSONB — تمت تعبئته يدوياً مرة واحدة قبل هذا الإصلاح
+    // (UPDATE ... SET status = data->>'status') ليطابق القيم الفعلية، والآن
+    // يُخزَّن بالعمود الحقيقي مباشرة.
+    indexedColumns: [{ field: 'status', column: 'status' }],
     template: [
       { header: 'الرمز', example: 'AMB-01' },
       { header: 'رقم اللوحة', example: '12345 بصرة' },
@@ -1407,7 +1421,7 @@ const registerAllModules = (router) => {
   pgCrud(router, 'promotions', collectionSchemas.promotions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
   pgCrud(router, 'allowances', collectionSchemas.allowances, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });
-  pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
+  pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [{ field: 'status', column: 'status' }], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'ambulanceMaintenanceLog', collectionSchemas.ambulanceMaintenanceLog, [
     { field: 'vehicleId', column: 'vehicle_id' },

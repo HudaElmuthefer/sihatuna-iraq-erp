@@ -70,12 +70,19 @@ app.use(helmet({
 // الفعلي فقط. القيمة الافتراضية تناسب التطوير المحلي (localhost:3000)؛ عند
 // النشر على خادم حقيقي، أضف FRONTEND_URL بملف .env بعنوان موقعك الفعلي
 // (مثلاً https://sihatuna-iraq.example.com) بدل الاعتماد على القيمة الافتراضية.
+//
+// إصلاح: FRONTEND_URL كانت قيمة نصية واحدة فقط — تكفي لعنوان إنتاج حقيقي
+// واحد، لكنها تفشل بصمت (CORS يرفض الرد) لأي عنوان محلي إضافي مشروع (مثل
+// معاينة نسخة الإنتاج المبنية محلياً على منفذ مختلف عن خادم التطوير 3000،
+// كما حصل فعلياً هنا). ندعم الآن قائمة عناوين مفصولة بفاصلة اختيارياً —
+// القيمة الافتراضية (بلا فاصلة) تبقى تماماً كما كانت لأي نشر حقيقي موجود.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean);
 // credentials: true مطلوب حتى يقدر المتصفح يرسل ويستقبل httpOnly cookie —
 // بدونه، المتصفح يرفض إرفاق الكوكي بطلبات fetch حتى لو الكود يمرر
 // credentials:'include' من جهة الفرونت إند. لازم origin يكون عنواناً محدَّداً
 // صراحة (مو '*') عشان يسمح المتصفح بهذا أصلاً — وهو مضبوط هيك أصلاً بالأعلى.
-app.use(cors({ origin: FRONTEND_URL, credentials: true, methods: ['GET','POST','PUT','DELETE','PATCH'], allowedHeaders: ['Content-Type','Authorization'] }));
+app.use(cors({ origin: ALLOWED_ORIGINS.length > 1 ? ALLOWED_ORIGINS : ALLOWED_ORIGINS[0], credentials: true, methods: ['GET','POST','PUT','DELETE','PATCH'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());

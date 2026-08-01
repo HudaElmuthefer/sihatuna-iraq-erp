@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "backend"],
       "port": 8000
+    },
+    {
+      "name": "frontend-prod",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "serve", "-s", "frontend/build", "-l", "3001"],
+      "port": 3001
     }
   ]
 }

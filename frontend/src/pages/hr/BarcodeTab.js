@@ -9,6 +9,36 @@ import { api } from '../../api';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
 
+// ── إصلاح: html5-qrcode ينشئ عنصر <video> داخلياً ويستدعي .play() عليه بمجرد
+// scanner.start() — ذلك الوعد غير مكشوف لنا إطلاقاً، فلا يوجد .catch() محلي
+// نقدر نعلّقه عليه. لو صار تبديل تبويب (تبويب "قراءة" هنا، أو تبويب HR
+// الأعلى الذي يُزيل BarcodeTab كاملاً) قبل ما تشغيل الكاميرا يخلص فعلياً،
+// React يزيل <div id="barcode-reader-hr"> (وعنصر الفيديو بداخله) من DOM
+// بينما وعد .play() الداخلي لسا معلّق — المتصفح يرفضه كـunhandled rejection
+// غير مرتبط بأي سلسلة وعود نملكها هنا.
+//
+// محاولة أولى (مستمع محلي داخل useEffect، بفلترة نصية تقريبية، وإزالة
+// مؤجَّلة بـsetTimeout) لم تحل المشكلة فعلياً — تشخيص لاحق بكاميرا حقيقية
+// أكّد الشكل الدقيق للخطأ: DOMException باسم "AbortError" ورسالة "The
+// play() request was interrupted because the media was removed from the
+// document." بالضبط، حرفاً بحرف. الحل النهائي: مطابقة تامة (لا تخمين نصي)
+// لهاتين القيمتين تحديداً، بمستمع دائم بمستوى الملف (وليس داخل useEffect) —
+// يبقى فعّالاً طوال عمر الصفحة بلا أي إزالة إطلاقاً، فلا يوجد أي احتمال
+// توقيت (إزالة مبكرة/متأخرة) يفوّت الرفض الفعلي كما حصل بالمحاولة الأولى.
+// preventDefault() هنا آمن ومقصود: الإلغاء نفسه سلوك صحيح (الكاميرا تُهجَر
+// فعلاً عند مغادرة الصفحة)، هذا فقط يمنع ظهوره كخطأ غير معالَج للمستخدم.
+if (typeof window !== 'undefined' && !window.__barcodeScanPlayRejectionSuppressed) {
+  window.__barcodeScanPlayRejectionSuppressed = true;
+  window.addEventListener('unhandledrejection', (event) => {
+    if (
+      event?.reason?.name === 'AbortError' &&
+      event?.reason?.message === 'The play() request was interrupted because the media was removed from the document.'
+    ) {
+      event.preventDefault();
+    }
+  });
+}
+
 const CODE39 = {
   '0':'NNNWWNWNN','1':'WNNWNNNNW','2':'NNWWNNNNW','3':'WNWWNNNNN',
   '4':'NNNWWNNNW','5':'WNNWWNNNN','6':'NNWWWNNNN','7':'NNNWNNWNW',
@@ -185,6 +215,11 @@ export default function BarcodeTab({ lang }) {
 
   useEffect(() => {
     if (subTab !== 'scan') return;
+    // `cancelled` is the mounted/active flag for this specific effect run —
+    // fresh per invocation (reset to false every time subTab becomes 'scan'
+    // again), which is exactly what's needed here: a useRef would persist
+    // across renders and would have to be manually reset on every re-run,
+    // while this closure variable already does that correctly for free.
     let cancelled = false;
     let startPromise = null;
     const scriptId = 'html5-qrcode-script';
@@ -204,11 +239,12 @@ export default function BarcodeTab({ lang }) {
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 280, height: 120 } },
         (decodedText) => {
+          if (cancelled) return; // العنصر قد يكون أُزيل فعلاً من DOM
           setScanResult({ code: decodedText, loading: true });
           try { scanner.stop().catch(() => {}); } catch { /* الماسح متوقف أصلاً */ }
           api.get(`/document-lookup-ref?ref=${encodeURIComponent(decodedText.trim())}`)
-            .then((r) => setScanResult({ code: decodedText, ...r, loading: false }))
-            .catch(() => setScanResult({ code: decodedText, found: false, loading: false }));
+            .then((r) => { if (!cancelled) setScanResult({ code: decodedText, ...r, loading: false }); })
+            .catch(() => { if (!cancelled) setScanResult({ code: decodedText, found: false, loading: false }); });
         },
         () => {}
       ).then(() => {
@@ -216,10 +252,13 @@ export default function BarcodeTab({ lang }) {
         // يخلص فعلياً، الكاميرا كانت تضل شغّالة — لأن cleanup سبق واستدعى
         // stop() ومكتبة html5-qrcode ترفض إيقاف ماسح لسا بمرحلة "بدء التشغيل"
         // (يرمي خطأ يُبتلَع بصمت بالـ catch). الآن لو صار الإلغاء أثناء
-        // الانتظار، نوقف الكاميرا فوراً بمجرد ما start() يخلص فعلياً.
+        // الانتظار، نوقف الكاميرا فوراً بمجرد ما start() يخلص فعلياً، ولا
+        // نلمس الحالة/العنصر إطلاقاً لأنه قد يكون أُزيل فعلاً من DOM.
         if (cancelled) { scanner.stop().catch(() => {}); return; }
         setScannerReady(true);
-      }).catch(() => setScanError(L('تعذّر تشغيل الكاميرا', 'Could not start the camera')));
+      }).catch(() => {
+        if (!cancelled) setScanError(L('تعذّر تشغيل الكاميرا', 'Could not start the camera'));
+      });
     };
     if (window.Html5Qrcode) {
       start();
@@ -228,7 +267,7 @@ export default function BarcodeTab({ lang }) {
       script.id = scriptId;
       script.src = 'https://unpkg.com/html5-qrcode';
       script.onload = start;
-      script.onerror = () => setScanError(L('تعذّر تحميل أداة القراءة', 'Could not load the scanner'));
+      script.onerror = () => { if (!cancelled) setScanError(L('تعذّر تحميل أداة القراءة', 'Could not load the scanner')); };
       document.body.appendChild(script);
     }
     return () => {

@@ -68,32 +68,44 @@ CREATE TABLE IF NOT EXISTS users (
 -- كاملة كـJSONB، أي حقل تضيفه الواجهة مستقبلاً (حتى لو لم نعرف باسمه بعد)
 -- يُخزَّن ويُسترجَع بشكل صحيح دون أي حاجة لتعديل بنية الجدول لاحقاً.
 -- الأعمدة الصريحة (name, phone, status) موجودة فقط للفهرسة والبحث السريع.
+-- patient_code/blood_type/national_id: رُقِّيت من JSONB لأعمدة حقيقية بـ
+-- migrations-sql/002_promote_columns.sql و006_national_id.sql — مُضافة هنا
+-- مباشرة لتطابق قاعدة مُرحَّلة بكامل سلسلة الترحيلات.
 CREATE TABLE IF NOT EXISTS patients (
     id              SERIAL PRIMARY KEY,
     name            VARCHAR(200) NOT NULL,
     phone           VARCHAR(50) NOT NULL,
     status          VARCHAR(30) DEFAULT 'active',
+    patient_code    VARCHAR(50),
+    blood_type      VARCHAR(10),
+    national_id     VARCHAR(50),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_patients_phone ON patients(phone);
 CREATE INDEX IF NOT EXISTS idx_patients_status ON patients(status);
+CREATE INDEX IF NOT EXISTS idx_patients_patient_code ON patients(patient_code);
+CREATE INDEX IF NOT EXISTS idx_patients_blood_type ON patients(blood_type);
+CREATE INDEX IF NOT EXISTS idx_patients_national_id ON patients(national_id);
 
 -- ----------------------------------------------------------------------------
 -- 3ب) الأطباء (بنفس نمط جدول المرضى تماماً: معرّف رقمي بسيط + تخزين مرن)
 -- ----------------------------------------------------------------------------
+-- specialization: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/002_promote_columns.sql
 CREATE TABLE IF NOT EXISTS doctors (
     id              SERIAL PRIMARY KEY,
     name            VARCHAR(200) NOT NULL,
     phone           VARCHAR(50) NOT NULL,
     status          VARCHAR(30) DEFAULT 'active',
+    specialization  VARCHAR(150),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_doctors_phone ON doctors(phone);
 CREATE INDEX IF NOT EXISTS idx_doctors_status ON doctors(status);
+CREATE INDEX IF NOT EXISTS idx_doctors_specialization ON doctors(specialization);
 
 -- ----------------------------------------------------------------------------
 -- 3ج) المواعيد
@@ -171,19 +183,25 @@ CREATE TABLE IF NOT EXISTS incoming (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS vaccinations (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_vaccinations_status ON vaccinations(status);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS medical_leaves (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_medical_leaves_status ON medical_leaves(status);
 
 CREATE TABLE IF NOT EXISTS dossiers (
     id              SERIAL PRIMARY KEY,
@@ -192,26 +210,39 @@ CREATE TABLE IF NOT EXISTS dossiers (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- status/priority: رُقِّيا من JSONB لعمودين حقيقيين بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS lab_tests (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
+    priority        VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_lab_tests_status ON lab_tests(status);
+CREATE INDEX IF NOT EXISTS idx_lab_tests_priority ON lab_tests(priority);
 
+-- status/modality: رُقِّيا من JSONB لعمودين حقيقيين بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS radiology (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
+    modality        VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_radiology_status ON radiology(status);
+CREATE INDEX IF NOT EXISTS idx_radiology_modality ON radiology(modality);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS pharmacy_orders (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_pharmacy_orders_status ON pharmacy_orders(status);
 
 CREATE TABLE IF NOT EXISTS assets (
     id              SERIAL PRIMARY KEY,
@@ -227,12 +258,15 @@ CREATE TABLE IF NOT EXISTS inventory (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS procurement (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_procurement_status ON procurement(status);
 
 CREATE TABLE IF NOT EXISTS projects (
     id              SERIAL PRIMARY KEY,
@@ -241,12 +275,19 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- type/status/priority: رُقِّيت من JSONB لأعمدة حقيقية بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS documents (
     id              SERIAL PRIMARY KEY,
+    type            VARCHAR(30),
+    status          VARCHAR(30),
+    priority        VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_documents_type ON documents(type);
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
+CREATE INDEX IF NOT EXISTS idx_documents_priority ON documents(priority);
 
 -- عمود "category" صريح (وليس JSONB فقط) لأن routes/modules.js يسجّله كـ
 -- indexedColumns حقيقي عند استيراد Excel (registerExcelImport('servicePrices', ...))
@@ -263,26 +304,35 @@ CREATE TABLE IF NOT EXISTS service_prices (
 );
 CREATE INDEX IF NOT EXISTS idx_service_prices_category ON service_prices(category);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS transactions (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS promotions (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_promotions_status ON promotions(status);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS allowances (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_allowances_status ON allowances(status);
 
 CREATE TABLE IF NOT EXISTS salaries (
     id              SERIAL PRIMARY KEY,
@@ -291,12 +341,15 @@ CREATE TABLE IF NOT EXISTS salaries (
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS ambulance_vehicles (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_ambulance_vehicles_status ON ambulance_vehicles(status);
 
 -- ── إصلاح: صفحة إدارة الجودة (ISO) كانت بدون أي جدول حقيقي إطلاقاً ──────────
 -- كانت البيانات (مراجعات، حالات عدم مطابقة، مؤشرات أداء) تُخزَّن بذاكرة
@@ -342,12 +395,15 @@ CREATE TABLE IF NOT EXISTS ambulance_maintenance_log (
 );
 CREATE INDEX IF NOT EXISTS idx_ambulance_maintenance_log_vehicle_id ON ambulance_maintenance_log(vehicle_id);
 
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS ambulance_missions (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_ambulance_missions_status ON ambulance_missions(status);
 
 -- ----------------------------------------------------------------------------
 -- 4) الفواتير
@@ -535,50 +591,78 @@ CREATE TABLE IF NOT EXISTS admissions (
 
 -- medication_orders: الأدوية اللي يكتبها الطبيب لكل حالة إدخال (اسم الدواء،
 -- الجرعة، التكرار، الطبيب الكاتب، تاريخ البدء/الانتهاء)
+-- admission_id: رُقِّي من JSONB (admissionId) لعمود حقيقي بـ
+-- migrations-sql/004_promote_batch2.sql — بدون قيد FK فعلي (مطابق للإنتاج).
 CREATE TABLE IF NOT EXISTS medication_orders (
     id              SERIAL PRIMARY KEY,
+    admission_id    INTEGER,
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_medication_orders_admission_id ON medication_orders(admission_id);
 
 -- medication_administrations: سجل كل مرة أُعطي فيها الدواء فعلياً (الممرض،
 -- الوقت، تأكيد الإعطاء) — سجل منفصل عن الوصفة نفسها لأن دواء واحد يُعطى
 -- عدة مرات (مثلاً 3 مرات باليوم لمدة أسبوع = عدة سجلات إعطاء لنفس الوصفة)
+-- order_id: رُقِّي من JSONB (orderId) لعمود حقيقي بـ
+-- migrations-sql/004_promote_batch2.sql — بدون قيد FK فعلي (مطابق للإنتاج).
 CREATE TABLE IF NOT EXISTS medication_administrations (
     id              SERIAL PRIMARY KEY,
+    order_id        INTEGER,
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_medication_administrations_order_id ON medication_administrations(order_id);
 
 -- ── صالة الولادة ─────────────────────────────────────────────────────────
+-- stage/baby_status: رُقِّيا من JSONB (stage/babyStatus) لعمودين حقيقيين بـ
+-- migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS deliveries (
     id              SERIAL PRIMARY KEY,
+    stage           VARCHAR(30),
+    baby_status     VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_deliveries_stage ON deliveries(stage);
+CREATE INDEX IF NOT EXISTS idx_deliveries_baby_status ON deliveries(baby_status);
 
 -- ── العلاج الطبيعي ───────────────────────────────────────────────────────
+-- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS pt_equipment (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_pt_equipment_status ON pt_equipment(status);
+
+-- status/date: رُقِّيا من JSONB لعمودين حقيقيين بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS pt_sessions (
     id              SERIAL PRIMARY KEY,
+    status          VARCHAR(30),
+    date            DATE,
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_pt_sessions_status ON pt_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_pt_sessions_date ON pt_sessions(date);
 
 -- ── إدارة الطابور ────────────────────────────────────────────────────────
+-- department/status: رُقِّيا من JSONB لعمودين حقيقيين بـ migrations-sql/004_promote_batch2.sql
 CREATE TABLE IF NOT EXISTS queue_tickets (
     id              SERIAL PRIMARY KEY,
+    department      VARCHAR(100),
+    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_department ON queue_tickets(department);
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_status ON queue_tickets(status);
 

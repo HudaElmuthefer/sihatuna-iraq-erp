@@ -36,7 +36,7 @@ export const ALL_PAGES = [
   // ── إدارة المشاريع ──
   { key: 'projects',         navKey: 'nav_projects',         label: 'إدارة المشاريع',       labelEn: 'Projects',                path: '/projects',              icon: '📐', group: 'projects' },
   // ── إدارة الوثائق ──
-  { key: 'documents',        navKey: 'nav_documents',        label: 'الوثائق والمراسلات',    labelEn: 'Documents',                path: '/documents',             icon: '📄', group: 'documents' },
+  { key: 'documents',        navKey: 'nav_documents',        label: 'ضبط الوثائق',           labelEn: 'Document Control',         path: '/documents',             icon: '📄', group: 'documents' },
   { key: 'quality',          navKey: 'nav_quality',          label: 'إدارة الجودة ISO',     labelEn: 'Quality (ISO)',              path: '/quality',               icon: '🏅', group: 'documents' },
   // ── المختبرات والتصوير الطبي ──
   { key: 'laboratory',       navKey: 'nav_laboratory',       label: 'المختبرات الطبية',     labelEn: 'Laboratory',              path: '/laboratory',            icon: '🔬', group: 'medtech' },

@@ -159,7 +159,7 @@ export default function DocumentsPage() {
 
   return (
     <div style={S.page}>
-      <PageBanner icon="📁" title={L('ضبط الوثائق والمراسلات','Document Control')} subtitle={lang === 'ar' ? 'إدارة الوارد والصادر وأرشفة الوثائق | متوافق مع ISO 9001' : 'Incoming, outgoing & document archiving | ISO 9001 compliant'} gradient={BANNER_GRADIENT}>
+      <PageBanner icon="📁" title={L('ضبط الوثائق والمراسلات','Document Control')} subtitle={lang === 'ar' ? 'متابعة دورة حياة الوثائق ومعالجتها واعتمادها | متوافق مع ISO 9001' : 'Document lifecycle tracking, processing & approval | ISO 9001 compliant'} gradient={BANNER_GRADIENT}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }} onClick={() => setShowImport(true)}>
             📊 {lang === 'ar' ? 'استيراد من Excel' : 'Import from Excel'}
@@ -326,7 +326,7 @@ export default function DocumentsPage() {
       {showImport && (
         <ExcelImportModal
           apiName="documents"
-          title={lang === 'ar' ? 'استيراد وثائق من Excel' : 'Import Documents from Excel'}
+          title={lang === 'ar' ? 'استيراد سجلات ضبط الوثائق من Excel' : 'Import Document Control Records from Excel'}
           lang={lang}
           onClose={() => setShowImport(false)}
           onImported={async () => {

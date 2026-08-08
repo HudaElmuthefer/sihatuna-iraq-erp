@@ -1,806 +1,6 @@
 {
-  "cursorId": 1092,
+  "cursorId": 1192,
   "failedCodes": [
-    {
-      "code": "A00.0",
-      "name_en": "Cholera due to Vibrio cholerae 01, biovar cholerae"
-    },
-    {
-      "code": "A00.1",
-      "name_en": "Cholera due to Vibrio cholerae 01, biovar eltor"
-    },
-    {
-      "code": "A00.9",
-      "name_en": "Cholera, unspecified"
-    },
-    {
-      "code": "A01.00",
-      "name_en": "Typhoid fever, unspecified"
-    },
-    {
-      "code": "A01.01",
-      "name_en": "Typhoid meningitis"
-    },
-    {
-      "code": "A01.02",
-      "name_en": "Typhoid fever with heart involvement"
-    },
-    {
-      "code": "A01.03",
-      "name_en": "Typhoid pneumonia"
-    },
-    {
-      "code": "A01.04",
-      "name_en": "Typhoid arthritis"
-    },
-    {
-      "code": "A01.05",
-      "name_en": "Typhoid osteomyelitis"
-    },
-    {
-      "code": "A01.09",
-      "name_en": "Typhoid fever with other complications"
-    },
-    {
-      "code": "A01.1",
-      "name_en": "Paratyphoid fever A"
-    },
-    {
-      "code": "A01.2",
-      "name_en": "Paratyphoid fever B"
-    },
-    {
-      "code": "A01.3",
-      "name_en": "Paratyphoid fever C"
-    },
-    {
-      "code": "A01.4",
-      "name_en": "Paratyphoid fever, unspecified"
-    },
-    {
-      "code": "A02.0",
-      "name_en": "Salmonella enteritis"
-    },
-    {
-      "code": "A02.1",
-      "name_en": "Salmonella sepsis"
-    },
-    {
-      "code": "A02.20",
-      "name_en": "Localized salmonella infection, unspecified"
-    },
-    {
-      "code": "A02.21",
-      "name_en": "Salmonella meningitis"
-    },
-    {
-      "code": "A02.22",
-      "name_en": "Salmonella pneumonia"
-    },
-    {
-      "code": "A02.23",
-      "name_en": "Salmonella arthritis"
-    },
-    {
-      "code": "A02.24",
-      "name_en": "Salmonella osteomyelitis"
-    },
-    {
-      "code": "A02.25",
-      "name_en": "Salmonella pyelonephritis"
-    },
-    {
-      "code": "A02.29",
-      "name_en": "Salmonella with other localized infection"
-    },
-    {
-      "code": "A02.8",
-      "name_en": "Other specified salmonella infections"
-    },
-    {
-      "code": "A02.9",
-      "name_en": "Salmonella infection, unspecified"
-    },
-    {
-      "code": "A03.0",
-      "name_en": "Shigellosis due to Shigella dysenteriae"
-    },
-    {
-      "code": "A03.1",
-      "name_en": "Shigellosis due to Shigella flexneri"
-    },
-    {
-      "code": "A03.2",
-      "name_en": "Shigellosis due to Shigella boydii"
-    },
-    {
-      "code": "A03.3",
-      "name_en": "Shigellosis due to Shigella sonnei"
-    },
-    {
-      "code": "A03.8",
-      "name_en": "Other shigellosis"
-    },
-    {
-      "code": "A03.9",
-      "name_en": "Shigellosis, unspecified"
-    },
-    {
-      "code": "A04.0",
-      "name_en": "Enteropathogenic Escherichia coli infection"
-    },
-    {
-      "code": "A04.1",
-      "name_en": "Enterotoxigenic Escherichia coli infection"
-    },
-    {
-      "code": "A04.2",
-      "name_en": "Enteroinvasive Escherichia coli infection"
-    },
-    {
-      "code": "A04.3",
-      "name_en": "Enterohemorrhagic Escherichia coli infection"
-    },
-    {
-      "code": "A04.4",
-      "name_en": "Other intestinal Escherichia coli infections"
-    },
-    {
-      "code": "A04.5",
-      "name_en": "Campylobacter enteritis"
-    },
-    {
-      "code": "A04.6",
-      "name_en": "Enteritis due to Yersinia enterocolitica"
-    },
-    {
-      "code": "A04.71",
-      "name_en": "Enterocolitis due to Clostridium difficile, recurrent"
-    },
-    {
-      "code": "A04.72",
-      "name_en": "Enterocolitis due to Clostridium difficile, not specified as recurrent"
-    },
-    {
-      "code": "A04.8",
-      "name_en": "Other specified bacterial intestinal infections"
-    },
-    {
-      "code": "A04.9",
-      "name_en": "Bacterial intestinal infection, unspecified"
-    },
-    {
-      "code": "A05.0",
-      "name_en": "Foodborne staphylococcal intoxication"
-    },
-    {
-      "code": "A05.1",
-      "name_en": "Botulism food poisoning"
-    },
-    {
-      "code": "A05.2",
-      "name_en": "Foodborne Clostridium perfringens [Clostridium welchii] intoxication"
-    },
-    {
-      "code": "A05.3",
-      "name_en": "Foodborne Vibrio parahaemolyticus intoxication"
-    },
-    {
-      "code": "A05.4",
-      "name_en": "Foodborne Bacillus cereus intoxication"
-    },
-    {
-      "code": "A05.5",
-      "name_en": "Foodborne Vibrio vulnificus intoxication"
-    },
-    {
-      "code": "A05.8",
-      "name_en": "Other specified bacterial foodborne intoxications"
-    },
-    {
-      "code": "A05.9",
-      "name_en": "Bacterial foodborne intoxication, unspecified"
-    },
-    {
-      "code": "A06.0",
-      "name_en": "Acute amebic dysentery"
-    },
-    {
-      "code": "A06.1",
-      "name_en": "Chronic intestinal amebiasis"
-    },
-    {
-      "code": "A06.2",
-      "name_en": "Amebic nondysenteric colitis"
-    },
-    {
-      "code": "A06.3",
-      "name_en": "Ameboma of intestine"
-    },
-    {
-      "code": "A06.4",
-      "name_en": "Amebic liver abscess"
-    },
-    {
-      "code": "A06.5",
-      "name_en": "Amebic lung abscess"
-    },
-    {
-      "code": "A06.6",
-      "name_en": "Amebic brain abscess"
-    },
-    {
-      "code": "A06.7",
-      "name_en": "Cutaneous amebiasis"
-    },
-    {
-      "code": "A06.81",
-      "name_en": "Amebic cystitis"
-    },
-    {
-      "code": "A06.82",
-      "name_en": "Other amebic genitourinary infections"
-    },
-    {
-      "code": "A06.89",
-      "name_en": "Other amebic infections"
-    },
-    {
-      "code": "A06.9",
-      "name_en": "Amebiasis, unspecified"
-    },
-    {
-      "code": "A07.0",
-      "name_en": "Balantidiasis"
-    },
-    {
-      "code": "A07.1",
-      "name_en": "Giardiasis [lambliasis]"
-    },
-    {
-      "code": "A07.2",
-      "name_en": "Cryptosporidiosis"
-    },
-    {
-      "code": "A07.3",
-      "name_en": "Isosporiasis"
-    },
-    {
-      "code": "A07.4",
-      "name_en": "Cyclosporiasis"
-    },
-    {
-      "code": "A07.8",
-      "name_en": "Other specified protozoal intestinal diseases"
-    },
-    {
-      "code": "A07.9",
-      "name_en": "Protozoal intestinal disease, unspecified"
-    },
-    {
-      "code": "A08.0",
-      "name_en": "Rotaviral enteritis"
-    },
-    {
-      "code": "A08.11",
-      "name_en": "Acute gastroenteropathy due to Norwalk agent"
-    },
-    {
-      "code": "A08.19",
-      "name_en": "Acute gastroenteropathy due to other small round viruses"
-    },
-    {
-      "code": "A08.2",
-      "name_en": "Adenoviral enteritis"
-    },
-    {
-      "code": "A08.31",
-      "name_en": "Calicivirus enteritis"
-    },
-    {
-      "code": "A08.32",
-      "name_en": "Astrovirus enteritis"
-    },
-    {
-      "code": "A08.39",
-      "name_en": "Other viral enteritis"
-    },
-    {
-      "code": "A08.4",
-      "name_en": "Viral intestinal infection, unspecified"
-    },
-    {
-      "code": "A08.8",
-      "name_en": "Other specified intestinal infections"
-    },
-    {
-      "code": "A15.0",
-      "name_en": "Tuberculosis of lung"
-    },
-    {
-      "code": "A15.4",
-      "name_en": "Tuberculosis of intrathoracic lymph nodes"
-    },
-    {
-      "code": "A15.5",
-      "name_en": "Tuberculosis of larynx, trachea and bronchus"
-    },
-    {
-      "code": "A15.6",
-      "name_en": "Tuberculous pleurisy"
-    },
-    {
-      "code": "A15.7",
-      "name_en": "Primary respiratory tuberculosis"
-    },
-    {
-      "code": "A15.8",
-      "name_en": "Other respiratory tuberculosis"
-    },
-    {
-      "code": "A15.9",
-      "name_en": "Respiratory tuberculosis unspecified"
-    },
-    {
-      "code": "A17.0",
-      "name_en": "Tuberculous meningitis"
-    },
-    {
-      "code": "A17.1",
-      "name_en": "Meningeal tuberculoma"
-    },
-    {
-      "code": "A17.81",
-      "name_en": "Tuberculoma of brain and spinal cord"
-    },
-    {
-      "code": "A17.82",
-      "name_en": "Tuberculous meningoencephalitis"
-    },
-    {
-      "code": "A17.83",
-      "name_en": "Tuberculous neuritis"
-    },
-    {
-      "code": "A17.89",
-      "name_en": "Other tuberculosis of nervous system"
-    },
-    {
-      "code": "A17.9",
-      "name_en": "Tuberculosis of nervous system, unspecified"
-    },
-    {
-      "code": "A18.01",
-      "name_en": "Tuberculosis of spine"
-    },
-    {
-      "code": "A18.02",
-      "name_en": "Tuberculous arthritis of other joints"
-    },
-    {
-      "code": "A18.03",
-      "name_en": "Tuberculosis of other bones"
-    },
-    {
-      "code": "A18.09",
-      "name_en": "Other musculoskeletal tuberculosis"
-    },
-    {
-      "code": "A18.10",
-      "name_en": "Tuberculosis of genitourinary system, unspecified"
-    },
-    {
-      "code": "A18.11",
-      "name_en": "Tuberculosis of kidney and ureter"
-    },
-    {
-      "code": "A18.12",
-      "name_en": "Tuberculosis of bladder"
-    },
-    {
-      "code": "A18.13",
-      "name_en": "Tuberculosis of other urinary organs"
-    },
-    {
-      "code": "A18.14",
-      "name_en": "Tuberculosis of prostate"
-    },
-    {
-      "code": "A18.15",
-      "name_en": "Tuberculosis of other male genital organs"
-    },
-    {
-      "code": "A18.16",
-      "name_en": "Tuberculosis of cervix"
-    },
-    {
-      "code": "A18.17",
-      "name_en": "Tuberculous female pelvic inflammatory disease"
-    },
-    {
-      "code": "A18.18",
-      "name_en": "Tuberculosis of other female genital organs"
-    },
-    {
-      "code": "A18.2",
-      "name_en": "Tuberculous peripheral lymphadenopathy"
-    },
-    {
-      "code": "A18.31",
-      "name_en": "Tuberculous peritonitis"
-    },
-    {
-      "code": "A18.32",
-      "name_en": "Tuberculous enteritis"
-    },
-    {
-      "code": "A18.39",
-      "name_en": "Retroperitoneal tuberculosis"
-    },
-    {
-      "code": "A18.4",
-      "name_en": "Tuberculosis of skin and subcutaneous tissue"
-    },
-    {
-      "code": "A18.50",
-      "name_en": "Tuberculosis of eye, unspecified"
-    },
-    {
-      "code": "A18.51",
-      "name_en": "Tuberculous episcleritis"
-    },
-    {
-      "code": "A18.52",
-      "name_en": "Tuberculous keratitis"
-    },
-    {
-      "code": "A18.53",
-      "name_en": "Tuberculous chorioretinitis"
-    },
-    {
-      "code": "A18.54",
-      "name_en": "Tuberculous iridocyclitis"
-    },
-    {
-      "code": "A18.59",
-      "name_en": "Other tuberculosis of eye"
-    },
-    {
-      "code": "A18.6",
-      "name_en": "Tuberculosis of (inner) (middle) ear"
-    },
-    {
-      "code": "A18.7",
-      "name_en": "Tuberculosis of adrenal glands"
-    },
-    {
-      "code": "A18.81",
-      "name_en": "Tuberculosis of thyroid gland"
-    },
-    {
-      "code": "A18.82",
-      "name_en": "Tuberculosis of other endocrine glands"
-    },
-    {
-      "code": "A18.83",
-      "name_en": "Tuberculosis of digestive tract organs, not elsewhere classified"
-    },
-    {
-      "code": "A18.84",
-      "name_en": "Tuberculosis of heart"
-    },
-    {
-      "code": "A18.85",
-      "name_en": "Tuberculosis of spleen"
-    },
-    {
-      "code": "A18.89",
-      "name_en": "Tuberculosis of other sites"
-    },
-    {
-      "code": "A19.0",
-      "name_en": "Acute miliary tuberculosis of a single specified site"
-    },
-    {
-      "code": "A19.1",
-      "name_en": "Acute miliary tuberculosis of multiple sites"
-    },
-    {
-      "code": "A19.2",
-      "name_en": "Acute miliary tuberculosis, unspecified"
-    },
-    {
-      "code": "A19.8",
-      "name_en": "Other miliary tuberculosis"
-    },
-    {
-      "code": "A19.9",
-      "name_en": "Miliary tuberculosis, unspecified"
-    },
-    {
-      "code": "A20.0",
-      "name_en": "Bubonic plague"
-    },
-    {
-      "code": "A20.1",
-      "name_en": "Cellulocutaneous plague"
-    },
-    {
-      "code": "A20.2",
-      "name_en": "Pneumonic plague"
-    },
-    {
-      "code": "A20.3",
-      "name_en": "Plague meningitis"
-    },
-    {
-      "code": "A20.7",
-      "name_en": "Septicemic plague"
-    },
-    {
-      "code": "A20.8",
-      "name_en": "Other forms of plague"
-    },
-    {
-      "code": "A20.9",
-      "name_en": "Plague, unspecified"
-    },
-    {
-      "code": "A21.0",
-      "name_en": "Ulceroglandular tularemia"
-    },
-    {
-      "code": "A21.1",
-      "name_en": "Oculoglandular tularemia"
-    },
-    {
-      "code": "A21.2",
-      "name_en": "Pulmonary tularemia"
-    },
-    {
-      "code": "A21.3",
-      "name_en": "Gastrointestinal tularemia"
-    },
-    {
-      "code": "A21.7",
-      "name_en": "Generalized tularemia"
-    },
-    {
-      "code": "A21.8",
-      "name_en": "Other forms of tularemia"
-    },
-    {
-      "code": "A21.9",
-      "name_en": "Tularemia, unspecified"
-    },
-    {
-      "code": "A22.0",
-      "name_en": "Cutaneous anthrax"
-    },
-    {
-      "code": "A22.1",
-      "name_en": "Pulmonary anthrax"
-    },
-    {
-      "code": "A22.2",
-      "name_en": "Gastrointestinal anthrax"
-    },
-    {
-      "code": "A22.7",
-      "name_en": "Anthrax sepsis"
-    },
-    {
-      "code": "A22.8",
-      "name_en": "Other forms of anthrax"
-    },
-    {
-      "code": "A22.9",
-      "name_en": "Anthrax, unspecified"
-    },
-    {
-      "code": "A23.0",
-      "name_en": "Brucellosis due to Brucella melitensis"
-    },
-    {
-      "code": "A23.1",
-      "name_en": "Brucellosis due to Brucella abortus"
-    },
-    {
-      "code": "A23.2",
-      "name_en": "Brucellosis due to Brucella suis"
-    },
-    {
-      "code": "A23.3",
-      "name_en": "Brucellosis due to Brucella canis"
-    },
-    {
-      "code": "A23.8",
-      "name_en": "Other brucellosis"
-    },
-    {
-      "code": "A23.9",
-      "name_en": "Brucellosis, unspecified"
-    },
-    {
-      "code": "A24.0",
-      "name_en": "Glanders"
-    },
-    {
-      "code": "A24.1",
-      "name_en": "Acute and fulminating melioidosis"
-    },
-    {
-      "code": "A24.2",
-      "name_en": "Subacute and chronic melioidosis"
-    },
-    {
-      "code": "A24.3",
-      "name_en": "Other melioidosis"
-    },
-    {
-      "code": "A24.9",
-      "name_en": "Melioidosis, unspecified"
-    },
-    {
-      "code": "A25.0",
-      "name_en": "Spirillosis"
-    },
-    {
-      "code": "A25.1",
-      "name_en": "Streptobacillosis"
-    },
-    {
-      "code": "A25.9",
-      "name_en": "Rat-bite fever, unspecified"
-    },
-    {
-      "code": "A26.0",
-      "name_en": "Cutaneous erysipeloid"
-    },
-    {
-      "code": "A26.7",
-      "name_en": "Erysipelothrix sepsis"
-    },
-    {
-      "code": "A26.8",
-      "name_en": "Other forms of erysipeloid"
-    },
-    {
-      "code": "A26.9",
-      "name_en": "Erysipeloid, unspecified"
-    },
-    {
-      "code": "A27.0",
-      "name_en": "Leptospirosis icterohemorrhagica"
-    },
-    {
-      "code": "A27.81",
-      "name_en": "Aseptic meningitis in leptospirosis"
-    },
-    {
-      "code": "A27.89",
-      "name_en": "Other forms of leptospirosis"
-    },
-    {
-      "code": "A27.9",
-      "name_en": "Leptospirosis, unspecified"
-    },
-    {
-      "code": "A28.0",
-      "name_en": "Pasteurellosis"
-    },
-    {
-      "code": "A28.1",
-      "name_en": "Cat-scratch disease"
-    },
-    {
-      "code": "A28.2",
-      "name_en": "Extraintestinal yersiniosis"
-    },
-    {
-      "code": "A28.8",
-      "name_en": "Other specified zoonotic bacterial diseases, not elsewhere classified"
-    },
-    {
-      "code": "A28.9",
-      "name_en": "Zoonotic bacterial disease, unspecified"
-    },
-    {
-      "code": "A30.0",
-      "name_en": "Indeterminate leprosy"
-    },
-    {
-      "code": "A30.1",
-      "name_en": "Tuberculoid leprosy"
-    },
-    {
-      "code": "A30.2",
-      "name_en": "Borderline tuberculoid leprosy"
-    },
-    {
-      "code": "A30.3",
-      "name_en": "Borderline leprosy"
-    },
-    {
-      "code": "A30.4",
-      "name_en": "Borderline lepromatous leprosy"
-    },
-    {
-      "code": "A30.5",
-      "name_en": "Lepromatous leprosy"
-    },
-    {
-      "code": "A30.8",
-      "name_en": "Other forms of leprosy"
-    },
-    {
-      "code": "A30.9",
-      "name_en": "Leprosy, unspecified"
-    },
-    {
-      "code": "A31.0",
-      "name_en": "Pulmonary mycobacterial infection"
-    },
-    {
-      "code": "A31.1",
-      "name_en": "Cutaneous mycobacterial infection"
-    },
-    {
-      "code": "A31.2",
-      "name_en": "Disseminated mycobacterium avium-intracellulare complex (DMAC)"
-    },
-    {
-      "code": "A31.8",
-      "name_en": "Other mycobacterial infections"
-    },
-    {
-      "code": "A31.9",
-      "name_en": "Mycobacterial infection, unspecified"
-    },
-    {
-      "code": "A32.0",
-      "name_en": "Cutaneous listeriosis"
-    },
-    {
-      "code": "A32.11",
-      "name_en": "Listerial meningitis"
-    },
-    {
-      "code": "A32.12",
-      "name_en": "Listerial meningoencephalitis"
-    },
-    {
-      "code": "A32.7",
-      "name_en": "Listerial sepsis"
-    },
-    {
-      "code": "A32.81",
-      "name_en": "Oculoglandular listeriosis"
-    },
-    {
-      "code": "A32.82",
-      "name_en": "Listerial endocarditis"
-    },
-    {
-      "code": "A32.89",
-      "name_en": "Other forms of listeriosis"
-    },
-    {
-      "code": "A32.9",
-      "name_en": "Listeriosis, unspecified"
-    },
-    {
-      "code": "A33",
-      "name_en": "Tetanus neonatorum"
-    },
-    {
-      "code": "A34",
-      "name_en": "Obstetrical tetanus"
-    },
-    {
-      "code": "A35",
-      "name_en": "Other tetanus"
-    },
     {
       "code": "A36.0",
       "name_en": "Pharyngeal diphtheria"
@@ -2800,7 +2000,407 @@
     {
       "code": "B27.10",
       "name_en": "Cytomegaloviral mononucleosis without complications"
+    },
+    {
+      "code": "B27.11",
+      "name_en": "Cytomegaloviral mononucleosis with polyneuropathy"
+    },
+    {
+      "code": "B27.12",
+      "name_en": "Cytomegaloviral mononucleosis with meningitis"
+    },
+    {
+      "code": "B27.19",
+      "name_en": "Cytomegaloviral mononucleosis with other complication"
+    },
+    {
+      "code": "B27.80",
+      "name_en": "Other infectious mononucleosis without complication"
+    },
+    {
+      "code": "B27.81",
+      "name_en": "Other infectious mononucleosis with polyneuropathy"
+    },
+    {
+      "code": "B27.82",
+      "name_en": "Other infectious mononucleosis with meningitis"
+    },
+    {
+      "code": "B27.89",
+      "name_en": "Other infectious mononucleosis with other complication"
+    },
+    {
+      "code": "B27.90",
+      "name_en": "Infectious mononucleosis, unspecified without complication"
+    },
+    {
+      "code": "B27.91",
+      "name_en": "Infectious mononucleosis, unspecified with polyneuropathy"
+    },
+    {
+      "code": "B27.92",
+      "name_en": "Infectious mononucleosis, unspecified with meningitis"
+    },
+    {
+      "code": "B27.99",
+      "name_en": "Infectious mononucleosis, unspecified with other complication"
+    },
+    {
+      "code": "B30.0",
+      "name_en": "Keratoconjunctivitis due to adenovirus"
+    },
+    {
+      "code": "B30.1",
+      "name_en": "Conjunctivitis due to adenovirus"
+    },
+    {
+      "code": "B30.2",
+      "name_en": "Viral pharyngoconjunctivitis"
+    },
+    {
+      "code": "B30.3",
+      "name_en": "Acute epidemic hemorrhagic conjunctivitis (enteroviral)"
+    },
+    {
+      "code": "B30.8",
+      "name_en": "Other viral conjunctivitis"
+    },
+    {
+      "code": "B30.9",
+      "name_en": "Viral conjunctivitis, unspecified"
+    },
+    {
+      "code": "B33.0",
+      "name_en": "Epidemic myalgia"
+    },
+    {
+      "code": "B33.1",
+      "name_en": "Ross River disease"
+    },
+    {
+      "code": "B33.20",
+      "name_en": "Viral carditis, unspecified"
+    },
+    {
+      "code": "B33.21",
+      "name_en": "Viral endocarditis"
+    },
+    {
+      "code": "B33.22",
+      "name_en": "Viral myocarditis"
+    },
+    {
+      "code": "B33.23",
+      "name_en": "Viral pericarditis"
+    },
+    {
+      "code": "B33.24",
+      "name_en": "Viral cardiomyopathy"
+    },
+    {
+      "code": "B33.3",
+      "name_en": "Retrovirus infections, not elsewhere classified"
+    },
+    {
+      "code": "B33.4",
+      "name_en": "Hantavirus (cardio)-pulmonary syndrome [HPS] [HCPS]"
+    },
+    {
+      "code": "B33.8",
+      "name_en": "Other specified viral diseases"
+    },
+    {
+      "code": "B34.0",
+      "name_en": "Adenovirus infection, unspecified"
+    },
+    {
+      "code": "B34.1",
+      "name_en": "Enterovirus infection, unspecified"
+    },
+    {
+      "code": "B34.2",
+      "name_en": "Coronavirus infection, unspecified"
+    },
+    {
+      "code": "B34.3",
+      "name_en": "Parvovirus infection, unspecified"
+    },
+    {
+      "code": "B34.4",
+      "name_en": "Papovavirus infection, unspecified"
+    },
+    {
+      "code": "B34.8",
+      "name_en": "Other viral infections of unspecified site"
+    },
+    {
+      "code": "B34.9",
+      "name_en": "Viral infection, unspecified"
+    },
+    {
+      "code": "B35.0",
+      "name_en": "Tinea barbae and tinea capitis"
+    },
+    {
+      "code": "B35.1",
+      "name_en": "Tinea unguium"
+    },
+    {
+      "code": "B35.2",
+      "name_en": "Tinea manuum"
+    },
+    {
+      "code": "B35.3",
+      "name_en": "Tinea pedis"
+    },
+    {
+      "code": "B35.4",
+      "name_en": "Tinea corporis"
+    },
+    {
+      "code": "B35.5",
+      "name_en": "Tinea imbricata"
+    },
+    {
+      "code": "B35.6",
+      "name_en": "Tinea cruris"
+    },
+    {
+      "code": "B35.8",
+      "name_en": "Other dermatophytoses"
+    },
+    {
+      "code": "B35.9",
+      "name_en": "Dermatophytosis, unspecified"
+    },
+    {
+      "code": "B36.0",
+      "name_en": "Pityriasis versicolor"
+    },
+    {
+      "code": "B36.1",
+      "name_en": "Tinea nigra"
+    },
+    {
+      "code": "B36.2",
+      "name_en": "White piedra"
+    },
+    {
+      "code": "B36.3",
+      "name_en": "Black piedra"
+    },
+    {
+      "code": "B36.8",
+      "name_en": "Other specified superficial mycoses"
+    },
+    {
+      "code": "B36.9",
+      "name_en": "Superficial mycosis, unspecified"
+    },
+    {
+      "code": "B37.0",
+      "name_en": "Candidal stomatitis"
+    },
+    {
+      "code": "B37.1",
+      "name_en": "Pulmonary candidiasis"
+    },
+    {
+      "code": "B37.2",
+      "name_en": "Candidiasis of skin and nail"
+    },
+    {
+      "code": "B37.31",
+      "name_en": "Acute candidiasis of vulva and vagina"
+    },
+    {
+      "code": "B37.32",
+      "name_en": "Chronic candidiasis of vulva and vagina"
+    },
+    {
+      "code": "B37.41",
+      "name_en": "Candidal cystitis and urethritis"
+    },
+    {
+      "code": "B37.42",
+      "name_en": "Candidal balanitis"
+    },
+    {
+      "code": "B37.49",
+      "name_en": "Other urogenital candidiasis"
+    },
+    {
+      "code": "B37.5",
+      "name_en": "Candidal meningitis"
+    },
+    {
+      "code": "B37.6",
+      "name_en": "Candidal endocarditis"
+    },
+    {
+      "code": "B37.7",
+      "name_en": "Candidal sepsis"
+    },
+    {
+      "code": "B37.81",
+      "name_en": "Candidal esophagitis"
+    },
+    {
+      "code": "B37.82",
+      "name_en": "Candidal enteritis"
+    },
+    {
+      "code": "B37.83",
+      "name_en": "Candidal cheilitis"
+    },
+    {
+      "code": "B37.84",
+      "name_en": "Candidal otitis externa"
+    },
+    {
+      "code": "B37.89",
+      "name_en": "Other sites of candidiasis"
+    },
+    {
+      "code": "B37.9",
+      "name_en": "Candidiasis, unspecified"
+    },
+    {
+      "code": "B38.0",
+      "name_en": "Acute pulmonary coccidioidomycosis"
+    },
+    {
+      "code": "B38.1",
+      "name_en": "Chronic pulmonary coccidioidomycosis"
+    },
+    {
+      "code": "B38.2",
+      "name_en": "Pulmonary coccidioidomycosis, unspecified"
+    },
+    {
+      "code": "B38.3",
+      "name_en": "Cutaneous coccidioidomycosis"
+    },
+    {
+      "code": "B38.4",
+      "name_en": "Coccidioidomycosis meningitis"
+    },
+    {
+      "code": "B38.7",
+      "name_en": "Disseminated coccidioidomycosis"
+    },
+    {
+      "code": "B38.81",
+      "name_en": "Prostatic coccidioidomycosis"
+    },
+    {
+      "code": "B38.89",
+      "name_en": "Other forms of coccidioidomycosis"
+    },
+    {
+      "code": "B38.9",
+      "name_en": "Coccidioidomycosis, unspecified"
+    },
+    {
+      "code": "B39.0",
+      "name_en": "Acute pulmonary histoplasmosis capsulati"
+    },
+    {
+      "code": "B39.1",
+      "name_en": "Chronic pulmonary histoplasmosis capsulati"
+    },
+    {
+      "code": "B39.2",
+      "name_en": "Pulmonary histoplasmosis capsulati, unspecified"
+    },
+    {
+      "code": "B39.3",
+      "name_en": "Disseminated histoplasmosis capsulati"
+    },
+    {
+      "code": "B39.4",
+      "name_en": "Histoplasmosis capsulati, unspecified"
+    },
+    {
+      "code": "B39.5",
+      "name_en": "Histoplasmosis duboisii"
+    },
+    {
+      "code": "B39.9",
+      "name_en": "Histoplasmosis, unspecified"
+    },
+    {
+      "code": "B40.0",
+      "name_en": "Acute pulmonary blastomycosis"
+    },
+    {
+      "code": "B40.1",
+      "name_en": "Chronic pulmonary blastomycosis"
+    },
+    {
+      "code": "B40.2",
+      "name_en": "Pulmonary blastomycosis, unspecified"
+    },
+    {
+      "code": "B40.3",
+      "name_en": "Cutaneous blastomycosis"
+    },
+    {
+      "code": "B40.7",
+      "name_en": "Disseminated blastomycosis"
+    },
+    {
+      "code": "B40.81",
+      "name_en": "Blastomycotic meningoencephalitis"
+    },
+    {
+      "code": "B40.89",
+      "name_en": "Other forms of blastomycosis"
+    },
+    {
+      "code": "B40.9",
+      "name_en": "Blastomycosis, unspecified"
+    },
+    {
+      "code": "B41.0",
+      "name_en": "Pulmonary paracoccidioidomycosis"
+    },
+    {
+      "code": "B41.7",
+      "name_en": "Disseminated paracoccidioidomycosis"
+    },
+    {
+      "code": "B41.8",
+      "name_en": "Other forms of paracoccidioidomycosis"
+    },
+    {
+      "code": "B41.9",
+      "name_en": "Paracoccidioidomycosis, unspecified"
+    },
+    {
+      "code": "B42.0",
+      "name_en": "Pulmonary sporotrichosis"
+    },
+    {
+      "code": "B42.1",
+      "name_en": "Lymphocutaneous sporotrichosis"
+    },
+    {
+      "code": "B42.7",
+      "name_en": "Disseminated sporotrichosis"
+    },
+    {
+      "code": "B42.81",
+      "name_en": "Cerebral sporotrichosis"
+    },
+    {
+      "code": "B42.82",
+      "name_en": "Sporotrichosis arthritis"
+    },
+    {
+      "code": "B42.89",
+      "name_en": "Other forms of sporotrichosis"
     }
   ],
-  "daysRun": 2
+  "daysRun": 3
 }

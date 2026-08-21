@@ -16,6 +16,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
+const RedisRateLimitStore = require('../config/redisRateLimitStore');
 const { logAudit } = require('../utils/auditLog');
 const { activeProvider, callAI } = require('../utils/aiProvider');
 
@@ -24,9 +25,10 @@ const router = express.Router();
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  message: { message: 'عدد كبير جداً من طلبات الفحص، حاولي مرة أخرى بعد قليل' },
+  message: { message: 'عدد كبير جداً من طلبات الفحص، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore('drug-interactions'),
 });
 
 function buildPrompts(lang, drugs) {

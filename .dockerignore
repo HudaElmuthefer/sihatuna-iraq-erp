@@ -1,0 +1,50 @@
+# .dockerignore — يمنع نسخ ملفات حساسة أو غير ضرورية لصورة Docker.
+#
+# الأهم أمنياً هنا: backend/.env (أسرار حقيقية محلية)، backend/uploads
+# (قد يحتوي مستندات مرضى/موظفين حقيقية)، وbackend/data/*.json التشغيلية —
+# لا يصح إطلاقاً أن تُخبَّز داخل طبقة صورة قد تُدفع لأي سجل (registry)
+# مستقبلاً. بيانات db.json الأساسية (المستخدمون الافتراضيون) تُنسَخ من
+# الملف المُتتبَّع بـ git (backend/data/db.json) — مسموح، هذا البذر الافتراضي
+# المقصود لأي نشر جديد، لا بيانات محلية حقيقية.
+
+# أسرار محلية حقيقية — لا تُخبَّز بالصورة أبداً
+backend/.env
+.env
+.env.docker
+.env.local
+frontend/.env.local
+
+# بيانات تشغيلية حقيقية (تُستبدَل بحجوم Docker وقت التشغيل على أي حال)
+backend/uploads/
+backend/backups/
+backend/logs/
+backend/data/audit-log.json
+backend/data/revoked-tokens.json
+backend/data/alerts-log.json
+backend/data/monitor-state.json
+
+# تبعيات — تُثبَّت من جديد داخل الصورة (npm ci)، نسخة الجهاز المحلي قد
+# تحتوي حزماً مُجمَّعة (native) لنظام تشغيل مختلف (ويندوز محلياً، لينكس
+# بالحاوية) — نسخها مباشرة قد يكسر التشغيل بدل تسريعه.
+backend/node_modules/
+frontend/node_modules/
+node_modules/
+
+# مخرجات بناء قديمة محلية — Dockerfile يبنيها من جديد دائماً
+frontend/build/
+
+# Git وملفات تطوير غير لازمة داخل الصورة
+.git/
+.github/
+*.md
+docs/
+tools/
+backup/
+icd-*.json
+icd-*.md
+
+# سجلات ونظام
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

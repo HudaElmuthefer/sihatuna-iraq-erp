@@ -23,7 +23,7 @@ const { JWT_SECRET } = require('../config/jwtConfig');
 // ونبقي دعم Authorization header كخيار احتياطي فقط (لأدوات API مباشرة مثل
 // Postman، أو ملفات الاختبار الآلي بمجلد tests/) — الفرونت إند نفسه ما عاد
 // يستخدم هذا المسار الثاني إطلاقاً.
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
   const cookieToken = req.cookies?.auth_token;
   const header = req.headers.authorization;
   const headerToken = header ? header.split(' ')[1] : null;
@@ -35,10 +35,11 @@ const auth = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     // ── إصلاح أمني: إبطال فعلي عند تسجيل الخروج ──────────────────────────────
     // بدون هذا الفحص، تسجيل الخروج كان يمسح الكوكي بالمتصفح بس — التوكن نفسه
-    // يبقى صالحاً بجانب الخادم حتى تنتهي مدته الطبيعية (7 أيام). الآن نتحقق
-    // من قائمة الإبطال (انظر utils/tokenRevocation.js) — أي توكن سُجِّل خروج
-    // منه صراحة يُرفَض فوراً حتى لو توقيعه صحيحاً وتاريخه لم ينته بعد.
-    if (isRevoked(decoded.jti)) {
+    // يبقى صالحاً بجانب الخادم حتى تنتهي مدته الطبيعية. الآن نتحقق من قائمة
+    // الإبطال (انظر utils/tokenRevocation.js — Redis منذ المرحلة الثانية،
+    // مشترك فعلياً بين كل عمليات cluster mode) — أي توكن سُجِّل خروج منه
+    // صراحة يُرفَض فوراً حتى لو توقيعه صحيحاً وتاريخه لم ينته بعد.
+    if (await isRevoked(decoded.jti)) {
       return res.status(401).json({ message: 'انتهت الجلسة، الرجاء تسجيل الدخول من جديد' });
     }
     req.user = decoded;

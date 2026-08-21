@@ -2,72 +2,53 @@
 //
 // ── إصلاح أمني: إبطال فعلي للجلسة عند تسجيل الخروج ────────────────────────────
 // قبل هذا الملف، تسجيل الخروج كان يمسح الكوكي من المتصفح بس — التوكن (JWT)
-// نفسه يبقى صالحاً تماماً بجانب الخادم لين تنتهي مدته الطبيعية (7 أيام)، حتى
-// لو صار تسجيل الخروج. لو توكن انسرق بأي طريقة (جهاز مشترك، هجوم، إلخ) قبل
-// ما يسجّل صاحبه خروج، ما فيه أي وسيلة توقفه فوراً.
+// نفسه يبقى صالحاً تماماً بجانب الخادم لين تنتهي مدته الطبيعية (يوم واحد)،
+// حتى لو صار تسجيل الخروج. لو توكن انسرق بأي طريقة (جهاز مشترك، هجوم، إلخ)
+// قبل ما يسجّل صاحبه خروج، ما فيه أي وسيلة توقفه فوراً.
 //
-// الحل: قائمة إبطال (Revocation List) خفيفة بالذاكرة (Set) لسرعة الفحص بكل
-// طلب — كل توكن يُعطى معرّف فريد (jti) عند إصداره، وعند تسجيل الخروج يُضاف
-// هذا المعرّف للقائمة، فيُرفَض أي طلب لاحق يحمل نفس التوكن حتى لو كان
-// توقيعه صحيحاً وتاريخ انتهائه لم يحن بعد. القائمة تُحفَظ أيضاً بملف JSON
-// بسيط (نفس نمط db.json) حتى تبقى فعّالة بعد إعادة تشغيل الخادم — بدون هذا
-// الحفظ، إعادة تشغيل الخادم كانت تصفّر القائمة وتُعيد صلاحية كل التوكنات
-// المبطَلة سابقاً.
-const fs = require('fs');
-const path = require('path');
+// ── المرحلة الثانية: الانتقال من ملف على القرص إلى Redis ─────────────────────
+// النسخة السابقة كانت Map بالذاكرة + ملف JSON على القرص، مع مزامنة دورية كل
+// 5 ثوانٍ بين عمليات PM2 cluster mode (كل عملية عندها نسخة منفصلة من
+// الذاكرة) — حل مؤقت مقبول لكن غير متّسق فورياً (نافذة تأخير تصل لخمس ثوانٍ
+// بين إبطال التوكن بعملية وقبوله بعملية أخرى لسا ما قرأت الملف من جديد).
+// Redis (مصدر واحد فعلي مشترك بين كل العمليات، لا نسخ محلية منفصلة) يحل
+// المشكلة باتساق فوري بلا أي تأخير، وبانتهاء صلاحية تلقائي (EXAT — بنفس
+// لحظة انتهاء التوكن نفسه) بدل مهمة تنظيف دورية يدوية.
+//
+// ── fail-open عند تعذّر الوصول لـRedis ────────────────────────────────────
+// لو Redis غير متاح مؤقتاً، isRevoked() ترجع false (تعامل التوكن كأنه غير
+// مُبطَل) بدل رفض كل طلب مصادَق بالنظام بسبب انقطاع نظام مساعد — نفس فلسفة
+// fail-open المشروحة بأعلى utils/redisService.js. الأثر العملي: توكن أُبطِل
+// (تسجيل خروج) قد يبقى صالحاً لفترة قصيرة جداً لو تزامن ذلك بالضبط مع
+// انقطاع Redis — أضعف بكثير من فشل تسجيل دخول ومصادقة كل المستخدمين بالنظام
+// بسبب نظام مساعد غير متاح مؤقتاً.
+const { getClient } = require('./redisService');
 
-const REVOKED_PATH = process.env.REVOKED_TOKENS_PATH || path.join(__dirname, '..', 'data', 'revoked-tokens.json');
+const KEY_PREFIX = process.env.REVOKED_TOKENS_KEY_PREFIX || 'revoked';
 
-// Map<jti, expUnixSeconds> — بالذاكرة لفحص فوري بدون أي قراءة قرص بكل طلب
-const revoked = new Map();
-
-function loadFromDisk() {
-  try {
-    if (!fs.existsSync(REVOKED_PATH)) return;
-    const raw = fs.readFileSync(REVOKED_PATH, 'utf8');
-    const entries = JSON.parse(raw);
-    const now = Math.floor(Date.now() / 1000);
-    Object.entries(entries).forEach(([jti, exp]) => {
-      if (exp > now) revoked.set(jti, exp); // نتجاهل عند التحميل أي مدخل منتهي أصلاً
-    });
-  } catch (err) {
-    console.warn('⚠️  فشل تحميل قائمة إبطال التوكنات:', err.message);
-  }
-}
-
-function saveToDisk() {
-  try {
-    const obj = Object.fromEntries(revoked);
-    fs.writeFileSync(REVOKED_PATH, JSON.stringify(obj), 'utf8');
-  } catch (err) {
-    console.warn('⚠️  فشل حفظ قائمة إبطال التوكنات:', err.message);
-  }
-}
-
-// تنظيف دوري: نحذف أي مدخل انتهت صلاحية توكنه الأصلي أصلاً (بعدها التوكن
-// مرفوض بسبب انتهاء الصلاحية العادي، فلا داعي للاحتفاظ به بقائمة الإبطال —
-// هذا يمنع نمو القائمة بلا حدود بمرور الوقت.
-function cleanup() {
-  const now = Math.floor(Date.now() / 1000);
-  let changed = false;
-  for (const [jti, exp] of revoked) {
-    if (exp <= now) { revoked.delete(jti); changed = true; }
-  }
-  if (changed) saveToDisk();
-}
-
+// ترجع Promise يُفضَّل انتظاره بمسار /auth/logout (جولة Redis واحدة سريعة
+// جداً، وتضمن إن "نجح تسجيل الخروج" بالرد يعني فعلاً إن التوكن أُبطِل، لا
+// مجرد إرسال أمر Redis بالخلفية بلا تأكيد) — لكنها لا ترمي استثناءً أبداً
+// (fail-open، راجعي utils/redisService.js)، فيبقى آمناً استدعاؤها بدون
+// await أيضاً لو احتجتِ ذلك بمكان آخر مستقبلاً.
 function revoke(jti, exp) {
-  if (!jti || !exp) return;
-  revoked.set(jti, exp);
-  saveToDisk();
+  if (!jti || !exp) return Promise.resolve();
+  const now = Math.floor(Date.now() / 1000);
+  if (exp <= now) return Promise.resolve(); // منتهي أصلاً بأي حال — لا داعي لتخزينه إطلاقاً
+  return getClient()
+    .set(`${KEY_PREFIX}:${jti}`, '1', 'EXAT', exp)
+    .catch((err) => console.warn('⚠️  [tokenRevocation] تعذّر تسجيل الإبطال بـ Redis (fail-open):', err.message));
 }
 
-function isRevoked(jti) {
+async function isRevoked(jti) {
   if (!jti) return false;
-  return revoked.has(jti);
+  try {
+    const exists = await getClient().exists(`${KEY_PREFIX}:${jti}`);
+    return exists === 1;
+  } catch (err) {
+    console.warn('⚠️  [tokenRevocation] تعذّر التحقق من الإبطال بـ Redis (fail-open — التوكن يُعامَل كغير مُبطَل):', err.message);
+    return false;
+  }
 }
-
-loadFromDisk();
-setInterval(cleanup, 60 * 60 * 1000).unref(); // تنظيف كل ساعة، unref حتى لا يمنع إغلاق العملية
 
 module.exports = { revoke, isRevoked };

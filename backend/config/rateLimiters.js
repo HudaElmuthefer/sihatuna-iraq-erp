@@ -4,6 +4,11 @@
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('./jwtConfig');
+// ── المرحلة الثانية: عدّاد مشترك عبر Redis بدل ذاكرة كل عملية ──────────────
+// راجعي تعليق config/redisRateLimitStore.js للسبب الكامل (PM2 cluster mode
+// كان يُضاعف الحد الفعلي تلقائياً بعدد أنوية المعالج). كل limiter يحتاج
+// نسخة Store منفصلة (prefix مختلف)، حتى لو تشابهت إعداداتهم.
+const RedisRateLimitStore = require('./redisRateLimitStore');
 
 // ── دالة مشتركة: تستخرج هوية المستخدم من التوكن لو موجود وصالح، وإلا IP ────
 // نقرأ التوكن يدويًا هنا (نفس طريقة middleware/auth.js بالضبط: كوكي أولاً ثم
@@ -35,6 +40,7 @@ const loginLimiter = rateLimit({
   message: { message: 'محاولات دخول كثيرة جداً، حاول مرة أخرى بعد 15 دقيقة' },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore('login'),
 });
 
 // ── تحديد معدل عام لكل مسارات API ──────────────────────────────────────────
@@ -48,6 +54,7 @@ const generalLimiter = rateLimit({
   message: { message: 'طلبات كثيرة جداً، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore('general'),
 });
 
 const importLimiter = rateLimit({
@@ -57,6 +64,7 @@ const importLimiter = rateLimit({
   message: { message: 'عمليات استيراد كثيرة جداً، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore('import'),
 });
 
 module.exports = { loginLimiter, generalLimiter, importLimiter };

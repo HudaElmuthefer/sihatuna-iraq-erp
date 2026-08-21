@@ -1276,7 +1276,14 @@ const registerAllModules = (router) => {
   });
 
   pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId'], dateRangeColumn: 'created_at' });
-  pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'] });
+  // ── المرحلة الثانية: كاش Redis ─────────────────────────────────────────────
+  // قائمة الأطباء تُقرأ من صفحات كثيرة جداً (قوائم منسدلة بالمواعيد، الوصفات،
+  // التحويلات...) وتتغيّر نادراً (إضافة/تعديل طبيب مناسبة نادرة نسبياً) —
+  // مرشّح مثالي للتخزين المؤقت. 5 دقائق (300 ثانية) توازن بين تقليل ضغط
+  // قاعدة البيانات وبقاء البيانات حديثة بما يكفي بلا أي إبطال يدوي إضافي
+  // (وأي كتابة فعلية على الموديول تُبطِل الكاش فوراً بأي حال — راجعي
+  // routes/pgCrud.js).
+  pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'], cache: { ttlSeconds: 300 } });
   pgCrud(router, 'appointments', collectionSchemas.appointments, [
     { field: 'patient', column: 'patient' },
     { field: 'doctor', column: 'doctor' },
@@ -1345,11 +1352,13 @@ const registerAllModules = (router) => {
     { field: 'status', column: 'status' },
     { field: 'total', column: 'total' },
   ], undefined, { hospitalScoped: true, permission: 'billing' });
+  // كاش Redis: بيانات الموظفين (الطاقم) تُقرأ بصفحات كثيرة (الرواتب،
+  // الترفيعات، الإضابير الشخصية...) وتتغيّر نادراً — نفس منطق doctors أعلاه.
   pgCrud(router, 'employees', collectionSchemas.employees, [
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },
     { field: 'status', column: 'status' },
-  ], undefined, { hospitalScoped: true, permission: 'hr', dateRangeField: 'hireDate' });
+  ], undefined, { hospitalScoped: true, permission: 'hr', dateRangeField: 'hireDate', cache: { ttlSeconds: 300 } });
   pgCrud(router, 'retired', collectionSchemas.retired, [
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },
@@ -1408,7 +1417,11 @@ const registerAllModules = (router) => {
   pgCrud(router, 'assetMaintenanceLog', collectionSchemas.assetMaintenanceLog, [
     { field: 'assetId', column: 'asset_id' },
   ], 'asset_maintenance_log', { hospitalScoped: true, permission: 'assets' });
-  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'], dateRangeField: 'expiry' });
+  // كاش Redis: قائمة المخزون (تتضمّن الأدوية — لا يوجد موديول "medicines"
+  // منفصل، الأدوية سجلات inventory بـcategory='medicine') تُقرأ باستمرار
+  // (الصيدلية، الوصفات، تقارير النفاد...). مدة أقصر (3 دقائق) من doctors/
+  // employees لأن الكميات (qty) قد تتغيّر بوتيرة أعلى (صرف/استلام يومي).
+  pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'], dateRangeField: 'expiry', cache: { ttlSeconds: 180 } });
   pgCrud(router, 'procurement', collectionSchemas.procurement, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'procurement', extraFilterFields: ['status'] });
   pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
   pgCrud(router, 'documents', collectionSchemas.documents, [

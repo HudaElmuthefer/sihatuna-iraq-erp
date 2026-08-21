@@ -1,4 +1,11 @@
 // backend/tests/auth.test.js
+//
+// ── المرحلة الثانية: إبطال التوكن (logout) صار عبر Redis لا ملف على القرص ──
+// نستخدم ioredis-mock بدل Redis حقيقي (لا خادم Redis متاح وقت الاختبار —
+// راجعي utils/tokenRevocation.js) حتى تُختبَر آلية الإبطال الفعلية نفسها،
+// لا سلوك fail-open فقط (ذاك مغطّى صراحة بـtests/tokenRevocation.test.js).
+jest.mock('ioredis', () => require('ioredis-mock'));
+
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
 

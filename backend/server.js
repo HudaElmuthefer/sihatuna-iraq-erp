@@ -309,16 +309,31 @@ if (require.main === module) {
     devLog('  doctor / doctor    -> Doctor');
     devLog('  nurse / nurse      -> Nurse');
     devLog('  accountant / account -> Accountant\n');
-    startAutoBackup();
 
-    // ── خادم HL7 (نتائج المختبر) — يشتغل بمنفذ منفصل، بجانب الباك إند الرئيسي
-    // نغلّفه بـ try/catch: لو صار تعارض منفذ أو أي خطأ، يبقى النظام الأساسي
-    // شغّال طبيعي (تكامل المختبر ميزة إضافية، مو أساس تشغيل النظام)
-    try {
-      const { startHL7Listener } = require('./services/hl7/hl7Listener');
-      startHL7Listener();
-    } catch (err) {
-      console.error('⚠️  فشل تشغيل خادم HL7 (تكامل المختبر):', err.message);
+    // ── حارس التفرّد تحت PM2 cluster mode ──────────────────────────────────
+    // بعد التحويل لـ cluster mode (عدة عمليات worker لنفس السيرفر)، أي كود هنا
+    // يشتغل داخل هذا الـ callback يتكرّر تلقائياً بعدد العمليات (مثلاً 8 مرات
+    // على جهاز بـ8أنوية) — مقبول لإعداد Express نفسه (بلا حالة مشتركة)، لكن
+    // مدمّر لأي مهمة يُفترض أنها تشتغل مرة وحدة بس: النسخ الاحتياطي التلقائي
+    // (نسخ متعددة متزامنة تتصارع على نفس الملفات) وخادم HL7 (كل عملية تحاول
+    // تفتح نفس منفذ TCP). PM2 يعطي كل عملية متغيّر NODE_APP_INSTANCE فريد
+    // ('0', '1', '2'...) — نشغّل هذي المهام بعملية '0' فقط. بالتشغيل المباشر
+    // بدون PM2 (node server.js أثناء التطوير)، هذا المتغيّر غير موجود أصلاً
+    // فتشتغل طبيعياً كالسابق.
+    const isPrimaryWorker = process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0';
+
+    if (isPrimaryWorker) {
+      startAutoBackup();
+
+      // ── خادم HL7 (نتائج المختبر) — يشتغل بمنفذ منفصل، بجانب الباك إند الرئيسي
+      // نغلّفه بـ try/catch: لو صار تعارض منفذ أو أي خطأ، يبقى النظام الأساسي
+      // شغّال طبيعي (تكامل المختبر ميزة إضافية، مو أساس تشغيل النظام)
+      try {
+        const { startHL7Listener } = require('./services/hl7/hl7Listener');
+        startHL7Listener();
+      } catch (err) {
+        console.error('⚠️  فشل تشغيل خادم HL7 (تكامل المختبر):', err.message);
+      }
     }
 
     // ── فحص اتصال PostgreSQL فوراً بعد الإقلاع ────────────────────────────────

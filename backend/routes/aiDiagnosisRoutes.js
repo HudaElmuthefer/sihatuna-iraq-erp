@@ -27,6 +27,7 @@ const path = require('path');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
+const RedisRateLimitStore = require('../config/redisRateLimitStore');
 const { logAudit } = require('../utils/auditLog');
 const { activeProvider, callAI } = require('../utils/aiProvider');
 
@@ -57,9 +58,10 @@ router.get('/ai-diagnosis/referral-doctors', auth, requirePermission('ai-diagnos
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  message: { message: 'عدد كبير جداً من طلبات التشخيص، حاولي مرة أخرى بعد قليل' },
+  message: { message: 'عدد كبير جداً من طلبات التشخيص، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisRateLimitStore('ai-diagnosis'),
 });
 
 // يبني نص الطلب (prompt) بصيغة موحّدة تُستخدم مع أي المزوّدين

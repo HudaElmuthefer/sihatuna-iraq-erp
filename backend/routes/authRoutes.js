@@ -69,11 +69,14 @@ router.post('/auth/login', loginLimiter, (req, res) => {
   res.json({ token, user: safeUser });
 });
 
-router.post('/auth/logout', (req, res) => {
+router.post('/auth/logout', async (req, res) => {
   // ── إصلاح أمني: إبطال فعلي بدل مجرد مسح الكوكي ────────────────────────────
   // نحاول استخراج jti من التوكن الحالي (كوكي أو header) ونضيفه لقائمة
   // الإبطال — بهذا حتى لو احتفظ أحد بنسخة من التوكن الخام قبل تسجيل الخروج
-  // (مثلاً بسجلات شبكة قديمة)، يصير مرفوضاً فوراً وليس فقط بعد 7 أيام.
+  // (مثلاً بسجلات شبكة قديمة)، يصير مرفوضاً فوراً وليس فقط بعد يوم واحد.
+  // ننتظر (await) اكتمال الإبطال بـRedis قبل الرد — جولة واحدة سريعة جداً،
+  // تضمن إن "نجح تسجيل الخروج" بالرد يعني فعلاً إن التوكن أُبطِل (راجعي
+  // utils/tokenRevocation.js — لا ترمي استثناءً أبداً حتى لو Redis غير متاح).
   const cookieToken = req.cookies?.auth_token;
   const header = req.headers.authorization;
   const headerToken = header ? header.split(' ')[1] : null;
@@ -81,7 +84,7 @@ router.post('/auth/logout', (req, res) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.jti && decoded.exp) revokeToken(decoded.jti, decoded.exp);
+      if (decoded.jti && decoded.exp) await revokeToken(decoded.jti, decoded.exp);
     } catch { /* توكن غير صالح أصلاً — لا داعي لإبطاله، سيُرفَض بأي حال */ }
   }
   res.clearCookie('auth_token', { httpOnly: true, secure: process.env.USE_HTTPS === 'true', sameSite: 'strict', path: '/' });

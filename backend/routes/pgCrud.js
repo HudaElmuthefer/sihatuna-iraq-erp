@@ -42,6 +42,13 @@ const { logAudit } = require('../utils/auditLog');
 const validate = require('../middleware/validate');
 const requirePermission = require('../middleware/requirePermission');
 const XLSX = require('xlsx');
+// ── المرحلة الثانية: تخزين مؤقت اختياري (Redis) ─────────────────────────────
+// راجعي شرح نمط "الأجيال" (versioned cache) بأعلى utils/redisService.js.
+// مفعَّل فقط للموديولات اللي تمرر options.cache صراحة (حالياً: doctors،
+// inventory، employees — راجعي routes/modules.js) — بيانات تُقرأ كثيراً
+// بصفحات متعددة (قوائم منسدلة...) وتتغيّر نادراً نسبياً. صفر تأثير على أي
+// موديول آخر لم يفعّله (فحص `if (cache)` واحد فقط، بلا أي استدعاء Redis).
+const { getCacheVersion, bumpCacheVersion, cacheGet, cacheSet } = require('../utils/redisService');
 
 const DEFAULT_COLUMNS = [
   { field: 'name', column: 'name' },
@@ -86,7 +93,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     );
   }
   const tableName = sqlTableName; // اسم الجدول الفعلي بكل استعلامات SQL أدناه
-  const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [], dateRangeField = null, dateRangeColumn = null } = options;
+  const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [], dateRangeField = null, dateRangeColumn = null, cache = null } = options;
   moduleRegistry[apiName] = { ...moduleRegistry[apiName], tableName, indexedColumns, hospitalScoped, permission };
   // ── فحص صلاحيات (RBAC) على القراءة والكتابة ──────────────────────────────────
   // الكتابة (POST/PUT/DELETE): مقيّدة دائماً بصلاحية الموديول لو كانت محدَّدة.
@@ -122,6 +129,25 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     return row.data?.hospitalId === req.user.hospitalId;
   };
 
+  // ── نطاق الكاش (cache scope) ──────────────────────────────────────────────
+  // لموديول موزَّع بين منشآت (hospitalScoped)، القائمة الكاملة تختلف فعلياً
+  // حسب هوية القارئ: موظف بمنشأة مُحدَّدة يشوف سجلات منشأته فقط، بينما إدمن
+  // (بلا hospitalId) يشوف كل السجلات بلا فلترة — لازم مفتاح كاش منفصل لكل
+  // حالة، وإلا موظف منشأة يشوف كاش إدمن (كل المنشآت) أو العكس بالخطأ.
+  const cacheScopeFor = (hospitalId) => hospitalId || 'ALL';
+  const cacheScopeForReq = (req) => cacheScopeFor(hospitalScoped ? req.user?.hospitalId : null);
+
+  // يُستدعى بعد أي كتابة ناجحة (POST/PUT/DELETE) — يزيد "رقم الجيل" لنطاق
+  // السجل المتأثر (منشأته تحديداً) *و* نطاق 'ALL' دائماً (لأن كاش الإدمن غير
+  // المفلتَر يتضمّن سجلات كل المنشآت، فأي تعديل بأي منشأة يُبطِله أيضاً).
+  // fire-and-forget (بدون await من المستدعي) — لا يجب أن يبطّئ رد الكتابة
+  // بانتظار Redis، تماماً متل نمط sendAlert/logAudit الحاليين بهذا المشروع.
+  const invalidateCache = async (recordHospitalId) => {
+    if (!cache) return;
+    const scopes = new Set([cacheScopeFor(hospitalScoped ? recordHospitalId : null), 'ALL']);
+    await Promise.all([...scopes].map((s) => bumpCacheVersion(apiName, s)));
+  };
+
   // GET all
   // دعم تصفح اختياري بالصفحات (page/limit) + بحث/فلترة، لتفادي بطء الجداول
   // الكبيرة مستقبلاً (خصوصاً المرضى والأطباء، أكثر موديولين مرشّحين للنمو
@@ -134,6 +160,21 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   // على أي صفحة موجودة حالياً لا ترسل هذي المعاملات.
   router.get(`/${apiName}`, auth, readPermission, async (req, res, next) => {
     try {
+      // ── قراءة الكاش (لو مفعَّل لهذا الموديول) ──────────────────────────────
+      // مفتاح الكاش يتضمّن كل معاملات الاستعلام (بحث/فلترة/صفحة...) — كل
+      // تركيبة فلاتر مختلفة تُخزَّن بمفتاح منفصل. لو تعذّر الوصول لـRedis،
+      // getCacheVersion ترجع null فنتجاوز الكاش بالكامل لهذا الطلب (fail-open).
+      let cacheKey = null;
+      if (cache) {
+        const scope = cacheScopeForReq(req);
+        const version = await getCacheVersion(apiName, scope);
+        if (version !== null) {
+          cacheKey = `c:${apiName}:${scope}:${version}:${JSON.stringify(req.query)}`;
+          const cached = await cacheGet(cacheKey);
+          if (cached) return res.json(cached);
+        }
+      }
+
       const conditions = [];
       const params = [];
 
@@ -245,16 +286,20 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
         params.push(limit, offset);
         sql += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
         const result = await pool.query(sql, params);
-        return res.json({
+        const payload = {
           data: result.rows.map(rowToRecord),
           total,
           page,
           totalPages: Math.max(Math.ceil(total / limit), 1),
-        });
+        };
+        if (cacheKey) cacheSet(cacheKey, payload, cache.ttlSeconds || 300).catch(() => {});
+        return res.json(payload);
       }
 
       const result = await pool.query(sql, params);
-      res.json(result.rows.map(rowToRecord));
+      const payload = result.rows.map(rowToRecord);
+      if (cacheKey) cacheSet(cacheKey, payload, cache.ttlSeconds || 300).catch(() => {});
+      res.json(payload);
     } catch (err) { next(err); }
   });
 
@@ -341,6 +386,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       }
       const result = await pool.query(sql, values);
       const record = rowToRecord(result.rows[0]);
+      if (cache) invalidateCache(record.hospitalId).catch(() => {});
       logAudit({ action: 'CREATE', table: tableName, recordId: record.id, userId: req.user?.id, username: req.user?.username });
       res.status(201).json(record);
     } catch (err) { next(err); }
@@ -366,6 +412,12 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
         [...indexedValues, JSON.stringify(rest), req.params.id]
       );
       const record = rowToRecord(result.rows[0]);
+      if (cache) {
+        // نُبطِل كاش المنشأة القديمة *و* الجديدة — عادة نفس الشيء، لكن يحمي
+        // بلا كلفة تُذكَر من الحالة النادرة (تعديل إدمن يغيّر hospitalId السجل)
+        invalidateCache(existing.rows[0].data?.hospitalId).catch(() => {});
+        invalidateCache(record.hospitalId).catch(() => {});
+      }
       logAudit({ action: 'UPDATE', table: tableName, recordId: record.id, userId: req.user?.id, username: req.user?.username });
       res.json(record);
     } catch (err) { next(err); }
@@ -393,6 +445,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       await client.query(`DELETE FROM ${tableName} WHERE id = $1`, [req.params.id]);
       await client.query('COMMIT');
 
+      if (cache) invalidateCache(row.data?.hospitalId).catch(() => {});
       logAudit({ action: 'DELETE', table: tableName, recordId: req.params.id, note: 'نُقل لسلة المحذوفات', userId: req.user?.id, username: req.user?.username });
       res.json({ success: true });
     } catch (err) {

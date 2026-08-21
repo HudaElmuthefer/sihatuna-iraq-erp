@@ -1,0 +1,138 @@
+# docker-compose.yml — SIHATUNA IRAQ ERP (المرحلة الثالثة: containerization)
+#
+# ثلاث خدمات بالضبط، بقرار مقصود: حاوية تطبيق واحدة (app) — لا نسخ متعددة
+# (replicas) — تشغّل الباك إند بـPM2 cluster mode داخلياً (عدة عمليات
+# worker بنفس الحاوية، راجعي ecosystem.docker.config.js)، بالإضافة لخدمتي
+# قاعدة بيانات مُدارتين (postgres، redis) بصورهما الرسمية.
+#
+# ── متغيرات البيئة ────────────────────────────────────────────────────────
+# تُقرأ من ملف .env بجذر المشروع (بجانب هذا الملف تحديداً — docker compose
+# يحمّله تلقائياً بهذا الاسم بالضبط). انسخي .env.docker.example إلى .env
+# هنا أولاً وعبّي القيم الحقيقية — راجعي README-Docker.md للتفاصيل الكاملة.
+# ملاحظة مهمة: هذا ملف .env منفصل تماماً عن backend/.env (المستخدَم بالنشر
+# المحلي العادي عبر start.bat) — الاثنان لا يتشاركان أي قيمة تلقائياً.
+
+services:
+  # ══════════════════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?يجب تحديد PG_PASSWORD بملف .env}
+      POSTGRES_DB: ${PG_DATABASE:-sihatuna_iraq}
+    volumes:
+      # ملاحظة: postgres:18+ (الصورة الرسمية) غيّرت بنية التخزين — تتوقع
+      # mount عند /var/lib/postgresql (لا /var/lib/postgresql/data مباشرة)،
+      # وتُنشئ مجلداً فرعياً خاصاً بالإصدار داخله تلقائياً (نمط
+      # pg_ctlcluster). تحقّقنا فعلياً: mount مباشر على .../data يجعل الصورة
+      # ترفض الإقلاع (crash loop) بخطأ صريح يطلب هذا بالضبط.
+      - postgres_data:/var/lib/postgresql
+      # يُطبَّق تلقائياً مرة واحدة فقط (أول تشغيل بمجلد بيانات فارغ) — ميزة
+      # قياسية بالصورة الرسمية لـPostgreSQL (docker-entrypoint-initdb.d).
+      # ملاحظة: postgres_schema.sql غير متزامن بالكامل مع migrations-sql
+      # (تحقّقنا: جدول medical_codes غائب منه مثلاً) — لهذا حاوية app تُشغّل
+      # أيضاً node run-migrations.js بكل إقلاع (راجعي Dockerfile)، يسدّ أي
+      # فجوة متبقية بأمان (كل الترحيلات idempotent).
+      - ./database/postgres_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-sihatuna_iraq}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      # اختياري — يفتح المنفذ لجهازك المضيف أيضاً (مثلاً pgAdmin مباشرة).
+      # احذفي هذا السطر لو تريدين قاعدة البيانات معزولة تماماً داخل شبكة
+      # Docker الداخلية (app تصل لها دائماً عبر اسم الخدمة "postgres"، بغض
+      # النظر عن وجود هذا التعريف أو لا).
+      - "${PG_PORT:-5432}:5432"
+
+  # ══════════════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF (Append Only File) مفعَّل عمداً — بعكس الإعداد الافتراضي (RDB
+    # snapshots دورية فقط)، AOF يحفظ كل عملية كتابة فور حدوثها تقريباً.
+    # مهم تحديداً هنا لأن Redis لم يعد كاشاً بحتاً بعد المرحلة الثانية —
+    # يحمل أيضاً طابور مهام BullMQ (قراءة الفواتير)، وفقدان مهمة قيد
+    # الانتظار بسبب إعادة تشغيل Redis غير المتوقَّعة تجربة أسوأ بكثير من
+    # فقدان بضع دقائق من الكاش وحده.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    ports:
+      # اختياري (نفس ملاحظة postgres أعلاه) — يفيد للفحص اليدوي من الجهاز
+      # المضيف عبر redis-cli مباشرة.
+      - "6379:6379"
+
+  # ══════════════════════════════════════════════════════════════════════
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # لو النشر يخدم أجهزة أخرى بالشبكة (لا localhost فقط)، حدّدي هذا
+        # بملف .env — راجعي شرح REACT_APP_API_URL الكامل بـDockerfile.
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000/api}
+    restart: unless-stopped
+    depends_on:
+      # service_healthy (لا مجرد service_started الافتراضي): يضمن انتظار
+      # فعلي لجاهزية قاعدة البيانات/Redis الحقيقية قبل إقلاع التطبيق، بدل
+      # سباق قد ينجح أحياناً ويفشل أحياناً حسب سرعة كل جهاز (خصوصاً أول
+      # تشغيل، حين يحتاج postgres وقتاً لتهيئة postgres_schema.sql بالكامل).
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # ── القيم التالية يجب أن تُشير لأسماء الخدمات بشبكة Docker الداخلية،
+      # لا localhost/127.0.0.1 — هذا بالضبط الفرق الجوهري بين .env المحلي
+      # (backend/.env، يشير لـlocalhost لأن كل شيء يعمل مباشرة على نفس
+      # الجهاز) وDocker (كل خدمة بحاويتها الخاصة، لها اسم DNS داخلي فقط
+      # صالح ضمن شبكة compose نفسها — "postgres" و"redis" هنا هما اسما
+      # الخدمتين أعلاه بالضبط، Docker يحلّهما تلقائياً).
+      NODE_ENV: production
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: ${PG_USER:-postgres}
+      PG_PASSWORD: ${PG_PASSWORD:?يجب تحديد PG_PASSWORD بملف .env}
+      PG_DATABASE: ${PG_DATABASE:-sihatuna_iraq}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000" # الـ API
+      - "3000:3000" # الفرونت إند (نسخة الإنتاج المبنية)
+      - "2575:2575" # خادم HL7 (نتائج المختبر) — احذفي لو الميزة غير مستخدَمة
+    volumes:
+      # ── بيانات دائمة يجب ألا تُفقَد عند إعادة تشغيل الحاوية ──────────────
+      # backend/data يحمل db.json (حسابات المستخدمين — لم تنتقل بعد بالكامل
+      # لـPostgreSQL) وملفات تشغيلية أخرى (سجل التدقيق، حالة المراقبة...).
+      # بدون هذا الحجم، كل إعادة تشغيل للحاوية تُرجع db.json لحالته
+      # بصورة البناء الأصلية (البيانات الافتراضية admin/admin وغيرها)،
+      # ماحية أي مستخدم أو تعديل حقيقي أُضيف لاحقاً.
+      - backend_data:/app/backend/data
+      - backend_uploads:/app/backend/uploads
+      - backend_backups:/app/backend/backups
+      - backend_logs:/app/backend/logs
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_data:
+  backend_uploads:
+  backend_backups:
+  backend_logs:

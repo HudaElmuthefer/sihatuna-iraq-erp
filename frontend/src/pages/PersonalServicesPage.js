@@ -79,14 +79,14 @@ export default function PersonalServicesPage() {
   };
 
   const handleBook = async () => {
-    if (!form.patientName.trim()) { addToast(lang==='ar' ? 'أدخلي اسم المريض' : 'Enter patient name', 'error'); return; }
-    if (!form.patientPhone.trim()) { addToast(lang==='ar' ? 'أدخلي رقم الهاتف' : 'Enter phone number', 'error'); return; }
+    if (!form.patientName.trim()) { addToast(lang==='ar' ? 'أدخل اسم المريض' : 'Enter patient name', 'error'); return; }
+    if (!form.patientPhone.trim()) { addToast(lang==='ar' ? 'أدخل رقم الهاتف' : 'Enter phone number', 'error'); return; }
     if (!form.date) { addToast(tr('x_akhtrtarikhalmwad'), 'error'); return; }
 
     const doctorName = bookModal.name;
     const taken = takenTimesForDoctor(doctorName, form.date);
     if (taken.has(form.time)) {
-      addToast(lang==='ar' ? 'هذا الموعد محجوز فعلاً لهذا الطبيب — اختاري وقتاً آخر' : 'This slot is already booked for this doctor — pick another time', 'error');
+      addToast(lang==='ar' ? 'هذا الموعد محجوز فعلاً لهذا الطبيب — اختر وقتاً آخر' : 'This slot is already booked for this doctor — pick another time', 'error');
       return;
     }
 
@@ -116,7 +116,7 @@ export default function PersonalServicesPage() {
       setBookModal(null);
       setForm({ patientName: '', patientPhone: '', date: '', time: '09:00', notes: '' });
     } catch (err) {
-      addToast(err?.message || (lang==='ar' ? 'تعذّر تسجيل الحجز، حاولي مرة ثانية' : 'Could not save the booking, try again'), 'error');
+      addToast(err?.message || (lang==='ar' ? 'تعذّر تسجيل الحجز، حاول مرة ثانية' : 'Could not save the booking, try again'), 'error');
     } finally {
       setBooking(false);
     }
@@ -260,7 +260,7 @@ export default function PersonalServicesPage() {
                 <div><label className="form-label">{tr('field_time')}</label><input className="form-control" type="time" value={form.time} onChange={e=>setForm(p=>({...p,time:e.target.value}))} /></div>
               </div>
               {takenTimesForDoctor(bookModal.name, form.date).has(form.time) && (
-                <p style={{ color:'#ef4444', fontSize:12, marginTop:8 }}>⚠️ {lang==='ar' ? 'هذا الموعد محجوز فعلاً — اختاري وقتاً آخر' : 'This slot is already booked — pick another time'}</p>
+                <p style={{ color:'#ef4444', fontSize:12, marginTop:8 }}>⚠️ {lang==='ar' ? 'هذا الموعد محجوز فعلاً — اختر وقتاً آخر' : 'This slot is already booked — pick another time'}</p>
               )}
               <div style={{ marginTop:12 }}><label className="form-label">{tr('field_notes')}</label><textarea className="form-control" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder={tr('auto_سبب_الزيارة')} /></div>
             </div>

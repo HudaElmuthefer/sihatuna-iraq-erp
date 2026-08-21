@@ -35,7 +35,7 @@ router.post('/booking/book-appointment', auth, async (req, res, next) => {
       [doctor, date, time]
     );
     if (conflict.rows.length > 0) {
-      return res.status(409).json({ message: 'هذا الموعد محجوز فعلاً لهذا الطبيب — اختاري وقتاً آخر' });
+      return res.status(409).json({ message: 'هذا الموعد محجوز فعلاً لهذا الطبيب — اختر وقتاً آخر' });
     }
 
     const data = {

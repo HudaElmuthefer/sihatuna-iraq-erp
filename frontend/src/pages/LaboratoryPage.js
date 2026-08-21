@@ -193,7 +193,7 @@ export default function LaboratoryPage() {
     showToast(
       createdCount === panelForm.selectedTests.length
         ? L(`تم إنشاء ${createdCount} طلب فحص بنجاح`, `${createdCount} test request(s) created successfully`)
-        : L(`تم إنشاء ${createdCount} من ${panelForm.selectedTests.length} طلب — راجعي القائمة`, `${createdCount} of ${panelForm.selectedTests.length} created — please review the list`),
+        : L(`تم إنشاء ${createdCount} من ${panelForm.selectedTests.length} طلب — راجع القائمة`, `${createdCount} of ${panelForm.selectedTests.length} created — please review the list`),
       createdCount === panelForm.selectedTests.length ? 'success' : 'warning'
     );
   };
@@ -416,7 +416,7 @@ export default function LaboratoryPage() {
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setShowPanelModal(false)}>
           <div style={{...S.mbox, maxWidth: 560}}>
             <h3 style={{margin:'0 0 6px',color:'var(--text-primary)'}}>{L('🧬 حزمة فحوصات', '🧬 Test Panel')}</h3>
-            <p style={{margin:'0 0 16px',fontSize:12,color:'var(--text-secondary)'}}>{L('عبّي بيانات المريض مرة وحدة، واختاري حزمة — كل تحليل بالحزمة يُنشأ كطلب منفصل تلقائياً.', 'Fill patient info once, pick a panel — each test in it is created as a separate request automatically.')}</p>
+            <p style={{margin:'0 0 16px',fontSize:12,color:'var(--text-secondary)'}}>{L('عبّئ بيانات المريض مرة وحدة، واختر حزمة — كل تحليل بالحزمة يُنشأ كطلب منفصل تلقائياً.', 'Fill patient info once, pick a panel — each test in it is created as a separate request automatically.')}</p>
 
             <div style={S.g2}>
               <label style={{gridColumn:'span 2'}}>{L('اسم المريض','Patient Name')}<input style={S.fi} value={panelForm.patientName} onChange={e=>setPanelForm(p=>({...p,patientName:e.target.value}))}/></label>
@@ -427,7 +427,7 @@ export default function LaboratoryPage() {
             </div>
 
             <label style={{display:'block',marginTop:14}}>
-              {L('اختاري حزمة جاهزة (اختياري)','Pick a ready panel (optional)')}
+              {L('اختر حزمة جاهزة (اختياري)','Pick a ready panel (optional)')}
               <select
                 style={S.fi}
                 value={panelForm.panelKey}
@@ -437,7 +437,7 @@ export default function LaboratoryPage() {
                   setPanelForm(p=>({...p, panelKey:key, selectedTests: panel ? [...panel.tests] : p.selectedTests}));
                 }}
               >
-                <option value="">{L('— اختاري حزمة أو أضيفي تحاليل منفردة تحت —','— pick a panel, or add individual tests below —')}</option>
+                <option value="">{L('— اختر حزمة أو أضف تحاليل منفردة تحت —','— pick a panel, or add individual tests below —')}</option>
                 {TEST_PANELS.map(p=><option key={p.key} value={p.key}>{L(p.nameAr,p.nameEn)} ({p.tests.length})</option>)}
               </select>
             </label>
@@ -454,7 +454,7 @@ export default function LaboratoryPage() {
                 </button>
               </div>
               {panelForm.selectedTests.length === 0 ? (
-                <p style={{fontSize:12,color:'var(--text-secondary)'}}>{L('ما فيه تحاليل مختارة بعد — اختاري حزمة أو أضيفي تحليل منفرد.','No tests selected yet — pick a panel or add an individual test.')}</p>
+                <p style={{fontSize:12,color:'var(--text-secondary)'}}>{L('ما فيه تحاليل مختارة بعد — اختر حزمة أو أضف تحليل منفرد.','No tests selected yet — pick a panel or add an individual test.')}</p>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:220,overflowY:'auto'}}>
                   {panelForm.selectedTests.map((t, idx) => (

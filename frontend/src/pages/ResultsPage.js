@@ -189,7 +189,7 @@ export default function ResultsPage() {
 
   const sendLabToPatient = (t) => {
     const msg = L(
-      `مرحباً ${t.patientName}، نتيجة فحص ${t.testType} جاهزة: ${t.results?.value || 'راجعي المختبر لمزيد من التفاصيل'}. ${appNameAr}.`,
+      `مرحباً ${t.patientName}، نتيجة فحص ${t.testType} جاهزة: ${t.results?.value || 'راجع المختبر لمزيد من التفاصيل'}. ${appNameAr}.`,
       `Hello ${t.patientName}, your ${t.testType} result is ready: ${t.results?.value || 'please visit the lab for details'}. ${appNameEn.toUpperCase()}.`
     );
     if (!openWhatsApp(selectedPatient.phone, msg)) alert(L('رقم هاتف المريض غير مسجَّل', "Patient's phone number is not on file"));
@@ -206,7 +206,7 @@ export default function ResultsPage() {
 
   const sendRadiologyToPatient = (r) => {
     const msg = L(
-      `مرحباً ${r.patientName}، تقرير ${r.modality} جاهز. الانطباع: ${r.impression || 'راجعي قسم الأشعة'}. ${appNameAr}.`,
+      `مرحباً ${r.patientName}، تقرير ${r.modality} جاهز. الانطباع: ${r.impression || 'راجع قسم الأشعة'}. ${appNameAr}.`,
       `Hello ${r.patientName}, your ${r.modality} report is ready. Impression: ${r.impression || 'please visit radiology'}. ${appNameEn.toUpperCase()}.`
     );
     if (!openWhatsApp(selectedPatient.phone, msg)) alert(L('رقم هاتف المريض غير مسجَّل', "Patient's phone number is not on file"));

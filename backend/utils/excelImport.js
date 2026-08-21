@@ -27,7 +27,7 @@ function parseExcelBuffer(buffer, columnMap) {
   try {
     workbook = XLSX.read(buffer, { type: 'buffer' });
   } catch {
-    return { rows: [], error: 'تعذّر قراءة الملف — تأكدي أنه ملف Excel صالح (.xlsx أو .xls)' };
+    return { rows: [], error: 'تعذّر قراءة الملف — تأكد أنه ملف Excel صالح (.xlsx أو .xls)' };
   }
 
   const firstSheetName = workbook.SheetNames[0];

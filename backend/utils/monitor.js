@@ -74,7 +74,7 @@ async function main() {
         : `السيرفر يستجيب لكنه بحالة غير سليمة: ${JSON.stringify(result.details)}`;
       await sendAlert(
         'SIHATUNA IRAQ — السيرفر بمشكلة',
-        `${reason}\n\nالوقت: ${now}\nالرابط المفحوص: ${HEALTH_URL}\n\nالخطوة التالية: تأكدي إن start-backend.bat شغّال، وشغّلي check-system.bat لتشخيص أدق.`
+        `${reason}\n\nالوقت: ${now}\nالرابط المفحوص: ${HEALTH_URL}\n\nالخطوة التالية: تأكد إن start-backend.bat شغّال، وشغّل check-system.bat لتشخيص أدق.`
       );
     } else if (state.lastStatus === 'unhealthy') {
       // كانت متعطّلة، والآن رجعت طبيعية — تنبيه "تعافي" حتى تعرفين انحلّت المشكلة

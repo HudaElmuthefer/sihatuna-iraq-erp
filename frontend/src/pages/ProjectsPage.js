@@ -280,7 +280,7 @@ export default function ProjectsPage() {
             onClick={() => {
               if (!projects || projects.length === 0) { showToast(L('لا توجد مشاريع للتصدير','No projects to export'), 'error'); return; }
               downloadPrimaveraXML(projects, lang, appNameAr, appNameEn);
-              showToast(L('تم تصدير ملف XML — افتحيه من Primavera P6 عبر File → Import','XML exported — open it in Primavera P6 via File → Import'), 'success');
+              showToast(L('تم تصدير ملف XML — افتحه من Primavera P6 عبر File → Import','XML exported — open it in Primavera P6 via File → Import'), 'success');
             }}
           >
             📤 {L('تصدير Primavera P6 (XML)','Export Primavera P6 (XML)')}

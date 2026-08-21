@@ -51,11 +51,33 @@ export default function ProcurementPage() {
   // دالة مشتركة تقرأ الفاتورة سواء جاءت من ملف مرفوع أو من التقاط كاميرا —
   // الاثنان ينتهيان بنفس الشكل (data URL + نوع الملف)، فلا داعي لتكرار منطق
   // استدعاء الـ API مرتين.
+  // ── المرحلة الثانية: قراءة الفاتورة صارت مهمة خلفية (BullMQ) ────────────
+  // POST /invoice-reader/read لم يعد يرجع نتيجة القراءة مباشرة — يرجع فوراً
+  // برقم مهمة (jobId) بدل إبقاء طلب HTTP معلَّقاً طوال مدة استدعاء الذكاء
+  // الاصطناعي (قد تصل لعدة ثوانٍ). نستعلم دورياً عن حالتها عبر GET
+  // /invoice-reader/jobs/:id لحد اكتمالها (راجعي backend/routes/invoiceReaderRoutes.js).
+  const pollInvoiceJob = async (jobId) => {
+    const POLL_INTERVAL_MS = 1500;
+    const MAX_ATTEMPTS = 45; // ~67 ثانية كحد أقصى — كافٍ جداً لأي استدعاء AI طبيعي، يمنع استعلاماً بلا نهاية لو تعطّلت المهمة فعلياً
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const status = await api.get(`/invoice-reader/jobs/${jobId}`);
+      if (status.state === 'completed') return status;
+      if (status.state === 'failed') throw new Error(status.error || 'invoice read job failed');
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+    throw new Error('invoice read job timed out');
+  };
+
   const readInvoiceFromDataUrl = async (dataUrl, mimeType) => {
     setReadingInvoice(true);
     setInvoicePreview(null);
     try {
-      const result = await api.post('/invoice-reader/read', { image: dataUrl, mimeType });
+      const submitted = await api.post('/invoice-reader/read', { image: dataUrl, mimeType });
+      if (submitted.available === false) {
+        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI invoice reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        return;
+      }
+      const result = await pollInvoiceJob(submitted.jobId);
       if (!result.available) {
         showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI invoice reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
       } else {
@@ -121,7 +143,7 @@ export default function ProcurementPage() {
   const captureFromCamera = async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظري ثانية وحاولي مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
+      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظر ثانية وحاول مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
       return;
     }
     const canvas = document.createElement('canvas');

@@ -92,7 +92,7 @@ export default function DossiersTab({ lang }) {
               <span style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginTop:2 }}>{(docsByEmployee[e.id]||[]).length} {L('docs_count')}</span>
             </button>
           ))}
-          {employees.length === 0 && <p style={{ fontSize:12, color:'var(--text-secondary)', textAlign:'center', padding:12 }}>{lang==='ar'?'لا يوجد موظفون مسجَّلون بعد — أضيفيهم من تبويب "الموظفون" أولاً':'No employees registered yet — add them from the "Employees" tab first'}</p>}
+          {employees.length === 0 && <p style={{ fontSize:12, color:'var(--text-secondary)', textAlign:'center', padding:12 }}>{lang==='ar'?'لا يوجد موظفون مسجَّلون بعد — أضفهم من تبويب "الموظفون" أولاً':'No employees registered yet — add them from the "Employees" tab first'}</p>}
         </div>
       </div>
       <div>

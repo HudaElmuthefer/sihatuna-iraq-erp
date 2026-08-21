@@ -296,7 +296,7 @@ export default function DepartmentsPage() {
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 0, marginBottom: 14 }}>
               {lang === 'ar'
-                ? `عندك ${suggestions.length} طبيب بلا قسم محدَّد. راجعي الاقتراح لكل وحد وعدّليه لو لازم، وبعدها اضغطي "تطبيق" — ما يصير أي تغيير قبل تأكيدك.`
+                ? `عندك ${suggestions.length} طبيب بلا قسم محدَّد. راجع الاقتراح لكل وحد وعدّله لو لازم، وبعدها اضغط "تطبيق" — ما يصير أي تغيير قبل تأكيدك.`
                 : `${suggestions.length} doctor(s) have no department set. Review each suggestion below and adjust if needed, then click "Apply" — nothing changes until you confirm.`}
             </p>
 

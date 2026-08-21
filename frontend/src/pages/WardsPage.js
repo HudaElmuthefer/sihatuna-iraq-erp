@@ -353,7 +353,7 @@ export default function WardsPage() {
                       </>
                     ) : (
                       <>
-                        <div style={{ marginBottom: 10 }}>{L('يوجد مرضى مُدخَلون لكن بلا أي وصفة دواء مُسجَّلة بعد — افتحي "حالات الإدخال" واضغطي 💊 بجانب المريض لإضافة وصفة.', 'There are admitted patients but no medication orders recorded yet — open "Admissions" and click 💊 next to the patient to add one.')}</div>
+                        <div style={{ marginBottom: 10 }}>{L('يوجد مرضى مُدخَلون لكن بلا أي وصفة دواء مُسجَّلة بعد — افتح "حالات الإدخال" واضغط 💊 بجانب المريض لإضافة وصفة.', 'There are admitted patients but no medication orders recorded yet — open "Admissions" and click 💊 next to the patient to add one.')}</div>
                         <button onClick={() => setTab('admissions')} className="btn btn-primary" style={{ fontSize: 13 }}>{L('الذهاب لحالات الإدخال', 'Go to Admissions')}</button>
                       </>
                     )}
@@ -661,7 +661,7 @@ export default function WardsPage() {
                   </button>
                 </div>
                 {orderForm.scheduledTimes.length === 0 ? (
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{L('ما فيه مواعيد محددة بعد — اضغطي "توليد تلقائي" أو أضيفي موعد يدوياً.', 'No times set yet — click "Auto-generate" or add one manually.')}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{L('ما فيه مواعيد محددة بعد — اضغط "توليد تلقائي" أو أضف موعد يدوياً.', 'No times set yet — click "Auto-generate" or add one manually.')}</p>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                     {orderForm.scheduledTimes.map((t, i) => (

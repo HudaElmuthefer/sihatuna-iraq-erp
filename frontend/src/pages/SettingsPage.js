@@ -692,7 +692,7 @@ export default function SettingsPage() {
                 <div className="modal-body">
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
                     {lang === 'ar'
-                      ? `كلمة مرور مؤقتة جديدة لـ"${resetPasswordResult.userName}". انسخيها وأرسليها له الآن — لن تظهر مرة ثانية بعد إغلاق هذي النافذة. سيُطلب منه تغييرها بأول تسجيل دخول.`
+                      ? `كلمة مرور مؤقتة جديدة لـ"${resetPasswordResult.userName}". انسخها وأرسلها له الآن — لن تظهر مرة ثانية بعد إغلاق هذي النافذة. سيُطلب منه تغييرها بأول تسجيل دخول.`
                       : `New temporary password for "${resetPasswordResult.userName}". Copy and send it now — it will not be shown again. They will be required to change it on first login.`}
                   </p>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

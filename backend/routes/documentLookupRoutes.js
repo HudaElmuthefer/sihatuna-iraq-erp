@@ -203,7 +203,7 @@ router.post('/barcode/import-excel', auth, requirePermission('hr'), barcodeUploa
       }
       if (hasArabic(ref)) {
         results.failed++;
-        results.errors.push({ row: rowNumber, messages: [`"${ref}" يحتوي حرفاً عربياً — يحتاج QR، افتحي الكتاب من تبويب "توليد" يدوياً مرة وحدة`] });
+        results.errors.push({ row: rowNumber, messages: [`"${ref}" يحتوي حرفاً عربياً — يحتاج QR، افتح الكتاب من تبويب "توليد" يدوياً مرة وحدة`] });
         continue;
       }
 

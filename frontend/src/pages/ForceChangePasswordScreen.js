@@ -45,10 +45,10 @@ export default function ForceChangePasswordScreen() {
       <div className="card" style={{ maxWidth: 420, width: '100%', padding: 32 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🔑</div>
-          <h2 style={{ margin: 0, fontSize: 19 }}>{ar ? 'لازم تغيّرين كلمة المرور' : 'You must change your password'}</h2>
+          <h2 style={{ margin: 0, fontSize: 19 }}>{ar ? 'لازم تغيّر كلمة المرور' : 'You must change your password'}</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 8 }}>
             {ar
-              ? `مرحباً ${user?.name || ''} — سجّلتِ دخول بكلمة مرور مؤقتة. اختاري كلمة مرور دائمة جديدة للمتابعة.`
+              ? `مرحباً ${user?.name || ''} — سجّلت دخول بكلمة مرور مؤقتة. اختر كلمة مرور دائمة جديدة للمتابعة.`
               : `Hi ${user?.name || ''} — you logged in with a temporary password. Choose a new permanent one to continue.`}
           </p>
         </div>

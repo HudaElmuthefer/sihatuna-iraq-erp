@@ -317,7 +317,7 @@ export default function QualityPage() {
         ) : kpis.length === 0 ? (
           <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--text-secondary)' }}>
             <div style={{ fontSize:48, marginBottom:12 }}>📊</div>
-            <p>{L('لا توجد مؤشرات أداء مسجَّلة بعد — أضيفي أول مؤشر بزر "مؤشر جديد" أعلاه','No KPIs recorded yet — add your first one with the "New KPI" button above')}</p>
+            <p>{L('لا توجد مؤشرات أداء مسجَّلة بعد — أضف أول مؤشر بزر "مؤشر جديد" أعلاه','No KPIs recorded yet — add your first one with the "New KPI" button above')}</p>
           </div>
         ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>

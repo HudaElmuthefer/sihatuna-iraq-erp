@@ -121,6 +121,106 @@ docker compose down -v     # ⚠️ يحذف كل شيء بما فيها الب�
 لحالته الافتراضية بصورة البناء (تمسح أي مستخدم أو تعديل حقيقي أُضيف
 لاحقاً) — هذا اكتُشف صراحة أثناء إعداد هذا الملف، وليس افتراضاً.
 
+## إضافة SSL/TLS لاحقاً
+
+النظام يعمل حالياً عبر HTTP فقط بقرار مقصود — الوصول عن بُعد مخطَّط له عبر
+VPN/WireGuard لا HTTPS عام، فما فيه شهادة SSL بعد. لكن `nginx/nginx.conf`
+مبني من البداية بحيث إضافة SSL لاحقاً **تغيير صغير إضافي، لا إعادة كتابة**
+— هذي الخطوات الكاملة وقتها.
+
+### 1. احصلي على شهادة
+
+اختاري حسب سيناريو النشر الفعلي وقتها:
+
+- **دومين حقيقي، وصول عام** (Let's Encrypt، مجاني): استخدمي `certbot`
+  (بحاوية Docker منفصلة مؤقتة، أو مثبَّت مباشرة على السيرفر) لإصدار شهادة
+  حقيقية لدومينك. مثال بسيط عبر وضع standalone (يحتاج المنفذ 80 فاضياً
+  مؤقتاً وقت الإصدار فقط):
+  ```bash
+  docker run --rm -p 80:80 -v "$(pwd)/ssl:/etc/letsencrypt" certbot/certbot \
+    certonly --standalone -d sihatuna-iraq.example.com
+  ```
+  الشهادة الناتجة تكون بـ
+  `ssl/live/sihatuna-iraq.example.com/{fullchain.pem,privkey.pem}`.
+  Let's Encrypt تنتهي صلاحيتها كل 90 يوم — تحتاجين تجديداً دورياً
+  (`certbot renew`، يمكن جدولته بمهمة cron/Task Scheduler).
+
+- **شبكة داخلية/VPN فقط** (لا وصول عام، تشفير بالنقل فقط لا ثقة متصفح
+  كاملة): شهادة موقَّعة ذاتياً (self-signed) كافية تماماً — المتصفح يحذّر
+  مرة واحدة ("غير آمن")، يقبلها المستخدم يدوياً، وبعدها تعمل بشكل طبيعي:
+  ```bash
+  mkdir -p ssl
+  openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
+    -keyout ssl/privkey.pem -out ssl/fullchain.pem \
+    -subj "/CN=sihatuna-iraq.local"
+  ```
+
+### 2. اربطي مجلد الشهادات بخدمة nginx (`docker-compose.yml`)
+
+أضيفي المنفذ 443 وvolume الشهادات لخدمة `nginx`:
+
+```yaml
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"          # ← جديد
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro          # ← جديد (يطابق مسار الشهادة بالخطوة 1)
+      - frontend_static:/usr/share/nginx/html:ro
+```
+
+### 3. عدّلي `nginx/nginx.conf`
+
+استبدلي `server { listen 80; ... }` الحالي بسيرفرين: واحد يحوّل كل حركة
+HTTP لـHTTPS تلقائياً، وثانٍ يخدم HTTPS فعلياً بنفس `location{}` الموجودة
+حالياً حرفياً (انسخيها كما هي، فقط أضيفي `server{}` جديد):
+
+```nginx
+  server {
+    listen 80;
+    server_name _;
+    return 301 https://$host$request_uri;
+  }
+
+  server {
+    listen 443 ssl;
+    server_name _;
+    ssl_certificate     /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
+    # نفس root/index/location الموجودة بـserver{ listen 80; } الحالي —
+    # انسخيها حرفياً هنا (root، index، location /api/، location /uploads/،
+    # location ~* \.(js|css|...)، location /).
+  }
+```
+
+### 4. فعّلي كوكي `secure` (`.env`)
+
+```
+USE_HTTPS=true
+```
+
+(`backend/routes/authRoutes.js` يقرأ هذا المتغيّر تحديداً — الكوكي
+`auth_token` يصير `secure:true`، يعني المتصفح يرفض إرسالها إلا عبر HTTPS
+فعلياً. لا تفعّليه قبل التأكد إن HTTPS شغّال فعلاً، وإلا تسجيل الدخول يفشل
+بصمت.)
+
+### 5. أعيدي التشغيل وتأكدي
+
+```bash
+docker compose up -d      # يعيد إنشاء nginx (وapp لقراءة USE_HTTPS الجديد)
+curl -k https://localhost/api/health   # -k لأن شهادة self-signed غير موثوقة من curl افتراضياً
+```
+
+افتحي `https://<عنوان السيرفر>` بالمتصفح — يجب أن يعمل تسجيل الدخول
+بشكل طبيعي (مع تحذير شهادة غير موثوقة أول مرة لو self-signed).
+
 ## هل تشغّل الاختبارات داخل الحاوية؟ (لا، وهذا مقصود)
 
 صورة الإنتاج تُبنى بـ`npm ci --omit=dev` — يعني `jest`/`nodemon`/`supertest`/

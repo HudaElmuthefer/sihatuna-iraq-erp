@@ -139,6 +139,55 @@ describe('POST /api/dosage-check/check', () => {
     expect(res.body.limit.maxDailyDose).toBe(20);
   });
 
+  // ── migrations-sql/010_more_dosage_limits.sql — 6 أدوية إضافية ────────────
+  test('سيبروفلوكساسين لطفل عمره 5 سنوات، جرعة ضمن سقف الأطفال (1000 مجم): status:safe', async () => {
+    const res = await request(app)
+      .post('/api/dosage-check/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ drugName: 'Ciprofloxacin', dose: 800, unit: 'mg', ageYears: 5, lang: 'en' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ available: true, source: 'db', status: 'safe' });
+    expect(res.body.limit.maxDailyDose).toBe(1000);
+  });
+
+  test('ليسينوبريل لطفل عمره 4 سنوات (أقل من الحد الأدنى المدروس 6 سنوات): لا تطابق بالجدول لهذا العمر، ينتقل لـAI', async () => {
+    const res = await request(app)
+      .post('/api/dosage-check/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ drugName: 'Lisinopril', dose: 5, unit: 'mg', ageYears: 4, lang: 'en' });
+    expect(res.status).toBe(200);
+    // بدون مفاتيح API بهذا الاختبار: لا تطابق بالجدول (عمر خارج كل النطاقات المعروفة) + لا AI متاح = available:false، لا 'safe' افتراضياً
+    expect(res.body.available).toBe(false);
+  });
+
+  test('ميترونيدازول لبالغ بجرعة تتجاوز السقف المرجعي (4 غم/يوم): status:exceeds', async () => {
+    const res = await request(app)
+      .post('/api/dosage-check/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ drugName: 'Metronidazole', dose: 5000, unit: 'mg', ageYears: 40, lang: 'en' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ available: true, source: 'db', status: 'exceeds' });
+  });
+
+  test('أتورفاستاتين لمراهق عمره 15 سنة، جرعة ضمن سقف المراهقين (20 مجم): status:safe', async () => {
+    const res = await request(app)
+      .post('/api/dosage-check/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ drugName: 'Atorvastatin', dose: 15, unit: 'mg', ageYears: 15, lang: 'en' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ available: true, source: 'db', status: 'safe' });
+    expect(res.body.limit.maxDailyDose).toBe(20);
+  });
+
+  test('وارفارين (مستبعَد عمداً من الجدول — راجعي migrations-sql/010): لا تطابق بالجدول بأي عمر، بدون مفاتيح API يرجع available:false', async () => {
+    const res = await request(app)
+      .post('/api/dosage-check/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ drugName: 'Warfarin', dose: 5, unit: 'mg', ageYears: 40, lang: 'en' });
+    expect(res.status).toBe(200);
+    expect(res.body.available).toBe(false);
+  });
+
   test('دواء غير موجود بالجدول إطلاقاً + بدون مفاتيح API: available:false بأمان (بدل خطأ 500)، لا يُفترَض آمن', async () => {
     const res = await request(app)
       .post('/api/dosage-check/check')

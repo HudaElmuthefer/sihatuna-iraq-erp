@@ -28,6 +28,12 @@ const COMMON_DRUGS = [
   { ar: 'أسبرين', en: 'Aspirin' },
   { ar: 'ميتفورمين', en: 'Metformin' },
   { ar: 'أوميبرازول', en: 'Omeprazole' },
+  { ar: 'سيبروفلوكساسين', en: 'Ciprofloxacin' },
+  { ar: 'ليسينوبريل', en: 'Lisinopril' },
+  { ar: 'أتورفاستاتين', en: 'Atorvastatin' },
+  { ar: 'لوزارتان', en: 'Losartan' },
+  { ar: 'ميترونيدازول', en: 'Metronidazole' },
+  { ar: 'كلاريثروميسين', en: 'Clarithromycin' },
 ];
 
 export default function DosageCheckPage() {

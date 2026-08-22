@@ -21,6 +21,7 @@ import PhysicalTherapyPage from './pages/PhysicalTherapyPage';
 import QueuePage from './pages/QueuePage';
 import QueueDisplayPage from './pages/QueueDisplayPage';
 import DrugInteractionsPage from './pages/DrugInteractionsPage';
+import DosageCheckPage from './pages/DosageCheckPage';
 import MedicalLeavePage from './pages/MedicalLeavePage';
 import SmartReportsPage from './pages/SmartReportsPage';
 import HRPage from './pages/HRPage';
@@ -90,6 +91,7 @@ function AppRoutes() {
           <Route path="physiotherapy"      element={<ProtectedRoute pageKey="physiotherapy"><PhysicalTherapyPage /></ProtectedRoute>} />
           <Route path="queue"              element={<ProtectedRoute pageKey="queue"><QueuePage /></ProtectedRoute>} />
           <Route path="drug-interactions"  element={<ProtectedRoute pageKey="drug-interactions"><DrugInteractionsPage /></ProtectedRoute>} />
+          <Route path="dosage-check"       element={<ProtectedRoute pageKey="dosage-check"><DosageCheckPage /></ProtectedRoute>} />
           <Route path="medical-leave"      element={<ProtectedRoute pageKey="medical-leave"><MedicalLeavePage /></ProtectedRoute>} />
           {/* Finance */}
           <Route path="accounts"           element={<ProtectedRoute pageKey="accounts"><AccountsPage /></ProtectedRoute>} />

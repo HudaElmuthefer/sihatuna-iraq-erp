@@ -18,6 +18,9 @@ frontend/build/
 
 # بيانات تشغيلية (تُنشأ تلقائياً، ما تُرفع لـ GitHub)
 backend/backups/
+# نسخ احتياطية مسحوبة يدوياً لقاعدة بيانات Docker (تحتوي بيانات مرضى حقيقية —
+# لا تُرفع لـGitHub إطلاقاً، احتفظي بها خارج المستودع)
+db-backups/
 backend/data/audit-log.json
 backend/data/revoked-tokens.json
 backend/data/alerts-log.json

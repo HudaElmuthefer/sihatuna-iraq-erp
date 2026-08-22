@@ -80,22 +80,37 @@ async function resolveMode(feature, requestedMode) {
   return getMode(feature);
 }
 
+// ── لا نكشف أبداً اسم المزوّد "الإنترنت" الفعلي (Gemini/Claude/...) بأي رد ──
+// حتى بحقل provider الخام بالـJSON، لا بس بالنصوص المعروضة بالواجهة — المزوّد
+// الحقيقي يُضبَط بـ.env وقد يتغيّر، فأي مستهلك لهذا الـAPI (الفرونت إند
+// الحالي، أو أي عميل مستقبلي) ما يصير يعتمد على اسم مزوّد محدَّد. 'bot'
+// و'ollama' مسموحان لأنهما مذكوران صراحة بواجهة الاختيار نفسها (AiModeSelect
+// .js: "Bot only" / "Offline AI (Ollama)") — الاسم المخفي فقط هو مزوّد وضع
+// 'online' تحديداً (gemini/anthropic حالياً بـutils/aiProvider.js).
+function sanitizeProvider(provider) {
+  if (!provider || provider === 'bot' || provider === 'ollama') return provider;
+  return 'online';
+}
+
 // نفس شكل callAI()/callAIWithImage() بالضبط ({available, provider, parsed}
 // أو {available:false, ...}) — أي مستدعٍ حالي (interactionAgent.js،
 // invoiceReadProcessor.js، prescriptionAgent.js) يستبدل استدعاء aiProvider
-// المباشر بهذا بلا أي تغيير آخر بمنطقه.
+// المباشر بهذا بلا أي تغيير آخر بمنطقه. حقل provider يُعقَّم هنا قبل رجوعه
+// لأي مستدعٍ — راجعي sanitizeProvider أعلاه.
 async function routeTextCall(feature, systemPrompt, userPrompt, requestedMode) {
   const mode = await resolveMode(feature, requestedMode);
   if (mode === 'bot') return { available: false, provider: 'bot' };
   if (mode === 'offline') return callOllama(systemPrompt, userPrompt);
-  return callAI(systemPrompt, userPrompt);
+  const result = await callAI(systemPrompt, userPrompt);
+  return result.provider ? { ...result, provider: sanitizeProvider(result.provider) } : result;
 }
 
 async function routeImageCall(feature, systemPrompt, userPrompt, imageBase64, mimeType, requestedMode) {
   const mode = await resolveMode(feature, requestedMode);
   if (mode === 'bot') return { available: false, provider: 'bot' };
   if (mode === 'offline') return callOllamaWithImage(systemPrompt, userPrompt, imageBase64, mimeType);
-  return callAIWithImage(systemPrompt, userPrompt, imageBase64, mimeType);
+  const result = await callAIWithImage(systemPrompt, userPrompt, imageBase64, mimeType);
+  return result.provider ? { ...result, provider: sanitizeProvider(result.provider) } : result;
 }
 
 // حالة صادقة لميزة محدَّدة — تحل محل الفحص القديم "Gemini/Claude مُعدّ أو لا"
@@ -109,7 +124,7 @@ async function getFeatureStatus(feature) {
   if (mode === 'bot') return { mode, available: true, provider: 'bot' };
   if (mode === 'offline') return { mode, available: await ollamaAvailable(), provider: 'ollama' };
   const provider = activeProvider();
-  return { mode, available: Boolean(provider), provider };
+  return { mode, available: Boolean(provider), provider: sanitizeProvider(provider) };
 }
 
-module.exports = { getSettings, setSettings, getMode, getFeatureStatus, routeTextCall, routeImageCall, FEATURES, VALID_MODES, DEFAULT_MODE };
+module.exports = { getSettings, setSettings, getMode, getFeatureStatus, routeTextCall, routeImageCall, sanitizeProvider, FEATURES, VALID_MODES, DEFAULT_MODE };

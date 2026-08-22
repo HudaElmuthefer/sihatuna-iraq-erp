@@ -73,6 +73,7 @@ export const SIDEBAR_SUB_TABS = {
     { key: 'logo', labelKey: 'set_tab_logo', adminOnly: true },
     { key: 'appname', labelKey: 'set_tab_appname', adminOnly: true },
     { key: 'hospitals', labelKey: 'set_tab_hospitals', adminOnly: true },
+    { key: 'ai', labelKey: 'set_tab_ai', adminOnly: true },
     { key: 'backups', labelKey: 'set_tab_backups', adminOnly: true },
     { key: 'updates', labelKey: 'set_tab_updates', adminOnly: true },
     { key: 'recycle', labelKey: 'set_tab_recycle', adminOnly: true },

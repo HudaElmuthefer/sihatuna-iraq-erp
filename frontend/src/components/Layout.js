@@ -24,6 +24,9 @@ const GROUP_LABELS = {
   hr:        { ar: 'الموارد البشرية', en: 'Human Resources' },
   projects:  { ar: 'المشاريع', en: 'Projects' },
   documents: { ar: 'الوثائق', en: 'Documents' },
+  medtech:   { ar: 'الخدمات الطبية المساندة', en: 'Medical Support Services' },
+  ops:       { ar: 'العمليات', en: 'Operations' },
+  assets:    { ar: 'الأصول', en: 'Assets' },
   reports:   { ar: 'التقارير', en: 'Reports' },
   // بلا عنوان مجموعة (زي 'core') — عنصر واحد فقط ("الإعدادات")، لا يحتاج ترويسة
   settingsFooter: { ar: '', en: '' },

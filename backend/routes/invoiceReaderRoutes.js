@@ -54,7 +54,7 @@ router.get('/invoice-reader/status', auth, async (req, res, next) => {
 
 router.post('/invoice-reader/read', auth, requirePermission('procurement'), invoiceLimiter, async (req, res, next) => {
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, mode } = req.body;
     if (!image) return res.status(400).json({ message: 'الصورة مطلوبة' });
 
     // The frontend sends a data URL (data:image/jpeg;base64,....) — strip
@@ -69,6 +69,7 @@ router.post('/invoice-reader/read', auth, requirePermission('procurement'), invo
         mimeType: detectedMimeType,
         userId: req.user.id,
         userRole: req.user.role,
+        mode,
       });
     } catch (err) {
       // تعذّر الوصول لطابور المعالجة (Redis غير متاح) — نفس التسمية الصادقة

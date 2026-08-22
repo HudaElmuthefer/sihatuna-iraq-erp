@@ -1,10 +1,11 @@
 // backend/utils/aiProviderRouter.js
 //
-// نقطة توزيع واحدة موحَّدة لكل ميزات الذكاء الاصطناعي الثلاث (قراءة
-// الفواتير، التضارب الدوائي، قراءة الوصفات) — تقرأ اختيار المستخدم المحفوظ
-// بجدول system_settings (لا localStorage — يبقى الاختيار موحّداً بين كل
-// أجهزة/متصفحات المستخدمين، ويقدر الإدمن يديره مركزياً)، وتوزّع كل استدعاء
-// لمصدره الصحيح:
+// نقطة توزيع واحدة موحَّدة لكل ميزات الذكاء الاصطناعي الأربع (قراءة
+// الفواتير، التضارب الدوائي، قراءة الوصفات، التشخيص الذكي) — تقرأ اختيار
+// المستخدم المحفوظ بجدول system_settings (لا localStorage — يبقى الاختيار
+// موحّداً بين كل أجهزة/متصفحات المستخدمين، ويقدر الإدمن يديره مركزياً)
+// كإعداد افتراضي، أو تأخذ اختياراً صريحاً لطلب واحد (requestedMode أدناه —
+// من AiModeSelect.js بالفرونت إند) لو وصل، وتوزّع كل استدعاء لمصدره الصحيح:
 //   'bot'     — بلا أي استدعاء AI إطلاقاً. لتفاعلات الأدوية: يعني الاعتماد
 //               فقط على جدول drug_interactions (راجعي agents/interactionAgent
 //               .js — يتعامل مع رد {available:false} هنا تماماً كما يتعامل
@@ -25,8 +26,8 @@ const { activeProvider, callAI, callAIWithImage } = require('./aiProvider');
 const { ollamaAvailable, callOllama, callOllamaWithImage } = require('./ollamaService');
 
 const SETTINGS_KEY = 'ai_provider_settings';
-// أسماء الميزات الثلاث بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
-const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader'];
+// أسماء الميزات الأربع بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
+const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis'];
 const VALID_MODES = ['bot', 'online', 'offline'];
 // الافتراضي 'online' يطابق تماماً السلوك الحالي قبل هذي الميزة (Gemini أولاً
 // دائماً) — لا يكسر أي نشر موجود لم يُعدِّل الإعداد صراحة بعد.
@@ -68,19 +69,30 @@ async function setSettings(updates) {
   return merged;
 }
 
+// requestedMode: اختيار المستخدم لهذا الطلب تحديداً (من واجهة الصفحة نفسها،
+// راجعي frontend/src/components/AiModeSelect.js) — لو صالح، يتفوّق على
+// الإعداد الافتراضي المحفوظ بجدول system_settings بلا أي قراءة قاعدة بيانات
+// إضافية. أي قيمة غير صالحة (غير مُرسَلة، فارغة، أو نص عشوائي) تُتجاهَل
+// بصمت وترجع للسلوك المعتاد (الإعداد المحفوظ) — لا تكسر أي مستدعٍ قديم لم
+// يُمرِّر هذا الوسيط بعد.
+async function resolveMode(feature, requestedMode) {
+  if (VALID_MODES.includes(requestedMode)) return requestedMode;
+  return getMode(feature);
+}
+
 // نفس شكل callAI()/callAIWithImage() بالضبط ({available, provider, parsed}
 // أو {available:false, ...}) — أي مستدعٍ حالي (interactionAgent.js،
 // invoiceReadProcessor.js، prescriptionAgent.js) يستبدل استدعاء aiProvider
 // المباشر بهذا بلا أي تغيير آخر بمنطقه.
-async function routeTextCall(feature, systemPrompt, userPrompt) {
-  const mode = await getMode(feature);
+async function routeTextCall(feature, systemPrompt, userPrompt, requestedMode) {
+  const mode = await resolveMode(feature, requestedMode);
   if (mode === 'bot') return { available: false, provider: 'bot' };
   if (mode === 'offline') return callOllama(systemPrompt, userPrompt);
   return callAI(systemPrompt, userPrompt);
 }
 
-async function routeImageCall(feature, systemPrompt, userPrompt, imageBase64, mimeType) {
-  const mode = await getMode(feature);
+async function routeImageCall(feature, systemPrompt, userPrompt, imageBase64, mimeType, requestedMode) {
+  const mode = await resolveMode(feature, requestedMode);
   if (mode === 'bot') return { available: false, provider: 'bot' };
   if (mode === 'offline') return callOllamaWithImage(systemPrompt, userPrompt, imageBase64, mimeType);
   return callAIWithImage(systemPrompt, userPrompt, imageBase64, mimeType);

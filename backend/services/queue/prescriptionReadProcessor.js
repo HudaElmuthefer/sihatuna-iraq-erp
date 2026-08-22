@@ -8,9 +8,9 @@ const { readPrescription } = require('../../agents/prescriptionAgent');
 const { logAudit } = require('../../utils/auditLog');
 
 async function processPrescriptionReadJob(jobData) {
-  const { imageBase64, mimeType, lang, userId, userRole } = jobData;
+  const { imageBase64, mimeType, lang, userId, userRole, mode } = jobData;
 
-  const result = await readPrescription(imageBase64, mimeType, lang);
+  const result = await readPrescription(imageBase64, mimeType, lang, mode);
 
   if (result.available) {
     logAudit({

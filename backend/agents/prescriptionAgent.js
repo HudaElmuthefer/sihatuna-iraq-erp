@@ -39,7 +39,7 @@ function buildUserPrompt(ocrText) {
 // readPrescription: يُستدعى مباشرة من services/queue/prescriptionReadProcessor.js
 // (المهمة الخلفية BullMQ) — وأيضاً مصمَّم للاستدعاء المباشر لاحقاً من أي
 // مسار آخر يحتاج نفس السير الكامل (OCR → AI → فحص تضارب) بلا وسيط.
-async function readPrescription(imageBase64, mimeType, lang) {
+async function readPrescription(imageBase64, mimeType, lang, mode) {
   const ocrResult = await extractText(imageBase64);
   if (!ocrResult.available) {
     devLog(`ℹ️  [prescription-agent] PaddleOCR غير متاح (${ocrResult.error}) — نكمل بالصورة وحدها`);
@@ -50,7 +50,7 @@ async function readPrescription(imageBase64, mimeType, lang) {
   // الاستدعاء تبعاً له — راجعي utils/aiProviderRouter.js. فحص التضارب
   // بالخطوة التالية (checkInteractions) يقرأ اختياره الخاص هو (drugInteractions)
   // بشكل مستقل تماماً — قد يختلف عن اختيار استخراج الوصفة نفسها.
-  const aiResult = await routeImageCall('prescriptionReader', SYSTEM_PROMPT_AR, userPrompt, imageBase64, mimeType);
+  const aiResult = await routeImageCall('prescriptionReader', SYSTEM_PROMPT_AR, userPrompt, imageBase64, mimeType, mode);
 
   if (!aiResult.available) {
     return { available: false, error: aiResult.error, provider: aiResult.provider };

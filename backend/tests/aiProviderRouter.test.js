@@ -22,7 +22,7 @@ describe('getSettings / getMode', () => {
   test('لا صف محفوظ إطلاقاً: كل الميزات تعود للافتراضي (online) — يطابق السلوك القديم قبل هذي الميزة', async () => {
     query.mockResolvedValueOnce({ rows: [] });
     const settings = await getSettings();
-    expect(settings).toEqual({ invoiceReader: DEFAULT_MODE, drugInteractions: DEFAULT_MODE, prescriptionReader: DEFAULT_MODE });
+    expect(settings).toEqual({ invoiceReader: DEFAULT_MODE, drugInteractions: DEFAULT_MODE, prescriptionReader: DEFAULT_MODE, aiDiagnosis: DEFAULT_MODE });
   });
 
   test('قيمة محفوظة غير صالحة (تلف بيانات مثلاً): تُستبدَل بالافتراضي بصمت، لا رمي استثناء', async () => {
@@ -44,7 +44,7 @@ describe('setSettings', () => {
 
     const result = await setSettings({ prescriptionReader: 'bot' });
 
-    expect(result).toEqual({ invoiceReader: 'offline', drugInteractions: 'bot', prescriptionReader: 'bot' });
+    expect(result).toEqual({ invoiceReader: 'offline', drugInteractions: 'bot', prescriptionReader: 'bot', aiDiagnosis: 'online' });
     const upsertCall = query.mock.calls[1];
     expect(upsertCall[0]).toContain('ON CONFLICT');
     expect(JSON.parse(upsertCall[1][1])).toEqual(result);
@@ -87,6 +87,19 @@ describe('routeTextCall', () => {
     expect(callAI).not.toHaveBeenCalled();
     expect(result.provider).toBe('ollama');
   });
+
+  test('requestedMode صالح: يتفوّق على الإعداد المحفوظ بلا أي قراءة قاعدة بيانات', async () => {
+    const result = await routeTextCall('drugInteractions', 'sys', 'user', 'bot');
+    expect(result).toEqual({ available: false, provider: 'bot' });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  test('requestedMode غير صالح (نص عشوائي): يُتجاهَل، يرجع للإعداد المحفوظ', async () => {
+    query.mockResolvedValueOnce({ rows: [{ value: { drugInteractions: 'bot' } }] });
+    const result = await routeTextCall('drugInteractions', 'sys', 'user', 'not-a-real-mode');
+    expect(result).toEqual({ available: false, provider: 'bot' });
+    expect(query).toHaveBeenCalled();
+  });
 });
 
 describe('routeImageCall', () => {
@@ -104,6 +117,15 @@ describe('routeImageCall', () => {
     await routeImageCall('prescriptionReader', 'sys', 'user', 'AAAA', 'image/png');
     expect(callOllamaWithImage).toHaveBeenCalledWith('sys', 'user', 'AAAA', 'image/png');
   });
+
+  test('requestedMode صالح (offline) يتفوّق على الإعداد المحفوظ (online)', async () => {
+    callOllamaWithImage.mockResolvedValueOnce({ available: true, provider: 'ollama', parsed: {} });
+    const result = await routeImageCall('invoiceReader', 'sys', 'user', 'AAAA', 'image/jpeg', 'offline');
+    expect(callOllamaWithImage).toHaveBeenCalledWith('sys', 'user', 'AAAA', 'image/jpeg');
+    expect(callAIWithImage).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
+    expect(result.provider).toBe('ollama');
+  });
 });
 
 describe('getFeatureStatus', () => {
@@ -116,6 +138,12 @@ describe('getFeatureStatus', () => {
     query.mockResolvedValueOnce({ rows: [{ value: { invoiceReader: 'online' } }] });
     activeProvider.mockReturnValueOnce('gemini');
     expect(await getFeatureStatus('invoiceReader')).toEqual({ mode: 'online', available: true, provider: 'gemini' });
+  });
+
+  test("ميزة 'aiDiagnosis' مسجَّلة بنفس منطق باقي الميزات الثلاث (لا فحص Gemini/Claude مباشر منفصل)", async () => {
+    query.mockResolvedValueOnce({ rows: [] });
+    activeProvider.mockReturnValueOnce('gemini');
+    expect(await getFeatureStatus('aiDiagnosis')).toEqual({ mode: DEFAULT_MODE, available: true, provider: 'gemini' });
   });
 
   test("mode='offline': يفحص خادم Ollama حياً (لا افتراض)", async () => {

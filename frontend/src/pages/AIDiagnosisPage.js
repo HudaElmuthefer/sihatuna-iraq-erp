@@ -6,6 +6,7 @@ import { api } from '../api';
 import { buildFallback } from '../utils/fallbackDiagnosis';
 import { FaBrain, FaPlus, FaTimes, FaChevronRight, FaExclamationTriangle, FaCheckCircle, FaFileMedical, FaUserMd, FaPhone, FaRobot, FaListAlt } from 'react-icons/fa';
 import PageBanner from '../components/PageBanner';
+import AiModeSelect from '../components/AiModeSelect';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #0f1923 0%, #1a2940 50%, #0d3460 100%)';
 
@@ -69,9 +70,11 @@ export default function AIDiagnosisPage() {
   // أولي محلي — بدل ما يتفاجأ بالنتيجة بعد ما يعبّي النموذج كامل.
   const [aiAvailable, setAiAvailable] = useState(null); // null = لسا يتحقق
   const [referralDoctors, setReferralDoctors] = useState([]);
+  // اختيار مزوّد الذكاء الاصطناعي لهذا التشخيص — راجعي components/AiModeSelect.js
+  const [aiMode, setAiMode] = useState('online');
   useEffect(() => {
     api.get('/ai-diagnosis/status')
-      .then(r => setAiAvailable(Boolean(r?.available)))
+      .then(r => { setAiAvailable(Boolean(r?.available)); if (r?.mode) setAiMode(r.mode); })
       .catch(() => setAiAvailable(false)); // أي خطأ اتصال = نفترض غير متاح، نستخدم النظام المحلي بأمان
     api.get('/ai-diagnosis/referral-doctors')
       .then(list => Array.isArray(list) && setReferralDoctors(list))
@@ -123,7 +126,7 @@ export default function AIDiagnosisPage() {
     // حول أي النظامين استُخدم فعلياً بكل مرة (راجعي result.source بالعرض).
     try {
       const aiResult = await api.post('/ai-diagnosis/analyze', {
-        symptoms: selectedSymptoms, age, gender, duration, filesDescription, lang,
+        symptoms: selectedSymptoms, age, gender, duration, filesDescription, lang, mode: aiMode,
       });
 
       if (aiResult.available) {
@@ -273,7 +276,12 @@ export default function AIDiagnosisPage() {
             <FileUpload label={L('صورة مفراس (CT Scan)','CT Scan Image')} icon="🖥️" file={ctFile} setFile={setCtFile} inputRef={ctRef} accept=".pdf,.jpg,.jpeg,.png" />
           </div>
 
-          <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
+          <div style={{ marginTop: 20 }}>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{L('مزوّد الذكاء الاصطناعي لهذا التشخيص', 'AI provider for this diagnosis')}</label>
+            <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={loading} style={{ maxWidth: 260 }} />
+          </div>
+
+          <div style={{ marginTop: 14, display: 'flex', gap: 12 }}>
             <button className="btn" onClick={() => setStep(1)} style={{ border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)' }}>{lang==='ar'?'رجوع':'Back'}</button>
             <button className="btn btn-primary" onClick={analyze} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <FaBrain /> {L('تحليل بالذكاء الاصطناعي','Analyze with AI')}
@@ -299,8 +307,8 @@ export default function AIDiagnosisPage() {
           {/* ── إصلاح: شارة صادقة توضح مصدر التشخيص الفعلي ──────────────────────
               قبل هذا، الصفحة تدّعي "ذكاء اصطناعي" دائماً بغض النظر عن المصدر
               الحقيقي للنتيجة. الآن نوضح بصراحة تامة: هل هذا رد فعلي من نموذج
-              ذكاء اصطناعي حقيقي (نعرض اسم المزوّد الفعلي: Gemini أو Claude)،
-              أو نظام مطابقة قواعد محلي بسيط. */}
+              ذكاء اصطناعي حقيقي (تسمية عامة "Online AI" بلا ذكر اسم مزوّد محدَّد
+              — يُضبَط عبر .env وقد يتغيّر)، أو نظام مطابقة قواعد محلي بسيط. */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
             padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -309,10 +317,7 @@ export default function AIDiagnosisPage() {
           }}>
             {result.source === 'ai' ? <FaRobot /> : <FaListAlt />}
             {result.source === 'ai'
-              ? L(
-                  `تشخيص بذكاء اصطناعي حقيقي (${result.provider === 'gemini' ? 'Google Gemini' : 'Claude'})`,
-                  `Real AI-powered diagnosis (${result.provider === 'gemini' ? 'Google Gemini' : 'Claude'})`
-                )
+              ? L('تشخيص بذكاء اصطناعي حقيقي (عبر الإنترنت)', 'Real AI-powered diagnosis (Online AI)')
               : L('نظام مساعدة أولية محلي — تشخيص مبني على مطابقة أعراض شائعة، وليس ذكاءً اصطناعياً','Local preliminary assistant — based on common symptom matching, not AI')}
           </div>
 

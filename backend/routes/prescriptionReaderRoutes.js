@@ -36,7 +36,7 @@ router.get('/prescription-reader/status', auth, requirePermission('pharmacy'), a
 
 router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), prescriptionLimiter, async (req, res, next) => {
   try {
-    const { image, mimeType, lang } = req.body;
+    const { image, mimeType, lang, mode } = req.body;
     if (!image) return res.status(400).json({ message: 'الصورة مطلوبة' });
 
     const base64 = image.includes(',') ? image.split(',')[1] : image;
@@ -50,6 +50,7 @@ router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), pr
         lang,
         userId: req.user.id,
         userRole: req.user.role,
+        mode,
       });
     } catch (err) {
       console.error('⚠️  [prescription-reader] تعذّر إضافة مهمة لطابور المعالجة (Redis):', err.message);

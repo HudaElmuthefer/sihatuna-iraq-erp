@@ -55,7 +55,7 @@ async function findDbMatch(drugA, drugB) {
 // دالة الفحص الموحَّدة — تُستدعى مباشرة (drugs: قائمة أسماء أدوية، لغتان
 // مدعومتان فقط بالنصوص المولَّدة لاستدعاء AI عند الحاجة؛ أسماء الأدوية
 // نفسها تُقارَن كما وصلت، بأي لغة).
-async function checkInteractions(drugs, lang) {
+async function checkInteractions(drugs, lang, mode) {
   const pairs = allPairs(drugs);
   const dbInteractions = [];
   const uncoveredPairs = [];
@@ -84,7 +84,7 @@ async function checkInteractions(drugs, lang) {
   // الاستدعاء تبعاً له — راجعي utils/aiProviderRouter.js. وضع 'bot' يرجع
   // {available:false} فوراً بلا أي استدعاء شبكة، فتتعامل معه الأسطر التالية
   // بالضبط كما تتعامل مع "AI غير مُعدّ أصلاً" — لا حاجة لأي منطق خاص هنا.
-  const aiResult = await routeTextCall('drugInteractions', systemPrompt, userPrompt);
+  const aiResult = await routeTextCall('drugInteractions', systemPrompt, userPrompt, mode);
 
   if (aiResult.available) {
     const aiInteractions = aiResult.parsed?.interactions || [];

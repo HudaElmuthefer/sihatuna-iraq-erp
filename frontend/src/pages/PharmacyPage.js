@@ -8,6 +8,7 @@ import { FaFileExcel } from 'react-icons/fa';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import AiModeSelect from '../components/AiModeSelect';
 import { api } from '../api';
 import normalizeLookupKey from '../utils/normalizeLookupKey';
 
@@ -85,6 +86,13 @@ export default function PharmacyPage() {
   // قراءة فاتورة عادية. راجعي backend/agents/prescriptionAgent.js للتفاصيل.
   const [readingPrescription, setReadingPrescription] = useState(false);
   const [prescriptionInteractions, setPrescriptionInteractions] = useState(null); // نتيجة فحص التضارب لآخر وصفة قُرئت، لعرضها بتحذير واضح
+  // ── اختيار مزوّد الذكاء الاصطناعي لهذا الطلب تحديداً (بوت/إنترنت/محلي) ──
+  // يبدأ بالإعداد الافتراضي الذي يديره الإدمن (system_settings)، لكن أي
+  // مستخدم يقدر يغيّره هنا لطلبه الحالي فقط — راجعي components/AiModeSelect.js.
+  const [aiMode, setAiMode] = useState('online');
+  React.useEffect(() => {
+    api.get('/prescription-reader/status').then(r => { if (r?.mode) setAiMode(r.mode); }).catch(() => {});
+  }, []);
 
   const pollPrescriptionJob = async (jobId) => {
     const POLL_INTERVAL_MS = 1500;
@@ -102,14 +110,14 @@ export default function PharmacyPage() {
     setReadingPrescription(true);
     setPrescriptionInteractions(null);
     try {
-      const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang });
+      const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang, mode: aiMode });
       if (submitted.available === false) {
-        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI prescription reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد مزوّد الذكاء الاصطناعي بملف .env', 'AI prescription reading is not enabled — check the AI provider setup in .env'), 'warning');
         return;
       }
       const result = await pollPrescriptionJob(submitted.jobId);
       if (!result.available) {
-        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI prescription reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد مزوّد الذكاء الاصطناعي بملف .env', 'AI prescription reading is not enabled — check the AI provider setup in .env'), 'warning');
         return;
       }
       // تعبئة نموذج الوصفة تلقائياً بما استخرجه الذكاء الاصطناعي — المستخدمة
@@ -126,9 +134,9 @@ export default function PharmacyPage() {
       }));
       if (result.hasInteractions) {
         setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
-        showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذي الوصفة — راجعي التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
+        showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذي الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
       } else {
-        showToast(L('تمت قراءة الوصفة وتعبئة الحقول — راجعي البيانات قبل الحفظ', 'Prescription read and fields filled — review before saving'), 'success');
+        showToast(L('تمت قراءة الوصفة وتعبئة الحقول — راجع البيانات قبل الحفظ', 'Prescription read and fields filled — review before saving'), 'success');
       }
     } catch (err) {
       showToast(L('تعذّرت قراءة الوصفة، جرب صورة أوضح', 'Could not read the prescription, try a clearer image'), 'error');
@@ -764,8 +772,12 @@ export default function PharmacyPage() {
                 </button>
               </div>
               <p style={{ margin:'8px 0 0', fontSize:11, color:'var(--text-secondary)' }}>
-                {L('صوّري أو ارفعي صورة الوصفة الورقية — تُستخرَج الأدوية تلقائياً ويُفحَص التضارب الدوائي بينها', 'Photograph or upload the paper prescription — medicines are extracted automatically and checked for interactions')}
+                {L('صوّر أو ارفع صورة الوصفة الورقية — تُستخرَج الأدوية تلقائياً ويُفحَص التضارب الدوائي بينها', 'Photograph or upload the paper prescription — medicines are extracted automatically and checked for interactions')}
               </p>
+              <div style={{ marginTop:10 }}>
+                <label style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginBottom:4 }}>{L('مزوّد الذكاء الاصطناعي لهذي القراءة', 'AI provider for this reading')}</label>
+                <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={readingPrescription} style={{ maxWidth: 260 }} />
+              </div>
             </div>
 
             {/* ── تحذير تضارب دوائي واضح — يظهر فقط لو القراءة الأخيرة اكتشفت تضارباً ── */}

@@ -180,10 +180,13 @@ export default function SettingsPage() {
   // ── اختيار مزوّد الذكاء الاصطناعي لكل ميزة (بوت/إنترنت/محلي) ────────────────
   // محفوظ بجدول system_settings بالباك إند (لا localStorage) — راجعي
   // backend/utils/aiProviderRouter.js لمنطق التوزيع الفعلي. Bot only (مو
-  // AI إطلاقاً) / Online AI (Gemini/Claude، يحتاج إنترنت) / Offline AI
-  // (Ollama محلي — راجعي backend/utils/ollamaService.js).
-  const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader'];
-  const [aiSettings, setAiSettings] = useState({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online' });
+  // AI إطلاقاً) / Online AI (المزوّد الفعلي يُضبَط بـ.env، لا يُذكَر اسمه
+  // بالواجهة أبداً — راجعي backend/utils/aiProvider.js) / Offline AI
+  // (Ollama محلي — راجعي backend/utils/ollamaService.js). هذا هو الإعداد
+  // الافتراضي فقط الآن — كل صفحة ذكاء اصطناعي (AiModeSelect.js) تسمح لأي
+  // مستخدم بتجاوزه لطلبه الحالي بلا حاجة صلاحية إدمن.
+  const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis'];
+  const [aiSettings, setAiSettings] = useState({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online' });
   const [aiSettingsLoading, setAiSettingsLoading] = useState(false);
   const [aiSettingsSaving, setAiSettingsSaving] = useState(false);
 
@@ -743,7 +746,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn btn-primary" onClick={() => setResetPasswordResult(null)}>{lang === 'ar' ? 'تم، أغلقي' : 'Done, close'}</button>
+                  <button className="btn btn-primary" onClick={() => setResetPasswordResult(null)}>{lang === 'ar' ? 'تم، أغلق' : 'Done, close'}</button>
                 </div>
               </div>
             </div>
@@ -1072,6 +1075,7 @@ export default function SettingsPage() {
                     { feature: 'invoiceReader', labelKey: 'ai_feature_invoice' },
                     { feature: 'drugInteractions', labelKey: 'ai_feature_interactions' },
                     { feature: 'prescriptionReader', labelKey: 'ai_feature_prescription' },
+                    { feature: 'aiDiagnosis', labelKey: 'ai_feature_diagnosis' },
                   ].map(({ feature, labelKey }) => (
                     <div key={feature}>
                       <label className="form-label">{tr(labelKey)}</label>

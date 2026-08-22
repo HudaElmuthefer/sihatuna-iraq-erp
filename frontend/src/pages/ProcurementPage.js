@@ -7,6 +7,7 @@ import { api } from '../api';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
+import AiModeSelect from '../components/AiModeSelect';
 import normalizeLookupKey from '../utils/normalizeLookupKey';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #7c2d12 0%, #c2410c 100%)';
@@ -47,6 +48,11 @@ export default function ProcurementPage() {
   // ما يحتاج أي إعداد إضافي لو Gemini شغّال أصلاً.
   const [readingInvoice, setReadingInvoice] = useState(false);
   const [invoicePreview, setInvoicePreview] = useState(null); // بيانات الفاتورة المُستخرَجة، للمراجعة قبل التطبيق
+  // اختيار مزوّد الذكاء الاصطناعي لهذا الطلب — راجعي components/AiModeSelect.js
+  const [aiMode, setAiMode] = useState('online');
+  React.useEffect(() => {
+    api.get('/invoice-reader/status').then(r => { if (r?.mode) setAiMode(r.mode); }).catch(() => {});
+  }, []);
 
   // دالة مشتركة تقرأ الفاتورة سواء جاءت من ملف مرفوع أو من التقاط كاميرا —
   // الاثنان ينتهيان بنفس الشكل (data URL + نوع الملف)، فلا داعي لتكرار منطق
@@ -72,14 +78,14 @@ export default function ProcurementPage() {
     setReadingInvoice(true);
     setInvoicePreview(null);
     try {
-      const submitted = await api.post('/invoice-reader/read', { image: dataUrl, mimeType });
+      const submitted = await api.post('/invoice-reader/read', { image: dataUrl, mimeType, mode: aiMode });
       if (submitted.available === false) {
-        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI invoice reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد مزوّد الذكاء الاصطناعي بملف .env', 'AI invoice reading is not enabled — check the AI provider setup in .env'), 'warning');
         return;
       }
       const result = await pollInvoiceJob(submitted.jobId);
       if (!result.available) {
-        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI invoice reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        showToast(L('قراءة الفواتير بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد مزوّد الذكاء الاصطناعي بملف .env', 'AI invoice reading is not enabled — check the AI provider setup in .env'), 'warning');
       } else {
         setInvoicePreview(result);
       }
@@ -479,6 +485,10 @@ export default function ProcurementPage() {
                 <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary)' }}>
                   {L('صوّر أو ارفع فاتورة المورد، تُعبّأ الحقول تلقائياً، راجع البيانات المستخرَجة قبل التطبيق.', 'Photograph or upload the supplier invoice — fields fill in automatically. Review the extracted data before applying.')}
                 </p>
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{L('مزوّد الذكاء الاصطناعي لهذي القراءة', 'AI provider for this reading')}</label>
+                  <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={readingInvoice} style={{ maxWidth: 260 }} />
+                </div>
 
                 {invoicePreview && (
                   <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border-color, #d1d5db)' }}>

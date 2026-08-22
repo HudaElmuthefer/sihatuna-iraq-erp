@@ -13,14 +13,15 @@
 // للفرونت إند كأي مسار API عادي بالنظام. هذا هو النمط الصحيح والوحيد الآمن
 // لاستخدام أي API خارجي من تطبيق ويب بأي حال.
 //
-// ── مزوّدان مدعومان — Gemini (مجاني) أولوية، Claude (مدفوع) بديل ──────────────
-// Google Gemini عنده طبقة مجانية دائمة (بدون بطاقة ائتمان، بلا حد زمني)
-// لنماذج Flash — مناسبة تماماً لحجم استخدام مستشفى واحد. لو GEMINI_API_KEY
-// مُعدّ، يُستخدم أولاً (مجاني بالكامل). لو ما مُعدّ لكن ANTHROPIC_API_KEY
-// موجود، يُستخدم Claude بدلاً عنه (مدفوع، جودة أعلى غالباً). لو ولا وحد منهم
-// مُعدّ، يرجع available:false والفرونت إند يستخدم النظام المحلي الاحتياطي
-// (buildFallback) **مع تسمية صادقة توضح إنه نظام مساعدة أولية مو ذكاء
-// اصطناعي حقيقي**. ما فيه أي كسر أو خطأ بأي حالة من الثلاث.
+// ── يمر الآن عبر aiProviderRouter.js كباقي ميزات الذكاء الاصطناعي الثلاث ────
+// كان هذا الملف يستدعي utils/aiProvider.js (Gemini/Claude) مباشرة بلا أي
+// اختيار bot/offline. الآن 'aiDiagnosis' ميزة رابعة مسجَّلة بـ
+// aiProviderRouter.js: 'online' (نفس المزوّد المُعدّ فعلياً بـ.env، لا يُذكَر
+// اسمه بالواجهة أبداً)، 'offline' (Ollama محلي)، أو 'bot' (يرجع
+// available:false فوراً — الفرونت إند يستخدم النظام المحلي الاحتياطي
+// buildFallback **مع تسمية صادقة توضح إنه نظام مساعدة أولية مو ذكاء اصطناعي
+// حقيقي**، بالضبط نفس سلوكه القديم لو ما فيه أي مفتاح API مُعدّ). ما فيه أي
+// كسر أو خطأ بأي حالة من الثلاث.
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -29,7 +30,7 @@ const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../config/redisRateLimitStore');
 const { logAudit } = require('../utils/auditLog');
-const { activeProvider, callAI } = require('../utils/aiProvider');
+const { getFeatureStatus, routeTextCall } = require('../utils/aiProviderRouter');
 
 const router = express.Router();
 
@@ -78,22 +79,30 @@ function buildPrompts(lang, symptoms, age, gender, duration, filesDescription) {
   return { systemPrompt, userPrompt };
 }
 
-// يخبر الفرونت إند فوراً هل الذكاء الاصطناعي الحقيقي متاح أصلاً (وأي مزوّد) —
-// يُستخدم لعرض تسمية صادقة بالواجهة دون الحاجة لمحاولة طلب فعلي أولاً.
-router.get('/ai-diagnosis/status', auth, requirePermission('ai-diagnosis'), (req, res) => {
-  const provider = activeProvider();
-  res.json({ available: Boolean(provider), provider });
+// يخبر الفرونت إند فوراً هل الذكاء الاصطناعي الحقيقي متاح أصلاً (وبأي وضع:
+// bot/online/offline) — يُستخدم لعرض تسمية صادقة بالواجهة، وليملأ اختيار
+// المستخدم الافتراضي بقائمة AiModeSelect.js قبل أول تحليل. راجعي
+// utils/aiProviderRouter.js — نفس نمط باقي ميزات الذكاء الاصطناعي الثلاث
+// بالضبط (مو فحص Gemini/Claude مباشر كما كان سابقاً).
+router.get('/ai-diagnosis/status', auth, requirePermission('ai-diagnosis'), async (req, res, next) => {
+  try {
+    res.json(await getFeatureStatus('aiDiagnosis'));
+  } catch (err) { next(err); }
 });
 
 router.post('/ai-diagnosis/analyze', auth, requirePermission('ai-diagnosis'), aiLimiter, async (req, res, next) => {
   try {
-    const { symptoms, age, gender, duration, filesDescription, lang } = req.body;
+    const { symptoms, age, gender, duration, filesDescription, lang, mode } = req.body;
     if (!Array.isArray(symptoms) || symptoms.length === 0) {
       return res.status(400).json({ message: 'يجب اختيار عرض واحد على الأقل' });
     }
 
     const { systemPrompt, userPrompt } = buildPrompts(lang, symptoms, age, gender, duration, filesDescription);
-    const result = await callAI(systemPrompt, userPrompt);
+    // routeTextCall تقرأ اختيار المستخدم المحفوظ (bot/online/offline) وتوزّع
+    // الاستدعاء تبعاً له، أو تستخدم mode (اختيار هذا الطلب تحديداً) لو وصل.
+    // وضع 'bot' يرجع {available:false} فوراً — الفرونت إند يتعامل معه تماماً
+    // كما يتعامل مع "لا مفتاح API مُعدّ" أصلاً: يستخدم buildFallback المحلي.
+    const result = await routeTextCall('aiDiagnosis', systemPrompt, userPrompt, mode);
 
     if (!result.available) {
       if (result.error) console.error(`⚠️  [ai-diagnosis] فشل استدعاء ${result.provider}:`, result.error);

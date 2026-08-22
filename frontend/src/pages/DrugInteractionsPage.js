@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { FaPlus, FaTimes, FaExclamationTriangle, FaCheckCircle, FaSearch, FaRobot, FaListAlt } from 'react-icons/fa';
 import PageBanner from '../components/PageBanner';
+import AiModeSelect from '../components/AiModeSelect';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #4c0519 0%, #9f1239 100%)';
 
@@ -37,7 +38,6 @@ export default function DrugInteractionsPage() {
   const [checked, setChecked] = useState(false);
   const [checking, setChecking] = useState(false);
   const [resultSource, setResultSource] = useState(null); // 'db' | 'ai' | 'mixed' | 'fallback'
-  const [resultProvider, setResultProvider] = useState(null);
   const [resultIncomplete, setResultIncomplete] = useState(false);
 
   // ── إصلاح: فحص صادق لتوفّر الذكاء الاصطناعي الحقيقي ────────────────────────
@@ -45,9 +45,11 @@ export default function DrugInteractionsPage() {
   // حتى يعرف المستخدم من البداية هل الفحص القادم بذكاء اصطناعي حقيقي أو
   // بجدول محلي محدود بـ5 تضاربات معروفة بس.
   const [aiAvailable, setAiAvailable] = useState(null);
+  // اختيار مزوّد الذكاء الاصطناعي لهذا الفحص — راجعي components/AiModeSelect.js
+  const [aiMode, setAiMode] = useState('online');
   useEffect(() => {
     api.get('/drug-interactions/status')
-      .then(r => setAiAvailable(Boolean(r?.available)))
+      .then(r => { setAiAvailable(Boolean(r?.available)); if (r?.mode) setAiMode(r.mode); })
       .catch(() => setAiAvailable(false));
   }, []);
 
@@ -75,7 +77,7 @@ export default function DrugInteractionsPage() {
     });
 
     try {
-      const aiResult = await api.post('/drug-interactions/check', { drugs: drugNames, lang });
+      const aiResult = await api.post('/drug-interactions/check', { drugs: drugNames, lang, mode: aiMode });
       if (aiResult.available) {
         // توحيد شكل نتيجة الذكاء الاصطناعي لتطابق شكل العرض (effect/recommendation
         // نصوص مباشرة بلغة الطلب، مو أزواج ثنائية اللغة زي الجدول المحلي)
@@ -87,7 +89,6 @@ export default function DrugInteractionsPage() {
         }));
         setResults(normalized);
         setResultSource(aiResult.source); // 'db' | 'ai' | 'mixed' — راجعي agents/interactionAgent.js
-        setResultProvider(aiResult.provider);
         setResultIncomplete(Boolean(aiResult.incomplete));
         setChecked(true);
         setChecking(false);
@@ -111,7 +112,6 @@ export default function DrugInteractionsPage() {
     });
     setResults(found);
     setResultSource('fallback');
-    setResultProvider(null);
     setResultIncomplete(false);
     setChecked(true);
     setChecking(false);
@@ -171,11 +171,16 @@ export default function DrugInteractionsPage() {
               </div>
             )}
 
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{lang==='ar'?'مزوّد الذكاء الاصطناعي لهذا الفحص':'AI provider for this check'}</label>
+              <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={checking} style={{ maxWidth: 260 }} />
+            </div>
+
             <button
               className="btn btn-primary"
               onClick={checkInteractions}
               disabled={checking}
-              style={{ width: '100%', marginTop: 16, padding: '12px' }}
+              style={{ width: '100%', marginTop: 12, padding: '12px' }}
             >
               {checking ? `⏳ ${lang==='ar'?'جاري الفحص...':'Checking...'}` : `🔍 ${tr('drug_check')}`}
             </button>
@@ -218,11 +223,10 @@ export default function DrugInteractionsPage() {
                   بلا AI)، 'ai' = كل النتائج من ذكاء اصطناعي، 'mixed' = جزء من كل مصدر،
                   'fallback' = تعذّر الوصول للباك إند بالكامل (جدول العميل الاحتياطي). */}
               {(() => {
-                const providerName = resultProvider === 'gemini' ? 'Google Gemini' : 'Claude';
                 const badges = {
                   db: { icon: <FaListAlt />, color: '#0f766e', bg: 'rgba(15,118,110,0.12)', ar: 'نتيجة من قاعدة تفاعلات دوائية موثوقة (فورية، بلا ذكاء اصطناعي)', en: 'Result from a trusted drug interaction database (instant, no AI needed)' },
-                  ai: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: `فحص بذكاء اصطناعي حقيقي (${providerName})`, en: `Real AI-powered check (${providerName})` },
-                  mixed: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: `نتيجة مدمجة: قاعدة بيانات موثوقة + ذكاء اصطناعي (${providerName})`, en: `Combined result: trusted database + AI (${providerName})` },
+                  ai: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: 'فحص بذكاء اصطناعي حقيقي (عبر الإنترنت)', en: 'Real AI-powered check (Online AI)' },
+                  mixed: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: 'نتيجة مدمجة: قاعدة بيانات موثوقة + ذكاء اصطناعي (عبر الإنترنت)', en: 'Combined result: trusted database + AI (Online AI)' },
                   fallback: { icon: <FaListAlt />, color: '#6b7280', bg: 'rgba(107,114,128,0.12)', ar: 'جدول محلي محدود (5 تضاربات معروفة بس) — تعذّر الوصول للخادم', en: 'Limited local table (5 known interactions only) — could not reach the server' },
                 };
                 const b = badges[resultSource] || badges.fallback;

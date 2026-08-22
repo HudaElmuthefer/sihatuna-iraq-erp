@@ -40,7 +40,7 @@ function buildUserPrompt(ocrText) {
 }
 
 async function processInvoiceReadJob(jobData) {
-  const { imageBase64, mimeType, userId, userRole } = jobData;
+  const { imageBase64, mimeType, userId, userRole, mode } = jobData;
 
   const ocrResult = await extractText(imageBase64);
   if (!ocrResult.available) {
@@ -49,8 +49,9 @@ async function processInvoiceReadJob(jobData) {
 
   const userPrompt = buildUserPrompt(ocrResult.available ? ocrResult.text : null);
   // routeImageCall تقرأ اختيار المستخدم المحفوظ (bot/online/offline) وتوزّع
-  // الاستدعاء تبعاً له — راجعي utils/aiProviderRouter.js.
-  const result = await routeImageCall('invoiceReader', SYSTEM_PROMPT_AR, userPrompt, imageBase64, mimeType);
+  // الاستدعاء تبعاً له، أو تستخدم mode (اختيار هذا الطلب تحديداً من واجهة
+  // الصفحة) لو وصل — راجعي utils/aiProviderRouter.js.
+  const result = await routeImageCall('invoiceReader', SYSTEM_PROMPT_AR, userPrompt, imageBase64, mimeType, mode);
 
   if (result.available) {
     logAudit({ module: 'invoice-reader', action: 'read', userId, userRole, after: { provider: result.provider, itemsCount: result.parsed?.items?.length || 0, ocrUsed: ocrResult.available } });

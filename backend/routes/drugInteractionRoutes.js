@@ -44,12 +44,12 @@ router.get('/drug-interactions/status', auth, requirePermission('drug-interactio
 
 router.post('/drug-interactions/check', auth, requirePermission('drug-interactions'), aiLimiter, async (req, res, next) => {
   try {
-    const { drugs, lang } = req.body;
+    const { drugs, lang, mode } = req.body;
     if (!Array.isArray(drugs) || drugs.length < 2) {
       return res.status(400).json({ message: 'يجب اختيار دوائين على الأقل' });
     }
 
-    const result = await checkInteractions(drugs, lang);
+    const result = await checkInteractions(drugs, lang, mode);
 
     if (!result.available) {
       return res.json({ available: false });

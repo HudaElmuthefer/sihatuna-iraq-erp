@@ -1,23 +1,30 @@
 # تشغيل SIHATUNA IRAQ ERP عبر Docker
 
-هذا الدليل يخص **المرحلة الثالثة** (containerization) — تشغيل النظام كاملاً
-(الباك إند + عامل قراءة الفواتير بالذكاء الاصطناعي + نسخة إنتاج من
-الفرونت إند + PostgreSQL + Redis) عبر Docker Compose، بدل التثبيت المباشر
-على الجهاز (`start.bat`).
+هذا الدليل يخص **المرحلة الثالثة** (containerization) **+ المرحلة الرابعة**
+(Nginx كـreverse proxy) — تشغيل النظام كاملاً (الباك إند + عامل قراءة
+الفواتير بالذكاء الاصطناعي + نسخة إنتاج من الفرونت إند + PostgreSQL +
+Redis + Nginx) عبر Docker Compose، بدل التثبيت المباشر على الجهاز
+(`start.bat`).
 
 ## البنية
 
-ثلاث خدمات بالضبط (`docker-compose.yml`):
+أربع خدمات بالضبط (`docker-compose.yml`):
 
-| الخدمة | الوصف | المنافذ |
+| الخدمة | الوصف | المنافذ المكشوفة على الجهاز المضيف |
 |---|---|---|
-| `app` | حاوية واحدة تشغّل PM2 داخلياً — الباك إند بـcluster mode، عامل BullMQ (`sihatuna-worker`)، وخادم ملفات ثابتة للفرونت إند المبني | 8000 (API)، 3000 (الواجهة)، 2575 (HL7) |
-| `postgres` | الصورة الرسمية `postgres:18` | 5432 |
-| `redis` | الصورة الرسمية `redis:7-alpine` (AOF مفعَّل) | 6379 |
+| `nginx` | نقطة الدخول الوحيدة — يقدّم الفرونت إند مباشرة، يوجّه `/api` و`/uploads` لـ`app` داخلياً (راجعي `nginx/nginx.conf`) | **80** |
+| `app` | حاوية واحدة تشغّل PM2 داخلياً — الباك إند بـcluster mode، عامل BullMQ (`sihatuna-worker`) | 2575 (HL7 فقط — بروتوكول TCP خام لأجهزة مختبر فعلية، لا يمرّ عبر Nginx) |
+| `postgres` | الصورة الرسمية `postgres:18` | لا شيء — داخلي فقط |
+| `redis` | الصورة الرسمية `redis:7-alpine` (AOF مفعَّل) | لا شيء — داخلي فقط |
 
 **حاوية تطبيق واحدة، لا نسخ متعددة (replicas)** — قرار مقصود، مطابق تماماً
 لبنية PM2 cluster mode المستخدَمة أصلاً بالنشر المحلي، معبّأة بحاوية واحدة
-بدل التثبيت المباشر.
+بدل التثبيت المباشر. Nginx هنا ليس لموازنة حمل بين نسخ متعددة (ما فيه
+أصلاً) — فقط يقدّم الفرونت إند بكفاءة (أسرع من خادم Express لملفات ثابتة)،
+ويعزل `app`/`postgres`/`redis` تماماً عن الجهاز المضيف (تحسين أمني حقيقي —
+لا "ports:" عليهم بعد الآن). HTTP فقط حالياً (الوصول عن بُعد مخطَّط له عبر
+VPN/WireGuard لا HTTPS عام) — راجعي التعليق أسفل `nginx/nginx.conf` لخطوات
+إضافة SSL لاحقاً.
 
 ## المتطلبات
 
@@ -52,14 +59,15 @@ docker compose up -d
 (`backend/migrations-sql/*.sql`) لم يكن مشمولاً بذاك الملف — كل هذا يحصل
 تلقائياً، لا خطوة يدوية.
 
-بعد اكتمال الإقلاع (`docker compose ps` يُظهر `app` بحالة `healthy`):
-- الواجهة: http://localhost:3000
-- الـ API مباشرة: http://localhost:8000/api/health
+بعد اكتمال الإقلاع (`docker compose ps` يُظهر `app` و`nginx` بحالة `healthy`/`Up`):
+- الواجهة: http://localhost
+- الـ API: http://localhost/api/health (عبر Nginx — `app` نفسها لم تعد مكشوفة مباشرة على الجهاز المضيف)
 
 ## عرض السجلات (logs)
 
 ```bash
-docker compose logs -f app          # كل عمليات PM2 الثلاث داخل حاوية app معاً
+docker compose logs -f app          # عمليتا PM2 (الباك إند + العامل) داخل حاوية app معاً
+docker compose logs -f nginx
 docker compose logs -f postgres
 docker compose logs -f redis
 ```
@@ -70,7 +78,6 @@ docker compose logs -f redis
 ```bash
 docker compose exec app pm2 logs sihatuna-backend --lines 50
 docker compose exec app pm2 logs sihatuna-worker --lines 50
-docker compose exec app pm2 logs sihatuna-frontend --lines 50
 ```
 
 ## تشغيل أوامر لمرة واحدة داخل حاوية app
@@ -83,7 +90,7 @@ docker compose exec app sh -c "cd backend && node run-migrations.js"
 # فتح shell تفاعلي داخل الحاوية
 docker compose exec app sh
 
-# حالة عمليات PM2 الثلاث
+# حالة عمليتَي PM2 (الباك إند بـcluster mode + العامل)
 docker compose exec app pm2 status
 
 # إعادة تشغيل عملية واحدة فقط بدون إعادة تشغيل الحاوية كاملة
@@ -108,6 +115,7 @@ docker compose down -v     # ⚠️ يحذف كل شيء بما فيها الب�
 | `backend_uploads` | مستندات مرفوعة (وثائق موظفين، مرفقات طبية...) |
 | `backend_backups` | نسخ النظام الاحتياطية التلقائية |
 | `backend_logs` | سجلات PM2 |
+| `frontend_static` | نسخة الفرونت إند الثابتة المبنية — تُنسخ إليها من حاوية app بكل إقلاع (تعكس دائماً آخر صورة مبنية)، تقدّمها حاوية nginx للقراءة فقط |
 
 بدون `backend_data` تحديداً، أي إعادة تشغيل للحاوية كانت سترجع `db.json`
 لحالته الافتراضية بصورة البناء (تمسح أي مستخدم أو تعديل حقيقي أُضيف

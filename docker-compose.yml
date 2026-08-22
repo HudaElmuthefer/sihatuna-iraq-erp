@@ -1,9 +1,14 @@
-# docker-compose.yml — SIHATUNA IRAQ ERP (المرحلة الثالثة: containerization)
+# docker-compose.yml — SIHATUNA IRAQ ERP (المرحلة الثالثة: containerization،
+# + المرحلة الرابعة: Nginx كـreverse proxy)
 #
-# ثلاث خدمات بالضبط، بقرار مقصود: حاوية تطبيق واحدة (app) — لا نسخ متعددة
+# أربع خدمات بالضبط، بقرار مقصود: حاوية تطبيق واحدة (app) — لا نسخ متعددة
 # (replicas) — تشغّل الباك إند بـPM2 cluster mode داخلياً (عدة عمليات
-# worker بنفس الحاوية، راجعي ecosystem.docker.config.js)، بالإضافة لخدمتي
-# قاعدة بيانات مُدارتين (postgres، redis) بصورهما الرسمية.
+# worker بنفس الحاوية، راجعي ecosystem.docker.config.js)، خدمتا قاعدة
+# بيانات مُدارتان (postgres، redis) بصورهما الرسمية، وNginx كنقطة دخول
+# وحيدة على المنفذ 80 (راجعي شرح كامل بأعلى nginx/nginx.conf) — ليس
+# لموازنة حمل بين نسخ متعددة (ما فيه أصلاً)، فقط يقدّم الفرونت إند الثابت
+# بكفاءة، يوجّه /api و/uploads داخلياً لـapp، ويعزل app/postgres/redis
+# تماماً عن الجهاز المضيف (لا "ports:" عليهم بعد الآن — تحسين أمني حقيقي).
 #
 # ── متغيرات البيئة ────────────────────────────────────────────────────────
 # تُقرأ من ملف .env بجذر المشروع (بجانب هذا الملف تحديداً — docker compose
@@ -41,12 +46,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    ports:
-      # اختياري — يفتح المنفذ لجهازك المضيف أيضاً (مثلاً pgAdmin مباشرة).
-      # احذفي هذا السطر لو تريدين قاعدة البيانات معزولة تماماً داخل شبكة
-      # Docker الداخلية (app تصل لها دائماً عبر اسم الخدمة "postgres"، بغض
-      # النظر عن وجود هذا التعريف أو لا).
-      - "${PG_PORT:-5432}:5432"
+    # ── إصلاح أمني (المرحلة الرابعة: Nginx) ──────────────────────────────────
+    # لا "ports:" هنا بعد الآن — قاعدة البيانات معزولة تماماً داخل شبكة
+    # Docker الداخلية، غير قابلة للوصول من الجهاز المضيف أو أي شبكة خارجية
+    # إطلاقاً. app يصل لها دائماً عبر اسم الخدمة "postgres" داخلياً (بغض
+    # النظر عن أي port mapping)، فهذا لا يكسر شيئاً بعمل التطبيق نفسه —
+    # يمنع فقط الوصول المباشر من خارج شبكة compose (مثل pgAdmin على
+    # الجهاز المضيف مباشرة). لو احتجتِ ذاك الوصول مؤقتاً للتشخيص، أضيفي
+    # "ports: [\"${PG_PORT:-5432}:5432\"]" يدوياً هنا ثم أزيليه بعد الانتهاء.
 
   # ══════════════════════════════════════════════════════════════════════
   redis:
@@ -67,10 +74,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
-    ports:
-      # اختياري (نفس ملاحظة postgres أعلاه) — يفيد للفحص اليدوي من الجهاز
-      # المضيف عبر redis-cli مباشرة.
-      - "6379:6379"
+    # ── إصلاح أمني (المرحلة الرابعة: Nginx) — لا "ports:" هنا أيضاً، نفس
+    # سبب postgres أعلاه بالضبط. للفحص اليدوي عبر redis-cli من الجهاز
+    # المضيف مؤقتاً: docker compose exec redis redis-cli
 
   # ══════════════════════════════════════════════════════════════════════
   app:
@@ -107,9 +113,14 @@ services:
       PG_PASSWORD: ${PG_PASSWORD:?يجب تحديد PG_PASSWORD بملف .env}
       PG_DATABASE: ${PG_DATABASE:-sihatuna_iraq}
       REDIS_URL: redis://redis:6379
+    # ── إصلاح أمني (المرحلة الرابعة: Nginx) ──────────────────────────────────
+    # لا "8000:8000" ولا "3000:3000" هنا بعد الآن — Nginx (خدمة nginx
+    # أدناه) صار نقطة الدخول الوحيدة على المنفذ 80؛ يصل لهذي الحاوية داخلياً
+    # عبر اسم الخدمة "app" فقط (شبكة Docker الداخلية)، بلا أي تعريض مباشر
+    # للجهاز المضيف. منفذ 2575 (HL7) يبقى مكشوفاً مباشرة عمداً — بروتوكول
+    # TCP خام لأجهزة مختبر فعلية بالشبكة، لا حركة ويب يقدر Nginx يفهمها أو
+    # يوجّهها أصلاً (راجعي nginx/nginx.conf).
     ports:
-      - "8000:8000" # الـ API
-      - "3000:3000" # الفرونت إند (نسخة الإنتاج المبنية)
       - "2575:2575" # خادم HL7 (نتائج المختبر) — احذفي لو الميزة غير مستخدَمة
     volumes:
       # ── بيانات دائمة يجب ألا تُفقَد عند إعادة تشغيل الحاوية ──────────────
@@ -122,12 +133,36 @@ services:
       - backend_uploads:/app/backend/uploads
       - backend_backups:/app/backend/backups
       - backend_logs:/app/backend/logs
+      # نسخة الفرونت إند الثابتة المبنية — تُنسخ هنا بكل إقلاع (راجعي CMD
+      # بـDockerfile)، تشاركها حاوية nginx للقراءة فقط بالأسفل.
+      - frontend_static:/shared/frontend
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ══════════════════════════════════════════════════════════════════════
+  # المرحلة الرابعة: Nginx كـreverse proxy — نقطة الدخول الوحيدة على الجهاز
+  # المضيف (راجعي شرح كامل بأعلى nginx/nginx.conf).
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        # service_healthy لا service_started — يضمن إن حاوية app أنجزت
+        # نسخ الفرونت إند لـvolume المشترك (خطوة أولى بالـCMD، قبل حتى
+        # فحص الجاهزية نفسه) وإن الـAPI فعلياً جاهز، قبل ما يستقبل Nginx
+        # أي طلب حقيقي — بنفس نمط انتظار app لـpostgres/redis أعلاه تماماً.
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # نفس الـvolume المشترك مع app — للقراءة فقط هنا (Nginx لا يكتب
+      # فرونت إند أبداً، فقط يقدّمه).
+      - frontend_static:/usr/share/nginx/html:ro
 
 volumes:
   postgres_data:
@@ -136,3 +171,4 @@ volumes:
   backend_uploads:
   backend_backups:
   backend_logs:
+  frontend_static:

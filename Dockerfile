@@ -26,11 +26,14 @@ COPY frontend/ ./
 
 # REACT_APP_API_URL تُقرأ وقت البناء فقط (Create React App تُضمّنها مباشرة
 # داخل ملفات JS النهائية، لا يمكن تغييرها بعد البناء إلا بإعادة بناء كاملة) —
-# القيمة الافتراضية هنا (localhost:8000) تعمل فقط لو المتصفح نفسه على نفس
-# جهاز/سيرفر Docker. لو النشر يخدم أجهزة أخرى بالشبكة (عنوان IP أو دومين
-# حقيقي)، مرّري القيمة الصحيحة وقت البناء:
-#   docker compose build --build-arg REACT_APP_API_URL=http://192.168.1.10:8000/api
-ARG REACT_APP_API_URL=http://localhost:8000/api
+# إصلاح: القيمة الافتراضية صارت مساراً نسبياً ('/api') لا عنواناً كاملاً،
+# لأن Nginx (راجعي nginx/nginx.conf) صار نقطة الدخول الوحيدة على المنفذ 80؛
+# الفرونت إند والـAPI على نفس الأصل تماماً بغض النظر عن عنوان/دومين السيرفر
+# الفعلي، فلا حاجة لتضمين عنوان مطلق هنا إطلاقاً بالحالة العادية. مرّري
+# عنواناً كاملاً هنا فقط لو نشرتِ الفرونت إند والـAPI على أصلين مختلفين
+# تماماً بمستقبل بعيد:
+#   docker compose build --build-arg REACT_APP_API_URL=http://api.example.com/api
+ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 
@@ -115,13 +118,23 @@ COPY ecosystem.docker.config.js ecosystem.config.js ./
 RUN mkdir -p backend/logs backend/uploads backend/backups backend/data
 
 ENV NODE_ENV=production
-# 8000: الـ API. 3000: الفرونت إند (الملفات الثابتة). 2575: خادم HL7
-# (نتائج المختبر) — يحتاج الوصول له من أجهزة المختبر الفعلية بالشبكة لو
-# استُخدمت هذي الميزة.
-EXPOSE 8000 3000 2575
+# 8000: الـ API. 2575: خادم HL7 (نتائج المختبر) — يحتاج الوصول له من أجهزة
+# المختبر الفعلية بالشبكة لو استُخدمت هذي الميزة. لا EXPOSE لمنفذ فرونت إند
+# منفصل بعد الآن — إصلاح: Nginx يقدّم الملفات الثابتة مباشرة من volume
+# مشترك (راجعي خطوة النسخ بالـCMD أدناه وخدمة nginx بـdocker-compose.yml)،
+# لا عملية Node.js منفصلة (serveFrontend.js حُذف، وnginx أسرع وأخف بكثير
+# لخدمة ملفات ثابتة من خادم Express).
+EXPOSE 8000 2575
 
 # ── نقطة البدء الفعلية ──────────────────────────────────────────────────────
-# 1) node run-migrations.js: نفس الخطوة اللي يسويها start.bat تلقائياً بكل
+# 1) نسخ نسخة الفرونت إند المبنية (المرحلة الأولى أعلاه) لمجلد مشترك (volume
+#    بـdocker-compose.yml، تشاركه حاوية nginx للقراءة فقط) — إصلاح: بما إن
+#    هذا الـvolume دائم (persistent) عبر إعادة تشغيل الحاوية، النسخ هنا
+#    صريح بكل إقلاع (لا اعتماد على تعبئة Docker التلقائية للـvolume الفارغ
+#    أول مرة فقط) — يضمن إن أي صورة جديدة (بعد docker compose build فعلي)
+#    تُحدِّث محتوى الـvolume المشترك فوراً بالإقلاع التالي، بدل الاحتفاظ
+#    بنسخة فرونت إند قديمة من صورة سابقة بصمت.
+# 2) node run-migrations.js: نفس الخطوة اللي يسويها start.bat تلقائياً بكل
 #    نشر محلي — يطبّق أي ترحيل SQL لم يُطبَّق بعد بجدول schema_migrations
 #    (كل ملفات migrations-sql/*.sql idempotent فعلياً — IF NOT EXISTS/ON
 #    CONFLICT DO NOTHING بكل واحد منها، تأكدنا من هذا صراحة)، فتشغيلها هنا
@@ -131,8 +144,8 @@ EXPOSE 8000 3000 2575
 #    بالكامل فعلياً مع migrations-sql (تحقّقنا: جدول medical_codes مثلاً
 #    غائب منه تماماً) — بدون هذي الخطوة، قاعدة بيانات جديدة بالكامل (أول
 #    تشغيل Docker) تفتقد جداول حقيقية يعتمد عليها التطبيق.
-# 2) pm2-runtime (لا pm2 العادي): مصمَّم خصيصاً للعمل كعملية PID 1 بالمقدّمة
+# 3) pm2-runtime (لا pm2 العادي): مصمَّم خصيصاً للعمل كعملية PID 1 بالمقدّمة
 #    داخل حاويات Docker (يبقى بالمقدّمة ويمرّر إشارات النظام SIGTERM/SIGINT
 #    بشكل صحيح لكل العمليات الفرعية) — pm2 العادي يعمل كـdaemon بالخلفية
 #    ويخرج فوراً، فتظن Docker إن الحاوية انتهت وتُغلقها مباشرة.
-CMD ["sh", "-c", "cd backend && node run-migrations.js && cd .. && pm2-runtime start ecosystem.docker.config.js"]
+CMD ["sh", "-c", "mkdir -p /shared/frontend && cp -rf /app/frontend/build/. /shared/frontend/ && cd backend && node run-migrations.js && cd .. && pm2-runtime start ecosystem.docker.config.js"]

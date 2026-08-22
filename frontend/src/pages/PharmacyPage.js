@@ -78,6 +78,131 @@ export default function PharmacyPage() {
   const [rxForm, setRxForm]           = useState(EMPTY_RX);
   const [newItem, setNewItem]         = useState(EMPTY_ITEM);
 
+  // ── قارئ الوصفات بالذكاء الاصطناعي (OCR + AI + فحص تضارب دوائي) ─────────
+  // مماثل تماماً لقارئ الفواتير بصفحة المشتريات (ProcurementPage.js) — نفس
+  // نمط: رفع ملف → مهمة خلفية BullMQ (POST ثم استعلام دوري) لأن السير
+  // الكامل هنا (OCR + AI + فحص تضارب لكل زوج أدوية) قد يأخذ وقتاً أطول من
+  // قراءة فاتورة عادية. راجعي backend/agents/prescriptionAgent.js للتفاصيل.
+  const [readingPrescription, setReadingPrescription] = useState(false);
+  const [prescriptionInteractions, setPrescriptionInteractions] = useState(null); // نتيجة فحص التضارب لآخر وصفة قُرئت، لعرضها بتحذير واضح
+
+  const pollPrescriptionJob = async (jobId) => {
+    const POLL_INTERVAL_MS = 1500;
+    const MAX_ATTEMPTS = 80; // ~2 دقيقة كحد أقصى — أطول من قارئ الفواتير عمداً (OCR + AI + فحص تضارب مجتمعين)
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const status = await api.get(`/prescription-reader/jobs/${jobId}`);
+      if (status.state === 'completed') return status;
+      if (status.state === 'failed') throw new Error(status.error || 'prescription read job failed');
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+    throw new Error('prescription read job timed out');
+  };
+
+  const readPrescriptionFromDataUrl = async (dataUrl, mimeType) => {
+    setReadingPrescription(true);
+    setPrescriptionInteractions(null);
+    try {
+      const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang });
+      if (submitted.available === false) {
+        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI prescription reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        return;
+      }
+      const result = await pollPrescriptionJob(submitted.jobId);
+      if (!result.available) {
+        showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد GEMINI_API_KEY بملف .env', 'AI prescription reading is not enabled — check GEMINI_API_KEY in .env'), 'warning');
+        return;
+      }
+      // تعبئة نموذج الوصفة تلقائياً بما استخرجه الذكاء الاصطناعي — المستخدمة
+      // تراجع/تعدّل قبل الحفظ، بلا حفظ تلقائي (نفس مبدأ قارئ الفواتير).
+      setRxForm(p => ({
+        ...p,
+        patientName: result.patientName || p.patientName,
+        doctorName: result.doctorName || p.doctorName,
+        date: result.date || p.date,
+        items: [
+          ...p.items,
+          ...(result.medicines || []).filter(m => m.name).map(m => ({ name: m.name, qty: m.quantity || 1, unit: m.unit || 'Tablet', dosage: m.dosage || '', id: Date.now() + Math.random() })),
+        ],
+      }));
+      if (result.hasInteractions) {
+        setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
+        showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذي الوصفة — راجعي التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
+      } else {
+        showToast(L('تمت قراءة الوصفة وتعبئة الحقول — راجعي البيانات قبل الحفظ', 'Prescription read and fields filled — review before saving'), 'success');
+      }
+    } catch (err) {
+      showToast(L('تعذّرت قراءة الوصفة، جرب صورة أوضح', 'Could not read the prescription, try a clearer image'), 'error');
+    } finally {
+      setReadingPrescription(false);
+    }
+  };
+
+  const handlePrescriptionFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await readPrescriptionFromDataUrl(dataUrl, file.type);
+    e.target.value = '';
+  };
+
+  // ── التقاط مباشر من كاميرا الحاسبة (Webcam) ─────────────────────────────
+  // نفس النمط تماماً المستخدَم بقارئ الفواتير (ProcurementPage.js) — بديل
+  // عن رفع ملف، تفتح بث الكاميرا مباشرة داخل المتصفح (getUserMedia) وتلتقط
+  // لقطة واحدة عند الضغط، بدون أي برنامج خارجي أو تثبيت إضافي.
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [cameraReady, setCameraReady] = useState(false);
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+
+  const openCamera = async () => {
+    setCameraError('');
+    setCameraReady(false);
+    setShowCamera(true);
+    try {
+      // ملاحظة: بدون facingMode — هذا القيد يخص كاميرات الموبايل (أمامية/
+      // خلفية)، وكاميرات الحاسبة (Webcam) ما تدعمه عادة؛ طلبه صراحة كان
+      // يمنع ظهور الصورة رغم نجاح تشغيل الكاميرا نفسها (ضوء الكاميرا يضوي).
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // بعض المتصفحات ما تشغّل الفيديو تلقائياً حتى لو البث نفسه شغّال
+        // (ضوء الكاميرا مضوي) — نطلب التشغيل صراحة بدل الاعتماد على autoPlay وحدها
+        videoRef.current.play().catch(() => {});
+      }
+    } catch (err) {
+      setCameraError(L('تعذّر الوصول لكاميرا الحاسبة، تأكد من السماح للمتصفح باستخدام الكاميرا', 'Could not access the computer camera — make sure the browser has camera permission'));
+    }
+  };
+
+  const closeCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+    setCameraReady(false);
+  };
+
+  const captureFromCamera = async () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) {
+      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظر ثانية وحاول مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    closeCamera();
+    await readPrescriptionFromDataUrl(dataUrl, 'image/jpeg');
+  };
+
   // Drug modal
   const [showDrugModal, setShowDrugModal] = useState(false);
   const [editDrugId, setEditDrugId]       = useState(null);
@@ -152,7 +277,7 @@ export default function PharmacyPage() {
     },0);
     const no = `${rPrefix}${String(rMaxSeq+1).padStart(4,'0')}`;
     setRxForm({ ...EMPTY_RX, prescNo: no, date: new Date().toISOString().split('T')[0] });
-    setEditRxId(null); setShowRxModal(true);
+    setEditRxId(null); setPrescriptionInteractions(null); setShowRxModal(true);
   };
   const addItem = () => {
     if (!newItem.name) return;
@@ -451,7 +576,7 @@ export default function PharmacyPage() {
               </div>
               <div style={{ display:'flex', gap:8, marginTop:10, borderTop:'1px solid var(--border)', paddingTop:10, flexWrap:'wrap' }}>
                 {rx.status==='pending' && <button onClick={()=>dispense(rx.id)} style={S.btn('#10b981')}>✅ {L('صرف الوصفة','Dispense')}</button>}
-                <button onClick={()=>{ setRxForm({...rx,items:rx.items||[]}); setEditRxId(rx.id); setShowRxModal(true); }} style={S.btn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
+                <button onClick={()=>{ setRxForm({...rx,items:rx.items||[]}); setEditRxId(rx.id); setPrescriptionInteractions(null); setShowRxModal(true); }} style={S.btn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
                 <button onClick={()=>deleteRx(rx.id)} style={S.btn('#ef4444')}>🗑 {L('حذف','Delete')}</button>
               </div>
             </div>
@@ -591,11 +716,88 @@ export default function PharmacyPage() {
         </table>
       </>}
 
+      {showCamera && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+          <div style={{ background: '#111', borderRadius: 14, padding: 16, maxWidth: '90vw' }}>
+            <h4 style={{ margin: '0 0 10px', color: '#fff', fontSize: 14 }}>{L('التقاط صورة الوصفة', 'Capture Prescription Photo')}</h4>
+            {cameraError ? (
+              <p style={{ color: '#fca5a5', fontSize: 13, maxWidth: 320 }}>{cameraError}</p>
+            ) : (
+              /* eslint-disable-next-line jsx-a11y/media-has-caption */
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                onLoadedMetadata={() => setCameraReady(true)}
+                style={{ maxWidth: '80vw', maxHeight: '60vh', borderRadius: 8, background: '#000' }}
+              />
+            )}
+            {!cameraError && !cameraReady && (
+              <p style={{ color: '#9ca3af', fontSize: 12, marginTop: 8 }}>{L('جاري تشغيل الكاميرا...', 'Starting camera...')}</p>
+            )}
+            <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={closeCamera} style={{ ...S.btn('#6b7280'), padding: '7px 16px' }}>{L('إلغاء', 'Cancel')}</button>
+              {!cameraError && (
+                <button type="button" onClick={captureFromCamera} disabled={!cameraReady} style={{ ...S.btn(), padding: '7px 16px', opacity: cameraReady ? 1 : 0.5 }}>📸 {L('التقاط', 'Capture')}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── PRESCRIPTION MODAL ── */}
       {showRxModal && (
         <div style={S.modal} onClick={e => e.target===e.currentTarget && setShowRxModal(false)}>
           <div style={S.mbox()}>
             <h3 style={{ margin:'0 0 20px', color:'var(--text-primary)' }}>{editRxId ? L('✏️ تعديل الوصفة','✏️ Edit Prescription') : L('💊 وصفة طبية جديدة','💊 New Prescription')}</h3>
+
+            {/* ── قارئ الوصفات بالذكاء الاصطناعي (رفع ملف أو كاميرا الحاسبة) ── */}
+            <div style={{ background:'var(--bg-tertiary)', border:'1px dashed var(--border)', borderRadius:10, padding:14, marginBottom:16 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                <label style={{ ...S.btn('#7c3aed'), cursor: readingPrescription ? 'not-allowed' : 'pointer', opacity: readingPrescription ? 0.6 : 1, margin:0 }}>
+                  {readingPrescription ? `⏳ ${L('جاري القراءة والفحص...','Reading & checking...')}` : `🤖 ${L('رفع صورة وصفة','Upload prescription photo')}`}
+                  <input type="file" accept="image/*" onChange={handlePrescriptionFile} disabled={readingPrescription} style={{ display:'none' }} />
+                </label>
+                <button type="button" onClick={openCamera} disabled={readingPrescription} style={{ ...S.btn('#6b7280'), padding:'5px 12px', fontSize:12, opacity: readingPrescription ? 0.6 : 1 }}>
+                  📸 {L('التقاط من كاميرا الحاسبة', "Capture from computer's camera")}
+                </button>
+              </div>
+              <p style={{ margin:'8px 0 0', fontSize:11, color:'var(--text-secondary)' }}>
+                {L('صوّري أو ارفعي صورة الوصفة الورقية — تُستخرَج الأدوية تلقائياً ويُفحَص التضارب الدوائي بينها', 'Photograph or upload the paper prescription — medicines are extracted automatically and checked for interactions')}
+              </p>
+            </div>
+
+            {/* ── تحذير تضارب دوائي واضح — يظهر فقط لو القراءة الأخيرة اكتشفت تضارباً ── */}
+            {prescriptionInteractions && (
+              <div style={{
+                background: prescriptionInteractions.severity === 'high' ? '#fef2f2' : prescriptionInteractions.severity === 'medium' ? '#fffbeb' : '#f0fdf4',
+                border: `2px solid ${prescriptionInteractions.severity === 'high' ? '#ef4444' : prescriptionInteractions.severity === 'medium' ? '#f59e0b' : '#22c55e'}`,
+                borderRadius: 10, padding: 14, marginBottom: 16,
+              }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, fontWeight:700, color: prescriptionInteractions.severity === 'high' ? '#991b1b' : prescriptionInteractions.severity === 'medium' ? '#92400e' : '#166534' }}>
+                  ⚠️ {L('تضارب دوائي محتمل بين أدوية هذي الوصفة', 'Possible drug interaction among this prescription\'s medicines')}
+                </div>
+                {prescriptionInteractions.interactions.map((it, i) => (
+                  <div key={i} style={{ padding:'8px 0', borderTop: i>0 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:4 }}>
+                      {(it.drugs||[]).map(d => <span key={d} style={{ background:'var(--bg-secondary)', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{d}</span>)}
+                      <span style={{ fontSize:11, fontWeight:700, color: it.severity === 'high' ? '#ef4444' : it.severity === 'medium' ? '#f59e0b' : '#22c55e' }}>
+                        {L(it.severity==='high'?'شديد':it.severity==='medium'?'متوسط':'خفيف', it.severity==='high'?'High':it.severity==='medium'?'Medium':'Low')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:13 }}>⚠️ {it.effect}</div>
+                    <div style={{ fontSize:12, color:'var(--text-secondary)' }}>💡 {it.recommendation}</div>
+                  </div>
+                ))}
+                {prescriptionInteractions.incomplete && (
+                  <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:8 }}>
+                    {L('ملاحظة: بعض الأزواج لم تُفحَص (الذكاء الاصطناعي غير متاح حالياً) — الفحص جزئي.', 'Note: some pairs were not checked (AI currently unavailable) — this check is partial.')}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={S.g2}>
               <label><span style={S.fl}>{L('رقم الوصفة','Rx Number')}</span><input style={S.fi} value={rxForm.prescNo||''} onChange={e=>setRxForm(p=>({...p,prescNo:e.target.value}))}/></label>
               <label><span style={S.fl}>{L('التاريخ','Date')}</span><input type="date" style={S.fi} value={rxForm.date||''} onChange={e=>setRxForm(p=>({...p,date:e.target.value}))}/></label>

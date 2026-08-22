@@ -38,7 +38,7 @@ const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef
 // لو بقيت داخل المكوّن لأصبحت مصفوفة جديدة بكل render، ما يجعل الاعتماد
 // عليها بـuseEffect (أدناه) إما يُسبّب تحذير react-hooks/exhaustive-deps
 // (لو أُغفلت) أو إعادة تنفيذ الـeffect بكل render (لو أُضيفت للاعتماديات).
-const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'backups', 'updates', 'recycle', 'about'];
+const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'ai', 'backups', 'updates', 'recycle', 'about'];
 
 export default function SettingsPage() {
   const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
@@ -177,6 +177,40 @@ export default function SettingsPage() {
     setAppNameSaving(false);
   };
 
+  // ── اختيار مزوّد الذكاء الاصطناعي لكل ميزة (بوت/إنترنت/محلي) ────────────────
+  // محفوظ بجدول system_settings بالباك إند (لا localStorage) — راجعي
+  // backend/utils/aiProviderRouter.js لمنطق التوزيع الفعلي. Bot only (مو
+  // AI إطلاقاً) / Online AI (Gemini/Claude، يحتاج إنترنت) / Offline AI
+  // (Ollama محلي — راجعي backend/utils/ollamaService.js).
+  const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader'];
+  const [aiSettings, setAiSettings] = useState({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online' });
+  const [aiSettingsLoading, setAiSettingsLoading] = useState(false);
+  const [aiSettingsSaving, setAiSettingsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (tab !== 'ai') return;
+    setAiSettingsLoading(true);
+    api.get('/ai-provider-settings')
+      .then(setAiSettings)
+      .catch(() => showToast(lang === 'ar' ? 'تعذّر تحميل إعدادات الذكاء الاصطناعي' : 'Could not load AI provider settings', 'error'))
+      .finally(() => setAiSettingsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const handleAiSettingChange = async (feature, mode) => {
+    const previous = aiSettings;
+    setAiSettings(p => ({ ...p, [feature]: mode })); // تحديث فوري متفائل (optimistic) — أسرع إحساساً بالاستجابة
+    setAiSettingsSaving(true);
+    try {
+      const updated = await api.put('/ai-provider-settings', { [feature]: mode });
+      setAiSettings(updated);
+    } catch (err) {
+      setAiSettings(previous); // تراجُع لو فشل الحفظ فعلياً
+      showToast(err.message, 'error');
+    }
+    setAiSettingsSaving(false);
+  };
+
   const handleAppNameReset = async () => {
     if (!(await confirmDialog(lang === 'ar' ? 'الرجوع للاسم الافتراضي "صحتنا عراق"؟' : 'Revert to the default name "SIHATUNA IRAQ"?'))) return;
     setAppNameResetting(true);
@@ -267,6 +301,7 @@ export default function SettingsPage() {
     ...(user?.role === 'admin' ? [{ key: 'logo', labelKey: 'set_tab_logo', icon: '🖼️' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'appname', labelKey: 'set_tab_appname', icon: '🏷️' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'hospitals', labelKey: 'set_tab_hospitals', icon: '🏥' }] : []),
+    ...(user?.role === 'admin' ? [{ key: 'ai', labelKey: 'set_tab_ai', icon: '🤖' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'backups', labelKey: 'set_tab_backups', icon: '💾' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'updates', labelKey: 'set_tab_updates', icon: '🔄' }] : []),
     ...(user?.role === 'admin' ? [{ key: 'recycle', labelKey: 'set_tab_recycle', icon: '🗑️' }] : []),
@@ -1018,6 +1053,41 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── AI PROVIDER TAB (admin-only) ── */}
+          {tab === 'ai' && user?.role === 'admin' && (
+            <div className="card">
+              <h3 style={{ margin:'0 0 8px' }}>🤖 {tr('set_tab_ai')}</h3>
+              <p style={{ margin:'0 0 20px', fontSize:13, color:'var(--text-secondary)', maxWidth:560 }}>{tr('ai_settings_desc')}</p>
+
+              {aiSettingsLoading ? (
+                <p style={{ fontSize:13, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</p>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:18, maxWidth:520 }}>
+                  {[
+                    { feature: 'invoiceReader', labelKey: 'ai_feature_invoice' },
+                    { feature: 'drugInteractions', labelKey: 'ai_feature_interactions' },
+                    { feature: 'prescriptionReader', labelKey: 'ai_feature_prescription' },
+                  ].map(({ feature, labelKey }) => (
+                    <div key={feature}>
+                      <label className="form-label">{tr(labelKey)}</label>
+                      <select
+                        className="form-control"
+                        value={aiSettings[feature] || 'online'}
+                        disabled={aiSettingsSaving}
+                        onChange={e => handleAiSettingChange(feature, e.target.value)}
+                        style={{ maxWidth:340 }}
+                      >
+                        <option value="bot">{tr('ai_mode_bot')}</option>
+                        <option value="online">{tr('ai_mode_online')}</option>
+                        <option value="offline">{tr('ai_mode_offline')}</option>
+                      </select>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

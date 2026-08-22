@@ -62,6 +62,23 @@ jobs:
         run: psql -h localhost -U postgres -d sihatuna_iraq_test -f ../database/postgres_schema.sql
         continue-on-error: true # لو الملف يحتاج امتدادات غير متوفرة بالحاوية الافتراضية، لا نوقف كل الـ CI بسببها — الاختبارات نفسها ستتجاوز نفسها بأمان (pgAvailable check)
 
+      - name: تطبيق ترحيلات SQL الإضافية (migrations-sql/)
+        # نفس الخطوة اللي تحصل تلقائياً بكل نشر محلي/Docker (راجعي run-migrations
+        # .js) — بدونها، جداول أُضيفت بمراحل لاحقة (medical_codes، drug_interactions...)
+        # غير موجودة إطلاقاً بقاعدة CI، فأي اختبار يعتمد عليها يفشل بخطأ اتصال
+        # حقيقي بدل أن يعمل بكامل تغطيته. idempotent فعلياً (راجعي تعليق كل ملف
+        # migrations-sql/*.sql) — لا ضرر من تشغيلها هنا حتى لو postgres_schema.sql
+        # أعلاه طبّق بعضها مسبقاً بالخطأ (schema_migrations يمنع التكرار).
+        working-directory: backend
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_USER: postgres
+          PG_PASSWORD: postgres
+          PG_DATABASE: sihatuna_iraq_test
+        run: node run-migrations.js
+        continue-on-error: true # نفس منطق الخطوة السابقة — لا نوقف كل الـ CI لو فشلت
+
       - name: تشغيل اختبارات الباك إند
         working-directory: backend
         env:

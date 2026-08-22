@@ -24,7 +24,7 @@ const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../config/redisRateLimitStore');
-const { activeProvider } = require('../utils/aiProvider');
+const { getFeatureStatus } = require('../utils/aiProviderRouter');
 const { enqueueInvoiceReadJob, getJobStatus } = require('../services/queue/ocrQueue');
 
 const router = express.Router();
@@ -38,26 +38,19 @@ const invoiceLimiter = rateLimit({
   store: new RedisRateLimitStore('invoice-reader'),
 });
 
-router.get('/invoice-reader/status', auth, (req, res) => {
-  const provider = activeProvider();
-  res.json({ available: Boolean(provider), provider });
+// راجعي utils/aiProviderRouter.js — يعكس الوضع المُختار فعلياً (bot/online/
+// offline) بدل افتراض Gemini/Claude دائماً كما كان سابقاً.
+router.get('/invoice-reader/status', auth, async (req, res, next) => {
+  try {
+    res.json(await getFeatureStatus('invoiceReader'));
+  } catch (err) { next(err); }
 });
 
-const SYSTEM_PROMPT_AR = 'أنتِ نظام استخراج بيانات فواتير دقيق لنظام مستشفى إلكتروني. اقرئي صورة الفاتورة المرفقة، واستخرجي البيانات بدقة. لو حقل غير واضح أو غير موجود بالصورة، اتركيه فارغاً (null) — لا تخمّني قيمة. أجيبي فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب، بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
-
-const USER_PROMPT_AR = `اقرئي صورة الفاتورة المرفقة واستخرجي:
-{
-  "vendorName": "اسم المورد/الشركة",
-  "invoiceNumber": "رقم الفاتورة",
-  "invoiceDate": "YYYY-MM-DD",
-  "items": [
-    { "name": "اسم الصنف", "quantity": 0, "unitPrice": 0, "total": 0 }
-  ],
-  "subtotal": 0,
-  "tax": 0,
-  "grandTotal": 0,
-  "confidence": "high|medium|low"
-}`;
+// ملاحظة: بنية استخراج البيانات (system/user prompt، مخطط JSON المتوقَّع)
+// انتقلت لـservices/queue/invoiceReadProcessor.js — الآن تشمل خطوة OCR
+// (PaddleOCR) تمهيدية قبل استدعاء AI، تعمل داخل مهمة الطابور نفسها (راجعي
+// شرح كامل هناك)، فلم يعد ممكناً بناء الـprompt النهائي هنا وقت استلام
+// الطلب (يحتاج نص OCR غير متوفر إلا بعد تشغيل تلك الخطوة داخل الـWorker).
 
 router.post('/invoice-reader/read', auth, requirePermission('procurement'), invoiceLimiter, async (req, res, next) => {
   try {
@@ -72,8 +65,6 @@ router.post('/invoice-reader/read', auth, requirePermission('procurement'), invo
     let jobId;
     try {
       jobId = await enqueueInvoiceReadJob({
-        systemPrompt: SYSTEM_PROMPT_AR,
-        userPrompt: USER_PROMPT_AR,
         imageBase64: base64,
         mimeType: detectedMimeType,
         userId: req.user.id,

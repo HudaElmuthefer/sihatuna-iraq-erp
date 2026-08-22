@@ -36,8 +36,9 @@ export default function DrugInteractionsPage() {
   const [results, setResults] = useState(null);
   const [checked, setChecked] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [resultSource, setResultSource] = useState(null); // 'ai' | 'fallback'
+  const [resultSource, setResultSource] = useState(null); // 'db' | 'ai' | 'mixed' | 'fallback'
   const [resultProvider, setResultProvider] = useState(null);
+  const [resultIncomplete, setResultIncomplete] = useState(false);
 
   // ── إصلاح: فحص صادق لتوفّر الذكاء الاصطناعي الحقيقي ────────────────────────
   // نفس مبدأ صفحة التشخيص بالذكاء الاصطناعي — نتحقق فوراً عند فتح الصفحة
@@ -85,8 +86,9 @@ export default function DrugInteractionsPage() {
           recommendation: inter.recommendation,
         }));
         setResults(normalized);
-        setResultSource('ai');
+        setResultSource(aiResult.source); // 'db' | 'ai' | 'mixed' — راجعي agents/interactionAgent.js
         setResultProvider(aiResult.provider);
+        setResultIncomplete(Boolean(aiResult.incomplete));
         setChecked(true);
         setChecking(false);
         return;
@@ -110,6 +112,7 @@ export default function DrugInteractionsPage() {
     setResults(found);
     setResultSource('fallback');
     setResultProvider(null);
+    setResultIncomplete(false);
     setChecked(true);
     setChecking(false);
   };
@@ -182,8 +185,8 @@ export default function DrugInteractionsPage() {
             <div style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
               <FaListAlt />
               {lang==='ar'
-                ? 'ملاحظة: الذكاء الاصطناعي غير مفعّل حالياً — الفحص القادم من جدول محلي محدود (5 تضاربات معروفة بس)، مو فحصاً شاملاً.'
-                : 'Note: AI is not currently enabled — the check will use a limited local table (5 known interactions only), not a comprehensive check.'}
+                ? 'ملاحظة: الذكاء الاصطناعي غير مفعّل حالياً — الفحص سيعتمد فقط على قاعدة التفاعلات الموثوقة المحفوظة (تعمل فوراً بلا AI)؛ أي زوج أدوية غير موجود بها لن يُفحَص.'
+                : 'Note: AI is not currently enabled — the check will rely only on the trusted saved interaction database (works instantly without AI); any drug pair not in it won\'t be checked.'}
             </div>
           )}
 
@@ -211,17 +214,33 @@ export default function DrugInteractionsPage() {
           ) : (
             <>
               {/* ── إصلاح: شارة صادقة توضح مصدر نتيجة الفحص الفعلي ── */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
-                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                background: resultSource === 'ai' ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)',
-                color: resultSource === 'ai' ? '#7c3aed' : '#6b7280',
-              }}>
-                {resultSource === 'ai' ? <FaRobot /> : <FaListAlt />}
-                {resultSource === 'ai'
-                  ? (lang==='ar' ? `فحص بذكاء اصطناعي حقيقي (${resultProvider === 'gemini' ? 'Google Gemini' : 'Claude'})` : `Real AI-powered check (${resultProvider === 'gemini' ? 'Google Gemini' : 'Claude'})`)
-                  : (lang==='ar' ? 'جدول محلي محدود (5 تضاربات معروفة بس) — وليس فحصاً شاملاً' : 'Limited local table (5 known interactions only) — not a comprehensive check')}
-              </div>
+              {/* راجعي agents/interactionAgent.js: 'db' = قاعدة تفاعلات موثوقة (فوري،
+                  بلا AI)، 'ai' = كل النتائج من ذكاء اصطناعي، 'mixed' = جزء من كل مصدر،
+                  'fallback' = تعذّر الوصول للباك إند بالكامل (جدول العميل الاحتياطي). */}
+              {(() => {
+                const providerName = resultProvider === 'gemini' ? 'Google Gemini' : 'Claude';
+                const badges = {
+                  db: { icon: <FaListAlt />, color: '#0f766e', bg: 'rgba(15,118,110,0.12)', ar: 'نتيجة من قاعدة تفاعلات دوائية موثوقة (فورية، بلا ذكاء اصطناعي)', en: 'Result from a trusted drug interaction database (instant, no AI needed)' },
+                  ai: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: `فحص بذكاء اصطناعي حقيقي (${providerName})`, en: `Real AI-powered check (${providerName})` },
+                  mixed: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: `نتيجة مدمجة: قاعدة بيانات موثوقة + ذكاء اصطناعي (${providerName})`, en: `Combined result: trusted database + AI (${providerName})` },
+                  fallback: { icon: <FaListAlt />, color: '#6b7280', bg: 'rgba(107,114,128,0.12)', ar: 'جدول محلي محدود (5 تضاربات معروفة بس) — تعذّر الوصول للخادم', en: 'Limited local table (5 known interactions only) — could not reach the server' },
+                };
+                const b = badges[resultSource] || badges.fallback;
+                return (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: b.bg, color: b.color }}>
+                    {b.icon}
+                    {lang === 'ar' ? b.ar : b.en}
+                  </div>
+                );
+              })()}
+
+              {resultIncomplete && (
+                <div style={{ fontSize: 12, color: '#f59e0b', marginTop: -8, marginBottom: 14 }}>
+                  ⚠️ {lang === 'ar'
+                    ? 'بعض الأزواج غير الموجودة بقاعدة البيانات لم تُفحَص (الذكاء الاصطناعي غير متاح حالياً) — النتيجة أعلاه جزئية.'
+                    : 'Some pairs not in the database were not checked (AI is currently unavailable) — the result above is partial.'}
+                </div>
+              )}
 
               {results.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>

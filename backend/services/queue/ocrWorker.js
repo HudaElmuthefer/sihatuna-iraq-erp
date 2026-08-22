@@ -25,35 +25,30 @@ require('dotenv').config();
 const { Worker } = require('bullmq');
 const { createQueueConnection } = require('./queueConnection');
 const { QUEUE_NAME } = require('./ocrQueue');
-const { callAIWithImage } = require('../../utils/aiProvider');
-const { logAudit } = require('../../utils/auditLog');
+const { processInvoiceReadJob } = require('./invoiceReadProcessor');
+const { processPrescriptionReadJob } = require('./prescriptionReadProcessor');
 const { devLog } = require('../../utils/logger');
+
+// يوزّع كل مهمة لمعالجها الصحيح حسب اسمها (راجعي ocrQueue.js: 'read-invoice'
+// مقابل 'read-prescription' — طابور واحد، معالجان مختلفان).
+function processJob(job) {
+  if (job.name === 'read-prescription') return processPrescriptionReadJob(job.data);
+  return processInvoiceReadJob(job.data);
+}
 
 // عدد المهام المتزامنة داخل عملية Worker الوحيدة هذه: استدعاء AI عملية
 // I/O-bound أساساً (تنتظر رد شبكة من Gemini/Anthropic)، مو عملية تستهلك
 // معالج (CPU-bound) — فمعالجة عدة مهام متزامنة بنفس العملية آمنة وفعّالة هنا
 // (Node.js تدير انتظار عدة طلبات شبكة غير متزامنة بكفاءة بنفس الوقت)، بعكس
 // لو كانت المهمة تفريغ صور كبيرة أو ضغط ملفات (CPU-bound فعلياً، تحتاج
-// عمليات منفصلة حقيقية بدل تزامن داخل نفس العملية).
+// عمليات منفصلة حقيقية بدل تزامن داخل نفس العملية). خطوة PaddleOCR نفسها
+// CPU-bound فعلاً، لكنها تعمل بعملية Python منفصلة تماماً (راجعي
+// agents/ocrAgent.js) — لا تحجب حلقة أحداث Node هنا إطلاقاً.
 const CONCURRENCY = parseInt(process.env.OCR_WORKER_CONCURRENCY, 10) || 3;
 
 const worker = new Worker(
   QUEUE_NAME,
-  async (job) => {
-    const { systemPrompt, userPrompt, imageBase64, mimeType, userId, userRole } = job.data;
-    const result = await callAIWithImage(systemPrompt, userPrompt, imageBase64, mimeType);
-    if (result.available) {
-      logAudit({ module: 'invoice-reader', action: 'read', userId, userRole, after: { provider: result.provider, itemsCount: result.parsed?.items?.length || 0 } });
-    } else if (result.error) {
-      // فشل استدعاء AI نفسه (لا مزوّد مُعدّ، أو خطأ بالاستدعاء) — لا نرمي
-      // استثناء يُعيد المحاولة عبثاً (سيفشل بنفس السبب مرة أخرى غالباً)، بل
-      // نرجع النتيجة كما هي؛ مسار الاستعلام (GET /invoice-reader/jobs/:id)
-      // يتعامل مع available:false بنفس الطريقة المعتادة أصلاً بكل ميزات
-      // الذكاء الاصطناعي بهذا النظام.
-      console.error(`⚠️  [ocr-worker] فشل استدعاء ${result.provider}:`, result.error);
-    }
-    return result;
-  },
+  async (job) => processJob(job),
   { connection: createQueueConnection(), concurrency: CONCURRENCY }
 );
 

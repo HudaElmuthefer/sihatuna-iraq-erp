@@ -153,6 +153,8 @@ router.use(require('./routes/hospitalsRoutes'));
 router.use(require('./routes/brandingRoutes'));
 router.use(require('./routes/dicomWebhookRoutes'));
 router.use(require('./routes/invoiceReaderRoutes'));
+router.use(require('./routes/prescriptionReaderRoutes'));
+router.use(require('./routes/aiProviderSettingsRoutes'));
 router.use(require('./routes/documentLookupRoutes'));
 router.use(require('./routes/bookingRoutes'));
 router.use(require('./routes/medicalCodesRoutes'));

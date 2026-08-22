@@ -67,6 +67,36 @@ WORKDIR /app
 COPY backend/package.json backend/package-lock.json ./backend/
 RUN cd backend && npm ci --omit=dev
 
+# ── PaddleOCR (Python) — قراءة الفواتير/الوصفات ─────────────────────────────
+# agents/ocrAgent.js يستدعي backend/services/ocr/paddle_ocr_runner.py كعملية
+# فرعية (راجعي شرح كامل هناك ليش عملية منفصلة بكل استدعاء، لا خادم Python
+# دائم) — يحتاج Python 3 + PaddlePaddle/PaddleOCR مثبَّتين بالصورة. libgl1/
+# libglib2.0-0: تبعيات نظام يحتاجها opencv-python (تبعية PaddleOCR نفسها)
+# وقت الاستيراد (import cv2) حتى بدون أي واجهة رسومية فعلية بالحاوية —
+# بدونها opencv يفشل بخطأ "libGL.so.1: cannot open shared object file".
+# libgomp1: مكتبة GNU OpenMP وقت التشغيل — paddlepaddle (النواة المُصرَّفة
+# libpaddle.so) تعتمد عليها مباشرة؛ بدونها الاستيراد نفسه (import paddle)
+# يفشل بخطأ "libgomp.so.1: cannot open shared object file" (تأكّدنا فعلياً:
+# أول محاولة بناء بدونها فشلت بالضبط بهذا الخطأ بخطوة تحميل النموذج تحت).
+# --break-system-packages: صورة Docker مخصَّصة بالكامل لهذا التطبيق (لا
+# تعارض حزم Python نظامية أخرى مطلقاً)، فتجاوز حماية PEP 668 (تتطلب بيئة
+# افتراضية عادةً) آمن هنا ومطابق لبساطة بقية الصورة (بلا طبقة venv إضافية).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 python3-pip libgl1 libglib2.0-0 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY backend/services/ocr/requirements.txt ./backend/services/ocr/requirements.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages -r backend/services/ocr/requirements.txt
+
+# تحميل نماذج PaddleOCR وقت البناء، لا وقت التشغيل — تأكّدنا فعلياً بالاختبار
+# المحلي: أول تحميل لنموذج لغة (~15-20 ميجابايت) أخذ قرابة 55 ثانية بشبكة
+# عادية، قريب جداً من مهلة agents/ocrAgent.js (60 ثانية) — أول مهمة قراءة
+# فاتورة حقيقية بحاوية جديدة كانت مُعرَّضة فعلياً لانتهاء المهلة (fail-open
+# تلقائي، لكن تجربة "أول استخدام" سيئة). خبزها هنا بطبقة الصورة نفسها
+# (تُنزَّل مرة واحدة وقت docker compose build، لا بكل إعادة تشغيل حاوية)
+# يحلّها نهائياً. 'ar' فقط — اللغة الافتراضية الوحيدة المُستخدَمة فعلياً
+# (OCR_LANG بـagents/ocrAgent.js).
+RUN python3 -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='ar', show_log=False)"
+
 # كود الباك إند الكامل
 COPY backend/ ./backend/
 

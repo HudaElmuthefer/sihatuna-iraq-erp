@@ -1,12 +1,18 @@
 // backend/services/queue/ocrQueue.js
 //
-// طابور معالجة قراءة الفواتير بالذكاء الاصطناعي (OCR + AI vision) — انتقلت
-// من مسار HTTP المباشر (routes/invoiceReaderRoutes.js) لمهمة خلفية عبر
-// BullMQ، لأن استدعاء AI فعلياً (Gemini/Claude) قد يأخذ عدة ثوانٍ لكل صورة،
-// وإبقاء طلب HTTP معلّقاً كل هذي المدة يحجز worker كامل من Express بلا فائدة
-// حقيقية (خصوصاً لو عدة موظفين رفعوا فواتير بنفس الوقت). الآن: الطلب يُرجع
-// فوراً برقم مهمة (jobId)، والفرونت إند يستعلم عن حالتها دورياً (انظر GET
-// /invoice-reader/jobs/:id بـinvoiceReaderRoutes.js).
+// طابور معالجة قراءة الفواتير والوصفات الطبية بالذكاء الاصطناعي (OCR + AI
+// vision) — انتقلت من مسار HTTP المباشر (routes/invoiceReaderRoutes.js
+// وroutes/prescriptionReaderRoutes.js) لمهمة خلفية عبر BullMQ، لأن استدعاء
+// AI فعلياً (Gemini/Claude) قد يأخذ عدة ثوانٍ لكل صورة (وOCR قبله ثوانٍ
+// إضافية — راجعي agents/ocrAgent.js)، وإبقاء طلب HTTP معلّقاً كل هذي المدة
+// يحجز worker كامل من Express بلا فائدة حقيقية. الآن: الطلب يُرجع فوراً
+// برقم مهمة (jobId)، والفرونت إند يستعلم عن حالتها دورياً.
+//
+// طابور واحد لكلا النوعين (اسم المهمة يميّز بينهما: 'read-invoice' مقابل
+// 'read-prescription' — راجعي ocrWorker.js لمنطق التوزيع) بدل طابورين
+// منفصلين: نفس نمط المعالجة بالضبط (OCR + AI vision)، ولا فائدة حقيقية من
+// عزلهما بعملية Worker إضافية كاملة (PM2 app جديد، إعداد Docker إضافي)
+// لمجرد اختلاف الميزة النهائية — يكفي تمييز بسيط باسم المهمة.
 //
 // يُستهلَك هذا الطابور بعملية منفصلة تماماً عن الخادم الرئيسي — راجعي
 // ocrWorker.js وecosystem.config.js لسبب فصله عن عمليات worker الخاصة
@@ -41,6 +47,11 @@ async function enqueueInvoiceReadJob(data) {
   return job.id;
 }
 
+async function enqueuePrescriptionReadJob(data) {
+  const job = await getQueue().add('read-prescription', data);
+  return job.id;
+}
+
 // حالة مهمة محدَّدة — تُستخدم بمسار الاستعلام (polling) من الفرونت إند.
 // ترجع null لو المهمة غير موجودة (رقم خاطئ، أو حُذفت بعد انتهاء removeOnComplete/removeOnFail).
 async function getJobStatus(jobId) {
@@ -55,4 +66,4 @@ async function getJobStatus(jobId) {
   };
 }
 
-module.exports = { getQueue, enqueueInvoiceReadJob, getJobStatus, QUEUE_NAME };
+module.exports = { getQueue, enqueueInvoiceReadJob, enqueuePrescriptionReadJob, getJobStatus, QUEUE_NAME };

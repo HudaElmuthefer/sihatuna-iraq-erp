@@ -94,12 +94,24 @@ export default function DrugInteractionsPage() {
         setChecking(false);
         return;
       }
+
+      // ── إصلاح: الخادم استجاب فعلاً لكن ما عنده بيانات كافية (لا تطابق
+      // بقاعدة البيانات + فشل/تعذّر الذكاء الاصطناعي) — هذا مختلف جذرياً عن
+      // "تعذّر الوصول للخادم" (شبكة/اتصال)، ويجب ألا يُعرَض كـ"آمن" أبداً عبر
+      // جدول العميل المحلي المحدود بـ5 أزواج بس. راجعي نفس المبدأ بصفحة فحص
+      // الجرعات (DosageCheckPage.js / dosageAgent.js).
+      setResults(null);
+      setResultSource('unavailable');
+      setResultIncomplete(false);
+      setChecked(true);
+      setChecking(false);
+      return;
     } catch {
-      // فشل الاتصال بالكامل — نكمل للاحتياط المحلي بدل كسر التجربة
+      // فشل الاتصال بالكامل (شبكة/خادم) — نكمل للاحتياط المحلي بدل كسر التجربة
     }
 
-    // احتياط محلي (5 تضاربات معروفة بس) — يُستخدم فقط لو الذكاء الاصطناعي
-    // غير مفعّل أو فشل الاتصال به مؤقتاً
+    // احتياط محلي (5 تضاربات معروفة بس) — يُستخدم فقط لو تعذّر الوصول للخادم
+    // فعلياً (استثناء شبكة)، مو لو الخادم استجاب وقال إنه ما عنده بيانات
     const found = [];
     interactions.forEach(inter => {
       const match = inter.drugs.every(d => selectedDrugs.includes(d));
@@ -221,12 +233,15 @@ export default function DrugInteractionsPage() {
               {/* ── إصلاح: شارة صادقة توضح مصدر نتيجة الفحص الفعلي ── */}
               {/* راجعي agents/interactionAgent.js: 'db' = قاعدة تفاعلات موثوقة (فوري،
                   بلا AI)، 'ai' = كل النتائج من ذكاء اصطناعي، 'mixed' = جزء من كل مصدر،
-                  'fallback' = تعذّر الوصول للباك إند بالكامل (جدول العميل الاحتياطي). */}
+                  'unavailable' = الخادم استجاب لكن ما عنده بيانات كافية (لا تطابق
+                  بقاعدة البيانات + تعذّر/فشل الذكاء الاصطناعي)، 'fallback' = تعذّر
+                  الوصول للباك إند بالكامل فعلياً (جدول العميل الاحتياطي). */}
               {(() => {
                 const badges = {
                   db: { icon: <FaListAlt />, color: '#0f766e', bg: 'rgba(15,118,110,0.12)', ar: 'نتيجة من قاعدة تفاعلات دوائية موثوقة (فورية، بلا ذكاء اصطناعي)', en: 'Result from a trusted drug interaction database (instant, no AI needed)' },
                   ai: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: 'فحص بذكاء اصطناعي حقيقي (عبر الإنترنت)', en: 'Real AI-powered check (Online AI)' },
                   mixed: { icon: <FaRobot />, color: '#7c3aed', bg: 'rgba(139,92,246,0.12)', ar: 'نتيجة مدمجة: قاعدة بيانات موثوقة + ذكاء اصطناعي (عبر الإنترنت)', en: 'Combined result: trusted database + AI (Online AI)' },
+                  unavailable: { icon: <FaListAlt />, color: '#6b7280', bg: 'rgba(107,114,128,0.12)', ar: 'لا توجد بيانات كافية — الذكاء الاصطناعي غير متاح حالياً', en: 'Not enough data — AI is currently unavailable' },
                   fallback: { icon: <FaListAlt />, color: '#6b7280', bg: 'rgba(107,114,128,0.12)', ar: 'جدول محلي محدود (5 تضاربات معروفة بس) — تعذّر الوصول للخادم', en: 'Limited local table (5 known interactions only) — could not reach the server' },
                 };
                 const b = badges[resultSource] || badges.fallback;
@@ -246,7 +261,16 @@ export default function DrugInteractionsPage() {
                 </div>
               )}
 
-              {results.length === 0 ? (
+              {resultSource === 'unavailable' ? (
+                <div className="card" style={{ padding: 24, border: '1px solid var(--border)', background: 'rgba(107,114,128,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6b7280', fontWeight: 700 }}>
+                    <FaListAlt />
+                    {lang === 'ar'
+                      ? 'لا توجد بيانات كافية لتقييم هذا التوليف — راجعي صيدلانياً أو طبيباً'
+                      : 'Not enough data to evaluate this combination — consult a pharmacist or physician'}
+                  </div>
+                </div>
+              ) : results.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
                   <FaCheckCircle size={52} color="#22c55e" style={{ marginBottom: 16 }} />
                   <h3 style={{ margin: '0 0 8px', color: '#22c55e' }}>{tr('drug_no_interaction')}</h3>

@@ -229,7 +229,18 @@ export default function SettingsPage() {
   };
 
   const openAdd = () => { setEditing(null); setForm(emptyUser); setShowModal(true); };
-  const openEdit = (u) => { setEditing(u); setForm({ ...u, password: u.password || '' }); setShowModal(true); };
+  // إصلاح: دور الإدمن يملك صلاحية كاملة دائماً عبر فحص الدور نفسه بالباك إند
+  // والفرونت إند (requirePermission.js وhasPermission بـAppContext.js) — لا
+  // يعتمد فعلياً على مصفوفة permissions المخزَّنة إطلاقاً لهذا الدور. لكن لو
+  // حساب إدمن قديم (بيانات أولية، أُنشئ قبل إضافة صفحات جديدة للنظام) عنده
+  // مصفوفة permissions ناقصة محفوظة، فتحه هنا للتعديل يُحدِّثها تلقائياً
+  // لتطابق كل صفحات النظام الحالية — تصحيح ذاتي بلا أي تدخّل يدوي بقاعدة
+  // البيانات، بدل تصحيحها يدوياً مرة وحدة (وتصير قديمة ثانية لاحقاً).
+  const openEdit = (u) => {
+    setEditing(u);
+    setForm({ ...u, password: u.password || '', permissions: u.role === 'admin' ? ALL_PAGES.map(p => p.key) : (u.permissions || []) });
+    setShowModal(true);
+  };
   const delUser = async (id) => {
     if (id === 1) { showToast(tr('set_cannot_delete_admin'), 'error'); return; }
     if (!(await confirmDialog(tr('x_hlantmtakd_laimknaltraja')))) return;
@@ -280,14 +291,19 @@ export default function SettingsPage() {
     if (!form.name || !form.username || (!editing && !form.password)) { showToast(tr('set_user_required'), 'error'); return; }
     if (!editing && systemUsers.find(u => u.username === form.username)) { showToast(tr('set_username_exists'), 'error'); return; }
     const prev = systemUsers;
+    // إصلاح: نفرض قائمة الصفحات الكاملة الحالية لأي حساب إدمن وقت الحفظ —
+    // بغض النظر عمّا بقائمة form.permissions فعلياً (قائمة التحديد نفسها
+    // مخفية لدور الإدمن بالواجهة أدناه، فما تتغيّر أصلاً) — يضمن عدم حفظ
+    // مصفوفة قديمة/ناقصة لأي حساب إدمن، حتى لو تغيّرت صفحات النظام لاحقاً.
+    const permissions = form.role === 'admin' ? ALL_PAGES.map(p => p.key) : form.permissions;
     if (editing) {
-      const uu = { ...form, id: editing.id };
+      const uu = { ...form, permissions, id: editing.id };
       setSystemUsers(p => p.map(u => u.id === editing.id ? uu : u));
       const ok = await syncToServer('users', 'update', uu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
       if (!ok) { setSystemUsers(prev); return; }
       showToast(tr('msg_edited'), 'success');
     } else {
-      const nu = { ...form, id: Date.now() };
+      const nu = { ...form, permissions, id: Date.now() };
       setSystemUsers(p => [...p, nu]);
       const ok = await syncToServer('users', 'create', nu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
       if (!ok) { setSystemUsers(prev); return; }
@@ -691,20 +707,29 @@ export default function SettingsPage() {
                         <div style={{ fontSize:12, color:'var(--text-secondary)', marginBottom:6 }}>
                           👤 {u.username} | 📧 {u.email} | 💼 {u.jobTitle}
                         </div>
-                        {/* Permissions pills */}
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                          {(u.permissions || []).slice(0, 8).map(pk => {
-                            const pg = ALL_PAGES.find(p => p.key === pk);
-                            return pg ? (
-                              <span key={pk} style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'1px 7px', borderRadius:6, fontSize:10 }}>
-                                {pg.icon} {tr(pg.navKey)}
-                              </span>
-                            ) : null;
-                          })}
-                          {(u.permissions || []).length > 8 && (
-                            <span style={{ background:'var(--bg-primary)', color:'var(--text-secondary)', padding:'1px 7px', borderRadius:6, fontSize:10 }}>+{u.permissions.length - 8}</span>
-                          )}
-                        </div>
+                        {/* Permissions pills — إصلاح: دور الإدمن يملك صلاحية كاملة دائماً
+                            بغض النظر عن مصفوفة permissions المخزَّنة (قد تكون قديمة/ناقصة
+                            لحسابات قديمة — راجعي ملاحظة save() أعلاه) — شارة واحدة صادقة
+                            بدل تعداد قد يوهم بأن صلاحياته محدودة فعلياً. */}
+                        {u.role === 'admin' ? (
+                          <span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'1px 7px', borderRadius:6, fontSize:10, fontWeight:700 }}>
+                            🔑 {lang === 'ar' ? 'كل الصفحات (إدمن)' : 'All pages (admin)'}
+                          </span>
+                        ) : (
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                            {(u.permissions || []).slice(0, 8).map(pk => {
+                              const pg = ALL_PAGES.find(p => p.key === pk);
+                              return pg ? (
+                                <span key={pk} style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'1px 7px', borderRadius:6, fontSize:10 }}>
+                                  {pg.icon} {tr(pg.navKey)}
+                                </span>
+                              ) : null;
+                            })}
+                            {(u.permissions || []).length > 8 && (
+                              <span style={{ background:'var(--bg-primary)', color:'var(--text-secondary)', padding:'1px 7px', borderRadius:6, fontSize:10 }}>+{u.permissions.length - 8}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display:'flex', gap:8, flexShrink:0 }}>
                         <button onClick={() => resetPassword(u)} disabled={resettingUserId === u.id} style={{ background:'none', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', cursor:'pointer', color:'var(--text-primary)', fontSize:12 }}>
@@ -1501,25 +1526,41 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Permissions */}
-              <div style={{ background:'var(--bg-primary)', borderRadius:10, padding:16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                  <h4 style={{ margin:0, fontSize:14, color:'var(--text-secondary)' }}>{tr('set_allowed_pages')}</h4>
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button onClick={() => setForm(p=>({...p, permissions:ALL_PAGES.map(pg=>pg.key)}))} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #1a6bab', background:'transparent', color:'#1a6bab', cursor:'pointer' }}>{tr('btn_select_all')}</button>
-                    <button onClick={() => setForm(p=>({...p, permissions:['dashboard']}))} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid var(--border)', background:'transparent', color:'var(--text-secondary)', cursor:'pointer' }}>{tr('btn_deselect_all')}</button>
+              {/* Permissions — إصلاح: دور الإدمن يملك صلاحية كاملة دائماً عبر فحص
+                  الدور نفسه (لا مصفوفة صلاحيات مخزَّنة، راجعي requirePermission.js
+                  وhasPermission بـAppContext.js) — عرض قائمة تحديد هنا لهذا الدور
+                  كان يوهم بأن صلاحياته "مُعدَّة يدوياً" وقد تنسى صفحة جديدة، رغم
+                  إنها فعلياً غير مستخدَمة إطلاقاً بمنطق التحقق. بدلها: ملاحظة
+                  توضيحية ثابتة، بلا أي قائمة يمكن أن تصير قديمة. */}
+              {form.role === 'admin' ? (
+                <div style={{ background:'var(--bg-primary)', borderRadius:10, padding:16, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:20 }}>🔑</span>
+                  <span style={{ fontSize:13, color:'var(--text-secondary)' }}>
+                    {lang === 'ar'
+                      ? 'حساب الإدمن يملك صلاحية كاملة لكل صفحات النظام دائماً — حالياً ومستقبلاً — بلا حاجة لأي تحديد يدوي.'
+                      : 'Admin accounts always have full access to every page in the system — now and in the future — nothing to select here.'}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ background:'var(--bg-primary)', borderRadius:10, padding:16 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                    <h4 style={{ margin:0, fontSize:14, color:'var(--text-secondary)' }}>{tr('set_allowed_pages')}</h4>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => setForm(p=>({...p, permissions:ALL_PAGES.map(pg=>pg.key)}))} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid #1a6bab', background:'transparent', color:'#1a6bab', cursor:'pointer' }}>{tr('btn_select_all')}</button>
+                      <button onClick={() => setForm(p=>({...p, permissions:['dashboard']}))} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid var(--border)', background:'transparent', color:'var(--text-secondary)', cursor:'pointer' }}>{tr('btn_deselect_all')}</button>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    {ALL_PAGES.map(pg => (
+                      <label key={pg.key} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, border:`1px solid ${form.permissions.includes(pg.key)?'#1a6bab':'var(--border)'}`, background:form.permissions.includes(pg.key)?'rgba(26,107,171,0.08)':'transparent', cursor:'pointer' }}>
+                        <input type="checkbox" checked={form.permissions.includes(pg.key)} onChange={() => togglePerm(pg.key)} style={{ accentColor:'#1a6bab' }} />
+                        <span style={{ fontSize:16 }}>{pg.icon}</span>
+                        <span style={{ fontSize:13 }}>{tr(pg.navKey)}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  {ALL_PAGES.map(pg => (
-                    <label key={pg.key} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, border:`1px solid ${form.permissions.includes(pg.key)?'#1a6bab':'var(--border)'}`, background:form.permissions.includes(pg.key)?'rgba(26,107,171,0.08)':'transparent', cursor:'pointer' }}>
-                      <input type="checkbox" checked={form.permissions.includes(pg.key)} onChange={() => togglePerm(pg.key)} style={{ accentColor:'#1a6bab' }} />
-                      <span style={{ fontSize:16 }}>{pg.icon}</span>
-                      <span style={{ fontSize:13 }}>{tr(pg.navKey)}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowModal(false)} style={{ marginLeft:8, padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{tr('btn_cancel')}</button>

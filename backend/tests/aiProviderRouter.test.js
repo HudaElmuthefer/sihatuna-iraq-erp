@@ -40,7 +40,7 @@ describe('getSettings / getMode', () => {
   test('لا صف محفوظ إطلاقاً: كل الميزات تعود للافتراضي (online) — يطابق السلوك القديم قبل هذي الميزة', async () => {
     query.mockResolvedValueOnce({ rows: [] });
     const settings = await getSettings();
-    expect(settings).toEqual({ invoiceReader: DEFAULT_MODE, drugInteractions: DEFAULT_MODE, prescriptionReader: DEFAULT_MODE, aiDiagnosis: DEFAULT_MODE, dosageValidation: DEFAULT_MODE });
+    expect(settings).toEqual({ invoiceReader: DEFAULT_MODE, drugInteractions: DEFAULT_MODE, prescriptionReader: DEFAULT_MODE, aiDiagnosis: DEFAULT_MODE, dosageValidation: DEFAULT_MODE, allergyCheck: DEFAULT_MODE });
   });
 
   test('قيمة محفوظة غير صالحة (تلف بيانات مثلاً): تُستبدَل بالافتراضي بصمت، لا رمي استثناء', async () => {
@@ -62,7 +62,7 @@ describe('setSettings', () => {
 
     const result = await setSettings({ prescriptionReader: 'bot' });
 
-    expect(result).toEqual({ invoiceReader: 'offline', drugInteractions: 'bot', prescriptionReader: 'bot', aiDiagnosis: 'online', dosageValidation: 'online' });
+    expect(result).toEqual({ invoiceReader: 'offline', drugInteractions: 'bot', prescriptionReader: 'bot', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online' });
     const upsertCall = query.mock.calls[1];
     expect(upsertCall[0]).toContain('ON CONFLICT');
     expect(JSON.parse(upsertCall[1][1])).toEqual(result);

@@ -206,6 +206,7 @@ router.use(require('./routes/employeeDossierRoutes'));
 router.use(require('./routes/aiDiagnosisRoutes'));
 router.use(require('./routes/drugInteractionRoutes'));
 router.use(require('./routes/dosageRoutes'));
+router.use(require('./routes/allergyRoutes'));
 require('./routes/modules')(router); // يسجّل كل موديولات pgCrud + استيراد Excel (41 موديول)
 router.use('/recycle-bin', require('./routes/recycleBinRoutes'));
 router.use(require('./routes/miscRoutes'));

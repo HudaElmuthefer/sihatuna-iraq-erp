@@ -13,7 +13,7 @@ import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
 const NAV_ICONS = {
   'dashboard': '🏠', 'services': '🎯', 'patients': '👥', 'doctors': '🩺',
   'appointments': '📅', 'departments': '🏢', 'ai-diagnosis': '🧠',
-  'vaccinations': '💉', 'drug-interactions': '💊', 'dosage-check': '⚖️', 'medical-leave': '🏥',
+  'vaccinations': '💉', 'drug-interactions': '💊', 'dosage-check': '⚖️', 'allergy-check': '🚫', 'medical-leave': '🏥',
   'smart-reports': '📊', 'hr': '👔', 'accounts': '💰', 'settings': '⚙️',
   'inventory': '📦', 'procurement': '🛒', 'projects': '📐', 'documents': '📁', 'crm': '📇', 'payment-settings': '💳', 'billing': '🧾', 'results': '📄', 'barcode': '🏷️' };
 

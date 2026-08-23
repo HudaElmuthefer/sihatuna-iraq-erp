@@ -22,6 +22,7 @@ export const ALL_PAGES = [
   { key: 'queue',            navKey: 'nav_queue',            label: 'إدارة الطابور',        labelEn: 'Queue Management',                 path: '/queue',                 icon: '🎫', group: 'clinical' },
   { key: 'drug-interactions',navKey: 'nav_drug_interact',    label: 'التضارب الدوائي',      labelEn: 'Drug Interactions',               path: '/drug-interactions',     icon: '💊', group: 'clinical' },
   { key: 'dosage-check',     navKey: 'nav_dosage_check',     label: 'فحص الجرعات',          labelEn: 'Dosage Check',                    path: '/dosage-check',          icon: '⚖️', group: 'clinical' },
+  { key: 'allergy-check',    navKey: 'nav_allergy_check',    label: 'فحص الحساسية الدوائية', labelEn: 'Allergy Check',                   path: '/allergy-check',         icon: '🚫', group: 'clinical' },
   { key: 'medical-leave',    navKey: 'nav_medical_leave',    label: 'الإجازات المرضية',     labelEn: 'Medical Leave',              path: '/medical-leave',         icon: '🏥', group: 'clinical' },
   { key: 'ai-diagnosis',     navKey: 'nav_ai_diagnosis',     label: 'التشخيص بالذكاء الاصطناعي', labelEn: 'AI Diagnosis',    path: '/ai-diagnosis',          icon: '🧠', group: 'clinical' },
   { key: 'crm',              navKey: 'nav_crm',              label: 'إدارة علاقات المرضى',   labelEn: 'Patient CRM',                 path: '/crm',                   icon: '📇', group: 'clinical' },

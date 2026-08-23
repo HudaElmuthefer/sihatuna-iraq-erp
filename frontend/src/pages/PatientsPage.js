@@ -10,6 +10,7 @@ import DateRangeFilter from '../components/DateRangeFilter';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import DiagnosisPicker from '../components/DiagnosisPicker';
+import AllergyPicker from '../components/AllergyPicker';
 import PageBanner from '../components/PageBanner';
 import { api } from '../api';
 
@@ -18,7 +19,7 @@ const BANNER_GRADIENT = 'linear-gradient(135deg, #9a3412 0%, #ea580c 100%)';
 const emptyForm = {
   name: '', nameEn: '', age: '', gender: 'male', phone: '', nationalId: '',
   bloodType: 'A+', status: 'active', insurance: '', notes: '',
-  diagnosis: '', diagnoses: [], doctor: '', allergies: '', chronicDiseases: ''
+  diagnosis: '', diagnoses: [], doctor: '', allergies: [], chronicDiseases: ''
 };
 
 const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -85,7 +86,15 @@ export default function PatientsPage() {
     if (diagnoses.length === 0 && (p.icdCode || p.snomedCode)) {
       diagnoses = [{ id: Date.now(), icdCode: p.icdCode || '', icdNameAr: '', icdNameEn: '', snomedCode: p.snomedCode || '', snomedNameAr: '', snomedNameEn: '', isPrimary: true, dateAdded: '' }];
     }
-    setForm({ ...p, diagnoses });
+    // نفس مبدأ التوافق العكسي أعلاه — مرضى أُنشئوا قبل هذا التحديث لهم
+    // allergies كحقل نصي حر واحد لا مصفوفة (راجعي AllergyPicker.js). نحوّل
+    // النص القديم لعنصر واحد بشدة "متوسطة" افتراضياً (غير معروفة فعلياً من
+    // نص حر قديم) بدل فقدان البيانات.
+    let allergies = Array.isArray(p.allergies) ? p.allergies : [];
+    if (allergies.length === 0 && typeof p.allergies === 'string' && p.allergies.trim()) {
+      allergies = [{ id: Date.now(), name: p.allergies.trim(), severity: 'moderate', dateAdded: '' }];
+    }
+    setForm({ ...p, diagnoses, allergies });
     setSelected(p);
     setModal('edit');
   };
@@ -361,7 +370,10 @@ export default function PatientsPage() {
                   </select>
                 </div>
               </div>
-              <div className="form-group"><label className="form-label">{tr('x_alamra_almzmnawalhsasia')}</label><input className="form-control" value={form.allergies || ''} onChange={e => setForm(p => ({ ...p, allergies: e.target.value }))} /></div>
+              <div className="form-group">
+                <label className="form-label">{tr('x_alamra_almzmnawalhsasia')}</label>
+                <AllergyPicker allergies={Array.isArray(form.allergies) ? form.allergies : []} onChange={(a) => setForm(p => ({ ...p, allergies: a }))} lang={lang} />
+              </div>
               <div className="form-group"><label className="form-label">{tr('field_notes')}</label><textarea className="form-control" rows={3} value={form.notes || ''} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
             </div>
             <div className="modal-footer">
@@ -402,6 +414,23 @@ export default function PatientsPage() {
                   </div>
                 ))}
               </div>
+              {(Array.isArray(selected.allergies) && selected.allergies.length > 0) && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>{tr('x_alamra_almzmnawalhsasia')}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {selected.allergies.map((a) => {
+                      const sevColor = { mild: '#22c55e', moderate: '#f59e0b', severe: '#ef4444' }[a.severity] || '#6b7280';
+                      const sevLabel = { mild: lang === 'ar' ? 'خفيفة' : 'Mild', moderate: lang === 'ar' ? 'متوسطة' : 'Moderate', severe: lang === 'ar' ? 'شديدة' : 'Severe' }[a.severity] || a.severity;
+                      return (
+                        <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--bg-primary)', fontSize: 13 }}>
+                          <span style={{ fontWeight: 700 }}>{a.name}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: sevColor, background: `${sevColor}1a`, padding: '1px 6px', borderRadius: 10 }}>{sevLabel}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {(Array.isArray(selected.diagnoses) && selected.diagnoses.length > 0) && (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>{lang === 'ar' ? 'التصنيف الطبي الدولي (ICD-10 / SNOMED CT)' : 'International Medical Classification'}</div>

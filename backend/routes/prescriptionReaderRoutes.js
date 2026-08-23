@@ -36,11 +36,18 @@ router.get('/prescription-reader/status', auth, requirePermission('pharmacy'), a
 
 router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), prescriptionLimiter, async (req, res, next) => {
   try {
-    const { image, mimeType, lang, mode } = req.body;
+    const { image, mimeType, lang, mode, patientAllergies } = req.body;
     if (!image) return res.status(400).json({ message: 'الصورة مطلوبة' });
 
     const base64 = image.includes(',') ? image.split(',')[1] : image;
     const detectedMimeType = mimeType || (image.match(/^data:(.+?);base64,/) || [])[1] || 'image/jpeg';
+
+    // patientAllergies: قائمة حساسيات مريض مربوط صراحةً بهذي الوصفة من
+    // الفرونت إند (اختياري تماماً — راجعي شرح كامل بـagents/prescriptionAgent
+    // .js). نتحقق فقط من الشكل العام هنا (مصفوفة أو غير موجودة) — أي عنصر
+    // بلا name صالح يُتجاهَل لاحقاً بـallergyAgent.js نفسه، لا حاجة لتكرار
+    // ذلك هنا.
+    const validPatientAllergies = Array.isArray(patientAllergies) ? patientAllergies : undefined;
 
     let jobId;
     try {
@@ -51,6 +58,7 @@ router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), pr
         userId: req.user.id,
         userRole: req.user.role,
         mode,
+        patientAllergies: validPatientAllergies,
       });
     } catch (err) {
       console.error('⚠️  [prescription-reader] تعذّر إضافة مهمة لطابور المعالجة (Redis):', err.message);

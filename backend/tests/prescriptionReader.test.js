@@ -49,6 +49,31 @@ describe('POST /api/prescription-reader/read', () => {
     expect(jobData.lang).toBe('ar');
   });
 
+  test('مع patientAllergies (مريض مربوط بالفرونت إند): تُمرَّر كما هي لمهمة الطابور', async () => {
+    enqueuePrescriptionReadJob.mockResolvedValueOnce('job-2');
+    const patientAllergies = [{ name: 'Penicillin', severity: 'severe' }];
+
+    await request(app)
+      .post('/api/prescription-reader/read')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ image: 'data:image/jpeg;base64,AAAA', mimeType: 'image/jpeg', lang: 'ar', patientAllergies });
+
+    const jobData = enqueuePrescriptionReadJob.mock.calls[0][0];
+    expect(jobData.patientAllergies).toEqual(patientAllergies);
+  });
+
+  test('بدون patientAllergies (لا مريض مربوط): تُمرَّر undefined، لا مصفوفة فارغة وهمية', async () => {
+    enqueuePrescriptionReadJob.mockResolvedValueOnce('job-3');
+
+    await request(app)
+      .post('/api/prescription-reader/read')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ image: 'data:image/jpeg;base64,AAAA', mimeType: 'image/jpeg', lang: 'ar' });
+
+    const jobData = enqueuePrescriptionReadJob.mock.calls[0][0];
+    expect(jobData.patientAllergies).toBeUndefined();
+  });
+
   test('بدون صورة: يُرفض بـ400', async () => {
     const res = await request(app)
       .post('/api/prescription-reader/read')

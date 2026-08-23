@@ -36,7 +36,7 @@ const EMPTY_ITEM = { name:'', qty:1, unit:'Tablet', dosage:'' };
 const EMPTY_DRUG = { code:'', name:'', nameEn:'', category:'other', form:'Tablet', strength:'', manufacturer:'', unitCost:0, qty:0, minQty:10, maxQty:500, expiry:'', notes:'' };
 
 export default function PharmacyPage() {
-  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, patients } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';
@@ -86,6 +86,39 @@ export default function PharmacyPage() {
   // قراءة فاتورة عادية. راجعي backend/agents/prescriptionAgent.js للتفاصيل.
   const [readingPrescription, setReadingPrescription] = useState(false);
   const [prescriptionInteractions, setPrescriptionInteractions] = useState(null); // نتيجة فحص التضارب لآخر وصفة قُرئت، لعرضها بتحذير واضح
+
+  // ── ربط مريض من السجلات لفحص الحساسية الدوائية تلقائياً (المرحلة الرابعة) ──
+  // ── قرار أمان صريح: لا مطابقة تلقائية بالاسم المُستخرَج من صورة الوصفة ──
+  // نفس مبدأ DosageCheckPage.js/AllergyCheckPage.js بالضبط: اسم المريض
+  // المكتوب بالوصفة (rxForm.patientName) نص حر دائماً، لا يُطابَق تلقائياً مع
+  // أي سجل مريض حقيقي، تجنّباً لخطر ربط حساسيات مريض آخر بصمت. الربط هنا
+  // اختياري تماماً وصريح فقط عبر هذي القائمة المنسدلة.
+  const [linkedPatientId, setLinkedPatientId] = useState('');
+  const linkedPatient = React.useMemo(() => (patients || []).find(p => String(p.id) === String(linkedPatientId)) || null, [patients, linkedPatientId]);
+  const [prescriptionAllergyResult, setPrescriptionAllergyResult] = useState(null); // نفس شكل رد /allergy-check أو حقول readPrescription (allergyConflicts/allergySource/...)
+  const [checkingAllergy, setCheckingAllergy] = useState(false);
+
+  // فحص حساسية يدوي بأدوية الوصفة الحالية بالنموذج — يُستخدم (أ) بعد ربط
+  // مريض لاحقاً لوصفة قُرئت بالفعل بلا ربط وقتها، و(ب) لوصفات تُدخَل أدويتها
+  // يدوياً بلا قارئ ذكاء اصطناعي إطلاقاً. نفس المسار (POST /allergy-check
+  // /check) المستخدَم بـAllergyCheckPage.js تماماً.
+  const runAllergyCheck = async () => {
+    if (!linkedPatient) { showToast(L('اختر مريضاً مربوطاً أولاً', 'Select a linked patient first'), 'error'); return; }
+    const drugNames = (rxForm.items || []).map(i => i.name).filter(Boolean);
+    if (drugNames.length === 0) { showToast(L('أضف دواءً واحداً على الأقل أولاً', 'Add at least one drug first'), 'error'); return; }
+    setCheckingAllergy(true);
+    try {
+      const res = await api.post('/allergy-check/check', { allergies: linkedPatient.allergies || [], drugs: drugNames, lang, mode: aiMode });
+      setPrescriptionAllergyResult(res);
+      if (res.available && (res.conflicts || []).length > 0) {
+        showToast(L('⚠️ تحذير: تضارب مع حساسية دوائية مسجَّلة للمريض — راجع التفاصيل بالأسفل', '⚠️ Warning: conflict with a recorded patient allergy — review the details below'), 'warning');
+      }
+    } catch (err) {
+      showToast(err.message || L('فشل فحص الحساسية', 'Allergy check failed'), 'error');
+    } finally {
+      setCheckingAllergy(false);
+    }
+  };
   // ── اختيار مزوّد الذكاء الاصطناعي لهذا الطلب تحديداً (بوت/إنترنت/محلي) ──
   // يبدأ بالإعداد الافتراضي الذي يديره الإدمن (system_settings)، لكن أي
   // مستخدم يقدر يغيّره هنا لطلبه الحالي فقط — راجعي components/AiModeSelect.js.
@@ -109,8 +142,13 @@ export default function PharmacyPage() {
   const readPrescriptionFromDataUrl = async (dataUrl, mimeType) => {
     setReadingPrescription(true);
     setPrescriptionInteractions(null);
+    setPrescriptionAllergyResult(null);
     try {
-      const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang, mode: aiMode });
+      // patientAllergies: تُرسَل فقط لو مريض مربوط صراحةً بالفعل قبل الرفع
+      // (راجعي شرح linkedPatient أعلاه) — يفحصها الخادم بنفس المهمة الخلفية
+      // (OCR + AI + تضارب دوائي + حساسية معاً). لو رُبط المريض بعد الرفع،
+      // استخدم زر "فحص الحساسية الآن" (runAllergyCheck) بدل إعادة رفع الصورة.
+      const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang, mode: aiMode, patientAllergies: linkedPatient?.allergies || undefined });
       if (submitted.available === false) {
         showToast(L('قراءة الوصفات بالذكاء الاصطناعي غير مُفعَّلة — تأكد من إعداد مزوّد الذكاء الاصطناعي بملف .env', 'AI prescription reading is not enabled — check the AI provider setup in .env'), 'warning');
         return;
@@ -132,9 +170,28 @@ export default function PharmacyPage() {
           ...(result.medicines || []).filter(m => m.name).map(m => ({ name: m.name, qty: m.quantity || 1, unit: m.unit || 'Tablet', dosage: m.dosage || '', id: Date.now() + Math.random() })),
         ],
       }));
-      if (result.hasInteractions) {
+      // نتيجة فحص الحساسية — فقط لو فُحصت فعلياً (allergyChecked: مريض مربوط
+      // وقت الرفع + دواء واحد على الأقل استُخرِج). allergyAvailable يفرّق
+      // بدوره بين "فُحص ونتيجته متاحة" و"فُحص لكن تعذّر إعطاء نتيجة" (لا
+      // تطابق بالجدول + AI غير متاح) — راجعي شرح allergyChecked/allergyAvailable
+      // بـagents/prescriptionAgent.js.
+      if (result.allergyChecked) {
+        setPrescriptionAllergyResult(
+          result.allergyAvailable
+            ? { available: true, conflicts: result.allergyConflicts || [], source: result.allergySource, incomplete: result.allergyIncomplete, noAllergiesOnFile: result.allergyNoneOnFile }
+            : { available: false }
+        );
+      }
+
+      const hasAllergyConflicts = (result.allergyConflicts || []).length > 0;
+      if (result.hasInteractions && hasAllergyConflicts) {
+        setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
+        showToast(L('⚠️ تحذير: تضارب دوائي وتضارب حساسية دوائية محتملان بهذي الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction AND allergy conflict in this prescription — review the details below before saving'), 'warning');
+      } else if (result.hasInteractions) {
         setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
         showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذي الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
+      } else if (hasAllergyConflicts) {
+        showToast(L('⚠️ تحذير: تضارب مع حساسية دوائية مسجَّلة للمريض — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: conflict with a recorded patient allergy — review the details below before saving'), 'warning');
       } else {
         showToast(L('تمت قراءة الوصفة وتعبئة الحقول — راجع البيانات قبل الحفظ', 'Prescription read and fields filled — review before saving'), 'success');
       }
@@ -285,7 +342,7 @@ export default function PharmacyPage() {
     },0);
     const no = `${rPrefix}${String(rMaxSeq+1).padStart(4,'0')}`;
     setRxForm({ ...EMPTY_RX, prescNo: no, date: new Date().toISOString().split('T')[0] });
-    setEditRxId(null); setPrescriptionInteractions(null); setShowRxModal(true);
+    setEditRxId(null); setPrescriptionInteractions(null); setLinkedPatientId(''); setPrescriptionAllergyResult(null); setShowRxModal(true);
   };
   const addItem = () => {
     if (!newItem.name) return;
@@ -584,7 +641,7 @@ export default function PharmacyPage() {
               </div>
               <div style={{ display:'flex', gap:8, marginTop:10, borderTop:'1px solid var(--border)', paddingTop:10, flexWrap:'wrap' }}>
                 {rx.status==='pending' && <button onClick={()=>dispense(rx.id)} style={S.btn('#10b981')}>✅ {L('صرف الوصفة','Dispense')}</button>}
-                <button onClick={()=>{ setRxForm({...rx,items:rx.items||[]}); setEditRxId(rx.id); setPrescriptionInteractions(null); setShowRxModal(true); }} style={S.btn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
+                <button onClick={()=>{ setRxForm({...rx,items:rx.items||[]}); setEditRxId(rx.id); setPrescriptionInteractions(null); setLinkedPatientId(''); setPrescriptionAllergyResult(null); setShowRxModal(true); }} style={S.btn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
                 <button onClick={()=>deleteRx(rx.id)} style={S.btn('#ef4444')}>🗑 {L('حذف','Delete')}</button>
               </div>
             </div>
@@ -778,6 +835,35 @@ export default function PharmacyPage() {
                 <label style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginBottom:4 }}>{L('مزوّد الذكاء الاصطناعي لهذي القراءة', 'AI provider for this reading')}</label>
                 <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={readingPrescription} style={{ maxWidth: 260 }} />
               </div>
+              {Array.isArray(patients) && patients.length > 0 && (
+                <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--border)' }}>
+                  <label style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginBottom:4 }}>
+                    {L('ربط مريض من السجلات لفحص الحساسية الدوائية تلقائياً (اختياري)', "Link an existing patient record to auto-check drug allergies (optional)")}
+                  </label>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    <select
+                      style={{ ...S.fi, maxWidth:280 }}
+                      value={linkedPatientId}
+                      onChange={e => { setLinkedPatientId(e.target.value); setPrescriptionAllergyResult(null); }}
+                    >
+                      <option value="">{L('— بلا ربط —', '— Not linked —')}</option>
+                      {patients.slice(0, 300).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    {linkedPatient && (
+                      <button type="button" onClick={runAllergyCheck} disabled={checkingAllergy || readingPrescription} style={{ ...S.btn('#c2410c'), padding:'5px 12px', fontSize:12, opacity: (checkingAllergy || readingPrescription) ? 0.6 : 1 }}>
+                        {checkingAllergy ? `⏳ ${L('جارٍ الفحص...','Checking...')}` : `🚫 ${L('فحص الحساسية الآن','Check allergy now')}`}
+                      </button>
+                    )}
+                  </div>
+                  {linkedPatient && (
+                    <p style={{ margin:'6px 0 0', fontSize:11, color:'var(--text-secondary)' }}>
+                      {Array.isArray(linkedPatient.allergies) && linkedPatient.allergies.length > 0
+                        ? L(`حساسيات مسجَّلة: ${linkedPatient.allergies.map(a => a.name).join('، ')}`, `Recorded allergies: ${linkedPatient.allergies.map(a => a.name).join(', ')}`)
+                        : L('لا توجد حساسيات مسجَّلة لهذا المريض', 'No allergies on file for this patient')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── تحذير تضارب دوائي واضح — يظهر فقط لو القراءة الأخيرة اكتشفت تضارباً ── */}
@@ -807,6 +893,48 @@ export default function PharmacyPage() {
                     {L('ملاحظة: بعض الأزواج لم تُفحَص (الذكاء الاصطناعي غير متاح حالياً) — الفحص جزئي.', 'Note: some pairs were not checked (AI currently unavailable) — this check is partial.')}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── تحذير تضارب حساسية دوائية — نفس نمط لون "شديد" الأحمر دائماً ── */}
+            {/* (بعكس تضارب التداخل الدوائي أعلاه، الذي يتلوّن حسب severity) — */}
+            {/* أي تضارب حساسية بحد ذاته يستحق أعلى درجة انتباه بصري، بغض النظر */}
+            {/* عن شدة الحساسية المسجَّلة نفسها (تُعرَض كشارة داخلية بدل ذلك). */}
+            {prescriptionAllergyResult?.available && (prescriptionAllergyResult.conflicts || []).length > 0 && (
+              <div style={{ background:'#fef2f2', border:'2px solid #ef4444', borderRadius:10, padding:14, marginBottom:16 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, fontWeight:700, color:'#991b1b' }}>
+                  🚫 {L('تضارب مع حساسية دوائية مسجَّلة للمريض', "Conflict with the patient's recorded allergy")}
+                </div>
+                {prescriptionAllergyResult.conflicts.map((c, i) => {
+                  const sevColor = { mild:'#22c55e', moderate:'#f59e0b', severe:'#ef4444' }[c.severity] || '#6b7280';
+                  const sevLabel = { mild: L('خفيفة','Mild'), moderate: L('متوسطة','Moderate'), severe: L('شديدة','Severe') }[c.severity] || L('غير محدَّدة','Unspecified');
+                  return (
+                    <div key={i} style={{ padding:'8px 0', borderTop: i>0 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', marginBottom:4 }}>
+                        <span style={{ background:'var(--bg-secondary)', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{c.drug}</span>
+                        <span style={{ fontSize:12, color:'var(--text-secondary)' }}>↔ {c.allergyName}</span>
+                        <span style={{ fontSize:11, fontWeight:700, color: sevColor }}>{sevLabel}</span>
+                      </div>
+                      {c.explanation && <div style={{ fontSize:13 }}>ℹ️ {c.explanation}</div>}
+                      {c.recommendation && <div style={{ fontSize:12, color:'var(--text-secondary)' }}>💡 {c.recommendation}</div>}
+                    </div>
+                  );
+                })}
+                {prescriptionAllergyResult.incomplete && (
+                  <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:8 }}>
+                    {L('ملاحظة: بعض الأدوية لم تُفحَص (الذكاء الاصطناعي غير متاح حالياً) — الفحص جزئي.', 'Note: some drugs were not checked (AI currently unavailable) — this check is partial.')}
+                  </div>
+                )}
+              </div>
+            )}
+            {prescriptionAllergyResult?.available && (prescriptionAllergyResult.conflicts || []).length === 0 && !prescriptionAllergyResult.noAllergiesOnFile && (
+              <div style={{ background:'#f0fdf4', border:'1px solid #22c55e', borderRadius:10, padding:'8px 14px', marginBottom:16, fontSize:12, color:'#166534' }}>
+                ✅ {L('لا يوجد تضارب مع حساسيات المريض المسجَّلة', "No conflict with the patient's recorded allergies")}
+              </div>
+            )}
+            {prescriptionAllergyResult && prescriptionAllergyResult.available === false && (
+              <div style={{ background:'rgba(107,114,128,0.08)', border:'1px solid var(--border)', borderRadius:10, padding:'8px 14px', marginBottom:16, fontSize:12, color:'var(--text-secondary)' }}>
+                ℹ️ {L('تعذّر فحص الحساسية الدوائية لبعض الأدوية (لا تطابق بالجدول والذكاء الاصطناعي غير متاح حالياً) — راجع صيدلانياً يدوياً.', 'Could not check drug allergies for some drugs (no table match and AI is currently unavailable) — please review manually with a pharmacist.')}
               </div>
             )}
 

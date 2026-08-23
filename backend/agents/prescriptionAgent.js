@@ -7,14 +7,19 @@
 //   1) agents/ocrAgent.js       — PaddleOCR يستخرج نصاً أولياً من صورة الوصفة
 //   2) هذا الملف (AI)           — يهيكل النص/الصورة إلى قائمة أدوية منظَّمة
 //   3) agents/interactionAgent.js — يفحص التضارب الدوائي بين الأدوية المُستخرَجة
+//   4) agents/allergyAgent.js     — يفحص تضارب الحساسية الدوائية، فقط لو
+//      مريض مربوط صراحةً بهذي الوصفة (patientAllergies أدناه) — راجعي شرح
+//      كامل بـPharmacyPage.js لسبب اشتراط ربط صريح (لا مطابقة تلقائية
+//      بالاسم المُستخرَج من الصورة، تجنّباً لخطر ربط حساسيات مريض خاطئ بصمت).
 //
 // نفس نهج invoiceReadProcessor.js تماماً بالخطوتين 1-2 (OCR كسياق مساعد
 // فقط، الصورة نفسها تبقى المصدر الأساسي المُرسَل لـGemini) — راجعي شرح
 // كامل هناك لسبب هذا القرار (جودة OCR بالعربية أضعف من رؤية Gemini
-// المباشرة). الإضافة الحقيقية هنا هي الخطوة 3 فقط.
+// المباشرة). الإضافة الحقيقية هنا هي الخطوتان 3-4.
 const { routeImageCall } = require('../utils/aiProviderRouter');
 const { extractText } = require('./ocrAgent');
 const { checkInteractions } = require('./interactionAgent');
+const { checkAllergies } = require('./allergyAgent');
 const { devLog } = require('../utils/logger');
 
 const SYSTEM_PROMPT_AR = 'أنتِ نظام استخراج بيانات وصفات طبية دقيق لنظام مستشفى إلكتروني. اقرئي صورة الوصفة الطبية المرفقة (ومعها نص استخراج ضوئي (OCR) أولي كمرجع مساعد فقط — قد يحتوي أخطاء، والصورة نفسها هي المصدر الأدق)، واستخرجي البيانات بدقة. لو حقل غير واضح أو غير موجود، اتركيه فارغاً (null) — لا تخمّني قيمة، وخصوصاً أسماء الأدوية (خطأ باسم الدواء قد يُخفي تضارباً دوائياً حقيقياً). أجيبي فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب، بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
@@ -39,7 +44,7 @@ function buildUserPrompt(ocrText) {
 // readPrescription: يُستدعى مباشرة من services/queue/prescriptionReadProcessor.js
 // (المهمة الخلفية BullMQ) — وأيضاً مصمَّم للاستدعاء المباشر لاحقاً من أي
 // مسار آخر يحتاج نفس السير الكامل (OCR → AI → فحص تضارب) بلا وسيط.
-async function readPrescription(imageBase64, mimeType, lang, mode) {
+async function readPrescription(imageBase64, mimeType, lang, mode, patientAllergies) {
   const ocrResult = await extractText(imageBase64);
   if (!ocrResult.available) {
     devLog(`ℹ️  [prescription-agent] PaddleOCR غير متاح (${ocrResult.error}) — نكمل بالصورة وحدها`);
@@ -69,6 +74,19 @@ async function readPrescription(imageBase64, mimeType, lang, mode) {
 
   const interactions = interactionResult?.available ? interactionResult.interactions : [];
 
+  // فحص الحساسية الدوائية — فقط لو الطالب مرَّر قائمة حساسيات مريض مربوط
+  // صراحةً (راجعي التعليق أعلى الاستيرادات). قائمة فارغة تعني "مريض بلا
+  // حساسيات مسجَّلة" (نتيجة صحيحة بذاتها)، بينما undefined/null تعني "لا
+  // مريض مربوط إطلاقاً" — لا نفحص شيئاً بهذي الحالة (لا available:false ولا
+  // ادّعاء أي نتيجة، الحقل ببساطة null بالرد).
+  let allergyResult = null;
+  const medicineNamesForAllergy = medicines.map((m) => m.name).filter(Boolean);
+  const allergyChecked = Array.isArray(patientAllergies) && medicineNamesForAllergy.length > 0;
+  if (allergyChecked) {
+    allergyResult = await checkAllergies(patientAllergies, medicineNamesForAllergy, lang, mode);
+  }
+  const allergyConflicts = allergyResult?.available ? (allergyResult.conflicts || []) : [];
+
   return {
     available: true,
     provider: aiResult.provider,
@@ -88,6 +106,13 @@ async function readPrescription(imageBase64, mimeType, lang, mode) {
       const rank = { low: 1, medium: 2, high: 3 };
       return (rank[i.severity] || 0) > (rank[max] || 0) ? i.severity : max;
     }, null),
+    allergyChecked,
+    allergyAvailable: allergyChecked ? Boolean(allergyResult?.available) : null,
+    allergyConflicts,
+    allergySource: allergyResult?.source ?? null,
+    allergyIncomplete: Boolean(allergyResult?.incomplete),
+    allergyNoneOnFile: Boolean(allergyResult?.noAllergiesOnFile),
+    hasAllergyConflicts: allergyConflicts.length > 0,
   };
 }
 

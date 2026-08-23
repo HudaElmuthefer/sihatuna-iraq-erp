@@ -8,10 +8,12 @@
 jest.mock('../agents/ocrAgent', () => ({ extractText: jest.fn() }));
 jest.mock('../utils/aiProviderRouter', () => ({ routeImageCall: jest.fn() }));
 jest.mock('../agents/interactionAgent', () => ({ checkInteractions: jest.fn() }));
+jest.mock('../agents/allergyAgent', () => ({ checkAllergies: jest.fn() }));
 
 const { extractText } = require('../agents/ocrAgent');
 const { routeImageCall } = require('../utils/aiProviderRouter');
 const { checkInteractions } = require('../agents/interactionAgent');
+const { checkAllergies } = require('../agents/allergyAgent');
 const { readPrescription } = require('../agents/prescriptionAgent');
 
 afterEach(() => {
@@ -72,4 +74,49 @@ test('فشل استدعاء AI نفسه: available:false بدون رمي است�
 
   expect(result).toEqual({ available: false, error: 'Gemini 500', provider: 'gemini' });
   expect(checkInteractions).not.toHaveBeenCalled();
+});
+
+test('لا patientAllergies مُمرَّرة إطلاقاً (لا مريض مربوط): لا يستدعي فحص الحساسية، allergyChecked:false', async () => {
+  extractText.mockResolvedValueOnce({ available: true, text: 'نص', avgConfidence: 0.9, lines: [] });
+  routeImageCall.mockResolvedValueOnce({ available: true, provider: 'gemini', parsed: { medicines: [{ name: 'Amoxicillin' }] } });
+
+  const result = await readPrescription('AAAA', 'image/jpeg', 'en', 'online');
+
+  expect(checkAllergies).not.toHaveBeenCalled();
+  expect(result.allergyChecked).toBe(false);
+  expect(result.allergyAvailable).toBeNull();
+  expect(result.allergyConflicts).toEqual([]);
+  expect(result.hasAllergyConflicts).toBe(false);
+});
+
+test('مريض مربوط بحساسية بنسلين + وصفة أموكسيسيلين: يستدعي فحص الحساسية ويرجع التضارب', async () => {
+  extractText.mockResolvedValueOnce({ available: true, text: 'نص', avgConfidence: 0.9, lines: [] });
+  routeImageCall.mockResolvedValueOnce({ available: true, provider: 'gemini', parsed: { medicines: [{ name: 'Amoxicillin' }] } });
+  checkAllergies.mockResolvedValueOnce({
+    available: true, source: 'db',
+    conflicts: [{ drug: 'Amoxicillin', allergyName: 'Penicillin', severity: 'severe', explanation: 'e', recommendation: 'r', source: 'db' }],
+  });
+
+  const patientAllergies = [{ name: 'Penicillin', severity: 'severe' }];
+  const result = await readPrescription('AAAA', 'image/jpeg', 'en', 'online', patientAllergies);
+
+  expect(checkAllergies).toHaveBeenCalledWith(patientAllergies, ['Amoxicillin'], 'en', 'online');
+  expect(result.allergyChecked).toBe(true);
+  expect(result.allergyAvailable).toBe(true);
+  expect(result.hasAllergyConflicts).toBe(true);
+  expect(result.allergyConflicts).toHaveLength(1);
+  expect(result.allergySource).toBe('db');
+});
+
+test('مريض مربوط لكن فشل فحص الحساسية (لا تطابق بالجدول + AI غير متاح): allergyChecked:true لكن allergyAvailable:false، لا تضارب وهمي', async () => {
+  extractText.mockResolvedValueOnce({ available: true, text: 'نص', avgConfidence: 0.9, lines: [] });
+  routeImageCall.mockResolvedValueOnce({ available: true, provider: 'gemini', parsed: { medicines: [{ name: 'SomeDrug' }] } });
+  checkAllergies.mockResolvedValueOnce({ available: false });
+
+  const result = await readPrescription('AAAA', 'image/jpeg', 'en', 'online', [{ name: 'Sulfa', severity: 'mild' }]);
+
+  expect(result.allergyChecked).toBe(true);
+  expect(result.allergyAvailable).toBe(false);
+  expect(result.hasAllergyConflicts).toBe(false);
+  expect(result.allergyConflicts).toEqual([]);
 });

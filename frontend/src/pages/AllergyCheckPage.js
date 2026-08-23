@@ -170,11 +170,17 @@ export default function AllergyCheckPage() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* ── إصلاح: البطاقة نفسها حمراء دائماً (نفس نمط "شديد") بغض النظر عن
+                      شدة الحساسية المسجَّلة — أي تضارب حساسية دوائية حقيقي يستحق أعلى
+                      درجة انتباه بصري، ولا يجوز أبداً أن يتشابه بصرياً مع بطاقة "لا يوجد
+                      تضارب" الخضراء أعلاه لمجرد أن شدة الحساسية المسجَّلة "خفيفة". الشدة
+                      الفعلية تُعرَض فقط كشارة داخلية ملوَّنة، لا كلون البطاقة كلها —
+                      راجعي نفس المبدأ بالضبط بـPharmacyPage.js. */}
                   {result.conflicts.map((c, i) => (
-                    <div key={i} style={{ padding: 20, border: `2px solid ${sevColor(c.severity)}`, borderRadius: 12, background: `${sevColor(c.severity)}0d` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, color: sevColor(c.severity), fontWeight: 700, fontSize: 16 }}>
+                    <div key={i} style={{ padding: 20, border: '2px solid #ef4444', borderRadius: 12, background: '#fef2f2' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, color: '#991b1b', fontWeight: 700, fontSize: 16 }}>
                         <FaExclamationTriangle /> {tr('allergy_result_conflict')}
-                        <span style={{ fontSize: 11, fontWeight: 700, background: `${sevColor(c.severity)}22`, padding: '2px 10px', borderRadius: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: sevColor(c.severity), background: `${sevColor(c.severity)}22`, padding: '2px 10px', borderRadius: 10 }}>
                           {lang === 'ar' ? sevLabelAr(c.severity) : sevLabelEn(c.severity)}
                         </span>
                       </div>

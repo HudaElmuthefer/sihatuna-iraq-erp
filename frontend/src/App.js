@@ -31,6 +31,7 @@ import SettingsPage from './pages/SettingsPage';
 // ERP New Modules
 import InventoryPage from './pages/InventoryPage';
 import ProcurementPage from './pages/ProcurementPage';
+import BillingAnomalyPage from './pages/BillingAnomalyPage';
 import ProjectsPage from './pages/ProjectsPage';
 import QualityPage from './pages/QualityPage';
 import LaboratoryPage from './pages/LaboratoryPage';
@@ -101,6 +102,7 @@ function AppRoutes() {
           <Route path="payment-settings"   element={<ProtectedRoute pageKey="payment-settings"><PaymentSettingsPage /></ProtectedRoute>} />
           <Route path="billing"            element={<ProtectedRoute pageKey="billing"><BillingPage /></ProtectedRoute>} />
           <Route path="procurement"        element={<ProtectedRoute pageKey="procurement"><ProcurementPage /></ProtectedRoute>} />
+          <Route path="billing-anomaly"    element={<ProtectedRoute pageKey="billing-anomaly"><BillingAnomalyPage /></ProtectedRoute>} />
           {/* HR */}
           <Route path="hr"                 element={<ProtectedRoute pageKey="hr"><HRPage /></ProtectedRoute>} />
           {/* Projects */}

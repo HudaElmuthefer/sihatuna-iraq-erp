@@ -47,7 +47,7 @@ describe('GET /api/ai-provider-settings', () => {
   test('أي مستخدم مسجّل دخول (حتى غير إدمن) يستطيع قراءة الإعداد الحالي', async () => {
     const res = await request(app).get('/api/ai-provider-settings').set('Authorization', `Bearer ${nurseToken}`);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online' });
+    expect(res.body).toEqual({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online', billingAnomaly: 'online' });
   });
 
   test('بدون توكن دخول: يُرفض بـ401', async () => {
@@ -63,7 +63,7 @@ describe('PUT /api/ai-provider-settings', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ drugInteractions: 'bot' });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ invoiceReader: 'online', drugInteractions: 'bot', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online' });
+    expect(res.body).toEqual({ invoiceReader: 'online', drugInteractions: 'bot', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online', billingAnomaly: 'online' });
 
     // يتأكد إن القراءة اللاحقة (GET) ترجع نفس القيمة المحفوظة فعلياً
     const getRes = await request(app).get('/api/ai-provider-settings').set('Authorization', `Bearer ${adminToken}`);

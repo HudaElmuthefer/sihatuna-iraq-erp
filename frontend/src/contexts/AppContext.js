@@ -30,6 +30,7 @@ export const ALL_PAGES = [
   // ── المالية ──
   { key: 'accounts',         navKey: 'nav_accounts',         label: 'الحسابات والمالية',    labelEn: 'Accounts & Finance',              path: '/accounts',              icon: '💰', group: 'finance' },
   { key: 'procurement',      navKey: 'nav_procurement',      label: 'المشتريات',            labelEn: 'Procurement',                     path: '/procurement',           icon: '🛒', group: 'finance' },
+  { key: 'billing-anomaly',  navKey: 'nav_billing_anomaly',  label: 'كشف القيم المتطرفة بالفوترة', labelEn: 'Billing Anomaly Detection', path: '/billing-anomaly', icon: '🔍', group: 'finance' },
   { key: 'inventory',        navKey: 'nav_inventory',        label: 'المخزون والمستودعات',  labelEn: 'Inventory',           path: '/inventory',             icon: '📦', group: 'finance' },
   { key: 'billing',          navKey: 'nav_billing',          label: 'الفوترة والدفع',       labelEn: 'Billing & Payment',              path: '/billing',               icon: '🧾', group: 'finance' },
   { key: 'payment-settings', navKey: 'nav_payment_settings', label: 'إعدادات الدفع',        labelEn: 'Payment Settings',              path: '/payment-settings',      icon: '💳', group: 'finance' },

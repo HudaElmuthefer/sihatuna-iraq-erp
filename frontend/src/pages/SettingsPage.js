@@ -185,8 +185,8 @@ export default function SettingsPage() {
   // (Ollama محلي — راجع backend/utils/ollamaService.js). هذا هو الإعداد
   // الافتراضي فقط الآن — كل صفحة ذكاء اصطناعي (AiModeSelect.js) تسمح لأي
   // مستخدم بتجاوزه لطلبه الحالي بلا حاجة صلاحية إدمن.
-  const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck'];
-  const [aiSettings, setAiSettings] = useState({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online' });
+  const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck', 'billingAnomaly'];
+  const [aiSettings, setAiSettings] = useState({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online', billingAnomaly: 'online' });
   const [aiSettingsLoading, setAiSettingsLoading] = useState(false);
   const [aiSettingsSaving, setAiSettingsSaving] = useState(false);
 
@@ -1103,6 +1103,7 @@ export default function SettingsPage() {
                     { feature: 'aiDiagnosis', labelKey: 'ai_feature_diagnosis' },
                     { feature: 'dosageValidation', labelKey: 'ai_feature_dosage' },
                     { feature: 'allergyCheck', labelKey: 'ai_feature_allergy' },
+                    { feature: 'billingAnomaly', labelKey: 'ai_feature_billing_anomaly' },
                   ].map(({ feature, labelKey }) => (
                     <div key={feature}>
                       <label className="form-label">{tr(labelKey)}</label>

@@ -1,8 +1,8 @@
 // backend/utils/aiProviderRouter.js
 //
-// نقطة توزيع واحدة موحَّدة لكل ميزات الذكاء الاصطناعي الست (قراءة
+// نقطة توزيع واحدة موحَّدة لكل ميزات الذكاء الاصطناعي (قراءة
 // الفواتير، التضارب الدوائي، قراءة الوصفات، التشخيص الذكي، فحص الجرعات،
-// فحص الحساسية الدوائية) — تقرأ اختيار
+// فحص الحساسية الدوائية، وشرح القيم المتطرفة بالفوترة) — تقرأ اختيار
 // المستخدم المحفوظ بجدول system_settings (لا localStorage — يبقى الاختيار
 // موحّداً بين كل أجهزة/متصفحات المستخدمين، ويستطيع الإدمن إدارته مركزياً)
 // كإعداد افتراضي، أو تأخذ اختياراً صريحاً لطلب واحد (requestedMode أدناه —
@@ -27,8 +27,8 @@ const { activeProvider, callAI, callAIWithImage } = require('./aiProvider');
 const { ollamaAvailable, callOllama, callOllamaWithImage } = require('./ollamaService');
 
 const SETTINGS_KEY = 'ai_provider_settings';
-// أسماء الميزات الست بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
-const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck'];
+// أسماء الميزات بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
+const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck', 'billingAnomaly'];
 const VALID_MODES = ['bot', 'online', 'offline'];
 // الافتراضي 'online' يطابق تماماً السلوك الحالي قبل هذه الميزة (Gemini أولاً
 // دائماً) — لا يكسر أي نشر موجود لم يُعدِّل الإعداد صراحة بعد.

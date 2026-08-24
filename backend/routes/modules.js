@@ -742,14 +742,17 @@ const registerAllModules = (router) => {
       const { additionLabelRaw, additionAmountRaw, deductionLabelRaw, deductionAmountRaw, ...rest } = row;
       rest.additions = additionLabelRaw ? [{ label: additionLabelRaw, amount: Number(additionAmountRaw) || 0 }] : [];
       rest.deductions = deductionLabelRaw ? [{ label: deductionLabelRaw, amount: Number(deductionAmountRaw) || 0 }] : [];
-      // ── إصلاح: مخطط التحقق (collectionSchemas.salaries) يطلب حقل "amount"
-      // صراحة، رغم إن نموذج الإضافة اليدوي بالواجهة (SalariesTab.js) يستخدم
-      // "baseSalary" فقط ولا يرسل "amount" إطلاقاً — فشل الاستيراد بالكامل
-      // (36 من 36) بسبب هذا الحقل الناقص. نعبّيه هنا تلقائياً بقيمة الراتب
-      // الأساسي حتى يمر التحقق؛ يستحق التأكد لاحقاً من الغرض الفعلي لحقل
-      // amount بمخطط قاعدة البيانات (هل يفترض يكون صافي الراتب بعد
-      // الإضافات/الخصومات، أو نفس الراتب الأساسي فقط؟).
-      rest.amount = Number(rest.baseSalary) || 0;
+      // ── إصلاح: "amount" يمثّل صافي الراتب (نفس دلالته بـtransactions/allowances —
+      // القيمة المالية الإجمالية النهائية للسجل)، أي baseSalary + مجموع additions
+      // - مجموع deductions، مطابقاً تماماً لدالة calcNet() بالواجهة
+      // (frontend/src/pages/accounts/shared.js). كان يُعبَّى سابقاً بقيمة
+      // baseSalary وحدها فقط لتفادي فشل تحقق قديم بمخطط الاستيراد — الحقل الآن
+      // غير مطلوب أصلاً بـcollectionSchemas.salaries، لكن نحسبه صحيحاً هنا
+      // بأي حال حتى يبقى صافياً حقيقياً لأي طرف يقرأه لاحقاً (تقرير، تصدير...)
+      // بدل الاعتماد على أنه دائماً يُعاد حسابه بالواجهة فقط.
+      const totalAdd = rest.additions.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+      const totalDed = rest.deductions.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      rest.amount = (Number(rest.baseSalary) || 0) + totalAdd - totalDed;
       const map = { 'مصرف': 'مدفوع', 'مُصرَف': 'مدفوع', 'مصروف': 'مدفوع', 'مدفوع': 'مدفوع', paid: 'مدفوع', 'معلق': 'معلق', pending: 'معلق', 'مرفوض': 'مرفوض', rejected: 'مرفوض' };
       const s = (rest.status || '').toString().trim();
       rest.status = map[s] || map[s.toLowerCase()] || 'معلق';

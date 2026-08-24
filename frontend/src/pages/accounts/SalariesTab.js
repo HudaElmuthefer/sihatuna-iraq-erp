@@ -71,14 +71,18 @@ function SalariesTab() {
   const save = async () => {
     if (!form.name) { showToast(tr('msg_required'),'error'); return; }
     const prev = salaries;
+    // amount: صافي الراتب (baseSalary + الإضافات - الخصومات) — نفس calcNet()
+    // المستخدَمة بالعرض، محسوبة هنا أيضاً وقت الحفظ حتى لا يبقى الحقل المخزَّن
+    // فارغاً لسجل أُنشئ يدوياً (بعكس الاستيراد من Excel الذي يحسبه، راجع
+    // afterParse بملف routes/modules.js لنفس المنطق بالضبط).
     if (editing) {
-      const ue = {...form,id:editing.id};
+      const ue = {...form,id:editing.id,amount:calcNet(form)};
       setSalaries(p=>p.map(e=>e.id===editing.id?ue:e));
       const ok = await syncToServer('salaries','update',ue);
       if (!ok) { setSalaries(prev); return; }
       showToast(tr('msg_saved'),'success');
     } else {
-      const ne = {...form,id:Date.now()};
+      const ne = {...form,id:Date.now(),amount:calcNet(form)};
       setSalaries(p=>[...p,ne]);
       const synced = await syncToServer('salaries','create',ne);
       if (!synced) { setSalaries(prev); return; }

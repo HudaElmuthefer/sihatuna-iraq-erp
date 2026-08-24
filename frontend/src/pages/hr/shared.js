@@ -2,7 +2,7 @@
 //
 // ثوابت ودوال مساعدة مشتركة بين كل تبويبات صفحة الموارد البشرية — استُخرجت
 // من HRPage.js الأصلي (كان 1261 سطر بملف واحد) كجزء من تقسيمه لملفات أصغر.
-// نُقلت هذي المحتويات بالضبط (نسخ حرفي، بدون أي تعديل منطقي) لتقليل خطر
+// نُقلت هذه المحتويات بالضبط (نسخ حرفي، بدون أي تعديل منطقي) لتقليل خطر
 // الأخطاء أثناء التقسيم.
 import { useApp } from '../../contexts/AppContext';
 import { api } from '../../api';
@@ -17,7 +17,7 @@ function useBackendLoad(backendKey, setState) {
       .then(data => {
         if (!cancelled && Array.isArray(data)) setState(data);
       })
-      .catch(() => {}); // الباك إند غير شغّال — نكمل بالبيانات المحلية بدون كسر
+      .catch(() => {}); // الباك إند لا يعمل — نكمل بالبيانات المحلية بدون كسر
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 }
@@ -26,15 +26,15 @@ function useBackendLoad(backendKey, setState) {
 const today = new Date();
 const addMonths = (d, m) => { const r = new Date(d); r.setMonth(r.getMonth()+m); return r.toISOString().split('T')[0]; };
 
-// ── إصلاح: كانت هذي بيانات تجريبية وهمية (4 موظفين برواتب حقيقية، كتب صادرة
-// وواردة، متقاعد) تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد قبل ما يضيف أي
+// ── إصلاح: كانت هذه بيانات تجريبية وهمية (4 موظفين برواتب حقيقية، كتب صادرة
+// وواردة، متقاعد) تظهر تلقائياً كـ"احتياط" لأول مستخدم جديد قبل أن يضيف أي
 // سجل حقيقي — بدون أي تمييز إنها وهمية. تبدأ فاضية بصراحة الآن.
 const initEmployees = [];
 const initOutgoing = [];
 const initIncoming = [];
 const initRetired = [];
 // ── إصلاح: initDossiers ما عادت مستخدَمة — DossiersTab صار يجيب البيانات
-// الحقيقية من الباك إند مباشرة (راجعي التعليق أعلى تعريف DossiersTab).
+// الحقيقية من الباك إند مباشرة (راجع التعليق أعلى تعريف DossiersTab).
 const DOSSIER_TYPES_AR = ['شهادة','قرار','عقد','تقرير','هوية','وثيقة','أخرى'];
 const DOSSIER_TYPES_EN = ['Certificate','Decree','Contract','Report','ID','Document','Other'];
 

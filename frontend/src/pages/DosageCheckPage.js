@@ -10,7 +10,7 @@
 // ── مبدأ أمان بصري جوهري ─────────────────────────────────────────────────
 // "لا بيانات كافية" (رمادي محايد) مختلف تماماً بصرياً عن "آمن" (أخضر) —
 // لا نعرضهما بنفس الطريقة أبداً، حتى لا يُفهَم غياب المعلومة كتطمين خاطئ.
-// راجعي نفس الملاحظة بأعلى backend/agents/dosageAgent.js.
+// راجع نفس الملاحظة بأعلى backend/agents/dosageAgent.js.
 import React, { useState, useEffect } from 'react';
 import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
@@ -50,7 +50,7 @@ export default function DosageCheckPage() {
   const [checked, setChecked] = useState(false);
   const [result, setResult] = useState(null);
 
-  // اختيار مزوّد الذكاء الاصطناعي لهذا الفحص — راجعي components/AiModeSelect.js
+  // اختيار مزوّد الذكاء الاصطناعي لهذا الفحص — راجع components/AiModeSelect.js
   const [aiMode, setAiMode] = useState('online');
   useEffect(() => {
     api.get('/dosage-check/status').then(r => { if (r?.mode) setAiMode(r.mode); }).catch(() => {});

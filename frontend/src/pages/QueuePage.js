@@ -8,7 +8,7 @@ import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
 // إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
-// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 6.04:1/7.49:1.
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذه تعطي 6.04:1/7.49:1.
 const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)';
 
 const empty = { patientName: '', department: '', priority: 'normal', notes: '' };
@@ -97,7 +97,7 @@ export default function QueuePage() {
   ];
   // إصلاح (منها مباشرة): كانت قائمة الأقسام تجمع أيضاً أي قيمة "قسم" ظهرت
   // بتذاكر اليوم فعلياً — فلو تذكرة واحدة انكتب فيها اسم طبيب بالغلط (من
-  // صفحة الحجز، اللي أصلاً حجزها على الأطباء مو الأقسام)، يبقى اسم الطبيب
+  // صفحة الحجز، التي أصلاً حجزها على الأطباء وليس الأقسام)، يبقى اسم الطبيب
   // هذا يظهر بقائمة الأقسام للأبد. الآن القائمة تقتصر على الأقسام الرسمية
   // والافتراضية فقط.
   const deptOptions = [...new Set(allDepartmentNames)].filter(Boolean);

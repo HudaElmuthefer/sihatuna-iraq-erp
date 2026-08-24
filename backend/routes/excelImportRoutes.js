@@ -5,8 +5,8 @@
 //
 // نتيجة الاستيراد ليست "الكل أو لا شيء": كل صف يُعالَج ويُحفَظ بشكل مستقل عن
 // باقي الصفوف عمداً (بدون معاملة/transaction واحدة تلف الجميع) — لأن الهدف
-// هو "استوردي كل الصفوف الصحيحة، وأخبريني بالضبط عن الصفوف الخاطئة وسببها"،
-// مو رفض الملف كاملاً بسبب خطأ بصف واحد وسط مئات الصفوف السليمة.
+// هو "استورد كل الصفوف الصحيحة، وأخبرني بالضبط عن الصفوف الخاطئة وسببها"،
+// وليس رفض الملف كاملاً بسبب خطأ بصف واحد وسط مئات الصفوف السليمة.
 const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
@@ -36,23 +36,23 @@ const importUpload = multer({
 // apiName: اسم المسار (يظهر بالرابط: /api/<apiName>/import-excel)
 // tableName: اسم الجدول الفعلي بقاعدة البيانات إن اختلف عن apiName (مثل
 //            ambulanceVehicles -> ambulance_vehicles)، بنفس فكرة sqlTableName
-//            بملف pgCrud.js — لازم يطابق تماماً الاسم المستخدم هناك لنفس
+//            بملف pgCrud.js — يجب أن يطابق تماماً الاسم المستخدم هناك لنفس
 //            الموديول، وإلا يفشل الإدراج بخطأ "الجدول غير موجود"
 // schema: نفس مخطط التحقق المستخدم بـ middleware/schemas.js لهذا الموديول
 // columnMap: قاموس "عنوان العمود بملف Excel" -> "اسم الحقل الداخلي"
-// options.indexedColumns: مطلوب صراحة الآن (بلا قيمة افتراضية) — لازم يطابق
+// options.indexedColumns: مطلوب صراحة الآن (بلا قيمة افتراضية) — يجب أن يطابق
 //            تماماً نفس المصفوفة المُمرَّرة لـ pgCrud() لنفس الموديول
 //            بـ modules.js (حتى لو فاضية [])، وإلا يفشل الإدراج.
 //            ── إصلاح fail-fast: كان الافتراض الضمني name/phone/status، وهو
 //            خاطئ لأغلب الجداول (تخزين JSONB بحت) — بالضبط نفس خطأ pgCrud.js
-//            اللي كسر 4 موديولات فعلياً بالاستيراد (المشاريع، الأقسام،
+//            الذي كسر 4 موديولات فعلياً بالاستيراد (المشاريع، الأقسام،
 //            المخزون، الأصول) قبل هذا الإصلاح. نسيان تمريره الآن يوقف تسجيل
 //            المسار فوراً برسالة واضحة بدل فشل استيراد غامض لاحقاً.
 const registerExcelImport = (router, apiName, schema, columnMap, options = {}) => {
   if (options.indexedColumns === undefined) {
     throw new Error(
       `❌ registerExcelImport('${apiName}'): options.indexedColumns مطلوب صراحة ولا قيمة افتراضية له.\n` +
-      `   مرري نفس المصفوفة بالضبط المُستخدَمة بتسجيل pgCrud() لنفس الموديول (حتى لو []).`
+      `   مرر نفس المصفوفة بالضبط المُستخدَمة بتسجيل pgCrud() لنفس الموديول (حتى لو []).`
     );
   }
   const {
@@ -61,12 +61,12 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
     permission = null,
     tableName = apiName,
     limiter = (req, res, next) => next(), // بدون تحديد معدل إضافي إن لم يُمرَّر
-    duplicateCheck = null, // مثال: ['name', 'phone'] — راجعي isDuplicate أدناه
+    duplicateCheck = null, // مثال: ['name', 'phone'] — راجع isDuplicate أدناه
     // ── إصلاح: تعبئة افتراضية اختيارية بعد تحليل كل صف ────────────────────────
     // بعض الحقول الرقمية (مثل spent/progress/milestones بموديول المشاريع)
     // ما تكون بأعمدة Excel أصلاً، فتبقى undefined وتكسر حسابات الواجهة
     // (تظهر "NaN%" أو "undefined/undefined"). afterParse(data) دالة اختيارية
-    // تُستدعى على كل صف بعد تحليله وقبل التحقق منه — تقدر ترجع نسخة معدَّلة
+    // تُستدعى على كل صف بعد تحليله وقبل التحقق منه — تستطيع إرجاع نسخة معدَّلة
     // بقيم افتراضية معقولة للحقول الناقصة.
     afterParse = null,
   } = options;
@@ -104,7 +104,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
       conditions.push(`${expr} = $${values.length}`);
     });
     // نطاق التحقق يبقى ضمن نفس المنشأة فقط بالأنظمة متعددة المنشآت — نفس
-    // الاسم والهاتف بمستشفيين مختلفين حالة مشروعة (مريضين مختلفين)، مو تكراراً
+    // الاسم والهاتف بمستشفيين مختلفين حالة مشروعة (مريضين مختلفين)، وليست تكراراً
     if (hospitalScoped && userHospitalId) {
       values.push(userHospitalId);
       conditions.push(`data->>'hospitalId' = $${values.length}`);
@@ -175,7 +175,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
           }
         } catch (dupErr) {
           // فشل فحص التكرار نفسه (مثلاً عمود JSONB بحاجة صياغة مختلفة) — لا
-          // نوقف الاستيراد كله بسببه، نكمل للإدراج مباشرة كما لو ما فيه تكرار
+          // نوقف الاستيراد كله بسببه، نكمل للإدراج مباشرة كما لو لا يوجد تكرار
           console.warn(`⚠️ [${apiName}] فشل فحص التكرار للصف ${rowNumber}:`, dupErr.message);
         }
 
@@ -184,7 +184,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         indexedColumns.forEach(({ field }) => delete rest[field]);
 
         // نفس فرع الحالتين المستخدم بـ pgCrud.js بالضبط: تخزين JSONB بحت لو
-        // ما فيه أعمدة فهرسة إضافية (مثل ambulanceVehicles)، أو أعمدة + JSONB
+        // لا توجد أعمدة فهرسة إضافية (مثل ambulanceVehicles)، أو أعمدة + JSONB
         let insertSql, insertValues;
         if (indexedColumns.length === 0) {
           insertSql = `INSERT INTO ${tableName} (data) VALUES ($1)`;

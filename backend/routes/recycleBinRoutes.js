@@ -27,7 +27,7 @@ router.get('/', auth, adminOnly, async (req, res, next) => {
   try {
     const conditions = [];
     const params = [];
-    // إدمن مرتبط بمنشأة معيّنة يشوف عناصر منشأته فقط؛ إدمن بلا منشأة (وزاري) يشوف الكل
+    // إدمن مرتبط بمنشأة معيّنة يرى عناصر منشأته فقط؛ إدمن بلا منشأة (وزاري) يرى الكل
     if (req.user?.hospitalId) {
       params.push(req.user.hospitalId);
       conditions.push(`hospital_id = $${params.length}`);
@@ -75,7 +75,7 @@ router.post('/:id/restore', auth, adminOnly, async (req, res, next) => {
 
     // نحاول نحافظ على نفس المعرّف الأصلي (يهم لو سجلات ثانية تشير له، مثل
     // dossiers.retiredId) طالما ما صار تعارض مع سجل جديد ياخذ نفس الرقم بالفترة
-    // اللي كان فيها بسلة المحذوفات؛ لو فيه تعارض، نرجعه بمعرّف جديد بدل الفشل.
+    // التي كانت فيها بسلة المحذوفات؛ لو وُجد تعارض، نرجعه بمعرّف جديد بدل الفشل.
     const collision = await client.query(`SELECT id FROM ${tableName} WHERE id = $1`, [binRow.original_id]);
     const preserveId = collision.rows.length === 0;
 

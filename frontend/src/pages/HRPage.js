@@ -4,7 +4,7 @@
 // ── إصلاح: هذا الملف كان 1261 سطر بملف واحد (كل التبويبات مع بعض) — قُسِّم
 // لملفات أصغر بمجلد frontend/src/pages/hr/ (كل تبويب بملفه الخاص + shared.js
 // للثوابت المشتركة). التقسيم نسخ حرفي بدون أي تغيير بالمنطق أو السلوك —
-// راجعي مجلد hr/ لتفاصيل كل تبويب. هذا الملف الحين مجرد نقطة تجميع تربط
+// راجع مجلد hr/ لتفاصيل كل تبويب. هذا الملف الحين مجرد نقطة تجميع تربط
 // التبويبات مع بعض.
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -25,7 +25,7 @@ export default function HRPage() {
   const { lang } = useApp();
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   // القيمة الابتدائية تحترم ?tab= بالرابط (تصل من القائمة الجانبية القابلة
-  // للتوسّع — راجعي components/Layout.js وconfig/sidebarSubTabs.js) دون أي
+  // للتوسّع — راجع components/Layout.js وconfig/sidebarSubTabs.js) دون أي
   // تغيير على سلوك التبديل اليدوي بين التبويبات داخل الصفحة نفسها. تُتجاهَل
   // أي قيمة غير معروفة (رابط قديم/مُعدَّل يدوياً) بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();

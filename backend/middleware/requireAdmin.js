@@ -7,7 +7,7 @@
 // التي كانت بلا أي فحص إطلاقاً.
 const requireAdmin = (req, res, next) => {
   if (req.user?.role !== 'admin') {
-    return res.status(403).json({ message: 'هذي الصفحة للإدمن فقط' });
+    return res.status(403).json({ message: 'هذه الصفحة للإدمن فقط' });
   }
   next();
 };

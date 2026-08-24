@@ -5,7 +5,7 @@ const crypto = require('crypto');
 
 class CashAdapter extends BaseGatewayAdapter {
   async initPayment({ amount, currency, invoiceId, patientId, metadata }) {
-    // ما في اتصال خارجي؛ نولّد رقم مرجعي داخلي فقط
+    // لا يوجد اتصال خارجي؛ نولّد رقم مرجعي داخلي فقط
     const gatewayTransactionId = `CASH-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     return {
       success: true,

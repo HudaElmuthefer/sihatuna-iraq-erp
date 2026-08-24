@@ -25,7 +25,7 @@ import sys
 # ── حماية: ترميز stdout/stderr — عربي، لا الترميز الافتراضي بويندوز ─────────
 # تأكّدنا فعلياً: بويندوز، لو stdout مُعاد توجيهه (redirect لملف/عملية أخرى،
 # بالضبط حالة استدعاء agents/ocrAgent.js)، بايثون يفترض ترميز الصفحة الرمزية
-# القديمة للنظام (cp1252 هنا) بدل UTF-8 — cp1252 لا يقدر يُرمِّز حروفاً عربية
+# القديمة للنظام (cp1252 هنا) بدل UTF-8 — cp1252 لا يستطيع ترميز حروف عربية
 # إطلاقاً، فتفشل عملية print() نفسها بـUnicodeEncodeError بمجرد وجود أي نص
 # عربي بالنتيجة (بالضبط ما سنطبعه دائماً، هذا كل معنى الملف). لينكس/Docker
 # افتراضياً UTF-8 غالباً فلا يظهر هذا هناك عادةً، لكن فرضه صراحة هنا يضمن
@@ -41,7 +41,7 @@ sys.stderr.reconfigure(encoding='utf-8')
 # JSON فوراً. الحل: نُحوِّل أي طباعة تصدر أثناء تحميل/تشغيل PaddleOCR نفسه
 # لـstderr مؤقتاً، ونطبع نتيجتنا فقط بعد استعادة stdout الحقيقي — يضمن
 # نتيجة نظيفة بغض النظر عمّا تطبعه المكتبة داخلياً. (احتياط إضافي؛ الحل
-# الأساسي هو تحميل النماذج مسبقاً وقت بناء صورة Docker — راجعي Dockerfile.)
+# الأساسي هو تحميل النماذج مسبقاً وقت بناء صورة Docker — راجع Dockerfile.)
 @contextlib.contextmanager
 def stdout_redirected_to_stderr():
     real_stdout = sys.stdout
@@ -70,7 +70,7 @@ def main():
         import cv2
         from paddleocr import PaddleOCR
     except ImportError as err:
-        fail(f'حزم PaddleOCR غير مثبَّتة: {err} — راجعي backend/services/ocr/requirements.txt')
+        fail(f'حزم PaddleOCR غير مثبَّتة: {err} — راجع backend/services/ocr/requirements.txt')
 
     image_array = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
     if image_array is None:
@@ -82,8 +82,8 @@ def main():
     try:
         # use_angle_cls: يصحّح دوران الصورة (شائع بصور ملتقطة بالكاميرا لا
         # الماسح الضوئي) قبل القراءة. show_log=False يمنع سجلات PaddleOCR
-        # المعتادة (لا يمنع طباعة تحميل النموذج نفسه — راجعي
-        # stdout_redirected_to_stderr أعلاه للحماية الفعلية من هذي الحالة).
+        # المعتادة (لا يمنع طباعة تحميل النموذج نفسه — راجع
+        # stdout_redirected_to_stderr أعلاه للحماية الفعلية من هذه الحالة).
         with stdout_redirected_to_stderr():
             ocr = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
             result = ocr.ocr(image_array, cls=True)

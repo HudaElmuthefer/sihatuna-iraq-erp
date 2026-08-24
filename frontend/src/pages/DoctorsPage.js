@@ -63,7 +63,7 @@ export default function DoctorsPage() {
   // نفس مبدأ صفحة المرضى بالضبط — الجدول/البطاقات هنا تجيب فقط الصفحة الحالية
   // من الخادم (بحث بالاسم والتخصص + فلترة بالحالة تصير كلها بقاعدة البيانات).
   // مصفوفة `doctors` بالسياق العام تبقى محمَّلة كاملة لصفحات ثانية تحتاجها
-  // كقائمة اختيار (الأقسام، المواعيد...)، ومنفصلة عن جدول هذي الصفحة تحديداً.
+  // كقائمة اختيار (الأقسام، المواعيد...)، ومنفصلة عن جدول هذه الصفحة تحديداً.
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
     useServerPagination('doctors', { search: debouncedSearch, status: filter, pageSize: 50 });
 

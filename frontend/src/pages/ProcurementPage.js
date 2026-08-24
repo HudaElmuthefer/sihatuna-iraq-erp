@@ -45,10 +45,10 @@ export default function ProcurementPage() {
   // مماثل لميزة "Razi System" بمنافس السوق (mip-iraq.com) — تصويري/رفعي
   // فاتورة ورقية من المورد بدل كتابة كل التفاصيل يدوياً. تعتمد على نفس
   // مفتاح Gemini المُعدّ أصلاً بـ.env لميزة التشخيص بالذكاء الاصطناعي —
-  // ما يحتاج أي إعداد إضافي لو Gemini شغّال أصلاً.
+  // لا يحتاج أي إعداد إضافي لو Gemini يعمل أصلاً.
   const [readingInvoice, setReadingInvoice] = useState(false);
   const [invoicePreview, setInvoicePreview] = useState(null); // بيانات الفاتورة المُستخرَجة، للمراجعة قبل التطبيق
-  // اختيار مزوّد الذكاء الاصطناعي لهذا الطلب — راجعي components/AiModeSelect.js
+  // اختيار مزوّد الذكاء الاصطناعي لهذا الطلب — راجع components/AiModeSelect.js
   const [aiMode, setAiMode] = useState('online');
   React.useEffect(() => {
     api.get('/invoice-reader/status').then(r => { if (r?.mode) setAiMode(r.mode); }).catch(() => {});
@@ -61,7 +61,7 @@ export default function ProcurementPage() {
   // POST /invoice-reader/read لم يعد يرجع نتيجة القراءة مباشرة — يرجع فوراً
   // برقم مهمة (jobId) بدل إبقاء طلب HTTP معلَّقاً طوال مدة استدعاء الذكاء
   // الاصطناعي (قد تصل لعدة ثوانٍ). نستعلم دورياً عن حالتها عبر GET
-  // /invoice-reader/jobs/:id لحد اكتمالها (راجعي backend/routes/invoiceReaderRoutes.js).
+  // /invoice-reader/jobs/:id لحد اكتمالها (راجع backend/routes/invoiceReaderRoutes.js).
   const pollInvoiceJob = async (jobId) => {
     const POLL_INTERVAL_MS = 1500;
     const MAX_ATTEMPTS = 45; // ~67 ثانية كحد أقصى — كافٍ جداً لأي استدعاء AI طبيعي، يمنع استعلاماً بلا نهاية لو تعطّلت المهمة فعلياً
@@ -130,7 +130,7 @@ export default function ProcurementPage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // بعض المتصفحات ما تشغّل الفيديو تلقائياً حتى لو البث نفسه شغّال
+        // بعض المتصفحات لا تشغّل الفيديو تلقائياً حتى لو البث نفسه يعمل
         // (ضوء الكاميرا مضوي) — نطلب التشغيل صراحة بدل الاعتماد على autoPlay وحدها
         videoRef.current.play().catch(() => {});
       }
@@ -149,7 +149,7 @@ export default function ProcurementPage() {
   const captureFromCamera = async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظر ثانية وحاول مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
+      showToast(L('لم تُجهّز الكاميرا الصورة بعد، انتظر ثانية وحاول مرة أخرى', 'The camera image is not ready yet, wait a second and try again'), 'warning');
       return;
     }
     const canvas = document.createElement('canvas');
@@ -486,7 +486,7 @@ export default function ProcurementPage() {
                   {L('صوّر أو ارفع فاتورة المورد، تُعبّأ الحقول تلقائياً، راجع البيانات المستخرَجة قبل التطبيق.', 'Photograph or upload the supplier invoice — fields fill in automatically. Review the extracted data before applying.')}
                 </p>
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{L('مزوّد الذكاء الاصطناعي لهذي القراءة', 'AI provider for this reading')}</label>
+                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{L('مزوّد الذكاء الاصطناعي لهذه القراءة', 'AI provider for this reading')}</label>
                   <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={readingInvoice} style={{ maxWidth: 260 }} />
                 </div>
 

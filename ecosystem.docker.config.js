@@ -1,5 +1,5 @@
 // ecosystem.docker.config.js — قائمة عمليات PM2 المستخدَمة داخل حاوية
-// Docker (راجعي Dockerfile وdocker-compose.yml بنفس المجلد) فقط. النشر
+// Docker (راجع Dockerfile وdocker-compose.yml بنفس المجلد) فقط. النشر
 // المحلي العادي (start.bat) يستمر باستخدام ecosystem.config.js كما هو
 // تماماً، بلا أي تغيير عليه.
 //
@@ -13,9 +13,9 @@
 // (apps[2]) بلا أي بديل بهذا الملف أيضاً.
 //
 // ── إصلاح: لا عملية "sihatuna-frontend" منفصلة بعد الآن ─────────────────────
-// كانت هذي القائمة تشغّل عملية Node.js ثالثة (backend/serveFrontend.js)
+// كانت هذه القائمة تشغّل عملية Node.js ثالثة (backend/serveFrontend.js)
 // فقط لخدمة ملفات الفرونت إند الثابتة المبنية مسبقاً. الآن Nginx (خدمة
-// جديدة بـdocker-compose.yml، راجعي nginx/nginx.conf) يقدّمها مباشرة من
+// جديدة بـdocker-compose.yml، راجع nginx/nginx.conf) يقدّمها مباشرة من
 // volume مشترك — أسرع وأخف بكثير من خادم Express لملفات ثابتة بحتة، وأزال
 // حاجة عملية PM2/منفذ داخلي كامل لهذا الغرض وحده.
 const { apps } = require('./ecosystem.config.js');

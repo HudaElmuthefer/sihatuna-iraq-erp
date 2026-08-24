@@ -1,6 +1,6 @@
 // frontend/src/api.js
 // نقطة اتصال مركزية واحدة بالباك إند الحقيقي (Node.js/Express + JWT)
-// كل الموديولات المستقبلية اللي نربطها بالباك إند تمر من هنا
+// كل الموديولات المستقبلية التي نربطها بالباك إند تمر من هنا
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 // إصلاح: روابط الملفات المرفوعة (مثل مستندات الإضابير) كانت تُستخدَم كما هي
@@ -18,9 +18,9 @@ export const LOGO_IMAGE_URL = `${SERVER_BASE_URL}/api/branding/logo`;
 
 // ── إصلاح أمني ────────────────────────────────────────────────────────────────
 // كان التوكن يُقرأ من localStorage ويُرسَل يدوياً بـ Authorization header —
-// أي كود جافاسكربت يشتغل بالصفحة (حتى عبر ثغرة XSS مستقبلية) كان يقدر يقرأ
+// أي كود جافاسكربت يعمل بالصفحة (حتى عبر ثغرة XSS مستقبلية) كان يستطيع قراءة
 // التوكن مباشرة من localStorage ويسرقه. الآن الخادم يضبط التوكن بـ httpOnly
-// cookie (كود الجافاسكربت لا يقدر يقرأها إطلاقاً)، والمتصفح يرسلها تلقائياً
+// cookie (كود الجافاسكربت لا يستطيع قراءتها إطلاقاً)، والمتصفح يرسلها تلقائياً
 // مع كل طلب طالما مررنا credentials:'include' — بدون أي حاجة لقراءة أو
 // تخزين التوكن يدوياً هنا نهائياً.
 async function apiRequest(path, options = {}) {
@@ -37,7 +37,7 @@ async function apiRequest(path, options = {}) {
   if (!response.ok) {
     // أخطاء التحقق من صحة المدخلات (400) تُعيد مصفوفة "errors" مفصّلة (مثل
     // "الحقل رقم الهاتف مطلوب") — ندمجها برسالة واحدة واضحة بدل رسالة عامة
-    // ("بيانات غير صالحة") لا تشرح للمستخدم شنو بالضبط يحتاج يصحّح.
+    // ("بيانات غير صالحة") لا تشرح للمستخدم ماذا بالضبط يحتاج أن يصحّح.
     const detailedMessage = Array.isArray(data?.errors) && data.errors.length > 0
       ? data.errors.join('، ')
       : (data?.message || `خطأ بالاتصال بالخادم (${response.status})`);
@@ -102,11 +102,11 @@ export async function apiDownloadFile(path, filename) {
   window.URL.revokeObjectURL(url);
 }
 
-// يتحقق هل الباك إند شغّال قبل أي محاولة اتصال (يفيد بعرض رسالة واضحة للمستخدم)
+// يتحقق هل الباك إند يعمل قبل أي محاولة اتصال (يفيد بعرض رسالة واضحة للمستخدم)
 export async function checkBackendReachable() {
   try {
     const res = await fetch(`${API_BASE_URL.replace('/api', '')}/`, { method: 'GET' });
-    return res.ok || res.status === 404; // أي رد يعني السيرفر شغّال
+    return res.ok || res.status === 404; // أي رد يعني أن السيرفر يعمل
   } catch {
     return false;
   }

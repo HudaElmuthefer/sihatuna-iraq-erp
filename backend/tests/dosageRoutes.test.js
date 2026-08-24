@@ -2,7 +2,7 @@
 //
 // اختبارات لمسار فحص الجرعات — عبر HTTP على قاعدة PostgreSQL حقيقية
 // (جدول dosage_limits، بُذر بـmigrations-sql/009_dosage_limits.sql). نفس
-// نمط tests/drugInteractions.test.js بالضبط. راجعي أيضاً tests/
+// نمط tests/drugInteractions.test.js بالضبط. راجع أيضاً tests/
 // dosageAgent.test.js لاختبار منطق التوزيع نفسه بمعزل عن قاعدة بيانات حقيقية.
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
@@ -13,7 +13,7 @@ let token;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('dosage-check');
-  // نفس مبدأ drugInteractions.test.js — نضبط لنص فاضٍ (مو نحذف) لمنع dotenv
+  // نفس مبدأ drugInteractions.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv
   // من إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';
   process.env.GEMINI_API_KEY = '';
@@ -179,7 +179,7 @@ describe('POST /api/dosage-check/check', () => {
     expect(res.body.limit.maxDailyDose).toBe(20);
   });
 
-  test('وارفارين (مستبعَد عمداً من الجدول — راجعي migrations-sql/010): لا تطابق بالجدول بأي عمر، بدون مفاتيح API يرجع available:false', async () => {
+  test('وارفارين (مستبعَد عمداً من الجدول — راجع migrations-sql/010): لا تطابق بالجدول بأي عمر، بدون مفاتيح API يرجع available:false', async () => {
     const res = await request(app)
       .post('/api/dosage-check/check')
       .set('Authorization', `Bearer ${token}`)

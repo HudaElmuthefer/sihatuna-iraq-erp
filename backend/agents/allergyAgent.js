@@ -2,18 +2,18 @@
 //
 // فحص تضارب الحساسية الدوائية — نفس معمارية agents/interactionAgent.js
 // وagents/dosageAgent.js بالضبط: قاعدة بيانات (bot/rules) أولاً عبر جدول
-// drug_allergy_classes (راجعي migrations-sql/011_drug_allergy_classes.sql)،
+// drug_allergy_classes (راجع migrations-sql/011_drug_allergy_classes.sql)،
 // ذكاء اصطناعي احتياطياً فقط للأدوية غير المغطاة بالجدول.
 //
 // ── الفرق الجوهري عن فحص التضارب الدوائي العادي: تحسّس تصالبي بين العائلات ──
 // حساسية دوائية حقيقية لا تعني فقط "نفس اسم الدواء بالضبط" — مريض عنده
 // حساسية من "البنسلين" يجب أن يُحذَّر أيضاً لو وُصف له "أموكسيسيلين" (دواء
-// آخر بنفس العائلة الدوائية)، لا فقط لو تطابق الاسمان حرفياً. راجعي
+// آخر بنفس العائلة الدوائية)، لا فقط لو تطابق الاسمان حرفياً. راجع
 // findClassMatch() أدناه.
 //
 // ── نفس مبدأ dosageAgent.js: "لا بيانات" لا يعني أبداً "آمن" ─────────────────
 // لو الجدول ما لقى تطابقاً ولا AI متاح، النتيجة يجب أن ترجع available:false
-// بصراحة — أبداً لا نفترض "لا تضارب" لمجرد غياب دليل على العكس. راجعي أيضاً
+// بصراحة — أبداً لا نفترض "لا تضارب" لمجرد غياب دليل على العكس. راجع أيضاً
 // AllergyCheckPage.js بالفرونت إند: تصميم الشارات هناك يفرّق بصرياً بوضوح
 // بين "لا تضارب" (أخضر) و"لا بيانات كافية" (رمادي محايد) — لا يجمعهما أبداً.
 const { query } = require('../config/database');
@@ -59,11 +59,11 @@ function buildAIPrompts(lang, allergyNames, drugNames) {
   const isEn = lang === 'en';
   const systemPrompt = isEn
     ? 'You are a clinical pharmacist assisting with a preliminary drug-allergy cross-reactivity check for a hospital ERP system. Only report conflicts you are reasonably confident about (known direct matches or well-established drug-class cross-reactivity) — do not invent conflicts. Always include a disclaimer that this does not replace a pharmacist or physician review. Respond ONLY with valid JSON matching the exact schema requested — no markdown, no extra text.'
-    : 'أنتِ صيدلانية سريرية تساعدين بفحص أولي لتضارب الحساسية الدوائية ضمن نظام مستشفى إلكتروني. اذكري فقط التضاربات اللي متأكدة منها بشكل معقول (تطابق مباشر معروف، أو تحسّس تصالبي موثّق بين عائلات دوائية) — لا تختلقي تضاربات غير موثوقة. اذكري دائماً إن هذا لا يغني عن مراجعة صيدلاني أو طبيب. أجيبي فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
+    : 'أنت صيدلاني سريري تساعد بفحص أولي لتضارب الحساسية الدوائية ضمن نظام مستشفى إلكتروني. اذكر فقط التضاربات اللي متأكد منها بشكل معقول (تطابق مباشر معروف، أو تحسّس تصالبي موثّق بين عائلات دوائية) — لا تختلق تضاربات غير موثوقة. اذكر دائماً إن هذا لا يغني عن مراجعة صيدلاني أو طبيب. أجب فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
 
   const userPrompt = isEn
     ? `Patient has these known allergies: ${allergyNames.join(', ')}.\nCheck whether any of these prescribed drugs have a known direct match or cross-reactivity risk with any of the patient's allergies: ${drugNames.join(', ')}.\n\nRespond with JSON only: {"conflicts":[{"drug":"...","allergyName":"...","severity":"mild|moderate|severe|unknown","explanation":"...","recommendation":"..."}]}. If no conflict exists for any combination, respond with {"conflicts":[]}.`
-    : `المريض عنده حساسيات معروفة من: ${allergyNames.join('، ')}.\nافحصي هل أي من هذي الأدوية الموصوفة عندها تطابق مباشر أو خطر تحسّس تصالبي مع أي من حساسيات المريض: ${drugNames.join('، ')}.\n\nأجيبي بصيغة JSON فقط: {"conflicts":[{"drug":"...","allergyName":"...","severity":"mild|moderate|severe|unknown","explanation":"...","recommendation":"..."}]}. لو ما فيه تضارب بأي توليفة، أجيبي بـ{"conflicts":[]}.`;
+    : `المريض عنده حساسيات معروفة من: ${allergyNames.join('، ')}.\nافحص هل أي من هذه الأدوية الموصوفة عندها تطابق مباشر أو خطر تحسّس تصالبي مع أي من حساسيات المريض: ${drugNames.join('، ')}.\n\nأجب بصيغة JSON فقط: {"conflicts":[{"drug":"...","allergyName":"...","severity":"mild|moderate|severe|unknown","explanation":"...","recommendation":"..."}]}. لو لم يوجد تضارب بأي توليفة، أجب بـ{"conflicts":[]}.`;
 
   return { systemPrompt, userPrompt };
 }
@@ -89,10 +89,10 @@ async function findClassMatch(drugName, allergyName) {
 
 // دالة الفحص الموحَّدة — تُستدعى مباشرة من routes/allergyRoutes.js، ومن
 // agents/prescriptionAgent.js (المرحلة الرابعة: فحص حساسية إضافي على نفس
-// أدوية الوصفة المُستخرَجة، لو مريض مربوط صراحةً بالوصفة — راجعي شرح هناك).
+// أدوية الوصفة المُستخرَجة، لو مريض مربوط صراحةً بالوصفة — راجع شرح هناك).
 //
 // patientAllergies: [{ name, severity }] — قائمة حساسيات المريض كما هي
-// محفوظة بسجله (راجعي AllergyPicker.js بالفرونت إند لشكلها الكامل؛ هنا
+// محفوظة بسجله (راجع AllergyPicker.js بالفرونت إند لشكلها الكامل؛ هنا
 // نستخدم فقط name وseverity). drugs: اسم دواء واحد (نص) أو قائمة أسماء.
 async function checkAllergies(patientAllergies, drugs, lang, mode) {
   const allergies = Array.isArray(patientAllergies) ? patientAllergies.filter((a) => a && a.name) : [];
@@ -100,7 +100,7 @@ async function checkAllergies(patientAllergies, drugs, lang, mode) {
 
   // ── لا حساسيات مسجَّلة إطلاقاً لهذا المريض ────────────────────────────────
   // هذه حالة مختلفة جذرياً عن "لا بيانات كافية للفحص" (available:false) —
-  // هنا فحصنا فعلياً وما فيه شيء نتحقق منه، لأن سجل المريض نفسه فارغ. راجعي
+  // هنا فحصنا فعلياً وما فيه شيء نتحقق منه، لأن سجل المريض نفسه فارغ. راجع
   // noAllergiesOnFile بالفرونت إند: يُعرَض بشارة مختلفة صراحة عن "لا تضارب".
   if (allergies.length === 0) {
     return { available: true, source: 'db', conflicts: [], noAllergiesOnFile: true };

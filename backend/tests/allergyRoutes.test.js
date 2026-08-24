@@ -3,7 +3,7 @@
 // اختبارات لمسار فحص الحساسية الدوائية — عبر HTTP على قاعدة PostgreSQL
 // حقيقية (جدول drug_allergy_classes، بُذر بـmigrations-sql/
 // 011_drug_allergy_classes.sql). نفس نمط tests/dosageRoutes.test.js بالضبط.
-// راجعي أيضاً tests/allergyAgent.test.js لاختبار منطق التوزيع نفسه بمعزل
+// راجع أيضاً tests/allergyAgent.test.js لاختبار منطق التوزيع نفسه بمعزل
 // عن قاعدة بيانات حقيقية.
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
@@ -14,7 +14,7 @@ let token;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('allergy-check');
-  // نفس مبدأ dosageRoutes.test.js — نضبط لنص فاضٍ (مو نحذف) لمنع dotenv من
+  // نفس مبدأ dosageRoutes.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv من
   // إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';
   process.env.GEMINI_API_KEY = '';

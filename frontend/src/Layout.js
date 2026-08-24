@@ -36,7 +36,7 @@ export default function Layout() {
   const unread = notifications.filter(n => !n.read).length;
   // الصفحات الظاهرة = صلاحيات الدور (كما كان) + صفحات منشأة المستخدم المفعّلة
   // (لو له منشأة مُعيَّنة ولها قائمة صفحات محدَّدة). حساب مستوى الوزارة (بلا
-  // منشأة) أو منشأة بلا قيود مُعرَّفة (enabled_pages فاضي) = يشوف كل الصفحات
+  // منشأة) أو منشأة بلا قيود مُعرَّفة (enabled_pages فارغ) = يرى كل الصفحات
   // المسموحة بدوره، بدون أي تغيير بالسلوك الحالي.
   const userHospital = hospitals.find(h => h.id === user?.hospitalId);
   const hospitalPages = userHospital?.enabled_pages;

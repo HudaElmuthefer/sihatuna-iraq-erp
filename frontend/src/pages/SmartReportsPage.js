@@ -64,7 +64,7 @@ export default function SmartReportsPage() {
     return d.getFullYear() === y && d.getMonth() === m;
   };
 
-  // مواعيد وإيرادات حقيقية مجمّعة بالشهر (من التواريخ الفعلية بالبيانات، مو أرقام مختلَقة)
+  // مواعيد وإيرادات حقيقية مجمّعة بالشهر (من التواريخ الفعلية بالبيانات، وليست أرقاماً مختلَقة)
   const monthlyAppointments = useMemo(() => months.map(mo => ({
     ...mo,
     count: (appointments || []).filter(a => inMonth(a.date, mo.year, mo.month)).length,
@@ -171,7 +171,7 @@ export default function SmartReportsPage() {
         <div className="card">
           <h3 style={{ margin: '0 0 20px', fontSize: 15 }}>{L('المواعيد شهرياً','Appointments per Month')}</h3>
           {monthlyAppointments.every(m => m.count === 0) ? (
-            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: '40px 0' }}>{L('لا توجد مواعيد مسجَّلة بهذي الفترة','No appointments recorded for this period')}</p>
+            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: '40px 0' }}>{L('لا توجد مواعيد مسجَّلة بهذه الفترة','No appointments recorded for this period')}</p>
           ) : (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 160, justifyContent: 'space-around' }}>
               {monthlyAppointments.map((m, i) => (
@@ -191,7 +191,7 @@ export default function SmartReportsPage() {
         <div className="card">
           <h3 style={{ margin: '0 0 20px', fontSize: 15 }}>{L('الإيرادات شهرياً (فواتير مدفوعة)','Revenue per Month (paid invoices)')}</h3>
           {monthlyRevenue.every(m => m.total === 0) ? (
-            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: '40px 0' }}>{L('لا توجد فواتير مدفوعة بهذي الفترة','No paid invoices for this period')}</p>
+            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: '40px 0' }}>{L('لا توجد فواتير مدفوعة بهذه الفترة','No paid invoices for this period')}</p>
           ) : (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 160, justifyContent: 'space-around' }}>
               {monthlyRevenue.map((m, i) => (

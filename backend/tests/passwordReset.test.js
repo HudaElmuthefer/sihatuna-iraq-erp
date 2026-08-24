@@ -44,14 +44,14 @@ describe('POST /api/users/:id/reset-password — الإدمن يولّد كلم�
     expect(res.status).toBe(404);
   });
 
-  test('غير إدمن يُرفض بـ403 (لا يقدر يعيد ضبط كلمة مرور أي حد)', async () => {
+  test('غير إدمن يُرفض بـ403 (لا يستطيع إعادة ضبط كلمة مرور أي أحد)', async () => {
     const res = await request(app)
       .post('/api/users/1/reset-password')
       .set('Authorization', `Bearer ${nurseTokenBeforeReset}`);
     expect(res.status).toBe(403);
   });
 
-  test('التدفّق الكامل: كلمة مرور مؤقتة تعمل فعلياً لتسجيل الدخول، والمستخدم يقدر يغيّرها بنفسه', async () => {
+  test('التدفّق الكامل: كلمة مرور مؤقتة تعمل فعلياً لتسجيل الدخول، والمستخدم يستطيع تغييرها بنفسه', async () => {
     // 1) الإدمن يولّد كلمة مرور مؤقتة جديدة
     const resetRes = await request(app)
       .post('/api/users/2/reset-password')

@@ -4,9 +4,9 @@
 // النظام لا يملك خدمة بريد إلكتروني مُجهَّزة افتراضياً، فالتصميم هنا مبني على
 // طبقتين:
 //   1) سجل محلي دائماً (data/alerts-log.json) — يعمل دائماً بدون أي إعداد،
-//      تقدرين تفتحينه بأي وقت أو تربطينه بأي أداة قراءة سجلات لاحقاً.
-//   2) بريد إلكتروني فعلي *اختياري* — يعمل فقط لو حدَّدتِ بيانات SMTP بملف
-//      .env (راجعي .env.example). بدون هذي البيانات، التنبيه يبقى بالسجل
+//      تستطيع فتحه بأي وقت أو ربطه بأي أداة قراءة سجلات لاحقاً.
+//   2) بريد إلكتروني فعلي *اختياري* — يعمل فقط لو حدَّدت بيانات SMTP بملف
+//      .env (راجع .env.example). بدون هذه البيانات، التنبيه يبقى بالسجل
 //      المحلي بس، مع رسالة واضحة بالكونسول تلفت الانتباه فوراً.
 const fs = require('fs');
 const path = require('path');
@@ -42,11 +42,11 @@ async function sendEmailAlert(subject, message) {
 
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, ALERT_EMAIL_TO } = process.env;
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !ALERT_EMAIL_TO) {
-    return { sent: false, reason: 'SMTP غير مُعدّ بملف .env (راجعي SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };
+    return { sent: false, reason: 'SMTP غير مُعدّ بملف .env (راجع SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };
   }
   try {
     // nodemailer تحميل كسول (lazy require) — حتى لا يفشل تحميل الملف كله لو
-    // المكتبة غير مثبَّتة بمشروع لا يستخدم هذي الميزة أصلاً
+    // المكتبة غير مثبَّتة بمشروع لا يستخدم هذه الميزة أصلاً
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,

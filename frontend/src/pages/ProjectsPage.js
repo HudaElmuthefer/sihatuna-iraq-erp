@@ -25,7 +25,7 @@ const PRIORITY_CONFIG = {
 const EMPTY = { code:'', name:'', nameEn:'', manager:'', managerEn:'', budget:0, spent:0, startDate:'', endDate:'', progress:0, status:'planning', priority:'normal', phase:'تخطيط', milestones:0, completedMilestones:0 };
 
 // ── تصدير XML متوافق مع Primavera P6 (وMicrosoft Project) ───────────────────
-// يبني ملف XML بمواصفات Microsoft Project القياسية (نفس الصيغة اللي يقرأها
+// يبني ملف XML بمواصفات Microsoft Project القياسية (نفس الصيغة التي يقرأها
 // Primavera P6 مباشرة عبر File → Import → MS Project XML) — بدون أي مكتبة
 // خارجية، نص XML خام يُبنى هنا يدوياً حسب هيكل MSP الرسمي (Project/Tasks/
 // Resources/Assignments). كل مشروع بالنظام يصير Task رئيسي (WBS)، وكل
@@ -208,8 +208,8 @@ export default function ProjectsPage() {
   const openEdit = p => { setForm({...p}); setEditId(p.id); setShowModal(true); };
   const saveProject = async () => {
     if (!form.name||!form.manager) { showToast(L('يرجى تعبئة الاسم والمدير','Please fill name and manager'),'error'); return; }
-    // ── إصلاح: كانت المشاريع المستورَدة من Excel (وأي مشروع قديم بلا هذي
-    // الحقول) تحفظ undefined لهذي الأرقام، فتظهر "NaN%" و"undefined/undefined"
+    // ── إصلاح: كانت المشاريع المستورَدة من Excel (وأي مشروع قديم بلا هذه
+    // الحقول) تحفظ undefined لهذه الأرقام، فتظهر "NaN%" و"undefined/undefined"
     // بالواجهة. الآن تُفرَض قيمة رقمية دائماً (0 كحد أدنى) بكل حفظ.
     const proj = {...form, budget:+form.budget||0, spent:+form.spent||0, progress:+form.progress||0, milestones:+form.milestones||0, completedMilestones:+form.completedMilestones||0};
     // ── إصلاح مهم: كان يعرض "تمت الإضافة/تم التحديث" فوراً ويقفل النافذة

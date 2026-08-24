@@ -2,7 +2,7 @@
 //
 // شاشة إجبارية تُعرض بدل كامل التطبيق لما يكون user.mustChangePassword صحيحاً
 // (يصير هذا فقط بعد إعادة ضبط كلمة مرور من الإدمن — انظر SettingsPage.js).
-// المستخدم لا يقدر يتصفح أي شيء ثاني بالنظام حتى يغيّر كلمة مروره المؤقتة
+// المستخدم لا يستطيع تصفح أي شيء آخر بالنظام حتى يغيّر كلمة مروره المؤقتة
 // بكلمة دائمة يختارها هو بنفسه.
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
@@ -45,7 +45,7 @@ export default function ForceChangePasswordScreen() {
       <div className="card" style={{ maxWidth: 420, width: '100%', padding: 32 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🔑</div>
-          <h2 style={{ margin: 0, fontSize: 19 }}>{ar ? 'لازم تغيّر كلمة المرور' : 'You must change your password'}</h2>
+          <h2 style={{ margin: 0, fontSize: 19 }}>{ar ? 'يجب أن تغيّر كلمة المرور' : 'You must change your password'}</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 8 }}>
             {ar
               ? `مرحباً ${user?.name || ''} — سجّلت دخول بكلمة مرور مؤقتة. اختر كلمة مرور دائمة جديدة للمتابعة.`

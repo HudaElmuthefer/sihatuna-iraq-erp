@@ -24,7 +24,7 @@ if (KEY_HEX === DEFAULT_KEY_HEX) {
   console.error('╚════════════════════════════════════════════════════════════════╝');
   console.error('  CREDENTIALS_ENCRYPTION_KEY غير محدَّد بملف .env، فبيانات اعتماد');
   console.error('  بوابات الدفع (مفاتيح API) "مشفَّرة" بمفتاح معروف للجميع (كله أصفار)،');
-  console.error('  أي شخص يقدر يفك تشفيرها لو وصل لقاعدة البيانات.');
+  console.error('  أي شخص يستطيع فك تشفيرها لو وصل لقاعدة البيانات.');
   console.error('  أضف CREDENTIALS_ENCRYPTION_KEY بملف backend/.env بقيمة عشوائية قوية.');
   console.error('  توليد مفتاح صالح: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
   if (process.env.NODE_ENV === 'production') {

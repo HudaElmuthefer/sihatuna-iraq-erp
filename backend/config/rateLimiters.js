@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('./jwtConfig');
 // ── المرحلة الثانية: عدّاد مشترك عبر Redis بدل ذاكرة كل عملية ──────────────
-// راجعي تعليق config/redisRateLimitStore.js للسبب الكامل (PM2 cluster mode
+// راجع تعليق config/redisRateLimitStore.js للسبب الكامل (PM2 cluster mode
 // كان يُضاعف الحد الفعلي تلقائياً بعدد أنوية المعالج). كل limiter يحتاج
 // نسخة Store منفصلة (prefix مختلف)، حتى لو تشابهت إعداداتهم.
 const RedisRateLimitStore = require('./redisRateLimitStore');
@@ -13,7 +13,7 @@ const RedisRateLimitStore = require('./redisRateLimitStore');
 // ── دالة مشتركة: تستخرج هوية المستخدم من التوكن لو موجود وصالح، وإلا IP ────
 // نقرأ التوكن يدويًا هنا (نفس طريقة middleware/auth.js بالضبط: كوكي أولاً ثم
 // Authorization header) لأن generalLimiter يشتغل *قبل* middleware auth بترتيب
-// server.js الحالي — فـ req.user غير موجود بعد بهذي المرحلة. لو فك تشفير
+// server.js الحالي — فـ req.user غير موجود بعد بهذه المرحلة. لو فك تشفير
 // التوكن فشل (منتهي، غير صالح، أو غير موجود أصلاً — مثل صفحة تسجيل الدخول
 // نفسها)، نرجع لعنوان IP كخط احتياط، بدل ما يفشل الطلب بالكامل بخطأ غير متوقع.
 const keyByUserOrIP = (req) => {

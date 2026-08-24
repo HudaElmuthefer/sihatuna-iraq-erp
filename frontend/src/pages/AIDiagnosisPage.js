@@ -31,7 +31,7 @@ const commonSymptoms = [
 // ── إصلاح: قائمة الأطباء المُقترَحين ما عادت مكتوبة هنا ────────────────────────
 // كانت مصفوفة ثابتة (BASRA_DOCTORS) بهذا الملف — أي تحديث (رقم هاتف، طبيب
 // جديد) كان يحتاج تعديل كود وبناء ونشر كامل. الآن تُجلَب من الباك إند
-// (GET /api/ai-diagnosis/referral-doctors) اللي يقرأها من ملف بيانات بسيط
+// (GET /api/ai-diagnosis/referral-doctors) الذي يقرأها من ملف بيانات بسيط
 // (backend/data/basra-referral-doctors.json) يُعدَّل مباشرة بدون أي بناء.
 export function getRecommendedDoctors(symptoms, doctorsList) {
   if (!symptoms || symptoms.length === 0 || !doctorsList || doctorsList.length === 0) return [];
@@ -65,12 +65,12 @@ export default function AIDiagnosisPage() {
   const ctRef = useRef();
 
   // ── إصلاح: التحقق الصادق من توفّر ذكاء اصطناعي حقيقي ──────────────────────
-  // نفحص هذا فوراً عند فتح الصفحة (مو بس بعد الضغط على "تحليل") حتى يعرف
+  // نفحص هذا فوراً عند فتح الصفحة (وليس فقط بعد الضغط على "تحليل") حتى يعرف
   // المستخدم من البداية هل التشخيص القادم بذكاء اصطناعي حقيقي أو نظام مساعدة
   // أولي محلي — بدل ما يتفاجأ بالنتيجة بعد ما يعبّي النموذج كامل.
-  const [aiAvailable, setAiAvailable] = useState(null); // null = لسا يتحقق
+  const [aiAvailable, setAiAvailable] = useState(null); // null = ما زال يتحقق
   const [referralDoctors, setReferralDoctors] = useState([]);
-  // اختيار مزوّد الذكاء الاصطناعي لهذا التشخيص — راجعي components/AiModeSelect.js
+  // اختيار مزوّد الذكاء الاصطناعي لهذا التشخيص — راجع components/AiModeSelect.js
   const [aiMode, setAiMode] = useState('online');
   useEffect(() => {
     api.get('/ai-diagnosis/status')
@@ -123,7 +123,7 @@ export default function AIDiagnosisPage() {
     // لا تجاهله بالكامل). الآن: نطلب من الباك إند فعلياً (بلا أي قيد CORS
     // لأنه اتصال خادم-لخادم)، وهو يقرر هل يستخدم ذكاء اصطناعي حقيقي (لو مُعدّ
     // مفتاح API) أو يرجع available:false لنستخدم النظام المحلي — بأمانة تامة
-    // حول أي النظامين استُخدم فعلياً بكل مرة (راجعي result.source بالعرض).
+    // حول أي النظامين استُخدم فعلياً بكل مرة (راجع result.source بالعرض).
     try {
       const aiResult = await api.post('/ai-diagnosis/analyze', {
         symptoms: selectedSymptoms, age, gender, duration, filesDescription, lang, mode: aiMode,
@@ -191,9 +191,9 @@ export default function AIDiagnosisPage() {
         gradient={BANNER_GRADIENT}
       />
 
-      {/* ── إصلاح: تلميح مبكر وصادق قبل ما يبدأ المستخدم أصلاً ────────────────────
+      {/* ── إصلاح: تلميح مبكر وصادق قبل أن يبدأ المستخدم أصلاً ────────────────────
           يعرف المستخدم من أول لحظة هل التشخيص القادم بذكاء اصطناعي حقيقي أو
-          نظام محلي، بدل ما يتفاجأ بعد ما يعبّي النموذج كامل وينتظر النتيجة. */}
+          نظام محلي، بدل أن يتفاجأ بعد أن يملأ النموذج كاملاً وينتظر النتيجة. */}
       {aiAvailable === false && step < 3 && (
         <div style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)' }}>
           <FaListAlt />

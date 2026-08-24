@@ -32,9 +32,9 @@ const EMPTY = { reqNo:'', patientName:'', patientId:'', doctorName:'', testType:
 // ── حزم فحوصات جاهزة (Panels) ────────────────────────────────────────────────
 // مشكلة حقيقية أثارتها المستخدمة: التحاليل عادة تُطلَب كمجموعة (مثلاً فحص
 // روتيني شامل = عدة تحاليل مع بعض بنفس الزيارة)، وإدخال بيانات المريض من
-// جديد لكل تحليل منفصل غير عملي. هذي الحزم تسمح بإدخال بيانات المريض مرة
+// جديد لكل تحليل منفصل غير عملي. هذه الحزم تسمح بإدخال بيانات المريض مرة
 // وحدة بس، واختيار حزمة كاملة، فينشئ النظام طلب منفصل لكل تحليل بالحزمة
-// تلقائياً (لأن كل تحليل لسا له نتيجة/حالة/تاريخ عينة مستقلة عن الباقي).
+// تلقائياً (لأن كل تحليل لا يزال له نتيجة/حالة/تاريخ عينة مستقلة عن الباقي).
 const TEST_PANELS = [
   { key: 'routine', nameAr: 'فحص روتيني شامل', nameEn: 'Routine Full Checkup', tests: [
     { testType: 'CBC', category: 'hematology' },
@@ -454,7 +454,7 @@ export default function LaboratoryPage() {
                 </button>
               </div>
               {panelForm.selectedTests.length === 0 ? (
-                <p style={{fontSize:12,color:'var(--text-secondary)'}}>{L('ما فيه تحاليل مختارة بعد — اختر حزمة أو أضف تحليل منفرد.','No tests selected yet — pick a panel or add an individual test.')}</p>
+                <p style={{fontSize:12,color:'var(--text-secondary)'}}>{L('لا توجد تحاليل مختارة بعد — اختر حزمة أو أضف تحليل منفرد.','No tests selected yet — pick a panel or add an individual test.')}</p>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:220,overflowY:'auto'}}>
                   {panelForm.selectedTests.map((t, idx) => (
@@ -514,7 +514,7 @@ export default function LaboratoryPage() {
             <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
             <h3 style={{ fontSize: 20, marginBottom: 8, color:'var(--text-primary)' }}>{ar ? `حذف ${selectedIds.size} طلب؟` : `Delete ${selectedIds.size} requests?`}</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 24 }}>
-              {L('هل أنت متأكدة؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}
+              {L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button style={S.btn('#6b7280')} onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting}>{lang==='ar'?'إلغاء':'Cancel'}</button>

@@ -74,7 +74,7 @@ registerExportRoute('snomed');
 // ── ربط تشخيصات ICD-10/SNOMED CT بمرضى حقيقيين دفعة واحدة ────────────────────
 // مختلف عن كل استيرادات Excel الثانية بالنظام: هذا لا يُنشئ سجلات جديدة، بل
 // يُحدِّث سجلات patients الموجودة فعلاً (يضيف عنصراً لمصفوفة diagnoses[]
-// المخزَّنة بسجل كل مريض) — لهذا السبب ما يقدر يستخدم مصنع registerExcelImport
+// المخزَّنة بسجل كل مريض) — لهذا السبب لا يستطيع استخدام مصنع registerExcelImport
 // العام (مصمَّم للإدراج فقط INSERT). يطابق نفس شكل عنصر diagnoses[] المستخدَم
 // فعلياً بـ PatientsPage.js بالضبط: {id, icdCode, icdNameAr, icdNameEn,
 // snomedCode, snomedNameAr, snomedNameEn, isPrimary, dateAdded}.

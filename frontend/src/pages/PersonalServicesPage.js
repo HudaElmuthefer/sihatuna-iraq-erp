@@ -108,7 +108,7 @@ export default function PersonalServicesPage() {
     setBooking(true);
     try {
       // ── مسار حجز مخصَّص يفحص التعارض على قاعدة البيانات الحقيقية مباشرة
-      // (مو بس على النسخة المحلية المخزَّنة بالمتصفح) — يمسك حالة نادرة لكن
+      // (وليس فقط على النسخة المحلية المخزَّنة بالمتصفح) — يمسك حالة نادرة لكن
       // ممكنة: مريضين يحجزون نفس الوقت بنفس اللحظة تقريباً من جهازين مختلفين.
       const saved = await api.post('/booking/book-appointment', payload);
       setAppointments(p => [...(p || []), saved]);

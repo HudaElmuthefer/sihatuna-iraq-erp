@@ -37,14 +37,14 @@ const NC_CLASS = {
 };
 
 // ── إصلاح جذري: كانت البيانات (مراجعات، عدم مطابقة، مؤشرات أداء) تُخزَّن
-// بذاكرة المتصفح المؤقتة بس (React state محلي بدون أي اتصال بقاعدة بيانات)
+// بذاكرة المتصفح المؤقتة فقط (React state محلي بدون أي اتصال بقاعدة بيانات)
 // — تُفقَد بمجرد تحديث الصفحة، وترجع لنفس 3 سجلات تجريبية ثابتة بالكود كل
-// مرة، رغم إن المستخدم يشوف رسالة "تم الحفظ" بعد كل إضافة! هذا كان يخدع
+// مرة، رغم إن المستخدم يرى رسالة "تم الحفظ" بعد كل إضافة! هذا كان يخدع
 // المستخدم فعلياً بإنه يحفظ بيانات جودة حقيقية بينما تختفي بصمت. الآن كل
 // شيء يُقرأ ويُكتَب من/لقاعدة PostgreSQL الحقيقية عبر /api/qualityAudits،
-// /api/qualityNCs، /api/qualityKPIs (راجعي routes/modules.js بالباك إند).
+// /api/qualityNCs، /api/qualityKPIs (راجع routes/modules.js بالباك إند).
 // لو الجداول فاضية (تركيب جديد)، الصفحة تبدأ فاضية بصراحة — بدون أي بيانات
-// تجريبية توحي بوجود سجلات مو موجودة فعلياً.
+// تجريبية توحي بوجود سجلات غير موجودة فعلياً.
 
 export default function QualityPage() {
   const { lang, showToast, confirmDialog, user } = useApp();
@@ -52,7 +52,7 @@ export default function QualityPage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams]          = useSearchParams();
   const [tab, setTab]           = useState(() => {

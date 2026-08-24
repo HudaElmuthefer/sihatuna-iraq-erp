@@ -76,7 +76,7 @@ export default function BillingPage() {
   const activeGateways = paymentGateways.filter(g => g.isActive);
   const payOptions = activeGateways.length > 0
     ? activeGateways.map(g => PAYMENT_PROVIDERS.find(p => p.code === g.providerCode)).filter(Boolean)
-    : [PAYMENT_PROVIDERS[0]]; // نقدي كخيار افتراضي دائماً حتى لو ما فيه بوابات مفعّلة
+    : [PAYMENT_PROVIDERS[0]]; // نقدي كخيار افتراضي دائماً حتى لو لا توجد بوابات مفعّلة
 
   function handleSelectPatient(id) {
     setSelectedPatientId(id);
@@ -211,7 +211,7 @@ export default function BillingPage() {
           <div style={{ marginTop:20 }}>
             <h3 style={{ fontSize:14 }}>{L('فاتورة','Invoice')}: {patientName(selectedPatientId)}</h3>
             {currentInvoice.items.length === 0 ? (
-              <p style={{ color:'var(--text-secondary)', fontSize:13 }}>{L('ماكو خدمات مضافة بعد','No services added yet')}</p>
+              <p style={{ color:'var(--text-secondary)', fontSize:13 }}>{L('لا توجد خدمات مضافة بعد','No services added yet')}</p>
             ) : (
               <>
                 {currentInvoice.items.map(it => (
@@ -304,7 +304,7 @@ export default function BillingPage() {
           onClose={() => setShowInvoiceImport(false)}
           onImported={() => {
             // invoices تُدار عبر دوال AppContext (createInvoice/processPayment)
-            // بدون setter مباشر أو دالة إعادة جلب مكشوفة لهذي الصفحة، فإعادة
+            // بدون setter مباشر أو دالة إعادة جلب مكشوفة لهذه الصفحة، فإعادة
             // تحميل الصفحة أسلم طريقة لعرض الفواتير المستورَدة فوراً.
             window.location.reload();
           }}

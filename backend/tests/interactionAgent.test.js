@@ -2,10 +2,10 @@
 //
 // اختبارات منطق agents/interactionAgent.js بمعزل عن PostgreSQL/AI الحقيقيين
 // (نُموِّه config/database.js وutils/aiProviderRouter.js مباشرة — الأخير
-// يوزّع فعلياً بين bot/online/offline حسب إعداد المستخدم المحفوظ، راجعي
+// يوزّع فعلياً بين bot/online/offline حسب إعداد المستخدم المحفوظ، راجع
 // المرحلة الخامسة؛ تمويهه هنا يبقي هذا الملف مركّزاً على منطق الأزواج
 // (pairing) وfallback فقط، لا منطق التوزيع نفسه) — سريعة، لا تحتاج قاعدة
-// بيانات فعلية. راجعي أيضاً tests/drugInteractions.test.js لاختبار تكاملي
+// بيانات فعلية. راجع أيضاً tests/drugInteractions.test.js لاختبار تكاملي
 // عبر HTTP على قاعدة PostgreSQL حقيقية (drug_interactions، بُذرت
 // بـmigrations-sql/008).
 jest.mock('../config/database', () => ({ query: jest.fn() }));

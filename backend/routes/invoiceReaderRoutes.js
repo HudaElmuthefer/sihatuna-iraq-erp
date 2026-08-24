@@ -13,12 +13,12 @@
 //
 // ── المرحلة الثانية: معالجة خلفية عبر BullMQ ─────────────────────────────────
 // استدعاء AI فعلياً (Gemini/Claude) لقراءة صورة قد يأخذ عدة ثوانٍ — POST
-// /invoice-reader/read كان يُبقي طلب HTTP معلَّقاً طوال هذي المدة (يحجز
+// /invoice-reader/read كان يُبقي طلب HTTP معلَّقاً طوال هذه المدة (يحجز
 // worker من Express بلا فائدة حقيقية). الآن يُضيف مهمة لطابور
 // services/queue/ocrQueue.js ويرجع فوراً برقم مهمة (jobId، 202 Accepted)؛
 // الفرونت إند يستعلم دورياً عن حالتها عبر GET /invoice-reader/jobs/:id
-// (راجعي frontend/src/pages/ProcurementPage.js). المعالجة الفعلية تتم
-// بعملية Worker منفصلة تماماً — راجعي services/queue/ocrWorker.js.
+// (راجع frontend/src/pages/ProcurementPage.js). المعالجة الفعلية تتم
+// بعملية Worker منفصلة تماماً — راجع services/queue/ocrWorker.js.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -38,7 +38,7 @@ const invoiceLimiter = rateLimit({
   store: new RedisRateLimitStore('invoice-reader'),
 });
 
-// راجعي utils/aiProviderRouter.js — يعكس الوضع المُختار فعلياً (bot/online/
+// راجع utils/aiProviderRouter.js — يعكس الوضع المُختار فعلياً (bot/online/
 // offline) بدل افتراض Gemini/Claude دائماً كما كان سابقاً.
 router.get('/invoice-reader/status', auth, async (req, res, next) => {
   try {
@@ -48,7 +48,7 @@ router.get('/invoice-reader/status', auth, async (req, res, next) => {
 
 // ملاحظة: بنية استخراج البيانات (system/user prompt، مخطط JSON المتوقَّع)
 // انتقلت لـservices/queue/invoiceReadProcessor.js — الآن تشمل خطوة OCR
-// (PaddleOCR) تمهيدية قبل استدعاء AI، تعمل داخل مهمة الطابور نفسها (راجعي
+// (PaddleOCR) تمهيدية قبل استدعاء AI، تعمل داخل مهمة الطابور نفسها (راجع
 // شرح كامل هناك)، فلم يعد ممكناً بناء الـprompt النهائي هنا وقت استلام
 // الطلب (يحتاج نص OCR غير متوفر إلا بعد تشغيل تلك الخطوة داخل الـWorker).
 

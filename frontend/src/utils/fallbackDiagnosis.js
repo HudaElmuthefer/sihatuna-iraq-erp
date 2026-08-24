@@ -1,15 +1,15 @@
 // frontend/src/utils/fallbackDiagnosis.js
 //
 // ── إصلاح: استخراج منطق التشخيص المحلي لملف مستقل قابل للاختبار ────────────────
-// كانت هذي الدالة معرَّفة داخل مكوّن AIDiagnosisPage.js نفسه — ما فيه طريقة
+// كانت هذه الدالة معرَّفة داخل مكوّن AIDiagnosisPage.js نفسه — لا توجد طريقة
 // لاختبارها آلياً بمعزل عن باقي الصفحة (React rendering، حالة المكوّن...).
 // نقلها لملف مستقل (دالة نقية pure function: نفس المدخل يعطي دائماً نفس
 // المخرج، بدون أي اعتماد على DOM أو حالة React) يسمح باختبارات Jest مباشرة
-// عليها — راجعي src/utils/fallbackDiagnosis.test.js.
+// عليها — راجع src/utils/fallbackDiagnosis.test.js.
 //
 // نظام مطابقة أعراض بقواعد ثابتة (Rule-Based) — يُستخدم فقط لما ما يكون
 // الذكاء الاصطناعي الحقيقي مفعّلاً (بدون ANTHROPIC_API_KEY بملف الباك إند).
-// راجعي AIDiagnosisPage.js للشارة الصادقة اللي توضح للمستخدم أي نظام استُخدم.
+// راجع AIDiagnosisPage.js للشارة الصادقة التي توضح للمستخدم أي نظام استُخدم.
 
 export function buildFallback(symptoms, lang) {
 const L = (ar, en) => lang === 'ar' ? ar : en;

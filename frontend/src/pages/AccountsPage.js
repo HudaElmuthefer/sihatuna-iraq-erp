@@ -3,7 +3,7 @@
 // ── إصلاح: هذا الملف كان 994 سطر بملف واحد (كل التبويبات مع بعض) — قُسِّم
 // لملفات أصغر بمجلد frontend/src/pages/accounts/ (كل تبويب بملفه الخاص +
 // shared.js للثوابت المشتركة). التقسيم نسخ حرفي بدون أي تغيير بالمنطق أو
-// السلوك — راجعي مجلد accounts/ لتفاصيل كل تبويب.
+// السلوك — راجع مجلد accounts/ لتفاصيل كل تبويب.
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useT } from '../translations';
@@ -26,7 +26,7 @@ const ACCT_TABS = [
 
 export default function AccountsPage() {
   // القيمة الابتدائية تحترم ?tab= بالرابط (تصل من القائمة الجانبية القابلة
-  // للتوسّع — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع
+  // للتوسّع — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع
   // تجاهل أي قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
@@ -48,7 +48,7 @@ export default function AccountsPage() {
   // ── إصلاح: الأرقام الحمراء بجانب "الترفيعات" و"العلاوات" كانت تُحسَب من
   // بيانات تجريبية ثابتة بالكود (initPromotions/initAllowances) — رقم مجمَّد
   // لا علاقة له بالبيانات الحقيقية إطلاقاً، حتى لو كل الترفيعات الحقيقية
-  // منجَزة فعلاً كان يضل يعرض تنبيهاً وهمياً (أو العكس). الآن يُجلَب مباشرة
+  // منجَزة فعلاً كان يبقى يعرض تنبيهاً وهمياً (أو العكس). الآن يُجلَب مباشرة
   // من قاعدة البيانات الحقيقية.
   const [promotionDue, setPromotionDue] = useState(0);
   const [allowanceDue, setAllowanceDue] = useState(0);

@@ -45,7 +45,7 @@ export default function DrugInteractionsPage() {
   // حتى يعرف المستخدم من البداية هل الفحص القادم بذكاء اصطناعي حقيقي أو
   // بجدول محلي محدود بـ5 تضاربات معروفة بس.
   const [aiAvailable, setAiAvailable] = useState(null);
-  // اختيار مزوّد الذكاء الاصطناعي لهذا الفحص — راجعي components/AiModeSelect.js
+  // اختيار مزوّد الذكاء الاصطناعي لهذا الفحص — راجع components/AiModeSelect.js
   const [aiMode, setAiMode] = useState('online');
   useEffect(() => {
     api.get('/drug-interactions/status')
@@ -62,11 +62,11 @@ export default function DrugInteractionsPage() {
   const addDrug = (d) => { setSelectedDrugs(p => [...p, d]); setSearch(''); setResults(null); setChecked(false); };
   const removeDrug = (d) => { setSelectedDrugs(p => p.filter(x => x !== d)); setResults(null); setChecked(false); };
 
-  // ── إصلاح جذري: كان فحص التضارب يطابق مقابل 5 أزواج ثابتة بالكود بس ─────────
-  // أي دواءين غير موجودين حرفياً بهذي القائمة الخمسة كانا يُعتبَران "آمنين"
+  // ── إصلاح جذري: كان فحص التضارب يطابق مقابل 5 أزواج ثابتة بالكود فقط ─────────
+  // أي دواءين غير موجودين حرفياً بهذه القائمة الخمسة كانا يُعتبَران "آمنين"
   // تلقائياً، بغض النظر عن وجود تضارب حقيقي بينهم. الآن يستدعي الباك إند
   // (الذي يستدعي بدوره Gemini/Claude الحقيقي) أولاً، ويستخدم الجدول المحلي
-  // بس كاحتياط صادق التسمية لو ما فيه ذكاء اصطناعي مفعّل.
+  // فقط كاحتياط صادق التسمية لو لا يوجد ذكاء اصطناعي مفعّل.
   const checkInteractions = async () => {
     if (selectedDrugs.length < 2) { showToast(tr('drug_no_drugs'), 'error'); return; }
     setChecking(true);
@@ -80,7 +80,7 @@ export default function DrugInteractionsPage() {
       const aiResult = await api.post('/drug-interactions/check', { drugs: drugNames, lang, mode: aiMode });
       if (aiResult.available) {
         // توحيد شكل نتيجة الذكاء الاصطناعي لتطابق شكل العرض (effect/recommendation
-        // نصوص مباشرة بلغة الطلب، مو أزواج ثنائية اللغة زي الجدول المحلي)
+        // نصوص مباشرة بلغة الطلب، وليس أزواجاً ثنائية اللغة مثل الجدول المحلي)
         const normalized = (aiResult.interactions || []).map(inter => ({
           drugs: inter.drugs || [],
           severity: inter.severity === 'medium' ? 'med' : inter.severity,
@@ -88,7 +88,7 @@ export default function DrugInteractionsPage() {
           recommendation: inter.recommendation,
         }));
         setResults(normalized);
-        setResultSource(aiResult.source); // 'db' | 'ai' | 'mixed' — راجعي agents/interactionAgent.js
+        setResultSource(aiResult.source); // 'db' | 'ai' | 'mixed' — راجع agents/interactionAgent.js
         setResultIncomplete(Boolean(aiResult.incomplete));
         setChecked(true);
         setChecking(false);
@@ -98,7 +98,7 @@ export default function DrugInteractionsPage() {
       // ── إصلاح: الخادم استجاب فعلاً لكن ما عنده بيانات كافية (لا تطابق
       // بقاعدة البيانات + فشل/تعذّر الذكاء الاصطناعي) — هذا مختلف جذرياً عن
       // "تعذّر الوصول للخادم" (شبكة/اتصال)، ويجب ألا يُعرَض كـ"آمن" أبداً عبر
-      // جدول العميل المحلي المحدود بـ5 أزواج بس. راجعي نفس المبدأ بصفحة فحص
+      // جدول العميل المحلي المحدود بـ5 أزواج بس. راجع نفس المبدأ بصفحة فحص
       // الجرعات (DosageCheckPage.js / dosageAgent.js).
       setResults(null);
       setResultSource('unavailable');
@@ -111,7 +111,7 @@ export default function DrugInteractionsPage() {
     }
 
     // احتياط محلي (5 تضاربات معروفة بس) — يُستخدم فقط لو تعذّر الوصول للخادم
-    // فعلياً (استثناء شبكة)، مو لو الخادم استجاب وقال إنه ما عنده بيانات
+    // فعلياً (استثناء شبكة)، وليس لو استجاب الخادم وقال إنه لا يملك بيانات
     const found = [];
     interactions.forEach(inter => {
       const match = inter.drugs.every(d => selectedDrugs.includes(d));
@@ -231,7 +231,7 @@ export default function DrugInteractionsPage() {
           ) : (
             <>
               {/* ── إصلاح: شارة صادقة توضح مصدر نتيجة الفحص الفعلي ── */}
-              {/* راجعي agents/interactionAgent.js: 'db' = قاعدة تفاعلات موثوقة (فوري،
+              {/* راجع agents/interactionAgent.js: 'db' = قاعدة تفاعلات موثوقة (فوري،
                   بلا AI)، 'ai' = كل النتائج من ذكاء اصطناعي، 'mixed' = جزء من كل مصدر،
                   'unavailable' = الخادم استجاب لكن ما عنده بيانات كافية (لا تطابق
                   بقاعدة البيانات + تعذّر/فشل الذكاء الاصطناعي)، 'fallback' = تعذّر
@@ -266,7 +266,7 @@ export default function DrugInteractionsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6b7280', fontWeight: 700 }}>
                     <FaListAlt />
                     {lang === 'ar'
-                      ? 'لا توجد بيانات كافية لتقييم هذا التوليف — راجعي صيدلانياً أو طبيباً'
+                      ? 'لا توجد بيانات كافية لتقييم هذا التوليف — راجع صيدلانياً أو طبيباً'
                       : 'Not enough data to evaluate this combination — consult a pharmacist or physician'}
                   </div>
                 </div>

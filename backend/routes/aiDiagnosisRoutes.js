@@ -19,8 +19,8 @@
 // aiProviderRouter.js: 'online' (نفس المزوّد المُعدّ فعلياً بـ.env، لا يُذكَر
 // اسمه بالواجهة أبداً)، 'offline' (Ollama محلي)، أو 'bot' (يرجع
 // available:false فوراً — الفرونت إند يستخدم النظام المحلي الاحتياطي
-// buildFallback **مع تسمية صادقة توضح إنه نظام مساعدة أولية مو ذكاء اصطناعي
-// حقيقي**، بالضبط نفس سلوكه القديم لو ما فيه أي مفتاح API مُعدّ). ما فيه أي
+// buildFallback **مع تسمية صادقة توضح أنه نظام مساعدة أولية وليس ذكاء اصطناعي
+// حقيقياً**، بالضبط نفس سلوكه القديم لو لم يوجد أي مفتاح API مُعدّ). لا يوجد أي
 // كسر أو خطأ بأي حالة من الثلاث.
 const express = require('express');
 const fs = require('fs');
@@ -34,7 +34,7 @@ const { getFeatureStatus, routeTextCall } = require('../utils/aiProviderRouter')
 
 const router = express.Router();
 
-// ── إصلاح: قائمة الأطباء المُقترَحين صارت ملف بيانات، مو كود ثابت ──────────────
+// ── إصلاح: قائمة الأطباء المُقترَحين صارت ملف بيانات، وليست كوداً ثابتاً ──────────────
 // قبل هذا، قائمة الأطباء (الاسم، التخصص، الهاتف، العنوان) كانت مكتوبة يدوياً
 // داخل كود React نفسه — أي تعديل بسيط (رقم هاتف تغيّر، طبيب جديد، عيادة
 // انتقلت) كان يحتاج تعديل كود وبناء (build) ونشر نسخة جديدة كاملة من الفرونت
@@ -70,20 +70,20 @@ function buildPrompts(lang, symptoms, age, gender, duration, filesDescription) {
   const isEn = lang === 'en';
   const systemPrompt = isEn
     ? 'You are a specialist consultant physician assisting with a preliminary, non-definitive symptom assessment for a hospital ERP system. Always include a clear disclaimer that this is not a substitute for professional medical evaluation. Respond ONLY with valid JSON matching the exact schema requested — no markdown, no extra text.'
-    : 'أنتِ طبيب استشاري متخصص تساعدين بتقييم أولي غير قطعي للأعراض ضمن نظام مستشفى إلكتروني. اذكري دائماً إن هذا لا يغني عن الفحص الطبي المتخصص. أجيبي فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
+    : 'أنت طبيب استشاري متخصص تساعد بتقييم أولي غير قطعي للأعراض ضمن نظام مستشفى إلكتروني. اذكر دائماً إن هذا لا يغني عن الفحص الطبي المتخصص. أجب فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
 
   const userPrompt = isEn
     ? `Patient symptoms: ${symptoms.join(', ')}\nDuration: ${duration || 'unspecified'}\nAge: ${age || 'unspecified'}\nGender: ${gender || 'unspecified'}\n${filesDescription ? `Attached files: ${filesDescription}` : ''}\n\nRespond with JSON only: {"diagnoses":[{"name":"...","probability":"...","description":"..."}],"severity":"mild|moderate|high|urgent","tests":["..."],"recommendations":["..."],"urgent":false,"urgentReason":""}`
-    : `أعراض المريض: ${symptoms.join('، ')}\nمدة الأعراض: ${duration || 'غير محددة'}\nالعمر: ${age || 'غير محدد'}\nالجنس: ${gender || 'غير محدد'}\n${filesDescription ? `الملفات المرفقة: ${filesDescription}` : ''}\n\nأجيبي بصيغة JSON فقط: {"diagnoses":[{"name":"...","probability":"...","description":"..."}],"severity":"خفيف|متوسط|مرتفع|طارئ","tests":["..."],"recommendations":["..."],"urgent":false,"urgentReason":""}`;
+    : `أعراض المريض: ${symptoms.join('، ')}\nمدة الأعراض: ${duration || 'غير محددة'}\nالعمر: ${age || 'غير محدد'}\nالجنس: ${gender || 'غير محدد'}\n${filesDescription ? `الملفات المرفقة: ${filesDescription}` : ''}\n\nأجب بصيغة JSON فقط: {"diagnoses":[{"name":"...","probability":"...","description":"..."}],"severity":"خفيف|متوسط|مرتفع|طارئ","tests":["..."],"recommendations":["..."],"urgent":false,"urgentReason":""}`;
 
   return { systemPrompt, userPrompt };
 }
 
 // يخبر الفرونت إند فوراً هل الذكاء الاصطناعي الحقيقي متاح أصلاً (وبأي وضع:
 // bot/online/offline) — يُستخدم لعرض تسمية صادقة بالواجهة، وليملأ اختيار
-// المستخدم الافتراضي بقائمة AiModeSelect.js قبل أول تحليل. راجعي
+// المستخدم الافتراضي بقائمة AiModeSelect.js قبل أول تحليل. راجع
 // utils/aiProviderRouter.js — نفس نمط باقي ميزات الذكاء الاصطناعي الثلاث
-// بالضبط (مو فحص Gemini/Claude مباشر كما كان سابقاً).
+// بالضبط (وليس فحص Gemini/Claude مباشرة كما كان سابقاً).
 router.get('/ai-diagnosis/status', auth, requirePermission('ai-diagnosis'), async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('aiDiagnosis'));

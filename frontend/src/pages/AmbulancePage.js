@@ -59,7 +59,7 @@ export default function AmbulancePage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
@@ -141,7 +141,7 @@ export default function AmbulancePage() {
     setShowVehModal(false);
   };
   const deleteVeh = async id => {
-    // ── إصلاح: كان يقدر يحذف مركبة أثناء مأمورية نشطة مرتبطة فيها، تاركاً
+    // ── إصلاح: كان يستطيع حذف مركبة أثناء مأمورية نشطة مرتبطة فيها، تاركاً
     // المأمورية "معلّقة" بلا مركبة مرجعية بصمت بدون أي تحذير للمستخدم.
     const activeMission = missions.find(m => m.vehicleId === id && missionStatus(m) === 'active');
     if (activeMission) {
@@ -607,7 +607,7 @@ export default function AmbulancePage() {
             {maintenanceLoading ? (
               <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:20 }}>{L('جاري التحميل...','Loading...')}</p>
             ) : maintenanceLog.length === 0 ? (
-              <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:20, fontSize:13 }}>{L('لا يوجد سجل صيانة سابق لهذي المركبة','No previous maintenance records for this vehicle')}</p>
+              <p style={{ textAlign:'center', color:'var(--text-secondary)', padding:20, fontSize:13 }}>{L('لا يوجد سجل صيانة سابق لهذه المركبة','No previous maintenance records for this vehicle')}</p>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:220, overflowY:'auto' }}>
                 {maintenanceLog.map(m => (

@@ -33,7 +33,7 @@ describe('POST/GET /api/qualityAudits — استمرارية حقيقية (كا�
     expect(created.status).toBe(201);
     expect(created.body.id).toBeDefined();
 
-    // نجلب القائمة كاملة من جديد — يحاكي "تحديث الصفحة" اللي كان يفقد البيانات سابقاً
+    // نجلب القائمة كاملة من جديد — يحاكي "تحديث الصفحة" الذي كان يفقد البيانات سابقاً
     const list = await request(app).get('/api/qualityAudits').set('Authorization', `Bearer ${token}`);
     expect(list.status).toBe(200);
     expect(list.body.some(a => a.id === created.body.id && a.title === 'مراجعة اختبار')).toBe(true);

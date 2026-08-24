@@ -36,7 +36,7 @@ function parseExcelBuffer(buffer, columnMap) {
   const sheet = workbook.Sheets[firstSheetName];
   // defval: '' يضمن رجوع خلية فاضية كنص فاضي بدل حذف الحقل من الكائن تماماً
   const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-  if (rawRows.length === 0) return { rows: [], error: 'الملف فاضي — ما فيه أي صفوف بيانات تحت صف العناوين' };
+  if (rawRows.length === 0) return { rows: [], error: 'الملف فارغ — لا توجد أي صفوف بيانات تحت صف العناوين' };
 
   // حد أقصى معقول لعدد الصفوف بالاستيراد الواحد — حماية من ملف ضخم بالخطأ
   // (أو متعمَّد) يجمّد الخادم أثناء المعالجة

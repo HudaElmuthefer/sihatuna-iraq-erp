@@ -1,7 +1,7 @@
 // backend/tests/drugInteractions.test.js
 //
 // اختبارات لمسار فحص التضارب الدوائي — بعد إضافة طبقة قاعدة البيانات (bot)
-// راجعي agents/interactionAgent.js: الجدول يُفحَص أولاً (يعمل حتى بدون أي
+// راجع agents/interactionAgent.js: الجدول يُفحَص أولاً (يعمل حتى بدون أي
 // مفتاح API)، والذكاء الاصطناعي احتياطي فقط للأزواج غير الموجودة بالجدول.
 // أزواج الاختبار هنا: 'Aspirin'+'Warfarin' موجود فعلياً بجدول
 // drug_interactions (بُذر بـmigrations-sql/008_drug_interactions.sql) —
@@ -17,7 +17,7 @@ let token;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('drug-interactions');
-  // نفس مبدأ aiDiagnosis.test.js — نضبط لنص فاضٍ (مو نحذف) لمنع dotenv من
+  // نفس مبدأ aiDiagnosis.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv من
   // إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';
   process.env.GEMINI_API_KEY = '';
@@ -46,7 +46,7 @@ describe('GET /api/drug-interactions/status', () => {
 });
 
 describe('POST /api/drug-interactions/check', () => {
-  test('بدواء واحد بس (أقل من اثنين): يُرفض بـ400 برسالة واضحة', async () => {
+  test('بدواء واحد فقط (أقل من اثنين): يُرفض بـ400 برسالة واضحة', async () => {
     const res = await request(app)
       .post('/api/drug-interactions/check')
       .set('Authorization', `Bearer ${token}`)

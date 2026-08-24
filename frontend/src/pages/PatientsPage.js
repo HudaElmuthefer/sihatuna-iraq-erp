@@ -58,11 +58,11 @@ export default function PatientsPage() {
   }, [search]);
 
   // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
-  // الجدول المعروض بهذي الصفحة يجيب فقط الصفحة الحالية من الخادم (بحث/فلترة/
+  // الجدول المعروض بهذه الصفحة يجيب فقط الصفحة الحالية من الخادم (بحث/فلترة/
   // ترقيم يصير كله بقاعدة البيانات، وليس بالمتصفح) — سريع بغض النظر عن عدد
   // المرضى الكلي، حتى لو وصل لعشرات الآلاف مستقبلاً. مصفوفة `patients` من
   // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
-  // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذي الصفحة تحديداً.
+  // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذه الصفحة تحديداً.
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
     useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { startDate: dateFrom, endDate: dateTo } });
 
@@ -87,7 +87,7 @@ export default function PatientsPage() {
       diagnoses = [{ id: Date.now(), icdCode: p.icdCode || '', icdNameAr: '', icdNameEn: '', snomedCode: p.snomedCode || '', snomedNameAr: '', snomedNameEn: '', isPrimary: true, dateAdded: '' }];
     }
     // نفس مبدأ التوافق العكسي أعلاه — مرضى أُنشئوا قبل هذا التحديث لهم
-    // allergies كحقل نصي حر واحد لا مصفوفة (راجعي AllergyPicker.js). نحوّل
+    // allergies كحقل نصي حر واحد لا مصفوفة (راجع AllergyPicker.js). نحوّل
     // النص القديم لعنصر واحد بشدة "متوسطة" افتراضياً (غير معروفة فعلياً من
     // نص حر قديم) بدل فقدان البيانات.
     let allergies = Array.isArray(p.allergies) ? p.allergies : [];
@@ -186,7 +186,7 @@ export default function PatientsPage() {
               const fresh = await api.get('/patients');
               if (Array.isArray(fresh)) setPatients(fresh);
             } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
-            refetch(); // يحدّث جدول هذي الصفحة تحديداً (المجلوب من السيرفر بشكل منفصل)
+            refetch(); // يحدّث جدول هذه الصفحة تحديداً (المجلوب من السيرفر بشكل منفصل)
           }}
         />
       )}
@@ -321,7 +321,7 @@ export default function PatientsPage() {
             <div className="modal-body">
               <div className="grid-2">
                 {/* ── إضافة: حقل رقم المريض (patientId) ──────────────────────
-                    لم يكن موجوداً بهذي النافذة إطلاقاً رغم أن العمود يظهر
+                    لم يكن موجوداً بهذه النافذة إطلاقاً رغم أن العمود يظهر
                     بالجدول — يُولَّد تلقائياً عند الإضافة فقط (openAdd)، لكن
                     لا توجد طريقة لعرضه أو تعديله يدوياً، خصوصاً للسجلات
                     المستوردة عبر Excel التي قد يصل رقم المريض فيها فارغاً أو

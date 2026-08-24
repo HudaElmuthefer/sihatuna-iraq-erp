@@ -9,14 +9,14 @@
 // وتسجّل عليه كل المسارات — بنفس ترتيب التسجيل الأصلي بالضبط (مهم جداً: كل
 // استيراد Excel مسجَّل *قبل* pgCrud لنفس الموديول، لتفادي تعارض مسار GET
 // /module/:id مع GET /module/import-template — انظر شرح المشكلة والحل
-// بملف routes/excelImportRoutes.js لو احتجتِ التفاصيل الكاملة).
+// بملف routes/excelImportRoutes.js لو احتجت التفاصيل الكاملة).
 const collectionSchemas = require('../middleware/schemas');
 const pgCrud = require('./pgCrud');
 const { DEFAULT_COLUMNS } = pgCrud;
 // ── أعمدة مُرقّاة من JSONB لأعمدة حقيقية (دفعة أولى) ─────────────────────────
-// راجعي migration_promote_columns.sql — لازم يُطبَّق على قاعدة البيانات أولاً
-// قبل ما يشتغل هذا الكود صح (وإلا الأعمدة الجديدة غير موجودة أصلاً بالجدول).
-const PATIENT_COLUMNS = DEFAULT_COLUMNS; // إصلاح: patient_code/blood_type/national_id ليست أعمدة حقيقية بجدول patients (JSONB بحت لهذي الحقول) — أُزيلت من هنا وأُضيفت كـ extraFilterFields بدلاً عنها بتسجيل pgCrud('patients', ...)
+// راجع migration_promote_columns.sql — يجب أن يُطبَّق على قاعدة البيانات أولاً
+// قبل أن يعمل هذا الكود بشكل صحيح (وإلا الأعمدة الجديدة غير موجودة أصلاً بالجدول).
+const PATIENT_COLUMNS = DEFAULT_COLUMNS; // إصلاح: patient_code/blood_type/national_id ليست أعمدة حقيقية بجدول patients (JSONB بحت لهذه الحقول) — أُزيلت من هنا وأُضيفت كـ extraFilterFields بدلاً عنها بتسجيل pgCrud('patients', ...)
 // إصلاح: specialization عمود حقيقي فعلاً بجدول doctors (رُقِّي بـ
 // 002_promote_columns.sql، ومُعبَّأ بالكامل: 152/152 طبيب) — التعليق السابق
 // هنا كان خاطئاً (يدّعي أنه JSONB بحت)، فكان rowToRecord يُسقطه بصمت من كل
@@ -47,7 +47,7 @@ const registerAllModules = (router) => {
   // يضيف POST /api/patients/import-excel و POST /api/doctors/import-excel
   // (و GET .../import-template لتحميل قالب فارغ). يُسجَّل عمداً *قبل* pgCrud
   // لنفس الموديول أدناه — Express يطابق المسارات بترتيب التسجيل، ولو سُجِّل
-  // بعد pgCrud (اللي يضيف GET /patients/:id)، كان طلب GET /patients/import-template
+  // بعد pgCrud (الذي يضيف GET /patients/:id)، كان طلب GET /patients/import-template
   // يتطابق خطأً مع نمط /:id (ويعامل "import-template" كأنه معرّف سجل رقمي)،
   // بدل مساره الصريح الأدق. هذا خطأ حقيقي وقعنا فيه واكتُشف بالاختبار الفعلي.
   registerExcelImport(router, 'patients', collectionSchemas.patients, {
@@ -92,9 +92,9 @@ const registerAllModules = (router) => {
     'الملاحظات': 'notes', 'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'doctors',
-    // لازم يطابق DOCTOR_COLUMNS المستخدَمة بتسجيل pgCrud('doctors', ...)
+    // يجب أن يطابق DOCTOR_COLUMNS المستخدَمة بتسجيل pgCrud('doctors', ...)
     // بالأسفل بالضبط — وإلا يُكتب specialization بجدول Excel المستورَد فقط
-    // بعمود JSONB، ثم rowToRecord (اللي يقرأ العمود الحقيقي الآن) يُفرغه لاحقاً.
+    // بعمود JSONB، ثم rowToRecord (الذي يقرأ العمود الحقيقي الآن) يُفرغه لاحقاً.
     indexedColumns: DOCTOR_COLUMNS,
     limiter: importLimiter,
     duplicateCheck: ['name', 'phone'],
@@ -289,10 +289,10 @@ const registerAllModules = (router) => {
     'تاريخ الانتهاء': 'endDate', 'End Date': 'endDate',
     'الحالة': 'status', 'Status': 'status',
     'الأولوية': 'priority', 'Priority': 'priority',
-    // ── إصلاح: هذي الأعمدة كانت ناقصة تماماً — أي مشروع مستورَد كانت هذي
+    // ── إصلاح: هذه الأعمدة كانت ناقصة تماماً — أي مشروع مستورَد كانت هذه
     // الحقول تطلع له undefined بالواجهة (يظهر "NaN%" بشريط التقدم، و
     // "undefined/undefined" بعدد المراحل). الآن اختيارية بالاستيراد، وتُملأ
-    // بصفر تلقائياً لو تُركت فاضية (راجعي afterParse بالأسفل).
+    // بصفر تلقائياً لو تُركت فاضية (راجع afterParse بالأسفل).
     'المصروف': 'spent', 'Spent': 'spent',
     'نسبة الإنجاز': 'progress', 'Progress': 'progress',
     'عدد المراحل': 'milestones', 'Milestones': 'milestones',
@@ -387,7 +387,7 @@ const registerAllModules = (router) => {
     limiter: importLimiter,
     duplicateCheck: ['reqNo'],
     // ── إصلاح: النتيجة تُخزَّن فعلياً بكائن متداخل results:{value, notes}
-    // بالواجهة (راجعي LaboratoryPage.js) — لا يمكن لـ columnMap تعيين حقل
+    // بالواجهة (راجع LaboratoryPage.js) — لا يمكن لـ columnMap تعيين حقل
     // متداخل مباشرة، لذا نستقبل عمود "النتيجة" مؤقتاً بحقل مسطّح resultRaw
     // ثم نحوّله هنا لبنية results الصحيحة قبل الحفظ. بدون هذا الإصلاح، كانت
     // قيمة النتيجة تُفقد أو تُدمَج خطأً بحقل "ملاحظات" العادي.
@@ -944,7 +944,7 @@ const registerAllModules = (router) => {
   // يمكن الحصول عليه من تصدير Excel لصفحة المرضى.
   // ── ملاحظة مُحدَّثة: صار يقبل الآن "اسم المريض" مباشرة ويحوّله لـpatientId
   // الرقمي الحقيقي بالبحث المباشر بجدول patients (نفس أسلوب wardId/
-  // admissionId) — بدل الاعتماد على معرفة رقم داخلي يدوياً، اللي صعب توفيره
+  // admissionId) — بدل الاعتماد على معرفة رقم داخلي يدوياً، مما يصعب توفيره
   // فعلياً بملف Excel عادي. لو الاسم ما تطابق بالضبط مع مريض حقيقي، السطر
   // يُرفَض بخطأ واضح (patientId مطلوب) بدل حفظه بربط خاطئ صامت.
   registerExcelImport(router, 'crmFollowUps', collectionSchemas.crmFollowUps, {
@@ -1104,7 +1104,7 @@ const registerAllModules = (router) => {
   // wardId رقمي فعلي بالبحث المباشر بجدول wards أثناء المعالجة — بدل ما يبقى
   // فارغاً كما كان بالنسخة السابقة. الشرط الوحيد: اسم الردهة بالعمود يطابق
   // *بالضبط* اسم ردهة موجود فعلاً بجدول wards (نفس النص المستورَد بملف
-  // wards_import.xlsx) — لو ما فيه تطابق، wardId يبقى فارغاً وتحتاجين ربطه
+  // wards_import.xlsx) — لو لم يوجد تطابق، wardId يبقى فارغاً وتحتاج ربطه
   // يدوياً كما كان الحال سابقاً، بدل ما يفشل الصف كاملاً.
   registerExcelImport(router, 'admissions', collectionSchemas.admissions, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
@@ -1281,7 +1281,7 @@ const registerAllModules = (router) => {
   // التحويلات...) وتتغيّر نادراً (إضافة/تعديل طبيب مناسبة نادرة نسبياً) —
   // مرشّح مثالي للتخزين المؤقت. 5 دقائق (300 ثانية) توازن بين تقليل ضغط
   // قاعدة البيانات وبقاء البيانات حديثة بما يكفي بلا أي إبطال يدوي إضافي
-  // (وأي كتابة فعلية على الموديول تُبطِل الكاش فوراً بأي حال — راجعي
+  // (وأي كتابة فعلية على الموديول تُبطِل الكاش فوراً بأي حال — راجع
   // routes/pgCrud.js).
   pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'], cache: { ttlSeconds: 300 } });
   pgCrud(router, 'appointments', collectionSchemas.appointments, [
@@ -1462,7 +1462,7 @@ const registerAllModules = (router) => {
   ], 'crm_campaign_targets', { hospitalScoped: true, permission: 'crm' });
 
   // ── إصلاح: إدارة الجودة (ISO) — كانت بدون أي اتصال بقاعدة بيانات ────────────
-  // راجعي middleware/schemas.js وmigrations/add-quality-tables.js لتفاصيل
+  // راجع middleware/schemas.js وmigrations/add-quality-tables.js لتفاصيل
   // الإصلاح الكامل. indexedColumns فاضية عمداً (JSONB بحت) — الحقول
   // (auditNo, ncNo, status...) لا تحتاج بحثاً سريعاً بحجم بيانات هذا الموديول
   // الطبيعي (عشرات-مئات السجلات كحد أقصى واقعي بمستشفى واحد).

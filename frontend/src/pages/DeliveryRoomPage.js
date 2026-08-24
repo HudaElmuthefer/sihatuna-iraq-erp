@@ -11,7 +11,7 @@ import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
 // إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
-// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 6.03:1/7.31:1.
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذه تعطي 6.03:1/7.31:1.
 const BANNER_GRADIENT = 'linear-gradient(135deg, #9d174d 0%, #831843 100%)';
 
 const today = new Date().toISOString().split('T')[0];
@@ -47,7 +47,7 @@ export default function DeliveryRoomPage() {
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => { // admitted | delivered
@@ -124,8 +124,8 @@ export default function DeliveryRoomPage() {
   };
 
   // ── تسجيل الطفل ولقاحه الأول ─────────────────────────────────────────────
-  // يُنشئ سجل تطعيم حقيقي بموديول التطعيمات نفسه (نفس الجدول اللي تشوفينه
-  // بصفحة "التطعيمات")، مو مجرد علامة داخل سجل الولادة — حتى يظهر الطفل
+  // يُنشئ سجل تطعيم حقيقي بموديول التطعيمات نفسه (نفس الجدول الذي تراه
+  // بصفحة "التطعيمات")، وليس مجرد علامة داخل سجل الولادة — حتى يظهر الطفل
   // ضمن سجلات التطعيم العامة للمستشفى مثل أي مريض ثاني.
   const [vaccineFor, setVaccineFor] = useState(null); // السجل المفتوح حالياً لتسجيل لقاحه
   const [vaccineForm, setVaccineForm] = useState(emptyVaccine);

@@ -44,7 +44,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت (SETTINGS_TAB_KEYS مُعرَّفة
   // بمستوى الملف أعلاه).
   const [searchParams] = useSearchParams();
@@ -104,7 +104,7 @@ export default function SettingsPage() {
     if (!f) { setLogoFile(null); return; }
     const ext = `.${f.name.split('.').pop().toLowerCase()}`;
     if (!LOGO_ALLOWED_EXT.includes(ext)) {
-      showToast(lang === 'ar' ? 'الشعار لازم يكون PNG أو JPG' : 'Logo must be a PNG or JPG image', 'error');
+      showToast(lang === 'ar' ? 'يجب أن يكون الشعار PNG أو JPG' : 'Logo must be a PNG or JPG image', 'error');
       e.target.value = '';
       setLogoFile(null);
       return;
@@ -147,13 +147,13 @@ export default function SettingsPage() {
 
   // ── اسم النظام القابل للتعديل (App Name) ────────────────────────────────
   // مسودة محلية منفصلة عن appNameAr/appNameEn (القيم المُطبَّقة فعلياً) —
-  // بس تُحفَظ فعلياً لما تضغط "حفظ"، نفس نمط باقي حقول هذا التبويب (لا حفظ
+  // لكن تُحفَظ فعلياً لما تضغط "حفظ"، نفس نمط باقي حقول هذا التبويب (لا حفظ
   // تلقائي بمجرد الكتابة).
   const [appNameForm, setAppNameForm] = useState({ ar: '', en: '' });
   const [appNameSaving, setAppNameSaving] = useState(false);
   const [appNameResetting, setAppNameResetting] = useState(false);
   // تُهيَّأ من القيمة الحالية أول ما نفتح تبويب "اسم النظام" (لا تُعاد التهيئة
-  // بعدها كل رندر، حتى ما تُمحى كتابة المستخدم وهو لسا يعدّل)
+  // بعدها كل رندر، حتى لا تُمحى كتابة المستخدم وهو لا يزال يعدّل)
   React.useEffect(() => {
     if (tab === 'appname') setAppNameForm({ ar: appNameAr, en: appNameEn });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,11 +178,11 @@ export default function SettingsPage() {
   };
 
   // ── اختيار مزوّد الذكاء الاصطناعي لكل ميزة (بوت/إنترنت/محلي) ────────────────
-  // محفوظ بجدول system_settings بالباك إند (لا localStorage) — راجعي
+  // محفوظ بجدول system_settings بالباك إند (لا localStorage) — راجع
   // backend/utils/aiProviderRouter.js لمنطق التوزيع الفعلي. Bot only (مو
   // AI إطلاقاً) / Online AI (المزوّد الفعلي يُضبَط بـ.env، لا يُذكَر اسمه
-  // بالواجهة أبداً — راجعي backend/utils/aiProvider.js) / Offline AI
-  // (Ollama محلي — راجعي backend/utils/ollamaService.js). هذا هو الإعداد
+  // بالواجهة أبداً — راجع backend/utils/aiProvider.js) / Offline AI
+  // (Ollama محلي — راجع backend/utils/ollamaService.js). هذا هو الإعداد
   // الافتراضي فقط الآن — كل صفحة ذكاء اصطناعي (AiModeSelect.js) تسمح لأي
   // مستخدم بتجاوزه لطلبه الحالي بلا حاجة صلاحية إدمن.
   const AI_FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck'];
@@ -261,7 +261,7 @@ export default function SettingsPage() {
   };
 
   // إعادة ضبط كلمة مرور مستخدم لكلمة مؤقتة عشوائية (يولّدها الخادم) — بدون
-  // نظام بريد إلكتروني بالمشروع، هذي أبسط وأضمن طريقة عملية: الإدمن يشوف
+  // نظام بريد إلكتروني بالمشروع، هذه أبسط وأضمن طريقة عملية: يرى الإدمن
   // الكلمة المؤقتة *مرة وحدة* هنا، ويوصّلها للمستخدم يدوياً (هاتف/حضورياً).
   // المستخدم يُجبَر تلقائياً على تغييرها بأول تسجيل دخول (mustChangePassword).
   const resetPassword = async (u) => {
@@ -378,12 +378,12 @@ export default function SettingsPage() {
 
       if (fileHandle) {
         // مسار المتصفحات الحديثة (Chrome/Edge): كتابة الملف مباشرة بالمكان
-        // اللي اختاره المستخدم بالضبط — بدون المرور بمجلد Downloads إطلاقاً
+        // الذي اختاره المستخدم بالضبط — بدون المرور بمجلد Downloads إطلاقاً
         const writable = await fileHandle.createWritable();
         await writable.write(blob);
         await writable.close();
       } else {
-        // مسار احتياطي (Firefox/Safari اللي ما تدعم showSaveFilePicker):
+        // مسار احتياطي (Firefox/Safari التي لا تدعم showSaveFilePicker):
         // نرجع لطريقة التنزيل التلقائي القديمة لمجلد Downloads
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -529,8 +529,8 @@ export default function SettingsPage() {
   const [recycleBusyId, setRecycleBusyId] = useState(null);
   const [recycleBulkBusy, setRecycleBulkBusy] = useState(false);
   // إصلاح: زر استرجاع/حذف نهائي كان لكل عنصر لحاله فقط — لو عندك عشرات
-  // العناصر بسلة المحذوفات، تحتاجين تضغطين لكل واحد لحاله. الآن تقدرين
-  // تحددين عدة عناصر بمربعات اختيار وتسوين الإجراء على الكل مرة وحدة.
+  // العناصر بسلة المحذوفات، تحتاج تضغط لكل واحد لحاله. الآن تقدر
+  // تحدد عدة عناصر بمربعات اختيار وتنفّذ الإجراء على الكل مرة واحدة.
   const [selectedRecycleIds, setSelectedRecycleIds] = useState(new Set());
   const toggleRecycleSelect = (id) => setSelectedRecycleIds(prev => {
     const next = new Set(prev);
@@ -709,7 +709,7 @@ export default function SettingsPage() {
                         </div>
                         {/* Permissions pills — إصلاح: دور الإدمن يملك صلاحية كاملة دائماً
                             بغض النظر عن مصفوفة permissions المخزَّنة (قد تكون قديمة/ناقصة
-                            لحسابات قديمة — راجعي ملاحظة save() أعلاه) — شارة واحدة صادقة
+                            لحسابات قديمة — راجع ملاحظة save() أعلاه) — شارة واحدة صادقة
                             بدل تعداد قد يوهم بأن صلاحياته محدودة فعلياً. */}
                         {u.role === 'admin' ? (
                           <span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'1px 7px', borderRadius:6, fontSize:10, fontWeight:700 }}>
@@ -755,7 +755,7 @@ export default function SettingsPage() {
                 <div className="modal-body">
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
                     {lang === 'ar'
-                      ? `كلمة مرور مؤقتة جديدة لـ"${resetPasswordResult.userName}". انسخها وأرسلها له الآن — لن تظهر مرة ثانية بعد إغلاق هذي النافذة. سيُطلب منه تغييرها بأول تسجيل دخول.`
+                      ? `كلمة مرور مؤقتة جديدة لـ"${resetPasswordResult.userName}". انسخها وأرسلها له الآن — لن تظهر مرة ثانية بعد إغلاق هذه النافذة. سيُطلب منه تغييرها بأول تسجيل دخول.`
                       : `New temporary password for "${resetPasswordResult.userName}". Copy and send it now — it will not be shown again. They will be required to change it on first login.`}
                   </p>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1529,7 +1529,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Permissions — إصلاح: دور الإدمن يملك صلاحية كاملة دائماً عبر فحص
-                  الدور نفسه (لا مصفوفة صلاحيات مخزَّنة، راجعي requirePermission.js
+                  الدور نفسه (لا مصفوفة صلاحيات مخزَّنة، راجع requirePermission.js
                   وhasPermission بـAppContext.js) — عرض قائمة تحديد هنا لهذا الدور
                   كان يوهم بأن صلاحياته "مُعدَّة يدوياً" وقد تنسى صفحة جديدة، رغم
                   إنها فعلياً غير مستخدَمة إطلاقاً بمنطق التحقق. بدلها: ملاحظة

@@ -374,7 +374,7 @@ export default function DepartmentsPage() {
             {departments.map(dept => (
               <div key={dept.id} onClick={() => setSelected(selected?.id === dept.id ? null : dept)}
                 // إصلاح تباين الوضع الليلي: كان background:var(--bg-secondary)
-                // (غير متسق مع باقي البطاقات المشابهة اللي تستخدم --bg-card)
+                // (غير متسق مع باقي البطاقات المشابهة التي تستخدم --bg-card)
                 // مع transition:'all 0.2s' يشمل الخلفية نفسها — نفس فئة مشكلة
                 // --transition الموثَّقة بـ index.css (انتقال خاصية معتمدة على
                 // متغيّر CSS يعلق أحياناً على القيمة القديمة عند تبديل الثيم).

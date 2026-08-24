@@ -80,11 +80,11 @@ describe('parseExcelBuffer — تحليل ملفات الاستيراد', () => 
     const buffer = buildExcelBuffer([['الاسم', 'الهاتف']]);
     const { error } = parseExcelBuffer(buffer, columnMap);
     expect(error).not.toBeNull();
-    expect(error).toContain('فاضي');
+    expect(error).toContain('فارغ');
   });
 
   test('ملف تالف (buffer غير صالح كملف Excel) يُرجع خطأ واضح بدل رمي استثناء', () => {
-    const badBuffer = Buffer.from('هذا نص عادي مو ملف Excel إطلاقاً');
+    const badBuffer = Buffer.from('هذا نص عادي وليس ملف Excel إطلاقاً');
     const { error } = parseExcelBuffer(badBuffer, columnMap);
     expect(error).not.toBeNull();
   });

@@ -1,6 +1,6 @@
 // server/services/gateways/BaseGatewayAdapter.js
-// كل بوابة دفع (Zain Cash, FastPay, Qi Card, PayPal...) لازم تطبّق نفس الواجهة
-// هذا يخلي إضافة بوابة جديدة مستقبلاً = ملف جديد فقط، بدون تعديل الكود الأساسي
+// كل بوابة دفع (Zain Cash, FastPay, Qi Card, PayPal...) يجب أن تطبّق نفس الواجهة
+// هذا يجعل إضافة بوابة جديدة مستقبلاً = ملف جديد فقط، بدون تعديل الكود الأساسي
 
 class BaseGatewayAdapter {
   constructor(credentials = {}, config = {}) {
@@ -25,7 +25,7 @@ class BaseGatewayAdapter {
   }
 
   /**
-   * استرجاع مبلغ (اختياري، مو كل البوابات تدعمه)
+   * استرجاع مبلغ (اختياري، ليست كل البوابات تدعمه)
    */
   async refund(gatewayTransactionId, amount) {
     throw new Error(`refund() غير مدعوم بهذه البوابة`);

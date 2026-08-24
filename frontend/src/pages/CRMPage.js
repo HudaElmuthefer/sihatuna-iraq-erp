@@ -43,7 +43,7 @@ export default function CRMPage() {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => (lang === 'ar' ? ar : en);
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
@@ -110,7 +110,7 @@ export default function CRMPage() {
 
   function submitFollowUp() {
     if (!fuForm.patientId || !fuForm.title || !fuForm.dueDate) {
-      showToast(L('عبّي كل الحقول المطلوبة', 'Please fill all required fields'), 'error');
+      showToast(L('عبِّ كل الحقول المطلوبة', 'Please fill all required fields'), 'error');
       return;
     }
     addCrmFollowUp({ ...fuForm, patientId: Number(fuForm.patientId) });

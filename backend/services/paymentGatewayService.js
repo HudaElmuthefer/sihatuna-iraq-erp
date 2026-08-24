@@ -1,6 +1,6 @@
 // server/services/paymentGatewayService.js
 // النقطة المركزية: تقرأ إعدادات البوابة المفعّلة من جدول hospital_payment_gateways
-// (اللي يحدده الإدمن)، تفك تشفير الـ credentials، وتنادي الـ Adapter المناسب.
+// (الذي يحدده الإدمن)، تفك تشفير الـ credentials، وتنادي الـ Adapter المناسب.
 // إضافة بوابة جديدة مستقبلاً = سطر واحد بـ ADAPTER_REGISTRY + ملف Adapter جديد.
 
 const { query } = require('../config/database');
@@ -86,7 +86,7 @@ async function _buildAdapter(hospitalId, providerCode) {
     [hospitalId, providerCode]
   );
   if (result.rowCount === 0) {
-    throw new Error(`بوابة الدفع "${providerCode}" غير مُعدّة — عبّي بياناتها بملف backend/.env`);
+    throw new Error(`بوابة الدفع "${providerCode}" غير مُعدّة — عبّ بياناتها بملف backend/.env`);
   }
   const row = result.rows[0];
   const credentials = row.credentials_encrypted ? decryptCredentials(row.credentials_encrypted) : {};

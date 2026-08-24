@@ -1,10 +1,10 @@
 // backend/config/redisRateLimitStore.js
 //
-// Store مخصَّص لـexpress-rate-limit (v7 — راجعي واجهة Store بملف
+// Store مخصَّص لـexpress-rate-limit (v7 — راجع واجهة Store بملف
 // node_modules/express-rate-limit/dist/index.d.ts) مبني على Redis، بديل عن
 // الذاكرة الداخلية الافتراضية (MemoryStore). كانت المشكلة: بعد التحويل
 // لـPM2 cluster mode (عدة عمليات worker منفصلة، كل وحدة بذاكرتها الخاصة —
-// راجعي تعليق ecosystem.config.js)، أي حد "300 طلب/5 دقائق" فعلياً يتضاعف
+// راجع تعليق ecosystem.config.js)، أي حد "300 طلب/5 دقائق" فعلياً يتضاعف
 // تلقائياً بعدد أنوية المعالج (كل worker يعدّ من الصفر بذاكرته المنفصلة)،
 // ونفس الأمر لحد محاولات تسجيل الدخول — يُضعف الحماية ضد التخمين
 // (Brute Force) فعلياً بقدر ما يزيد عدد الأنوية. Redis (مصدر عدّاد واحد
@@ -13,8 +13,8 @@
 // ── fail-open عند تعذّر الوصول لـRedis ────────────────────────────────────
 // تحديد المعدل أقل أهمية بكثير من استمرار عمل النظام — لا يصح أن يفشل كل
 // طلب تسجيل دخول أو كل طلب API بالنظام لمجرد انقطاع Redis لحظياً. كل خطأ
-// هنا يُعامَل كـ"لا حد بعد" (كأنه أول طلب بهذي النافذة)، مو كخطأ يوقف
-// الطلب. راجعي نفس الفلسفة المشروحة بأعلى utils/redisService.js.
+// هنا يُعامَل كـ"لا حد بعد" (كأنه أول طلب بهذه النافذة)، وليس كخطأ يوقف
+// الطلب. راجع نفس الفلسفة المشروحة بأعلى utils/redisService.js.
 const { getClient } = require('../utils/redisService');
 
 class RedisRateLimitStore {
@@ -55,8 +55,8 @@ class RedisRateLimitStore {
       const totalHits = await client.incr(redisKey);
       let ttl = await client.pttl(redisKey);
       if (ttl < 0) {
-        // مفتاح جديد (أول طلب بهذي النافذة) — نضبط مدة صلاحيته الآن فقط،
-        // مو بكل زيادة (وإلا نافذة الحد تنزلق للأمام مع كل طلب ولا تنتهي أبداً)
+        // مفتاح جديد (أول طلب بهذه النافذة) — نضبط مدة صلاحيته الآن فقط،
+        // وليس بكل زيادة (وإلا نافذة الحد تنزلق للأمام مع كل طلب ولا تنتهي أبداً)
         await client.pexpire(redisKey, this.windowMs);
         ttl = this.windowMs;
       }

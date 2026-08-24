@@ -1,7 +1,7 @@
 // backend/tests/projectsImport.test.js
 //
 // اختبار لإصلاح حقيقي: مشاريع مستورَدة من Excel بدون أعمدة spent/progress/
-// milestones/completedMilestones كانت تُحفَظ بهذي الحقول فاضية (undefined)،
+// milestones/completedMilestones كانت تُحفَظ بهذه الحقول فارغة (undefined)،
 // فتظهر "NaN%" و"undefined/undefined" بالواجهة. يتحقق من إن afterParse
 // يملأها بصفر تلقائياً بدل تركها فارغة.
 const request = require('supertest');
@@ -30,7 +30,7 @@ afterAll(async () => {
 describe('استيراد مشروع من Excel بدون أعمدة spent/progress/milestones', () => {
   test('الحقول الرقمية الناقصة تُملأ بصفر تلقائياً بدل ما تبقى فاضية', async () => {
     const XLSX = require('xlsx');
-    // ملف بس بالأعمدة الأساسية — بدون المصروف أو نسبة الإنجاز أو المراحل إطلاقاً
+    // ملف فقط بالأعمدة الأساسية — بدون المصروف أو نسبة الإنجاز أو المراحل إطلاقاً
     const ws = XLSX.utils.aoa_to_sheet([
       ['الرمز', 'الاسم', 'المدير', 'الميزانية'],
       [`PRJ-TEST-${Date.now()}`, 'مشروع اختبار الاستيراد', 'أحمد المدير', 50000000],
@@ -50,7 +50,7 @@ describe('استيراد مشروع من Excel بدون أعمدة spent/progres
     const list = await request(app).get('/api/projects').set('Authorization', `Bearer ${token}`);
     const imported = list.body.find(p => p.name === 'مشروع اختبار الاستيراد');
     expect(imported).toBeDefined();
-    // قبل الإصلاح: هذي كانت undefined — الآن يجب تكون 0 بالضبط
+    // قبل الإصلاح: هذه كانت undefined — الآن يجب تكون 0 بالضبط
     expect(imported.spent).toBe(0);
     expect(imported.progress).toBe(0);
     expect(imported.milestones).toBe(0);

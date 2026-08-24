@@ -12,7 +12,7 @@ let token;
 
 beforeAll(async () => {
   dbPath = setupTestEnv('drug-interactions');
-  // نفس مبدأ aiDiagnosis.test.js — نضبط لنص فاضٍ (مو نحذف) لمنع dotenv من
+  // نفس مبدأ aiDiagnosis.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv من
   // إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';
   process.env.GEMINI_API_KEY = '';
@@ -39,7 +39,7 @@ describe('GET /api/drug-interactions/status', () => {
 });
 
 describe('POST /api/drug-interactions/check', () => {
-  test('بدواء واحد بس (أقل من اثنين): يُرفض بـ400 برسالة واضحة', async () => {
+  test('بدواء واحد فقط (أقل من اثنين): يُرفض بـ400 برسالة واضحة', async () => {
     const res = await request(app)
       .post('/api/drug-interactions/check')
       .set('Authorization', `Bearer ${token}`)

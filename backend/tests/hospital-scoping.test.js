@@ -1,7 +1,7 @@
 // backend/tests/hospital-scoping.test.js
 //
 // اختبار حرج للمرحلة 4 من دعم المنشآت المتعددة: يتأكد فعلياً إن مستخدماً
-// مربوطاً بمنشأة معينة لا يقدر يشوف أو يعدّل أو يحذف بيانات منشأة أخرى،
+// مربوطاً بمنشأة معينة لا يستطيع رؤية أو تعديل أو حذف بيانات منشأة أخرى،
 // حتى لو خمّن معرّف السجل مباشرة. يحتاج اتصالاً حقيقياً بـ PostgreSQL —
 // يفشل الملف كاملاً بخطأ واضح لو تعذّر (لا يُتجاوز بصمت)، بنفس نمط بقية الاختبارات.
 const request = require('supertest');
@@ -35,8 +35,8 @@ beforeAll(async () => {
   // إصلاح: requirePermission.js يتحقق فقط من مصفوفة permissions الصريحة —
   // لا يوجد ربط تلقائي بين role:'doctor' وأي صلاحية افتراضية (الإدمن فقط
   // يتجاوز الفحص). بدون permissions:['patients'] هنا، أي محاولة POST/DELETE
-  // على /api/patients من staffA/staffB كانت تُرفض بـ403 قبل ما توصل أصلاً
-  // لمنطق عزل المنشآت اللي هذا الاختبار مصمَّم يفحصه تحديداً.
+  // على /api/patients من staffA/staffB كانت تُرفض بـ403 قبل أن تصل أصلاً
+  // لمنطق عزل المنشآت الذي هذا الاختبار مصمَّم يفحصه تحديداً.
   await request(app).post('/api/users').set('Authorization', `Bearer ${adminToken}`)
     .send({ username: 'staffA', password: 'testpass123', name: 'موظف أ', role: 'doctor', hospitalId: hospA.body.id, permissions: ['patients'] });
   await request(app).post('/api/users').set('Authorization', `Bearer ${adminToken}`)
@@ -55,7 +55,7 @@ afterAll(async () => {
 });
 
 describe('عزل بيانات المرضى بين المنشآت', () => {
-  test('موظف منشأة أ يضيف مريضاً، وموظف منشأة ب لا يقدر يشوفه إطلاقاً', async () => {
+  test('موظف منشأة أ يضيف مريضاً، وموظف منشأة ب لا يستطيع رؤيته إطلاقاً', async () => {
 
     const createRes = await request(app)
       .post('/api/patients')
@@ -77,14 +77,14 @@ describe('عزل بيانات المرضى بين المنشآت', () => {
       .set('Authorization', `Bearer ${hospitalBTokenUser}`);
     expect(directAccessB.status).toBe(404);
 
-    // موظف منشأة أ نفسه يقدر يشوف مريضه بدون مشكلة
+    // موظف منشأة أ نفسه يستطيع رؤية مريضه بدون مشكلة
     const listA = await request(app)
       .get('/api/patients')
       .set('Authorization', `Bearer ${hospitalATokenUser}`);
     expect(listA.body.some(p => p.id === patientId)).toBe(true);
   });
 
-  test('موظف منشأة ب لا يقدر يحذف مريضاً يخص منشأة أ حتى لو عرف المعرّف', async () => {
+  test('موظف منشأة ب لا يستطيع حذف مريضاً يخص منشأة أ حتى لو عرف المعرّف', async () => {
 
     const createRes = await request(app)
       .post('/api/patients')
@@ -97,14 +97,14 @@ describe('عزل بيانات المرضى بين المنشآت', () => {
       .set('Authorization', `Bearer ${hospitalBTokenUser}`);
     expect(deleteAttempt.status).toBe(404);
 
-    // نتأكد إنه لسا موجود فعلياً (ما انحذف)
+    // نتأكد إنه لا يزال موجوداً فعلياً (لم يُحذف)
     const stillThere = await request(app)
       .get(`/api/patients/${patientId}`)
       .set('Authorization', `Bearer ${hospitalATokenUser}`);
     expect(stillThere.status).toBe(200);
   });
 
-  test('إدمن بلا منشأة مُعيَّنة (مستوى الوزارة) يشوف مرضى كل المنشآت', async () => {
+  test('إدمن بلا منشأة مُعيَّنة (مستوى الوزارة) يرى مرضى كل المنشآت', async () => {
 
     const listAsAdmin = await request(app)
       .get('/api/patients')

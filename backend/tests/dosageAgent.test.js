@@ -2,7 +2,7 @@
 //
 // اختبارات منطق agents/dosageAgent.js بمعزل عن PostgreSQL/AI الحقيقيين
 // (نُموِّه config/database.js وutils/aiProviderRouter.js مباشرة) — سريعة،
-// لا تحتاج قاعدة بيانات فعلية. راجعي أيضاً tests/dosageRoutes.test.js
+// لا تحتاج قاعدة بيانات فعلية. راجع أيضاً tests/dosageRoutes.test.js
 // لاختبار تكاملي عبر HTTP على قاعدة PostgreSQL حقيقية (dosage_limits،
 // بُذرت بـmigrations-sql/009).
 jest.mock('../config/database', () => ({ query: jest.fn() }));

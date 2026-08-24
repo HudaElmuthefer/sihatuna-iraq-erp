@@ -2,7 +2,7 @@
 //
 // اختبارات منطق agents/allergyAgent.js بمعزل عن PostgreSQL/AI الحقيقيين —
 // نفس نمط tests/interactionAgent.test.js وtests/dosageAgent.test.js بالضبط.
-// راجعي أيضاً tests/allergyRoutes.test.js لاختبار تكاملي عبر HTTP على
+// راجع أيضاً tests/allergyRoutes.test.js لاختبار تكاملي عبر HTTP على
 // قاعدة PostgreSQL حقيقية (drug_allergy_classes، بُذرت بـmigrations-sql/011).
 jest.mock('../config/database', () => ({ query: jest.fn() }));
 jest.mock('../utils/aiProviderRouter', () => ({ routeTextCall: jest.fn() }));

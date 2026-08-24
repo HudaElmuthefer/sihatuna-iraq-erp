@@ -36,7 +36,7 @@ function timestamp() {
 }
 
 // نسخة احتياطية حقيقية وكاملة لقاعدة بيانات PostgreSQL بأمر pg_dump الرسمي
-// (نفس الأداة اللي يستخدمها pgAdmin داخلياً). تُحفَظ كملف SQL نصّي عادي —
+// (نفس الأداة التي يستخدمها pgAdmin داخلياً). تُحفَظ كملف SQL نصّي عادي —
 // يمكن استعادته لاحقاً بلصقه بـ Query Tool أو بأمر psql مباشرة، بدون أي
 // تعقيد إضافي، بما يتوافق مع طريقة عملك المعتادة بـ pgAdmin.
 function runPostgresBackup(backupFolder) {
@@ -65,7 +65,7 @@ function runPostgresBackup(backupFolder) {
 }
 
 // ينسخ مجلد نسخة احتياطية كامل إلى الوجهة الخارجية المُعدَّة بـ EXTERNAL_BACKUP_DIR
-// (لو موجودة بملف .env). فشل هذي الخطوة (مثلاً القرص الخارجي غير موصول وقتها)
+// (لو موجودة بملف .env). فشل هذه الخطوة (مثلاً القرص الخارجي غير موصول وقتها)
 // لا يوقف عملية النسخ الاحتياطي المحلي أبداً — فقط يُسجَّل تحذير واضح.
 function copyToExternalDestination(backupFolder, ts) {
   const externalRoot = process.env.EXTERNAL_BACKUP_DIR;
@@ -74,7 +74,7 @@ function copyToExternalDestination(backupFolder, ts) {
   try {
     if (!fs.existsSync(externalRoot)) {
       console.warn(`⚠️  مسار النسخ الاحتياطي الخارجي غير موجود حالياً: ${externalRoot}`);
-      console.warn('    (طبيعي لو كان قرصاً خارجياً غير موصول بالجهاز وقت هذي النسخة)');
+      console.warn('    (طبيعي لو كان قرصاً خارجياً غير موصول بالجهاز وقت هذه النسخة)');
       return { attempted: true, ok: false };
     }
     const externalFolder = path.join(externalRoot, ts);
@@ -179,7 +179,7 @@ function listBackups() {
 function restoreFromBackup(backupName) {
   // ── إصلاح أمني ────────────────────────────────────────────────────────────
   // backupName يوصل مباشرة من req.params بمسار API (انظر server.js) — بدون
-  // هذا التحقق، اسم يحتوي "../" يقدر يخليها تقرأ/تكتب خارج مجلد BACKUPS_DIR
+  // هذا التحقق، اسم يحتوي "../" يمكن أن يجعلها تقرأ/تكتب خارج مجلد BACKUPS_DIR
   // (Path Traversal). المسار محمي أصلاً بصلاحية admin فقط، لكن نمنع المشكلة
   // من جذرها بدل الاعتماد فقط على طبقة الصلاحيات.
   if (typeof backupName !== 'string' || !/^[a-zA-Z0-9_.-]+$/.test(backupName)) {
@@ -213,7 +213,7 @@ function startAutoBackup() {
   devLog(`💾 Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);
 
   // ── تحسين نشر: تنبيه واضح لا يمكن تفويته ────────────────────────────────────
-  // قبل هذا، غياب EXTERNAL_BACKUP_DIR كان يظهر بس كجزء صغير من سطر لوق طويل —
+  // قبل هذا، غياب EXTERNAL_BACKUP_DIR كان يظهر فقط كجزء صغير من سطر لوق طويل —
   // سهل جداً يضيع وسط باقي رسائل الإقلاع. لو الجهاز نفسه تعطّل (قرص صلب، سرقة،
   // حريق...) وكل النسخ الاحتياطية محفوظة بنفس القرص فقط، تُفقَد البيانات كلها
   // نهائياً بدون أي وسيلة استرجاع. هذا صندوق منفصل تماماً يصعب تفويته.
@@ -224,7 +224,7 @@ function startAutoBackup() {
     console.warn('  كل النسخ الاحتياطية محفوظة حالياً بنفس قرص هذا الجهاز فقط.');
     console.warn('  لو تعطّل الجهاز (عطل قرص، سرقة، حريق...) تُفقَد كل البيانات');
     console.warn('  نهائياً بدون أي وسيلة استرجاع، بما فيها النسخ الاحتياطية نفسها.');
-    console.warn('  أضيفي EXTERNAL_BACKUP_DIR بملف backend/.env يشير لمكان ثانٍ');
+    console.warn('  أضف EXTERNAL_BACKUP_DIR بملف backend/.env يشير لمكان ثانٍ');
     console.warn('  (قرص USB خارجي دائم الاتصال، أو مجلد Google Drive/OneDrive مزامَن).\n');
   }
 }

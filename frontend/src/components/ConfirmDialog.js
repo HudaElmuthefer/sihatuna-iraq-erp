@@ -4,7 +4,7 @@ import { useT } from '../translations';
 
 // نافذة تأكيد عامة واحدة تُعرَض فوق أي صفحة — تقرأ confirmState من AppContext
 // (يضبطها استدعاء confirmDialog(message) من أي مكان بالتطبيق) وتحل الـ Promise
-// بـ true/false حسب ضغطة المستخدم. راجعي تعليق confirmDialog بـ AppContext.js.
+// بـ true/false حسب ضغطة المستخدم. راجع تعليق confirmDialog بـ AppContext.js.
 export default function ConfirmDialog() {
   const { confirmState, resolveConfirm, lang } = useApp();
   const tr = useT(lang);

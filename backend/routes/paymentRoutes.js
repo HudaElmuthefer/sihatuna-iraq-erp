@@ -8,9 +8,9 @@ const auth = require('../middleware/auth');
 const requireAdmin = require('../middleware/requireAdmin');
 
 // ── إصلاح أمني حرج ───────────────────────────────────────────────────────────
-// كانت كل هذي المسارات بلا أي مصادقة إطلاقاً (auth/requireAdmin معلَّقين
+// كانت كل هذه المسارات بلا أي مصادقة إطلاقاً (auth/requireAdmin معلَّقين
 // بالكومنت أدناه سابقاً) — أي شخص بدون تسجيل دخول، حتى من خارج الشبكة
-// المحلية، كان يقدر يضيف أو يحذف بيانات اعتماد بوابات دفع (مفاتيح API حساسة)
+// المحلية، كان يستطيع إضافة أو حذف بيانات اعتماد بوابات دفع (مفاتيح API حساسة)
 // أو يرسل عمليات دفع وهمية عبر /api/payments مباشرة. الآن:
 //   - مسارات إعدادات بوابات الدفع (admin/*) تحتاج تسجيل دخول + دور "admin" حصراً
 //   - مسارات الدفع الفعلية تحتاج تسجيل دخول فقط (أي مستخدم بالنظام، مثل
@@ -18,8 +18,8 @@ const requireAdmin = require('../middleware/requireAdmin');
 
 // -- إعدادات الإدمن --
 // ملاحظة: لا حاجة لمعرّف مستشفى بالمسار (hospitalId) — النظام يعمل حالياً بمنشأة
-// واحدة تُحدَّد تلقائياً بالخادم (انظر config/defaultHospital.js). لو احتجتِ دعم
-// أكثر من منشأة مستقبلاً، هذا أول مكان تُعيدين فيه إضافة المعرّف بالمسار.
+// واحدة تُحدَّد تلقائياً بالخادم (انظر config/defaultHospital.js). لو احتجت دعم
+// أكثر من منشأة مستقبلاً، هذا أول مكان تُعيد فيه إضافة المعرّف بالمسار.
 router.get('/admin/payment-providers', auth, requireAdmin, asyncHandler(paymentSettingsController.listAllProviders));
 router.get('/admin/payment-gateways', auth, requireAdmin, asyncHandler(paymentSettingsController.listHospitalGateways));
 router.post('/admin/payment-gateways', auth, requireAdmin, asyncHandler(paymentSettingsController.upsertHospitalGateway));

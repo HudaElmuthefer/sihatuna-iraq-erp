@@ -2,7 +2,7 @@
 //
 // اختبار تكاملي لمسار إعدادات مزوّد الذكاء الاصطناعي — عبر HTTP على قاعدة
 // PostgreSQL حقيقية (جدول system_settings، الموجود أصلاً منذ postgres_schema
-// .sql — لا يحتاج ترحيل جديد). راجعي أيضاً tests/aiProviderRouter.test.js
+// .sql — لا يحتاج ترحيل جديد). راجع أيضاً tests/aiProviderRouter.test.js
 // لاختبار منطق التوزيع نفسه بمعزل عن قاعدة بيانات حقيقية.
 //
 // ── ملاحظة عزل مهمة: system_settings صف مشترك عالمياً (لا مُعزَّل لكل ملف
@@ -44,7 +44,7 @@ afterAll(async () => {
 });
 
 describe('GET /api/ai-provider-settings', () => {
-  test('أي مستخدم مسجّل دخول (حتى غير إدمن) يقدر يقرأ الإعداد الحالي', async () => {
+  test('أي مستخدم مسجّل دخول (حتى غير إدمن) يستطيع قراءة الإعداد الحالي', async () => {
     const res = await request(app).get('/api/ai-provider-settings').set('Authorization', `Bearer ${nurseToken}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ invoiceReader: 'online', drugInteractions: 'online', prescriptionReader: 'online', aiDiagnosis: 'online', dosageValidation: 'online', allergyCheck: 'online' });
@@ -57,7 +57,7 @@ describe('GET /api/ai-provider-settings', () => {
 });
 
 describe('PUT /api/ai-provider-settings', () => {
-  test('إدمن يقدر يحدّث اختيار ميزة واحدة، والباقي يبقى كما كان', async () => {
+  test('إدمن يستطيع تحديث اختيار ميزة واحدة، والباقي يبقى كما كان', async () => {
     const res = await request(app)
       .put('/api/ai-provider-settings')
       .set('Authorization', `Bearer ${adminToken}`)

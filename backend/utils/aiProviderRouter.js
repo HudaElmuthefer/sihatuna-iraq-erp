@@ -4,21 +4,21 @@
 // الفواتير، التضارب الدوائي، قراءة الوصفات، التشخيص الذكي، فحص الجرعات،
 // فحص الحساسية الدوائية) — تقرأ اختيار
 // المستخدم المحفوظ بجدول system_settings (لا localStorage — يبقى الاختيار
-// موحّداً بين كل أجهزة/متصفحات المستخدمين، ويقدر الإدمن يديره مركزياً)
+// موحّداً بين كل أجهزة/متصفحات المستخدمين، ويستطيع الإدمن إدارته مركزياً)
 // كإعداد افتراضي، أو تأخذ اختياراً صريحاً لطلب واحد (requestedMode أدناه —
 // من AiModeSelect.js بالفرونت إند) لو وصل، وتوزّع كل استدعاء لمصدره الصحيح:
 //   'bot'     — بلا أي استدعاء AI إطلاقاً. لتفاعلات الأدوية: يعني الاعتماد
-//               فقط على جدول drug_interactions (راجعي agents/interactionAgent
+//               فقط على جدول drug_interactions (راجع agents/interactionAgent
 //               .js — يتعامل مع رد {available:false} هنا تماماً كما يتعامل
 //               مع "AI غير مُعدّ أصلاً"، فيرجع نتيجة الجدول وحدها). لقراءة
 //               الفواتير/الوصفات: يعني نص OCR فقط بلا أي هيكلة AI للحقول.
 //   'online'  — Gemini/Claude (utils/aiProvider.js) — بحاجة اتصال إنترنت.
 //   'offline' — Ollama محلي (utils/ollamaService.js) — يعمل بلا إنترنت، لكن
-//               يحتاج خادم Ollama شغّالاً فعلياً على الجهاز (أو
+//               يحتاج خادم Ollama يعمل فعلياً على الجهاز (أو
 //               host.docker.internal لو داخل Docker).
 //
 // ── ملاحظة مهمة: OCR ليس أحد الخيارات الثلاثة أعلاه ─────────────────────────
-// PaddleOCR (راجعي agents/ocrAgent.js) خطوة تمهيدية دائمة الحدوث قبل أي من
+// PaddleOCR (راجع agents/ocrAgent.js) خطوة تمهيدية دائمة الحدوث قبل أي من
 // الخيارات الثلاثة، لا بديلاً عنها — تعمل بغض النظر عن الاختيار هنا (حتى
 // بوضع 'bot'، الفواتير/الوصفات تُقرَأ بصرياً عبر OCR أولاً، فقط لا AI يهيكل
 // نتيجتها لاحقاً).
@@ -30,7 +30,7 @@ const SETTINGS_KEY = 'ai_provider_settings';
 // أسماء الميزات الست بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
 const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck'];
 const VALID_MODES = ['bot', 'online', 'offline'];
-// الافتراضي 'online' يطابق تماماً السلوك الحالي قبل هذي الميزة (Gemini أولاً
+// الافتراضي 'online' يطابق تماماً السلوك الحالي قبل هذه الميزة (Gemini أولاً
 // دائماً) — لا يكسر أي نشر موجود لم يُعدِّل الإعداد صراحة بعد.
 const DEFAULT_MODE = 'online';
 
@@ -71,7 +71,7 @@ async function setSettings(updates) {
 }
 
 // requestedMode: اختيار المستخدم لهذا الطلب تحديداً (من واجهة الصفحة نفسها،
-// راجعي frontend/src/components/AiModeSelect.js) — لو صالح، يتفوّق على
+// راجع frontend/src/components/AiModeSelect.js) — لو صالح، يتفوّق على
 // الإعداد الافتراضي المحفوظ بجدول system_settings بلا أي قراءة قاعدة بيانات
 // إضافية. أي قيمة غير صالحة (غير مُرسَلة، فارغة، أو نص عشوائي) تُتجاهَل
 // بصمت وترجع للسلوك المعتاد (الإعداد المحفوظ) — لا تكسر أي مستدعٍ قديم لم
@@ -82,7 +82,7 @@ async function resolveMode(feature, requestedMode) {
 }
 
 // ── لا نكشف أبداً اسم المزوّد "الإنترنت" الفعلي (Gemini/Claude/...) بأي رد ──
-// حتى بحقل provider الخام بالـJSON، لا بس بالنصوص المعروضة بالواجهة — المزوّد
+// حتى بحقل provider الخام بالـJSON، لا فقط بالنصوص المعروضة بالواجهة — المزوّد
 // الحقيقي يُضبَط بـ.env وقد يتغيّر، فأي مستهلك لهذا الـAPI (الفرونت إند
 // الحالي، أو أي عميل مستقبلي) ما يصير يعتمد على اسم مزوّد محدَّد. 'bot'
 // و'ollama' مسموحان لأنهما مذكوران صراحة بواجهة الاختيار نفسها (AiModeSelect
@@ -97,7 +97,7 @@ function sanitizeProvider(provider) {
 // أو {available:false, ...}) — أي مستدعٍ حالي (interactionAgent.js،
 // invoiceReadProcessor.js، prescriptionAgent.js) يستبدل استدعاء aiProvider
 // المباشر بهذا بلا أي تغيير آخر بمنطقه. حقل provider يُعقَّم هنا قبل رجوعه
-// لأي مستدعٍ — راجعي sanitizeProvider أعلاه.
+// لأي مستدعٍ — راجع sanitizeProvider أعلاه.
 async function routeTextCall(feature, systemPrompt, userPrompt, requestedMode) {
   const mode = await resolveMode(feature, requestedMode);
   if (mode === 'bot') return { available: false, provider: 'bot' };

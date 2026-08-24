@@ -68,7 +68,7 @@ export default function DiagnosisPicker({ diagnoses, onChange, lang }) {
         />
         {showSuggestions && (
           // إصلاح تباين الوضع الليلي: كانت الخلفية بيضاء ثابتة (#fff) بينما
-          // النص يرث color:var(--text-primary) من body — بالوضع الليلي هذي
+          // النص يرث color:var(--text-primary) من body — بالوضع الليلي هذه
           // القيمة فاتحة تقريباً، فيصير النص غير مقروء على الخلفية البيضاء
           // الثابتة. var(--bg-card)/var(--border) نفس المتغيرات المستخدَمة
           // بكل القوائم المنسدلة المشابهة الأخرى بالتطبيق.

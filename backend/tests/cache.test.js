@@ -2,9 +2,9 @@
 //
 // اختبار تكاملي (integration) للتخزين المؤقت بـRedis المضاف بالمرحلة الثانية
 // (options.cache بـroutes/pgCrud.js) — نستخدم موديول doctors كمثال (أول
-// موديول فعّلنا عليه الكاش، راجعي routes/modules.js). ioredis-mock بدل Redis
+// موديول فعّلنا عليه الكاش، راجع routes/modules.js). ioredis-mock بدل Redis
 // حقيقي (لا خادم Redis متاح وقت الاختبار)، بينما PostgreSQL حقيقي فعلاً
-// (نفس نمط باقي اختبارات pgCrud — راجعي testUtils.js).
+// (نفس نمط باقي اختبارات pgCrud — راجع testUtils.js).
 //
 // الإثبات الفعلي: نتجسّس (spy) على pool.query لنتأكد إن الاستعلام الثاني
 // المطابق تماماً للأول لا يصل فعلياً لقاعدة البيانات (كاش)، وإن أي كتابة

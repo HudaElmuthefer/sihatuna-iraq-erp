@@ -1,14 +1,14 @@
 // backend/tests/rbac.test.js
 //
 // اختبار تكامل حقيقي (Integration Test) للتحقق من أن نظام الصلاحيات
-// (requirePermission) فعّال فعلياً على المسارات الحقيقية بـ pgCrud — مو بس
-// أن الدالة نفسها صحيحة بمعزل (ذاك موجود بـ requirePermission.test.js)، بل
+// (requirePermission) فعّال فعلياً على المسارات الحقيقية بـ pgCrud — ليس فقط
+// أن الدالة نفسها صحيحة بمعزل (ذلك موجود بـ requirePermission.test.js)، بل
 // أن التطبيق الفعلي (تسجيل دخول → طلب حقيقي → قاعدة بيانات) يمنع فعلاً.
 //
-// السيناريو الأهم اللي هذا الاختبار يحميه من الانكسار مستقبلاً: قبل الإصلاح
-// الأمني الأصلي، أي مستخدم مسجّل دخول (بغض النظر عن دوره) كان يقدر يعدّل أي
-// موديول. هذا الاختبار يمنع رجوع نفس الثغرة بالخطأ مستقبلاً (مثلاً لو حد
-// نسى يمرّر permission عند إضافة موديول جديد لاحقاً بـ routes/modules.js).
+// السيناريو الأهم الذي هذا الاختبار يحميه من الانكسار مستقبلاً: قبل الإصلاح
+// الأمني الأصلي، أي مستخدم مسجّل دخول (بغض النظر عن دوره) كان يستطيع أن يعدّل
+// أي موديول. هذا الاختبار يمنع رجوع نفس الثغرة بالخطأ مستقبلاً (مثلاً لو نسي
+// أحد أن يمرّر permission عند إضافة موديول جديد لاحقاً بـ routes/modules.js).
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
 
@@ -38,7 +38,7 @@ afterAll(async () => {
 });
 
 describe('RBAC — فرض الصلاحيات على موديولات pgCrud الحقيقية', () => {
-  test('حساب admin يقدر يضيف سجل لموديول ليس له صلاحية "inventory" صراحة (يتجاوز الفحص دائماً)', async () => {
+  test('حساب admin يستطيع أن يضيف سجلاً لموديول ليس له صلاحية "inventory" صراحة (يتجاوز الفحص دائماً)', async () => {
     const res = await request(app)
       .post('/api/inventory')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -54,7 +54,7 @@ describe('RBAC — فرض الصلاحيات على موديولات pgCrud ال
     expect(res.status).toBe(403);
   });
 
-  test('نفس الممرضة تقدر تضيف مريضاً بنجاح (تملك صلاحية "patients" صراحة)', async () => {
+  test('نفس الممرضة تستطيع أن تضيف مريضاً بنجاح (تملك صلاحية "patients" صراحة)', async () => {
     const res = await request(app)
       .post('/api/patients')
       .set('Authorization', `Bearer ${nurseToken}`)

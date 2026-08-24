@@ -1,14 +1,14 @@
 // fix-close-db-pool.js
 //
 // سكربت لمرة واحدة: يمرّ على كل ملفات backend/tests/*.test.js ويضيف تلقائياً
-// استدعاء closeDbPool() داخل afterAll، حتى Jest يقدر يخرج (exit) طبيعياً بعد
+// استدعاء closeDbPool() داخل afterAll، حتى يستطيع Jest الخروج (exit) طبيعياً بعد
 // انتهاء الاختبارات بدل ما يعلّق منتظراً اتصال PostgreSQL مفتوح.
 //
 // طريقة التشغيل:
 //   1) انسخي هذا الملف داخل مجلد backend (نفس مستوى مجلد tests)
 //   2) من الطرفية (PowerShell) داخل مجلد backend:
 //        node fix-close-db-pool.js
-//   3) السكربت يطبع تقرير: أي ملف عُدِّل، وأي ملف تجاهله (ولماذا) — راجعي
+//   3) السكربت يطبع تقرير: أي ملف عُدِّل، وأي ملف تجاهله (ولماذا) — راجع
 //      الملفات المتجاهَلة يدوياً إذا وُجدت.
 //
 // آمن: يعمل نسخة احتياطية (.bak) من كل ملف قبل تعديله.
@@ -61,7 +61,7 @@ for (const file of files) {
   const afterAllMatch = content.match(afterAllRegex);
 
   if (!afterAllMatch) {
-    console.log(`⚠️  لم أجد afterAll بصيغة متوقَّعة — راجعيه يدوياً: ${file}`);
+    console.log(`⚠️  لم أجد afterAll بصيغة متوقَّعة — راجعه يدوياً: ${file}`);
     skippedNoAfterAll++;
     continue;
   }
@@ -89,5 +89,5 @@ console.log(`✅ متجاهَلة (معدَّلة مسبقاً): ${skippedAlread
 console.log(`⏭️  متجاهَلة (لا تستورد testUtils): ${skippedNoImport}`);
 console.log(`⚠️  تحتاج مراجعة يدوية (afterAll غير قياسي): ${skippedNoAfterAll}`);
 console.log('───────────────────────────────────────────');
-console.log('\nبعد المراجعة، احذفي ملفات .bak إذا كل شي تمام:');
+console.log('\nبعد المراجعة، احذف ملفات .bak إذا كل شي تمام:');
 console.log('  Get-ChildItem tests\\*.bak | Remove-Item');

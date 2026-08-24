@@ -2,7 +2,7 @@
 #
 # صورة واحدة تحتوي: الباك إند (Express)، عامل طابور BullMQ (قراءة الفواتير
 # بالذكاء الاصطناعي)، ونسخة إنتاج ثابتة من الفرونت إند (React). الثلاثة
-# يشتغلون معاً داخل نفس الحاوية عبر PM2 (راجعي ecosystem.docker.config.js) —
+# يشتغلون معاً داخل نفس الحاوية عبر PM2 (راجع ecosystem.docker.config.js) —
 # قرار مقصود بالمرحلة الثالثة: حاوية تطبيق واحدة، لا نسخ متعددة (replicas)،
 # مطابقة تماماً لبنية PM2 cluster mode المستخدمة أصلاً بالنشر المحلي
 # (start.bat)، فقط معبّأة بحاوية بدل التثبيت المباشر على الجهاز.
@@ -27,10 +27,10 @@ COPY frontend/ ./
 # REACT_APP_API_URL تُقرأ وقت البناء فقط (Create React App تُضمّنها مباشرة
 # داخل ملفات JS النهائية، لا يمكن تغييرها بعد البناء إلا بإعادة بناء كاملة) —
 # إصلاح: القيمة الافتراضية صارت مساراً نسبياً ('/api') لا عنواناً كاملاً،
-# لأن Nginx (راجعي nginx/nginx.conf) صار نقطة الدخول الوحيدة على المنفذ 80؛
+# لأن Nginx (راجع nginx/nginx.conf) صار نقطة الدخول الوحيدة على المنفذ 80؛
 # الفرونت إند والـAPI على نفس الأصل تماماً بغض النظر عن عنوان/دومين السيرفر
-# الفعلي، فلا حاجة لتضمين عنوان مطلق هنا إطلاقاً بالحالة العادية. مرّري
-# عنواناً كاملاً هنا فقط لو نشرتِ الفرونت إند والـAPI على أصلين مختلفين
+# الفعلي، فلا حاجة لتضمين عنوان مطلق هنا إطلاقاً بالحالة العادية. مرّر
+# عنواناً كاملاً هنا فقط لو نشرت الفرونت إند والـAPI على أصلين مختلفين
 # تماماً بمستقبل بعيد:
 #   docker compose build --build-arg REACT_APP_API_URL=http://api.example.com/api
 ARG REACT_APP_API_URL=/api
@@ -42,12 +42,12 @@ RUN npm run build
 # ══════════════════════════════════════════════════════════════════════════
 FROM node:24-slim AS final
 
-# PM2 يدير كل العمليات الثلاث داخل الحاوية (راجعي ecosystem.docker.config.js
+# PM2 يدير كل العمليات الثلاث داخل الحاوية (راجع ecosystem.docker.config.js
 # وCMD بالأسفل) — نفس أداة إدارة العمليات المستخدمة أصلاً بالنشر المحلي.
 RUN npm install -g pm2
 
 # pg_dump — يحتاجه backend/utils/backup.js للنسخ الاحتياطي التلقائي الكامل
-# لقاعدة PostgreSQL (راجعي شرح كامل هناك). مستودعات Debian bookworm
+# لقاعدة PostgreSQL (راجع شرح كامل هناك). مستودعات Debian bookworm
 # الافتراضية (قاعدة node:24-slim) توفّر فقط postgresql-client الإصدار 15،
 # بينما خدمة postgres بـdocker-compose.yml هي الإصدار 18 — pg_dump من إصدار
 # أقدم من السيرفر غير مدعوم رسمياً (قد يفشل أو يعطي نسخة ناقصة). لهذا نضيف
@@ -72,7 +72,7 @@ RUN cd backend && npm ci --omit=dev
 
 # ── PaddleOCR (Python) — قراءة الفواتير/الوصفات ─────────────────────────────
 # agents/ocrAgent.js يستدعي backend/services/ocr/paddle_ocr_runner.py كعملية
-# فرعية (راجعي شرح كامل هناك ليش عملية منفصلة بكل استدعاء، لا خادم Python
+# فرعية (راجع شرح كامل هناك لماذا عملية منفصلة بكل استدعاء، لا خادم Python
 # دائم) — يحتاج Python 3 + PaddlePaddle/PaddleOCR مثبَّتين بالصورة. libgl1/
 # libglib2.0-0: تبعيات نظام يحتاجها opencv-python (تبعية PaddleOCR نفسها)
 # وقت الاستيراد (import cv2) حتى بدون أي واجهة رسومية فعلية بالحاوية —
@@ -107,7 +107,7 @@ COPY backend/ ./backend/
 # أي devDependencies خاصة به بالصورة النهائية إطلاقاً.
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
-# قائمة عمليات PM2 الخاصة بـDocker (راجعي شرح كامل بالملف نفسه) — تحتاج أيضاً
+# قائمة عمليات PM2 الخاصة بـDocker (راجع شرح كامل بالملف نفسه) — تحتاج أيضاً
 # ecosystem.config.js نفسه لأنها تعمل require() عليه مباشرة (تعيد استخدام
 # تعريفي sihatuna-backend/sihatuna-worker منه بلا تكرار).
 COPY ecosystem.docker.config.js ecosystem.config.js ./
@@ -119,9 +119,9 @@ RUN mkdir -p backend/logs backend/uploads backend/backups backend/data
 
 ENV NODE_ENV=production
 # 8000: الـ API. 2575: خادم HL7 (نتائج المختبر) — يحتاج الوصول له من أجهزة
-# المختبر الفعلية بالشبكة لو استُخدمت هذي الميزة. لا EXPOSE لمنفذ فرونت إند
+# المختبر الفعلية بالشبكة لو استُخدمت هذه الميزة. لا EXPOSE لمنفذ فرونت إند
 # منفصل بعد الآن — إصلاح: Nginx يقدّم الملفات الثابتة مباشرة من volume
-# مشترك (راجعي خطوة النسخ بالـCMD أدناه وخدمة nginx بـdocker-compose.yml)،
+# مشترك (راجع خطوة النسخ بالـCMD أدناه وخدمة nginx بـdocker-compose.yml)،
 # لا عملية Node.js منفصلة (serveFrontend.js حُذف، وnginx أسرع وأخف بكثير
 # لخدمة ملفات ثابتة من خادم Express).
 EXPOSE 8000 2575
@@ -134,15 +134,15 @@ EXPOSE 8000 2575
 #    أول مرة فقط) — يضمن إن أي صورة جديدة (بعد docker compose build فعلي)
 #    تُحدِّث محتوى الـvolume المشترك فوراً بالإقلاع التالي، بدل الاحتفاظ
 #    بنسخة فرونت إند قديمة من صورة سابقة بصمت.
-# 2) node run-migrations.js: نفس الخطوة اللي يسويها start.bat تلقائياً بكل
+# 2) node run-migrations.js: نفس الخطوة التي يقوم بها start.bat تلقائياً بكل
 #    نشر محلي — يطبّق أي ترحيل SQL لم يُطبَّق بعد بجدول schema_migrations
 #    (كل ملفات migrations-sql/*.sql idempotent فعلياً — IF NOT EXISTS/ON
 #    CONFLICT DO NOTHING بكل واحد منها، تأكدنا من هذا صراحة)، فتشغيلها هنا
 #    بأمان حتى لو postgres_schema.sql (يُطبَّق تلقائياً أول مرة فقط عبر
-#    docker-entrypoint-initdb.d بخدمة postgres — راجعي docker-compose.yml)
+#    docker-entrypoint-initdb.d بخدمة postgres — راجع docker-compose.yml)
 #    يطبّق بعضها مسبقاً. ضروري تحديداً لأن postgres_schema.sql غير متزامن
 #    بالكامل فعلياً مع migrations-sql (تحقّقنا: جدول medical_codes مثلاً
-#    غائب منه تماماً) — بدون هذي الخطوة، قاعدة بيانات جديدة بالكامل (أول
+#    غائب منه تماماً) — بدون هذه الخطوة، قاعدة بيانات جديدة بالكامل (أول
 #    تشغيل Docker) تفتقد جداول حقيقية يعتمد عليها التطبيق.
 # 3) pm2-runtime (لا pm2 العادي): مصمَّم خصيصاً للعمل كعملية PID 1 بالمقدّمة
 #    داخل حاويات Docker (يبقى بالمقدّمة ويمرّر إشارات النظام SIGTERM/SIGINT

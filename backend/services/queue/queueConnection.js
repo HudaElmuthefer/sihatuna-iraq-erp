@@ -3,11 +3,11 @@
 // اتصال Redis منفصل تماماً عن utils/redisService.js (المستخدَم للكاش/تحديد
 // المعدل/إبطال التوكنات) — مخصَّص فقط لـBullMQ (الطابور services/queue/*).
 //
-// السبب إلزامي، مو خيار تصميم: BullMQ يشترط صراحة maxRetriesPerRequest:null
-// على اتصال Redis المُمرَّر له (راجعي "Production Checklist" بتوثيق BullMQ
+// السبب إلزامي، وليس خيار تصميم: BullMQ يشترط صراحة maxRetriesPerRequest:null
+// على اتصال Redis المُمرَّر له (راجع "Production Checklist" بتوثيق BullMQ
 // الرسمي) — يعتمد داخلياً على أوامر Redis "حاجبة" (blocking، مثل
 // BRPOPLPUSH) يجب أن تنتظر بصبر لا أن تفشل بعد محاولة واحدة، بعكس اتصال
-// الكاش/تحديد المعدل المصمَّم عمداً للفشل السريع (fail-open — راجعي تعليق
+// الكاش/تحديد المعدل المصمَّم عمداً للفشل السريع (fail-open — راجع تعليق
 // utils/redisService.js). لهذا اتصالان منفصلان تماماً، لا اتصال واحد
 // بإعدادات مختلفة حسب الاستخدام.
 const IORedis = require('ioredis');

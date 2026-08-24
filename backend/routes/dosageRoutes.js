@@ -4,7 +4,7 @@
 // لا علاقة بصفحة الصيدلية أو قارئ الوصفات إطلاقاً — قرار صريح بمحادثة
 // التخطيط). نفس نمط drugInteractionRoutes.js بالضبط: قاعدة بيانات (bot)
 // أولاً عبر agents/dosageAgent.js، AI احتياطياً فقط لو الدواء/النطاق غير
-// موجود بجدول dosage_limits — راجعي migrations-sql/009_dosage_limits.sql.
+// موجود بجدول dosage_limits — راجع migrations-sql/009_dosage_limits.sql.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -53,9 +53,9 @@ router.post('/dosage-check/check', auth, requirePermission('dosage-check'), dosa
     if (weightNum != null && !Number.isFinite(weightNum)) {
       return res.status(400).json({ message: 'الوزن يجب أن يكون رقماً صالحاً' });
     }
-    // ── لازم عمر أو وزن واحد على الأقل ────────────────────────────────────
+    // ── يجب توفر عمر أو وزن واحد على الأقل ────────────────────────────────────
     // بدون أي منهما، لا معنى لمطابقة أي نطاق بجدول dosage_limits (كل صف
-    // كان سيبدو "متطابقاً" بالخطأ — راجعي شرح findDbMatch بـdosageAgent.js)،
+    // كان سيبدو "متطابقاً" بالخطأ — راجع شرح findDbMatch بـdosageAgent.js)،
     // وحتى فحص AI الاحتياطي يحتاج معلومة مريض أساسية ليعطي رأياً ذا معنى.
     if (ageNum == null && weightNum == null) {
       return res.status(400).json({ message: 'العمر أو الوزن مطلوب (واحد منهما على الأقل) لفحص الجرعة' });

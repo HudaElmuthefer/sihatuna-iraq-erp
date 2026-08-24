@@ -1,7 +1,7 @@
 // frontend/src/components/Pagination.js
 //
 // شريط تصفح بسيط (السابق / أرقام الصفحات / التالي) — يُستخدم مع usePagination.
-// يُخفي نفسه تلقائياً لو صفحة واحدة بس (لا داعي لعرضه لقوائم قصيرة).
+// يُخفي نفسه تلقائياً لو صفحة واحدة فقط (لا داعي لعرضه لقوائم قصيرة).
 import React from 'react';
 
 export default function Pagination({ currentPage, totalPages, onPageChange, totalItems, pageSize, lang = 'ar' }) {

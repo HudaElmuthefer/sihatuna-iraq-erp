@@ -16,7 +16,7 @@ const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
 // لا نستورد pool بأعلى الملف عمداً — لو استُورد هنا (قبل استدعاء setupTestEnv()
 // بـ beforeAll أدناه)، يُبنى الاتصال بقاعدة .env الحقيقية قبل أن تُضبَط قاعدة
-// الاختبار المعزولة أصلاً، فيفشل العزل تماماً. راجعي التعليق بأعلى testUtils.js.
+// الاختبار المعزولة أصلاً، فيفشل العزل تماماً. راجع التعليق بأعلى testUtils.js.
 
 let dbPath;
 let app;
@@ -34,10 +34,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
-  // القاعدة نفسها معزولة تماماً الآن (sihatuna_iraq_test، راجعي testUtils.js)،
+  // القاعدة نفسها معزولة تماماً الآن (sihatuna_iraq_test، راجع testUtils.js)،
   // لكن ننظّف سجلاتنا هنا أيضاً حتى لا تتراكم بلا حدود بقاعدة الاختبار نفسها
   // عبر مئات التشغيلات المستقبلية. نستورد pool هنا (وليس بأعلى الملف) بعد أن
-  // تكون setupTestEnv() قد ضبطت PG_DATABASE فعلاً — راجعي التعليق أعلاه.
+  // تكون setupTestEnv() قد ضبطت PG_DATABASE فعلاً — راجع التعليق أعلاه.
   const { pool } = require('../config/database');
   await pool.query(`DELETE FROM assets WHERE data->>'assetNo' LIKE 'AST-UNSET-%' OR data->>'assetNo' LIKE 'AST-ACTIVE-%' OR data->>'assetNo' LIKE 'AST-NOCAT-%' OR data->>'assetNo' LIKE 'AST-CAT-%'`);
   await closeDbPool();

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS drug_interactions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 -- فهرس فريد (لا عادي فقط) — ضروري لجعل INSERT أدناه (ON CONFLICT) صحيح
--- ومتكرر التنفيذ بأمان (idempotent) فعلاً، مو مجرد تسريع بحث.
+-- ومتكرر التنفيذ بأمان (idempotent) فعلاً، وليس مجرد تسريع بحث.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_drug_interactions_pair_unique ON drug_interactions (LOWER(drug_a), LOWER(drug_b));
 
 -- ── بذر أولي: نفس الخمسة تضاربات كانت مكتوبة سابقاً بكود الفرونت إند
@@ -21,7 +21,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_drug_interactions_pair_unique ON drug_inte
 -- الذكاء الاصطناعي — انتقلت هنا لتصير مصدر الفحص الأساسي (bot) بدل احتياط
 -- طارئ فقط، ومتاحة الآن للباك إند نفسه لا الفرونت إند وحده. كل تضارب
 -- مُدرَج بصيغتين (عربي/إنجليزي) لأن طلب الفحص يصل بأي من اللغتين حسب لغة
--- واجهة المستخدم وقت الإرسال (راجعي drugInteractionRoutes.js).
+-- واجهة المستخدم وقت الإرسال (راجع drugInteractionRoutes.js).
 INSERT INTO drug_interactions (drug_a, drug_b, severity, notes, recommendation) VALUES
   ('أسبرين', 'وارفارين', 'high', 'زيادة خطر النزيف بشكل كبير', 'تجنب الاستخدام المشترك أو مراقبة دقيقة'),
   ('Aspirin', 'Warfarin', 'high', 'Significantly increases bleeding risk', 'Avoid combined use or monitor closely'),

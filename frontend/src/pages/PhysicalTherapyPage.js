@@ -11,7 +11,7 @@ import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 
 // إصلاح تباين: التدرّج الأصلي كان يعطي تحت 4.5:1 (WCAG AA) لنص العنوان
-// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذي تعطي 5.77:1/7.34:1.
+// الفرعي (أبيض بأوباسيتي 0.85) — النسخة الأغمق هذه تعطي 5.77:1/7.34:1.
 const BANNER_GRADIENT = 'linear-gradient(135deg, #155e75 0%, #0c4a6e 100%)';
 
 const emptyEquip = { name: '', nameEn: '', type: '', status: 'available', notes: '' };
@@ -22,7 +22,7 @@ export default function PhysicalTherapyPage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {

@@ -1,15 +1,15 @@
 // backend/utils/aiProvider.js
 //
 // منطق موحَّد للاتصال بذكاء اصطناعي حقيقي (Gemini المجاني أولاً، Claude
-// المدفوع بديلاً) — مُستخرَج من routes/aiDiagnosisRoutes.js حتى تقدر أي
+// المدفوع بديلاً) — مُستخرَج من routes/aiDiagnosisRoutes.js حتى تستطيع أي
 // ميزة ثانية بالنظام (تفاعلات دوائية، تقارير ذكية مستقبلاً...) تستخدم نفس
-// المنطق بدون تكرار الكود. راجعي routes/aiDiagnosisRoutes.js للشرح الكامل
-// لليش هذا الاستدعاء يصير من الباك إند (خادم لخادم) لا الفرونت إند مباشرة.
+// المنطق بدون تكرار الكود. راجع routes/aiDiagnosisRoutes.js للشرح الكامل
+// لماذا هذا الاستدعاء يصير من الباك إند (خادم لخادم) لا الفرونت إند مباشرة.
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // ── ملاحظة: النموذج الفعلي المتاح لحسابات جديدة يتغيّر بسرعة من طرف Google ──
-// لو صار خطأ 404 "no longer available to new users"، افتحي
+// لو صار خطأ 404 "no longer available to new users"، افتح
 // aistudio.google.com → Playground → Build → Code and Chat، شوفي أي نموذج
-// معروض هناك فعلياً، وحدّثي GEMINI_MODEL بملف .env (بدون حاجة لتعديل الكود).
+// معروض هناك فعلياً، وحدّث GEMINI_MODEL بملف .env (بدون حاجة لتعديل الكود).
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929';
@@ -69,7 +69,7 @@ async function callAnthropic(systemPrompt, userPrompt) {
 }
 
 // دالة موحّدة: تستدعي أي مزوّد فعّال حالياً، وتُرجع نتيجة موحَّدة الشكل بدل
-// رمي استثناء يكسر الطلب — أي مسار API يستخدمها يقرر بنفسه شنو يسوي لو فشلت
+// رمي استثناء يكسر الطلب — أي مسار API يستخدمها يقرر بنفسه ماذا يفعل لو فشلت
 // (عادةً: يرجع للنظام المحلي الاحتياطي بدل رسالة خطأ جافة للمستخدم).
 async function callAI(systemPrompt, userPrompt) {
   const provider = activeProvider();

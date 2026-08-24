@@ -21,7 +21,7 @@ export default function WardsPage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => { // admissions | schedule | wards
@@ -190,15 +190,15 @@ export default function WardsPage() {
     if (typeof synced === 'object' && synced.id !== na.id) setAdministrations(p => p.map(x => x.id === na.id ? synced : x));
     showToast(L('تم تسجيل إعطاء الجرعة', 'Dose administration recorded'), 'success');
     setGiveDoseFor(null);
-    refreshNotifSources(); // إصلاح: يخفي تنبيه هذي الجرعة بالذات فوراً من الجرس
+    refreshNotifSources(); // إصلاح: يخفي تنبيه هذه الجرعة بالذات فوراً من الجرس
   };
 
   const wardName = (id) => wards.find(w => w.id === id)?.[lang === 'ar' ? 'name' : 'nameEn'] || wards.find(w => w.id === id)?.name || '—';
 
   // ── جدول الجرعات المستحقة اليوم (لمرضى الردهات المُدخَلين فقط) ─────────────
-  // إصلاح: كان المتابعة تقتصر على سجل ماضٍ (مين أعطى الجرعة ومتى) بدون أي
-  // معرفة بمواعيد الجرعات القادمة أو المتأخرة — يعني ما فيه طريقة تعرف فيها
-  // الممرضة "شنو الجرعة المستحقة الحين" بنظرة وحدة. الآن نحسب مواعيد كل
+  // إصلاح: كانت المتابعة تقتصر على سجل ماضٍ (من أعطى الجرعة ومتى) دون أي
+  // معرفة بمواعيد الجرعات القادمة أو المتأخرة — أي أنه لا توجد طريقة تعرف بها
+  // الممرضة الجرعة المستحقة الآن بنظرة واحدة. الآن نحسب مواعيد كل
   // جرعة (موزّعة بالتساوي على 24 ساعة بعدد المرات باليوم)، ونقارنها بسجل
   // الإعطاء الفعلي لتحديد: تم الإعطاء ✅ / متأخرة ⚠️ / قادمة ⏳.
   const computeScheduleTimes = (timesPerDay) => {
@@ -215,7 +215,7 @@ export default function WardsPage() {
     return times;
   };
   // إصلاح: "التكرار" كان حقل نص حر منفصل تماماً عن "عدد المرات باليوم" —
-  // يبقى بقيمته الافتراضية الثابتة (أو أي نص كتبته سابقاً) حتى لو غيّرتِ
+  // يبقى بقيمته الافتراضية الثابتة (أو أي نص كتبته سابقاً) حتى لو غيّرت
   // العدد، فيظهر تكرار خاطئ لا علاقة له بالعدد الفعلي المحدَّد. الآن يُحتسَب
   // مباشرة من العدد: 24 ÷ عدد المرات = عدد الساعات بين كل جرعة والثانية.
   const frequencyLabel = (timesPerDay) => {
@@ -225,10 +225,10 @@ export default function WardsPage() {
   };
   // إصلاح (من المراجعة الشاملة): "طريقة الإعطاء" كانت تُخزَّن كنص عربي ثابت
   // بالسجل (فموي/وريدي/...) وتُعرَض كما هي بغض النظر عن اللغة الحالية — نفس
-  // فئة خلل الأقسام والطابور المكتشَفة اليوم، بس بمكان ثالث منفصل تماماً.
-  // هذي دالة تترجم القيمة المخزَّنة حسب اللغة وقت العرض فقط (تبقى القيمة
+  // فئة خلل الأقسام والطابور المكتشَفة اليوم، لكن بمكان ثالث منفصل تماماً.
+  // هذه دالة تترجم القيمة المخزَّنة حسب اللغة وقت العرض فقط (تبقى القيمة
   // المخزَّنة بقاعدة البيانات عربية دائماً، وهذا مقصود — التخزين ثابت،
-  // العرض فقط هو اللي يتغيّر حسب اللغة).
+  // والعرض فقط هو الذي يتغيّر حسب اللغة).
   const ROUTE_LABELS = {
     'فموي': { ar: 'فموي', en: 'Oral' },
     'وريدي': { ar: 'وريدي', en: 'IV' },
@@ -251,7 +251,7 @@ export default function WardsPage() {
     return times.map(time => {
       const scheduledAt = new Date(`${todayStr}T${time}:00`);
       // تطابق دقيق بالموعد المجدوَل المُعلَّم صراحةً بلحظة الإعطاء — لا علاقة
-      // له بالوقت الحالي (نفس الآلية اللي تصحح مشكلة "كل جرعة تغيّر كل
+      // له بالوقت الحالي (نفس الآلية التي تصحح مشكلة "كل جرعة تغيّر كل
       // الجرعات"، لأن كل جرعة الآن مربوطة بموعدها بالضبط لا بالتقارب الزمني).
       // نُبقي على تطابق تقريبي (٩٠ دقيقة) كخيار احتياطي فقط لسجلات قديمة
       // أُنشئت قبل هذا الإصلاح ولا تحمل scheduledFor.
@@ -348,7 +348,7 @@ export default function WardsPage() {
                   <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                     {admissions.filter(a => a.status === 'admitted').length === 0 ? (
                       <>
-                        <div style={{ marginBottom: 10 }}>{L('ما فيه أي مريض مُدخَل حالياً بالردهات — الجدول يعرض فقط جرعات المرضى المُدخَلين.', 'No patient is currently admitted to a ward — the schedule only shows doses for currently-admitted patients.')}</div>
+                        <div style={{ marginBottom: 10 }}>{L('لا يوجد أي مريض مُدخَل حالياً بالردهات — الجدول يعرض فقط جرعات المرضى المُدخَلين.', 'No patient is currently admitted to a ward — the schedule only shows doses for currently-admitted patients.')}</div>
                         <button onClick={() => setTab('admissions')} className="btn btn-primary" style={{ fontSize: 13 }}>{L('إدخال مريض الآن', 'Admit a Patient Now')}</button>
                       </>
                     ) : (
@@ -661,7 +661,7 @@ export default function WardsPage() {
                   </button>
                 </div>
                 {orderForm.scheduledTimes.length === 0 ? (
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{L('ما فيه مواعيد محددة بعد — اضغط "توليد تلقائي" أو أضف موعد يدوياً.', 'No times set yet — click "Auto-generate" or add one manually.')}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{L('لا توجد مواعيد محددة بعد — اضغط "توليد تلقائي" أو أضف موعد يدوياً.', 'No times set yet — click "Auto-generate" or add one manually.')}</p>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                     {orderForm.scheduledTimes.map((t, i) => (

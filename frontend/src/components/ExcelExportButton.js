@@ -1,7 +1,7 @@
 // frontend/src/components/ExcelExportButton.js
 //
 // زر تصدير بيانات موديول معيّن لملف Excel — يقابل ExcelImportModal (استيراد)
-// بس بالاتجاه المعاكس. يعمل مع أي موديول مسجَّل عبر pgCrud بالباك إند تلقائياً
+// لكن بالاتجاه المعاكس. يعمل مع أي موديول مسجَّل عبر pgCrud بالباك إند تلقائياً
 // (المسار /api/<apiName>/export-excel عام، لا يحتاج إعداد إضافي لكل موديول).
 import React, { useState } from 'react';
 import { FaFileExcel } from 'react-icons/fa';
@@ -11,7 +11,7 @@ import { apiDownloadFile } from '../api';
 // label: نص الزر (اختياري، له نص افتراضي بالعربي/الإنجليزي)
 // className / style: تخصيص اختياري للمظهر — الافتراضي "btn btn-outline" يناسب
 // الخلفيات الفاتحة (بطاقات، أشرطة أدوات بيضاء). على رأسيات ملوّنة/داكنة
-// (تدرّجات لونية بأعلى بعض الصفحات) مرّري style بلون نص وحدود واضحين، مثل:
+// (تدرّجات لونية بأعلى بعض الصفحات) مرّر style بلون نص وحدود واضحين، مثل:
 // style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)' }}
 export default function ExcelExportButton({ apiName, lang, label, onError, className, style }) {
   const [downloading, setDownloading] = useState(false);

@@ -91,7 +91,7 @@ export default function AssetsPage() {
   // ── الجلب المُرقَّم من السيرفر ────────────────────────────────────────────
   // نفس مبدأ صفحتي المرضى والمخزون — الجدول/البطاقات هنا تجيب فقط الصفحة
   // الحالية من الخادم. مصفوفة `assets` بالسياق العام تبقى محمَّلة كاملة
-  // (تُستخدم بـ stats أدناه)، بدون علاقة بجدول هذي الصفحة تحديداً.
+  // (تُستخدم بـ stats أدناه)، بدون علاقة بجدول هذه الصفحة تحديداً.
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
     useServerPagination('assets', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter }, pageSize: 50 });
 
@@ -163,8 +163,8 @@ export default function AssetsPage() {
   };
 
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ────────────
-  // قبل هذا، ضغطة "انتهت الصيانة" كانت تكتب فوق lastMaintenance بس — لو الأصل
-  // انصان 5 مرات، تشوفين آخر مرة بس، والأربعة قبلها تختفي نهائياً. الآن كل
+  // قبل هذا، ضغطة "انتهت الصيانة" كانت تكتب فوق lastMaintenance فقط — لو الأصل
+  // صُلِّح 5 مرات، ترى آخر مرة فقط، والأربعة قبلها تختفي نهائياً. الآن كل
   // حدث صيانة يُسجَّل بشكل مستقل بجدول asset_maintenance_log الدائم.
   const openMaintenanceLog = async (asset) => {
     setMaintenanceAsset(asset);
@@ -187,7 +187,7 @@ export default function AssetsPage() {
       const saved = await api.post('/assetMaintenanceLog', { ...newMaintenance, assetId: maintenanceAsset.id, cost: newMaintenance.cost ? Number(newMaintenance.cost) : null });
       setMaintenanceLog(p => [saved, ...p]);
       // نحدّث الأصل نفسه: نرجّعه "مشغّل" ونحدّث تاريخ آخر صيانة (الملخّص السريع
-      // اللي يبان بالبطاقة)، مع بقاء التفاصيل الكاملة محفوظة بالسجل الدائم فوق
+      // الذي يظهر بالبطاقة)، مع بقاء التفاصيل الكاملة محفوظة بالسجل الدائم فوق
       const updatedAsset = { ...maintenanceAsset, status: 'active', lastMaintenance: newMaintenance.date };
       const prevAssets = assets;
       setAssets(p => p.map(x => x.id === maintenanceAsset.id ? updatedAsset : x));

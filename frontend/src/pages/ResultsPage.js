@@ -334,7 +334,7 @@ export default function ResultsPage() {
               {/* إصلاح تباين الوضع الليلي: هذا الشريط تنبيهي بلون أصفر ثابت
                   عمداً (بغض النظر عن الثيم، مثل شارات النجاح الخضراء الثابتة
                   بباقي الصفحات) — لكن نصه كان بلا لون صريح فيرث color من
-                  body، فيصير فاتحاً وغير مقروء بالوضع الليلي على هذي الخلفية
+                  body، فيصير فاتحاً وغير مقروء بالوضع الليلي على هذه الخلفية
                   الفاتحة. لون بني داكن ثابت هنا مناسب لنفس الخلفية بكل الأحوال. */}
               <span style={{ fontWeight: 700, fontSize: 13, color: '#78350f' }}>{L(`${totalSelected} نتيجة محدَّدة`, `${totalSelected} result(s) selected`)}</span>
               <button style={bulkBtnStyle} onClick={handlePrintSelected}>🖨️ {L('طباعة الكل', 'Print All')}</button>

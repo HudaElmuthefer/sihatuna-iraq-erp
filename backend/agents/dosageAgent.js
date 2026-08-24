@@ -2,7 +2,7 @@
 //
 // فحص الجرعة الآمنة — نفس معمارية agents/interactionAgent.js بالضبط:
 // طبقتان، قاعدة بيانات (bot/rules) أولاً، ذكاء اصطناعي احتياطياً فقط لو
-// الدواء/النطاق العمري غير موجود بالجدول (راجعي migrations-sql/
+// الدواء/النطاق العمري غير موجود بالجدول (راجع migrations-sql/
 // 009_dosage_limits.sql للبذر الأولي والمصادر السريرية الحقيقية لكل رقم).
 //
 // ── مبدأ أمان جوهري: "لا بيانات" لا يعني أبداً "آمن" ─────────────────────────
@@ -10,7 +10,7 @@
 // عواقب خطيرة لو AI أيضاً غير متاح — النتيجة تبقى بلا أي ادّعاء وهمي)، فحص
 // الجرعة أكثر حساسية: أي مسار هنا (لا تطابق بالجدول + لا AI متاح، أو AI رجع
 // رداً غير واضح) **يجب** أن يرجع available:false أو status:'unknown' بصراحة
-// تامة — أبداً لا نفترض 'safe' لمجرد غياب دليل على العكس. راجعي أيضاً
+// تامة — أبداً لا نفترض 'safe' لمجرد غياب دليل على العكس. راجع أيضاً
 // DosageCheckPage.js بالفرونت إند: تصميم الشارات هناك يفرّق بصرياً بوضوح
 // بين "آمن" (أخضر) و"لا بيانات كافية" (رمادي محايد) — لا يجمعهما أبداً.
 const { query } = require('../config/database');
@@ -24,16 +24,16 @@ function buildAIPrompts(lang, drugName, dose, unit, ageYears, weightKg) {
 
   const systemPrompt = isEn
     ? 'You are a clinical pharmacist assisting with a preliminary dosage safety check for a hospital ERP system. Only assess drugs/doses you are reasonably confident about — if genuinely uncertain, say so explicitly rather than guessing. Always include a disclaimer that this does not replace a pharmacist or physician review. Respond ONLY with valid JSON matching the exact schema requested — no markdown, no extra text.'
-    : 'أنتِ صيدلانية سريرية تساعدين بفحص أولي لسلامة جرعة دوائية ضمن نظام مستشفى إلكتروني. قيّمي فقط الأدوية/الجرعات اللي متأكدة منها بشكل معقول — لو غير متأكدة فعلاً، صرّحي بذلك بدل التخمين. اذكري دائماً إن هذا لا يغني عن مراجعة صيدلاني أو طبيب. أجيبي فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
+    : 'أنت صيدلاني سريري تساعد بفحص أولي لسلامة جرعة دوائية ضمن نظام مستشفى إلكتروني. قيّم فقط الأدوية/الجرعات التي متأكد منها بشكل معقول — لو غير متأكد فعلاً، صرّح بذلك بدل التخمين. اذكر دائماً إن هذا لا يغني عن مراجعة صيدلاني أو طبيب. أجب فقط بصيغة JSON صالحة مطابقة تماماً للمخطط المطلوب — بدون Markdown وبدون أي نص إضافي خارج الـ JSON.';
 
   const userPrompt = isEn
     ? `Assess this dosage: drug "${drugName}", dose ${dose}${unit}/day, patient ${patientDesc}.\n\nRespond with JSON only: {"status":"safe|exceeds|contraindicated|unknown","reasoning":"...","recommendation":"..."}. Use "unknown" honestly if you cannot assess this drug/dose combination with reasonable confidence — do not guess "safe".`
-    : `قيّمي هذي الجرعة: الدواء "${drugName}"، الجرعة ${dose}${unit}/يوم، المريض ${patientDesc}.\n\nأجيبي بصيغة JSON فقط: {"status":"safe|exceeds|contraindicated|unknown","reasoning":"...","recommendation":"..."}. استخدمي "unknown" بصدق لو ما تقدرين تقيّمين هذا الدواء/الجرعة بثقة معقولة — لا تخمّني "safe".`;
+    : `قيّم هذه الجرعة: الدواء "${drugName}"، الجرعة ${dose}${unit}/يوم، المريض ${patientDesc}.\n\nأجب بصيغة JSON فقط: {"status":"safe|exceeds|contraindicated|unknown","reasoning":"...","recommendation":"..."}. استخدم "unknown" بصدق لو لم تستطع تقييم هذا الدواء/الجرعة بثقة معقولة — لا تخمّن "safe".`;
 
   return { systemPrompt, userPrompt };
 }
 
-// أكثر صف تطابقاً تخصيصاً (specificity) يفوز لو تعدّدت التطابقات — راجعي
+// أكثر صف تطابقاً تخصيصاً (specificity) يفوز لو تعدّدت التطابقات — راجع
 // migrations-sql/009_dosage_limits.sql لشرح كامل لماذا NULL بأي عمود يعني
 // "بلا حد بهذا الاتجاه"، ولماذا نطلب توفّر عمر أو وزن واحد على الأقل (يُفرَض
 // هذا بـroutes/dosageRoutes.js، لا هنا) قبل محاولة أي تطابق إطلاقاً.
@@ -61,7 +61,7 @@ async function findDbMatch(drugName, ageYears, weightKg) {
 // drugName/dose مطلوبان دائماً؛ ageYears/weightKg: واحد منهما على الأقل
 // مطلوب فعلياً (يُفرَض بالراوت) حتى يكون لأي تطابق بالجدول معنى — لو كلاهما
 // غير متوفرين، لا نحاول تطابقاً بالجدول إطلاقاً (كل الصفوف كانت ستُعتبَر
-// "متطابقة" بالخطأ، راجعي شرح findDbMatch)، ننتقل لـAI مباشرة.
+// "متطابقة" بالخطأ، راجع شرح findDbMatch)، ننتقل لـAI مباشرة.
 async function checkDosage(drugName, dose, unit, ageYears, weightKg, lang, mode) {
   const hasPatientInfo = ageYears != null || weightKg != null;
 

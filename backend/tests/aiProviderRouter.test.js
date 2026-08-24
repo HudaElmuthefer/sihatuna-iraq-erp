@@ -37,7 +37,7 @@ describe('sanitizeProvider', () => {
 });
 
 describe('getSettings / getMode', () => {
-  test('لا صف محفوظ إطلاقاً: كل الميزات تعود للافتراضي (online) — يطابق السلوك القديم قبل هذي الميزة', async () => {
+  test('لا صف محفوظ إطلاقاً: كل الميزات تعود للافتراضي (online) — يطابق السلوك القديم قبل هذه الميزة', async () => {
     query.mockResolvedValueOnce({ rows: [] });
     const settings = await getSettings();
     expect(settings).toEqual({ invoiceReader: DEFAULT_MODE, drugInteractions: DEFAULT_MODE, prescriptionReader: DEFAULT_MODE, aiDiagnosis: DEFAULT_MODE, dosageValidation: DEFAULT_MODE, allergyCheck: DEFAULT_MODE });
@@ -97,7 +97,7 @@ describe('routeTextCall', () => {
     expect(result.provider).toBe('online');
   });
 
-  test("mode='online' وclaude/anthropic فعلياً: نفس التعقيم — 'online' فقط، مو 'anthropic'", async () => {
+  test("mode='online' وclaude/anthropic فعلياً: نفس التعقيم — 'online' فقط، وليس 'anthropic'", async () => {
     query.mockResolvedValueOnce({ rows: [{ value: { drugInteractions: 'online' } }] });
     callAI.mockResolvedValueOnce({ available: true, provider: 'anthropic', parsed: {} });
     const result = await routeTextCall('drugInteractions', 'sys', 'user');
@@ -143,7 +143,7 @@ describe('routeTextCall', () => {
 });
 
 describe('routeImageCall', () => {
-  test("mode='bot': يرجع available:false فوراً بلا OCR/AI (OCR نفسه يبقى يعمل بمكان آخر — راجعي prescriptionAgent.js)", async () => {
+  test("mode='bot': يرجع available:false فوراً بلا OCR/AI (OCR نفسه يبقى يعمل بمكان آخر — راجع prescriptionAgent.js)", async () => {
     query.mockResolvedValueOnce({ rows: [{ value: { invoiceReader: 'bot' } }] });
     const result = await routeImageCall('invoiceReader', 'sys', 'user', 'AAAA', 'image/jpeg');
     expect(result).toEqual({ available: false, provider: 'bot' });

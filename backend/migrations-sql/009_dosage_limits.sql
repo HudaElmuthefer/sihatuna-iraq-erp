@@ -8,17 +8,17 @@
 -- (مثال: باراسيتامول 60 مجم/كجم/يوم)، لا كرقم مطلق ثابت. لتبسيط الفحص هنا
 -- (مقارنة رقمية مباشرة بلا حساب معادلات وقت الطلب)، نخزّن سقفاً مطلقاً
 -- محسوباً مسبقاً لكل نطاق عمر/وزن — بنفس أسلوب جداول الجرعات السريعة
--- المستخدَمة فعلياً بالمستشفيات (نطاق وزن ← جرعة واحدة)، مو حساباً دقيقاً
+-- المستخدَمة فعلياً بالمستشفيات (نطاق وزن ← جرعة واحدة)، وليس حساباً دقيقاً
 -- لكل كيلوغرام بالضبط. هذا يعني الفحص هنا **تقريبي بالتصميم** — حالات حدّية
 -- (وزن/عمر عند حافة نطاقين، أو دواء غير مُدرَج) تُحال تلقائياً لطبقة AI
 -- الاحتياطية، وتبقى مراجعة الصيدلاني/الطبيب ضرورية دائماً (نفس تحذير باقي
--- ميزات الذكاء الاصطناعي بهذا المشروع — راجعي DosageCheckPage.js بالفرونت
+-- ميزات الذكاء الاصطناعي بهذا المشروع — راجع DosageCheckPage.js بالفرونت
 -- إند للتحذير الظاهر للمستخدم).
 --
 -- min_age/max_age بالسنوات، min_weight_kg/max_weight_kg بالكيلوغرام — أي
 -- منهم NULL يعني "بلا حد بهذا الاتجاه" (مثال: max_age NULL يعني يشمل كل
 -- الأعمار الأكبر ضمن هذا الصف). max_daily_dose = 0 يُستخدَم صراحة لتمثيل
--- "ممنوع منعاً باتاً بهذا العمر" (مثال: أسبرين للأطفال — راجعي البذر أدناه)
+-- "ممنوع منعاً باتاً بهذا العمر" (مثال: أسبرين للأطفال — راجع البذر أدناه)
 -- بدل صف مفقود قد يُفسَّر خطأً كـ"لا بيانات" المحايدة.
 CREATE TABLE IF NOT EXISTS dosage_limits (
   id SERIAL PRIMARY KEY,
@@ -58,7 +58,7 @@ INSERT INTO dosage_limits (drug_name, min_age, max_age, min_weight_kg, max_weigh
   -- 3000-4000 مجم/يوم (استُخدم 3000 الأكثر أماناً حسب التوصيات الحديثة).
   -- المصدر: MSF Medical Guidelines، St. Louis Children's Hospital Dose
   -- Table، Drugs.com Acetaminophen Dosage Guide.
-  ('باراسيتامول', 0, 11, 3, 40, 2400, 'mg', 'جرعة الأطفال 60 مجم/كجم/يوم تقريباً (مقسَّمة كل 4-6 ساعات) — هذا سقف تقريبي لنطاق الوزن، لا حساب دقيق لكل كيلوغرام', 'لا تتجاوز 5 جرعات خلال 24 ساعة؛ راجعي جدول جرعات دقيق حسب الوزن الفعلي'),
+  ('باراسيتامول', 0, 11, 3, 40, 2400, 'mg', 'جرعة الأطفال 60 مجم/كجم/يوم تقريباً (مقسَّمة كل 4-6 ساعات) — هذا سقف تقريبي لنطاق الوزن، لا حساب دقيق لكل كيلوغرام', 'لا تتجاوز 5 جرعات خلال 24 ساعة؛ راجع جدول جرعات دقيق حسب الوزن الفعلي'),
   ('Paracetamol', 0, 11, 3, 40, 2400, 'mg', '~60mg/kg/day (divided every 4-6h) — approximate ceiling for this weight band, not an exact per-kg calculation', 'Do not exceed 5 doses in 24 hours; consult a precise weight-based dosing chart'),
   ('باراسيتامول', 12, NULL, 40, NULL, 3000, 'mg', 'سقف البالغين المُوصى به حديثاً للأمان (بعض المراجع تسمح حتى 4000 مجم/يوم)', 'لا تتجاوز 3000 مجم يومياً إلا بتوجيه طبي صريح'),
   ('Paracetamol', 12, NULL, 40, NULL, 3000, 'mg', 'Modern safety-recommended adult ceiling (some references allow up to 4000mg/day)', 'Do not exceed 3000mg/day without explicit physician guidance'),
@@ -77,7 +77,7 @@ INSERT INTO dosage_limits (drug_name, min_age, max_age, min_weight_kg, max_weigh
   -- عادةً (حتى أعلى بتوجيه طبي للحالات الشديدة). المصدر: Pharmacy Times
   -- Pediatric Amoxicillin Dosing Guide، UCSF ID Management Program،
   -- Drugs.com Amoxicillin Dosage Guide.
-  ('أموكسيسيلين', 0, 11, 3, 40, 3600, 'mg', 'الجرعة القياسية 45 مجم/كجم/يوم، وحتى 90 مجم/كجم/يوم (جرعة عالية) لبعض الالتهابات — هذا السقف يعكس الجرعة العالية القصوى', 'استخدمي الجرعة القياسية (45 مجم/كجم) إلا لو وصف الطبيب جرعة عالية صراحة'),
+  ('أموكسيسيلين', 0, 11, 3, 40, 3600, 'mg', 'الجرعة القياسية 45 مجم/كجم/يوم، وحتى 90 مجم/كجم/يوم (جرعة عالية) لبعض الالتهابات — هذا السقف يعكس الجرعة العالية القصوى', 'استخدم الجرعة القياسية (45 مجم/كجم) إلا لو وصف الطبيب جرعة عالية صراحة'),
   ('Amoxicillin', 0, 11, 3, 40, 3600, 'mg', 'Standard dosing is 45mg/kg/day; up to 90mg/kg/day (high-dose) for select infections — this ceiling reflects the high-dose maximum', 'Use standard dosing (45mg/kg) unless a physician has explicitly prescribed high-dose therapy'),
   ('أموكسيسيلين', 12, NULL, 40, NULL, 1500, 'mg', 'الجرعة القياسية للبالغين — التهابات شديدة قد تحتاج جرعة أعلى بتوجيه طبي', 'لا تتجاوز 1500 مجم يومياً إلا بتوجيه طبي صريح لالتهاب شديد'),
   ('Amoxicillin', 12, NULL, 40, NULL, 1500, 'mg', 'Standard adult dosing — severe infections may need a higher dose under physician guidance', 'Do not exceed 1500mg/day without explicit physician guidance for a severe infection'),

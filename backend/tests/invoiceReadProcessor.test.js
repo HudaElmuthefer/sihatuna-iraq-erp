@@ -1,9 +1,9 @@
 // backend/tests/invoiceReadProcessor.test.js
 //
 // اختبارات منطق معالجة مهمة قراءة فاتورة واحدة (services/queue
-// /invoiceReadProcessor.js) — بمعزل عن BullMQ (راجعي شرح ذاك الملف) وعن
+// /invoiceReadProcessor.js) — بمعزل عن BullMQ (راجع شرح ذاك الملف) وعن
 // PaddleOCR/AI الحقيقيين: نُموِّه agents/ocrAgent.js وutils/aiProviderRouter.js
-// مباشرة (الأخير يوزّع فعلياً بين bot/online/offline — راجعي المرحلة
+// مباشرة (الأخير يوزّع فعلياً بين bot/online/offline — راجع المرحلة
 // الخامسة؛ تمويهه هنا يبقي هذا الملف مركّزاً على منطق دمج OCR بالـprompt
 // فقط)، بنفس نمط تموية services/queue/ocrQueue.js بـinvoiceReader.test.js.
 jest.mock('../agents/ocrAgent', () => ({ extractText: jest.fn() }));
@@ -25,13 +25,13 @@ describe('buildUserPrompt', () => {
   test('بنص OCR: يُضمَّنه كسياق مساعد قبل طلب الاستخراج', () => {
     const prompt = buildUserPrompt('فاتورة رقم 123');
     expect(prompt).toContain('فاتورة رقم 123');
-    expect(prompt).toContain('اقرئي صورة الفاتورة المرفقة');
+    expect(prompt).toContain('اقرأ صورة الفاتورة المرفقة');
   });
 
   test('بلا نص OCR (null): يطلب القراءة من الصورة وحدها بدون قسم OCR', () => {
     const prompt = buildUserPrompt(null);
     expect(prompt).not.toContain('نص استخراج ضوئي');
-    expect(prompt).toContain('اقرئي صورة الفاتورة المرفقة');
+    expect(prompt).toContain('اقرأ صورة الفاتورة المرفقة');
   });
 });
 

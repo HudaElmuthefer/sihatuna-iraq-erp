@@ -24,7 +24,7 @@
 //     أرسلها العميل (حماية من انتحال منشأة أخرى عبر تعديل الطلب يدوياً)
 // الفلترة تُطبَّق فقط لو المستخدم نفسه له hospitalId مُعيَّن (بحساباته —
 // انظر عمود hospitalId بملف db.json لجدول users). المستخدم بلا hospitalId
-// (مثل حساب إدمن على مستوى الوزارة) يشوف كل شيء بلا فلترة — هذا سلوك مقصود.
+// (مثل حساب إدمن على مستوى الوزارة) يرى كل شيء بلا فلترة — هذا سلوك مقصود.
 //
 // تحقق دائماً من الحقول الفعلية بصفحة الفرونت إند قبل التحديد — هذا بالضبط
 // الدرس المستفاد من خطأ سابق بمخطط تحقق المواعيد.
@@ -43,9 +43,9 @@ const validate = require('../middleware/validate');
 const requirePermission = require('../middleware/requirePermission');
 const XLSX = require('xlsx');
 // ── المرحلة الثانية: تخزين مؤقت اختياري (Redis) ─────────────────────────────
-// راجعي شرح نمط "الأجيال" (versioned cache) بأعلى utils/redisService.js.
-// مفعَّل فقط للموديولات اللي تمرر options.cache صراحة (حالياً: doctors،
-// inventory، employees — راجعي routes/modules.js) — بيانات تُقرأ كثيراً
+// راجع شرح نمط "الأجيال" (versioned cache) بأعلى utils/redisService.js.
+// مفعَّل فقط للموديولات التي تمرر options.cache صراحة (حالياً: doctors،
+// inventory، employees — راجع routes/modules.js) — بيانات تُقرأ كثيراً
 // بصفحات متعددة (قوائم منسدلة...) وتتغيّر نادراً نسبياً. صفر تأثير على أي
 // موديول آخر لم يفعّله (فحص `if (cache)` واحد فقط، بلا أي استدعاء Redis).
 const { getCacheVersion, bumpCacheVersion, cacheGet, cacheSet } = require('../utils/redisService');
@@ -57,7 +57,7 @@ const DEFAULT_COLUMNS = [
 ];
 
 // قيمة خاصة تُفهَم بمعالجة extraFilterFields أدناه كـ"الحقل غائب أو فارغ"،
-// بدل تطابق تام حرفي — راجعي التعليق عند استخدامها بالأسفل.
+// بدل تطابق تام حرفي — راجع التعليق عند استخدامها بالأسفل.
 const UNSET_FILTER_VALUE = '__unset__';
 
 // ── سجل الموديولات (Module Registry) ────────────────────────────────────────
@@ -76,18 +76,18 @@ const moduleRegistry = {};
 // ── إصلاح أمان-من-الانكسار (fail-fast) ──────────────────────────────────────
 // المعامل الرابع (indexedColumns) لم يعد له قيمة افتراضية إطلاقاً. سابقاً كان
 // الافتراض DEFAULT_COLUMNS (أعمدة name/phone/status) — فأي تسجيل موديول جديد
-// نسي تمريره صراحة كان يفترض ضمنياً أن الجدول يملك هذي الأعمدة، وإذا لم يملكها
+// نسي تمريره صراحة كان يفترض ضمنياً أن الجدول يملك هذه الأعمدة، وإذا لم يملكها
 // فعلاً (وهي الغالبية العظمى من الجداول، المبنية بتخزين JSONB بحت)، تفشل كل
 // عملية POST/PUT بصمت برسالة SQL غامضة ("column X does not exist") لا تظهر
 // إلا لحظة أول محاولة حفظ فعلية من مستخدم حقيقي — بالضبط ما حصل بـ 15 موديول
 // مختلفة قبل هذا الإصلاح. الآن: نسيان تمريره يوقف تشغيل الخادم فوراً برسالة
-// واضحة، مو خطأ SQL غامض لاحقاً. الموديولات التي تملك فعلاً أعمدة name/phone/
+// واضحة، وليس خطأ SQL غامضاً لاحقاً. الموديولات التي تملك فعلاً أعمدة name/phone/
 // status الحقيقية (مثل patients و doctors) تمرر DEFAULT_COLUMNS صراحة.
 const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName, options = {}) => {
   if (indexedColumns === undefined) {
     throw new Error(
       `❌ pgCrud('${apiName}'): المعامل الرابع (indexedColumns) مطلوب صراحة ولا قيمة افتراضية له.\n` +
-      `   مرري [] لو الجدول تخزين JSONB بحت (الحالة الأكثر شيوعاً — راجعي postgres_schema.sql)، ` +
+      `   مرر [] لو الجدول تخزين JSONB بحت (الحالة الأكثر شيوعاً — راجع postgres_schema.sql)، ` +
       `أو مصفوفة { field, column } لو فيه أعمدة مفهرسة حقيقية، ` +
       `أو DEFAULT_COLUMNS المُصدَّرة من هذا الملف لو الجدول يطابق أعمدة name/phone/status القياسية.`
     );
@@ -102,7 +102,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   // كثيرة لعرض أسماء بقوائم منسدلة أو بجانب سجلات ثانية (مثلاً صفحة الفوترة
   // تعرض اسم المريض من موديول patients رغم إن المحاسب ما عنده صلاحية "patients"
   // نفسها). تأكدت من هذا بمراجعة كل صفحات الفرونت إند فعلياً قبل التطبيق —
-  // راجعي ملاحظة "لماذا القراءة المفتوحة" بالمحادثة لو احتجتِ تضيّقين هذا لاحقاً.
+  // راجع ملاحظة "لماذا القراءة المفتوحة" بالمحادثة لو احتجت تضيّق هذا لاحقاً.
   const writePermission = requirePermission(permission);
   const readPermission = openRead ? (req, res, next) => next() : requirePermission(permission);
 
@@ -114,7 +114,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     return record;
   };
 
-  // يفصل الحقول المفهرسة عن بقية بيانات السجل (اللي تُخزَّن بعمود data)
+  // يفصل الحقول المفهرسة عن بقية بيانات السجل (التي تُخزَّن بعمود data)
   const splitBody = (body) => {
     const indexedValues = indexedColumns.map(({ field }) => body[field] ?? null);
     const rest = { ...body };
@@ -131,9 +131,9 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
 
   // ── نطاق الكاش (cache scope) ──────────────────────────────────────────────
   // لموديول موزَّع بين منشآت (hospitalScoped)، القائمة الكاملة تختلف فعلياً
-  // حسب هوية القارئ: موظف بمنشأة مُحدَّدة يشوف سجلات منشأته فقط، بينما إدمن
-  // (بلا hospitalId) يشوف كل السجلات بلا فلترة — لازم مفتاح كاش منفصل لكل
-  // حالة، وإلا موظف منشأة يشوف كاش إدمن (كل المنشآت) أو العكس بالخطأ.
+  // حسب هوية القارئ: موظف بمنشأة مُحدَّدة يرى سجلات منشأته فقط، بينما إدمن
+  // (بلا hospitalId) يرى كل السجلات بلا فلترة — يجب مفتاح كاش منفصل لكل
+  // حالة، وإلا موظف منشأة يرى كاش إدمن (كل المنشآت) أو العكس بالخطأ.
   const cacheScopeFor = (hospitalId) => hospitalId || 'ALL';
   const cacheScopeForReq = (req) => cacheScopeFor(hospitalScoped ? req.user?.hospitalId : null);
 
@@ -141,7 +141,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   // السجل المتأثر (منشأته تحديداً) *و* نطاق 'ALL' دائماً (لأن كاش الإدمن غير
   // المفلتَر يتضمّن سجلات كل المنشآت، فأي تعديل بأي منشأة يُبطِله أيضاً).
   // fire-and-forget (بدون await من المستدعي) — لا يجب أن يبطّئ رد الكتابة
-  // بانتظار Redis، تماماً متل نمط sendAlert/logAudit الحاليين بهذا المشروع.
+  // بانتظار Redis، تماماً مثل نمط sendAlert/logAudit الحاليين بهذا المشروع.
   const invalidateCache = async (recordHospitalId) => {
     if (!cache) return;
     const scopes = new Set([cacheScopeFor(hospitalScoped ? recordHospitalId : null), 'ALL']);
@@ -157,7 +157,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   // ملاحظة أمان مهمة: لو طلب "page" غير مقروء كرقم صحيح، نتجاهله ونرجع لكل
   // السجلات بدل تمرير قيمة غير موثوقة مباشرة لجملة SQL (LIMIT/OFFSET).
   // الافتراضي (بدون معامل page): يرجع مصفوفة كاملة كما كان دائماً — صفر خطر
-  // على أي صفحة موجودة حالياً لا ترسل هذي المعاملات.
+  // على أي صفحة موجودة حالياً لا ترسل هذه المعاملات.
   router.get(`/${apiName}`, auth, readPermission, async (req, res, next) => {
     try {
       // ── قراءة الكاش (لو مفعَّل لهذا الموديول) ──────────────────────────────
@@ -197,7 +197,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
         // ── تحسين أداء ──────────────────────────────────────────────────────
         // لو الحقل صار عمود حقيقي مفهرس (indexedColumns) بعد ترقيته من
         // JSONB، نستخدم العمود مباشرة (سريع، مفهرس) بدل data->>'field'
-        // (بطيء، فحص كامل للجدول). الحقول اللي لسا JSONB بس تبقى تشتغل
+        // (بطيء، فحص كامل للجدول). الحقول التي لا تزال JSONB فقط تبقى تعمل
         // بنفس الطريقة القديمة — صفر كسر لأي موديول لم يُرقَّ بعد.
         searchFields.forEach(f => {
           const promotedCol = indexedColumns.find(c => c.field === f)?.column;
@@ -223,7 +223,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       // الأصول (AssetsPage.js) لإيجاد سجلات مستوردة بحقل status/category فارغ،
       // بدل أن تبقى مخفية بصمت (كانت تُعرَض بشارة "نشط" افتراضية رغم عدم
       // تطابقها فعلياً مع فلتر "نشط" الحقيقي — تعارض عرض/فلترة). القيمة نفسها
-      // لا تُعرَض أو تُخزَّن أبداً كحقل حقيقي بأي سجل — راجعي frontend/src/pages/AssetsPage.js.
+      // لا تُعرَض أو تُخزَّن أبداً كحقل حقيقي بأي سجل — راجع frontend/src/pages/AssetsPage.js.
       extraFilterFields.forEach((field) => {
         const value = req.query[field];
         if (value === UNSET_FILTER_VALUE) {
@@ -306,7 +306,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   // ── تصدير إلى Excel ──────────────────────────────────────────────────────
   // إصلاح/ميزة جديدة: كان النظام يدعم الاستيراد من Excel فقط (رفع بيانات
   // للنظام) بدون أي طريقة لتصدير البيانات الحالية لملف Excel. هذا المسار عام
-  // ويعمل تلقائياً لكل موديول مسجَّل عبر pgCrud (مو فقط الموديولات اللي عندها
+  // ويعمل تلقائياً لكل موديول مسجَّل عبر pgCrud (وليس فقط الموديولات التي عندها
   // registerExcelImport مُفعَّل) — يجلب كل السجلات (بحدود منشأة المستخدم لو
   // النظام متعدد المنشآت) ويحوّلها لملف .xlsx للتنزيل المباشر.
   // العناوين: تُستخدم عناوين عربية جميلة لو كان هذا الموديول عنده أيضاً
@@ -326,7 +326,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       const records = result.rows.map(rowToRecord);
 
       const exportHeaders = moduleRegistry[apiName]?.exportHeaders || {};
-      // نجمع كل مفاتيح موجودة فعلياً بأي سجل (مو فقط أول سجل) — لتفادي فقدان
+      // نجمع كل مفاتيح موجودة فعلياً بأي سجل (وليس فقط أول سجل) — لتفادي فقدان
       // أعمدة نادرة موجودة ببعض السجلات فقط
       const allFields = new Set();
       records.forEach(r => Object.keys(r).forEach(k => allFields.add(k)));

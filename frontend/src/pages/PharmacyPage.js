@@ -42,7 +42,7 @@ export default function PharmacyPage() {
   const ar = lang === 'ar';
 
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
-  // — راجعي components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
+  // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت.
   const [searchParams]          = useSearchParams();
   const [tab, setTab]           = useState(() => {
@@ -83,7 +83,7 @@ export default function PharmacyPage() {
   // مماثل تماماً لقارئ الفواتير بصفحة المشتريات (ProcurementPage.js) — نفس
   // نمط: رفع ملف → مهمة خلفية BullMQ (POST ثم استعلام دوري) لأن السير
   // الكامل هنا (OCR + AI + فحص تضارب لكل زوج أدوية) قد يأخذ وقتاً أطول من
-  // قراءة فاتورة عادية. راجعي backend/agents/prescriptionAgent.js للتفاصيل.
+  // قراءة فاتورة عادية. راجع backend/agents/prescriptionAgent.js للتفاصيل.
   const [readingPrescription, setReadingPrescription] = useState(false);
   const [prescriptionInteractions, setPrescriptionInteractions] = useState(null); // نتيجة فحص التضارب لآخر وصفة قُرئت، لعرضها بتحذير واضح
 
@@ -92,7 +92,7 @@ export default function PharmacyPage() {
   // نفس مبدأ DosageCheckPage.js/AllergyCheckPage.js بالضبط: اسم المريض
   // المكتوب بالوصفة (rxForm.patientName) نص حر دائماً، لا يُطابَق تلقائياً مع
   // أي سجل مريض حقيقي، تجنّباً لخطر ربط حساسيات مريض آخر بصمت. الربط هنا
-  // اختياري تماماً وصريح فقط عبر هذي القائمة المنسدلة.
+  // اختياري تماماً وصريح فقط عبر هذه القائمة المنسدلة.
   const [linkedPatientId, setLinkedPatientId] = useState('');
   const linkedPatient = React.useMemo(() => (patients || []).find(p => String(p.id) === String(linkedPatientId)) || null, [patients, linkedPatientId]);
   const [prescriptionAllergyResult, setPrescriptionAllergyResult] = useState(null); // نفس شكل رد /allergy-check أو حقول readPrescription (allergyConflicts/allergySource/...)
@@ -121,7 +121,7 @@ export default function PharmacyPage() {
   };
   // ── اختيار مزوّد الذكاء الاصطناعي لهذا الطلب تحديداً (بوت/إنترنت/محلي) ──
   // يبدأ بالإعداد الافتراضي الذي يديره الإدمن (system_settings)، لكن أي
-  // مستخدم يقدر يغيّره هنا لطلبه الحالي فقط — راجعي components/AiModeSelect.js.
+  // مستخدم يستطيع تغييره هنا لطلبه الحالي فقط — راجع components/AiModeSelect.js.
   const [aiMode, setAiMode] = useState('online');
   React.useEffect(() => {
     api.get('/prescription-reader/status').then(r => { if (r?.mode) setAiMode(r.mode); }).catch(() => {});
@@ -145,7 +145,7 @@ export default function PharmacyPage() {
     setPrescriptionAllergyResult(null);
     try {
       // patientAllergies: تُرسَل فقط لو مريض مربوط صراحةً بالفعل قبل الرفع
-      // (راجعي شرح linkedPatient أعلاه) — يفحصها الخادم بنفس المهمة الخلفية
+      // (راجع شرح linkedPatient أعلاه) — يفحصها الخادم بنفس المهمة الخلفية
       // (OCR + AI + تضارب دوائي + حساسية معاً). لو رُبط المريض بعد الرفع،
       // استخدم زر "فحص الحساسية الآن" (runAllergyCheck) بدل إعادة رفع الصورة.
       const submitted = await api.post('/prescription-reader/read', { image: dataUrl, mimeType, lang, mode: aiMode, patientAllergies: linkedPatient?.allergies || undefined });
@@ -173,7 +173,7 @@ export default function PharmacyPage() {
       // نتيجة فحص الحساسية — فقط لو فُحصت فعلياً (allergyChecked: مريض مربوط
       // وقت الرفع + دواء واحد على الأقل استُخرِج). allergyAvailable يفرّق
       // بدوره بين "فُحص ونتيجته متاحة" و"فُحص لكن تعذّر إعطاء نتيجة" (لا
-      // تطابق بالجدول + AI غير متاح) — راجعي شرح allergyChecked/allergyAvailable
+      // تطابق بالجدول + AI غير متاح) — راجع شرح allergyChecked/allergyAvailable
       // بـagents/prescriptionAgent.js.
       if (result.allergyChecked) {
         setPrescriptionAllergyResult(
@@ -186,10 +186,10 @@ export default function PharmacyPage() {
       const hasAllergyConflicts = (result.allergyConflicts || []).length > 0;
       if (result.hasInteractions && hasAllergyConflicts) {
         setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
-        showToast(L('⚠️ تحذير: تضارب دوائي وتضارب حساسية دوائية محتملان بهذي الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction AND allergy conflict in this prescription — review the details below before saving'), 'warning');
+        showToast(L('⚠️ تحذير: تضارب دوائي وتضارب حساسية دوائية محتملان بهذه الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction AND allergy conflict in this prescription — review the details below before saving'), 'warning');
       } else if (result.hasInteractions) {
         setPrescriptionInteractions({ interactions: result.interactions, source: result.interactionSource, incomplete: result.interactionIncomplete, severity: result.highestSeverity });
-        showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذي الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
+        showToast(L('⚠️ تحذير: تضارب دوائي محتمل بين أدوية هذه الوصفة — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: possible drug interaction among this prescription\'s medicines — review the details below before saving'), 'warning');
       } else if (hasAllergyConflicts) {
         showToast(L('⚠️ تحذير: تضارب مع حساسية دوائية مسجَّلة للمريض — راجع التفاصيل بالأسفل قبل الحفظ', '⚠️ Warning: conflict with a recorded patient allergy — review the details below before saving'), 'warning');
       } else {
@@ -237,7 +237,7 @@ export default function PharmacyPage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // بعض المتصفحات ما تشغّل الفيديو تلقائياً حتى لو البث نفسه شغّال
+        // بعض المتصفحات لا تشغّل الفيديو تلقائياً حتى لو البث نفسه يعمل
         // (ضوء الكاميرا مضوي) — نطلب التشغيل صراحة بدل الاعتماد على autoPlay وحدها
         videoRef.current.play().catch(() => {});
       }
@@ -256,7 +256,7 @@ export default function PharmacyPage() {
   const captureFromCamera = async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      showToast(L('لسا الكاميرا ما جهّزت الصورة، انتظر ثانية وحاول مرة ثانية', 'The camera image is not ready yet, wait a second and try again'), 'warning');
+      showToast(L('لم تُجهّز الكاميرا الصورة بعد، انتظر ثانية وحاول مرة أخرى', 'The camera image is not ready yet, wait a second and try again'), 'warning');
       return;
     }
     const canvas = document.createElement('canvas');
@@ -397,8 +397,8 @@ export default function PharmacyPage() {
           showToast(L(`تعذّر خصم ${item.name} من المخزون`, `Failed to deduct ${item.name} from stock`), 'error');
         }
       }
-      // لو ما لقينا مطابقة بالمخزون (دواء مو مسجَّل أصلاً)، نتجاهل الخصم بصمت
-      // بدل ما نكسر عملية الصرف — الوصفة تنصرف بأي حال، وين لو المخزون مو دقيق 100%
+      // لو لم نجد مطابقة بالمخزون (دواء غير مسجَّل أصلاً)، نتجاهل الخصم بصمت
+      // بدل أن نكسر عملية الصرف — الوصفة تنصرف بأي حال، حتى لو المخزون غير دقيق 100%
     }
 
     showToast(L('تم صرف الوصفة','Prescription dispensed'), 'success');
@@ -446,10 +446,10 @@ export default function PharmacyPage() {
     const minQty = +drugForm.minQty;
     const status = qty === 0 ? 'out' : qty <= minQty ? 'low' : 'active';
     const d = { ...drugForm, category: 'medicine', qty, minQty, maxQty: +drugForm.maxQty, unitCost: +drugForm.unitCost, status };
-    // ── إصلاح حرج: كان الحفظ يحدّث الحالة المحلية بس بدون أي تزامن مع
-    // الباك إند إطلاقاً — أي دواء يُضاف/يُعدَّل من هذي الصفحة كان يختفي فوراً
+    // ── إصلاح حرج: كان الحفظ يحدّث الحالة المحلية فقط بدون أي تزامن مع
+    // الباك إند إطلاقاً — أي دواء يُضاف/يُعدَّل من هذه الصفحة كان يختفي فوراً
     // بمجرد تحديث الصفحة، رغم ظهور رسالة "تم الحفظ" ✅ (نفس نمط مشكلة إدارة
-    // الجودة اللي انصلحت سابقاً، بس هنا يمس مخزون أدوية حقيقي).
+    // الجودة التي أُصلحت سابقاً، لكن هنا يمس مخزون أدوية حقيقي).
     if (editDrugId) {
       const ud = { ...d, id: editDrugId };
       const prev = inventory;
@@ -832,7 +832,7 @@ export default function PharmacyPage() {
                 {L('صوّر أو ارفع صورة الوصفة الورقية — تُستخرَج الأدوية تلقائياً ويُفحَص التضارب الدوائي بينها', 'Photograph or upload the paper prescription — medicines are extracted automatically and checked for interactions')}
               </p>
               <div style={{ marginTop:10 }}>
-                <label style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginBottom:4 }}>{L('مزوّد الذكاء الاصطناعي لهذي القراءة', 'AI provider for this reading')}</label>
+                <label style={{ fontSize:11, color:'var(--text-secondary)', display:'block', marginBottom:4 }}>{L('مزوّد الذكاء الاصطناعي لهذه القراءة', 'AI provider for this reading')}</label>
                 <AiModeSelect value={aiMode} onChange={setAiMode} lang={lang} disabled={readingPrescription} style={{ maxWidth: 260 }} />
               </div>
               {Array.isArray(patients) && patients.length > 0 && (
@@ -874,7 +874,7 @@ export default function PharmacyPage() {
                 borderRadius: 10, padding: 14, marginBottom: 16,
               }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, fontWeight:700, color: prescriptionInteractions.severity === 'high' ? '#991b1b' : prescriptionInteractions.severity === 'medium' ? '#92400e' : '#166534' }}>
-                  ⚠️ {L('تضارب دوائي محتمل بين أدوية هذي الوصفة', 'Possible drug interaction among this prescription\'s medicines')}
+                  ⚠️ {L('تضارب دوائي محتمل بين أدوية هذه الوصفة', 'Possible drug interaction among this prescription\'s medicines')}
                 </div>
                 {prescriptionInteractions.interactions.map((it, i) => (
                   <div key={i} style={{ padding:'8px 0', borderTop: i>0 ? '1px solid var(--border)' : 'none' }}>

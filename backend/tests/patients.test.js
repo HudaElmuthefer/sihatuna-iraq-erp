@@ -2,8 +2,8 @@
 //
 // ملاحظة مهمة بعد نقل موديول المرضى إلى PostgreSQL: هذا الاختبار يحتاج الآن
 // اتصالاً حقيقياً بقاعدة PostgreSQL (وليس مجرد ملف db.json مؤقت كما كان سابقاً).
-// إن لم تكن بيانات الاتصال بـ.env صحيحة أو السيرفر غير شغّال وقت التشغيل،
-// يفشل الملف كاملاً بخطأ واضح يوضح السبب (راجعي assertPgAvailable بـ
+// إن لم تكن بيانات الاتصال بـ.env صحيحة أو السيرفر لا يعمل وقت التشغيل،
+// يفشل الملف كاملاً بخطأ واضح يوضح السبب (راجع assertPgAvailable بـ
 // testUtils.js) — لا يُتجاوز بصمت.
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');

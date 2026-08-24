@@ -6,7 +6,7 @@
 // التوكنات عند تسجيل الخروج (utils/tokenRevocation.js). عميل واحد يكفي
 // لثلاثتهم (عمليات قراءة/كتابة خفيفة). البند الوحيد المستثنى هو BullMQ
 // (services/queue/*) — له اتصال منفصل تماماً لأنه يحتاج إعدادات مختلفة
-// جذرياً (maxRetriesPerRequest:null إلزامي من BullMQ نفسه)، راجعي
+// جذرياً (maxRetriesPerRequest:null إلزامي من BullMQ نفسه)، راجع
 // services/queue/queueConnection.js للتفاصيل.
 //
 // ── فلسفة التعامل مع فشل Redis: fail-open ────────────────────────────────
@@ -65,7 +65,7 @@ function cacheVersionKey(namespace, scope) {
 }
 
 // ترجع null فقط لو تعذّر الوصول لـRedis أصلاً — يفهمها المستدعي كـ"تجاوز
-// الكاش بالكامل لهذا الطلب" (راجعي routes/pgCrud.js)، بعكس '0' وهي قيمة جيل
+// الكاش بالكامل لهذا الطلب" (راجع routes/pgCrud.js)، بعكس '0' وهي قيمة جيل
 // أولى صالحة تماماً (لا فرق حقيقي بينها وبين رقم جيل حقيقي آخر).
 async function getCacheVersion(namespace, scope) {
   try {
@@ -82,7 +82,7 @@ async function bumpCacheVersion(namespace, scope) {
     await getClient().incr(cacheVersionKey(namespace, scope));
   } catch (err) {
     // لا مشكلة حرجة لو فشلت — أسوأ سيناريو: كاش قديم يبقى صالحاً حتى انتهاء
-    // TTL الطبيعي (بضع دقائق)، مو خطأ يوقف عملية الكتابة نفسها.
+    // TTL الطبيعي (بضع دقائق)، وليس خطأ يوقف عملية الكتابة نفسها.
     logRedisError(`bumpCacheVersion(${namespace})`, err);
   }
 }
@@ -106,7 +106,7 @@ async function cacheSet(key, value, ttlSeconds) {
 }
 
 // يُستخدم فقط لإغلاق الاتصال بأمان عند إيقاف عملية تحتاج ذلك صراحة (مثل
-// تنظيف الاختبارات الآلية — راجعي tests/testUtils.js). خارج بيئة الاختبار،
+// تنظيف الاختبارات الآلية — راجع tests/testUtils.js). خارج بيئة الاختبار،
 // عملية Node.js الرئيسية (server.js) لا تستدعي هذا إطلاقاً — الاتصال يبقى
 // مفتوحاً طوال عمر العملية، بنفس نمط pool الخاص بـPostgreSQL.
 async function closeClient() {

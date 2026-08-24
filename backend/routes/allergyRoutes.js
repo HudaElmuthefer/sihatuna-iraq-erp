@@ -5,7 +5,7 @@
 // له بالصيدلية أو قارئ الوصفات مباشرة). نفس نمط dosageRoutes.js/
 // drugInteractionRoutes.js بالضبط: قاعدة بيانات (bot) أولاً عبر
 // agents/allergyAgent.js، AI احتياطياً فقط للأدوية غير المغطاة بجدول
-// drug_allergy_classes — راجعي migrations-sql/011_drug_allergy_classes.sql.
+// drug_allergy_classes — راجع migrations-sql/011_drug_allergy_classes.sql.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');

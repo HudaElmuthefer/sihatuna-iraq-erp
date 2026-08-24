@@ -1,9 +1,9 @@
 // backend/routes/prescriptionReaderRoutes.js
 //
-// قراءة وصفة طبية بالذكاء الاصطناعي — تصوّري/ارفعي وصفة ورقية من الطبيب،
+// قراءة وصفة طبية بالذكاء الاصطناعي — تصوّر/ارفع وصفة ورقية من الطبيب،
 // والنظام يستخرج الأدوية تلقائياً (بدل كتابتها يدوياً بشاشة "وصفة جديدة"
 // بـPharmacyPage.js) *ويفحص التضارب الدوائي بينها فوراً* — سير عمل متعدد
-// الوكلاء كامل (OCR → AI → فحص تضارب)، راجعي شرح تفصيلي بـ
+// الوكلاء كامل (OCR → AI → فحص تضارب)، راجع شرح تفصيلي بـ
 // agents/prescriptionAgent.js.
 //
 // نفس نمط invoiceReaderRoutes.js تماماً (مهمة خلفية BullMQ، لا استدعاء AI/
@@ -42,8 +42,8 @@ router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), pr
     const base64 = image.includes(',') ? image.split(',')[1] : image;
     const detectedMimeType = mimeType || (image.match(/^data:(.+?);base64,/) || [])[1] || 'image/jpeg';
 
-    // patientAllergies: قائمة حساسيات مريض مربوط صراحةً بهذي الوصفة من
-    // الفرونت إند (اختياري تماماً — راجعي شرح كامل بـagents/prescriptionAgent
+    // patientAllergies: قائمة حساسيات مريض مربوط صراحةً بهذه الوصفة من
+    // الفرونت إند (اختياري تماماً — راجع شرح كامل بـagents/prescriptionAgent
     // .js). نتحقق فقط من الشكل العام هنا (مصفوفة أو غير موجودة) — أي عنصر
     // بلا name صالح يُتجاهَل لاحقاً بـallergyAgent.js نفسه، لا حاجة لتكرار
     // ذلك هنا.

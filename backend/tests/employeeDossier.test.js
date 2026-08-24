@@ -5,7 +5,7 @@
 // الصفحة، وحتى الملف المرفق نفسه كان معاينة محلية فقط (blob URL) لا يُرفَع
 // لأي مكان. يتحقق من إن الوثيقة (بملف مرفق حقيقي) تُحفَظ وتبقى بعد إعادة الجلب.
 const request = require('supertest');
-const { setupTestEnv, cleanupTestEnv } = require('./testUtils');
+const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
 
 let dbPath;
 let app;
@@ -20,10 +20,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   cleanupTestEnv(dbPath);
+  await closeDbPool();
 });
 
 describe('GET/POST/DELETE /api/employees/:id/dossier', () => {
-  test('قائمة فاضية لموظف بدون أي وثيقة بعد', async () => {
+  test('قائمة فارغة لموظف بدون أي وثيقة بعد', async () => {
     const res = await request(app).get('/api/employees/1/dossier').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -48,13 +49,14 @@ describe('GET/POST/DELETE /api/employees/:id/dossier', () => {
     expect(refetch.body[0].filePath).toBe(res.body.filePath);
   });
 
-  test('حذف وثيقة يشتغل صح', async () => {
+  test('حذف وثيقة يعمل بشكل صحيح', async () => {
     const created = await request(app)
       .post('/api/employees/2/dossier')
       .set('Authorization', `Bearer ${token}`)
       .field('type', 'عقد')
       .field('title', 'عقد توظيف')
-      .field('date', '2026-07-12');
+      .field('date', '2026-07-12')
+      .attach('file', Buffer.from('محتوى تجريبي'), 'contract.pdf');
     const docId = created.body.id;
 
     const del = await request(app).delete(`/api/employees/2/dossier/${docId}`).set('Authorization', `Bearer ${token}`);

@@ -14,8 +14,7 @@ const today = new Date().toISOString().split('T')[0];
 // برواتب وأرقام قرارات حقيقية الشكل) تظهر تلقائياً كـ"احتياط" لأول مستخدم
 // جديد. تبدأ فاضية بصراحة الآن.
 const initTransactions = [];
-const initPromotions = [];
-const initAllowances = [];
+const initPromotionsAllowances = [];
 
 const ACCT_CATS = { 'دخل':['revenue','donation','grant'], 'مصروف':['salaries','supplies','maintenance','rent','utilities','other'] };
 const METHODS_KEYS = ['cash','bank','card','check'];
@@ -125,7 +124,7 @@ function calcNet(emp) {
 }
 
 export {
-  today, initTransactions, initPromotions, initAllowances, initSalaries,
+  today, initTransactions, initPromotionsAllowances, initSalaries,
   ACCT_CATS, METHODS_KEYS, GRADE_EN, gradeEn,
   TR_LABELS, displayValue, printTable, usePersistedTab, calcNet, hasBaseSalary,
 };

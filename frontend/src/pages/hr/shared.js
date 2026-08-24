@@ -33,9 +33,6 @@ const initEmployees = [];
 const initOutgoing = [];
 const initIncoming = [];
 const initRetired = [];
-const initAdjustmentTypes = [];
-const initPromotionCycles = [];
-const initPromotionAdjustments = [];
 // ── إصلاح: initDossiers ما عادت مستخدَمة — DossiersTab صار يجيب البيانات
 // الحقيقية من الباك إند مباشرة (راجع التعليق أعلى تعريف DossiersTab).
 const DOSSIER_TYPES_AR = ['شهادة','قرار','عقد','تقرير','هوية','وثيقة','أخرى'];
@@ -157,43 +154,13 @@ const I18N = {
   iqd:                { ar:'د.ع',                       en:'IQD' },
   choose:             { ar:'اختر...',                   en:'Choose...' },
 
-  // ── نظام حساب استحقاق العلاوة/الترفيع ──────────────────────────────────────
+  // ── حساب استحقاق الترفيع/العلاوة القادم (عمودان محسوبان بصفحة الموظفين،
+  // بلا أي جدول أو تبويب منفصل — راجع promotionCalc.js) ───────────────────────
   lbl_certificate:    { ar:'الشهادة',                    en:'Certificate' },
-  tab_adjustment_types:{ ar:'أنواع التعديلات',           en:'Adjustment Types' },
-  tab_promotion_cycles:{ ar:'دورات الترفيع',             en:'Promotion Cycles' },
-  tab_promotion_adjustments:{ ar:'تعديلات الموظفين',     en:'Employee Adjustments' },
-  adj_types_list:     { ar:'أنواع التعديلات',             en:'Adjustment Types' },
-  add_adj_type:       { ar:'إضافة نوع تعديل',             en:'Add Adjustment Type' },
-  edit_adj_type:      { ar:'تعديل نوع تعديل',             en:'Edit Adjustment Type' },
-  col_direction:      { ar:'الاتجاه',                     en:'Direction' },
-  lbl_name_ar_req:    { ar:'الاسم بالعربية *',             en:'Name (Arabic) *' },
-  lbl_name_en:        { ar:'الاسم بالإنجليزية',            en:'Name (English)' },
-  lbl_direction:      { ar:'الاتجاه *',                    en:'Direction *' },
-  direction_advances: { ar:'يقدّم تاريخ الاستحقاق',         en:'Advances due date' },
-  direction_delays:   { ar:'يؤخّر تاريخ الاستحقاق',         en:'Delays due date' },
-  err_name_direction: { ar:'أدخل الاسم والاتجاه',           en:'Enter name and direction' },
-  cycles_list:        { ar:'دورات الترفيع حسب الشهادة',    en:'Promotion Cycles by Certificate' },
-  add_cycle:          { ar:'إضافة دورة',                   en:'Add Cycle' },
-  edit_cycle:         { ar:'تعديل دورة',                   en:'Edit Cycle' },
-  col_grade_optional: { ar:'الدرجة (اختياري)',             en:'Grade (optional)' },
-  col_cycle_years:    { ar:'عدد سنوات الدورة',             en:'Cycle Years' },
-  lbl_certificate_req:{ ar:'الشهادة *',                    en:'Certificate *' },
-  lbl_grade_optional: { ar:'الدرجة الوظيفية (اتركها فارغة لتنطبق على كل الدرجات)', en:'Grade (leave blank to apply to all grades)' },
-  lbl_cycle_years_req:{ ar:'عدد سنوات الدورة *',            en:'Cycle Years *' },
-  err_cert_years:     { ar:'أدخل الشهادة وعدد سنوات الدورة', en:'Enter certificate and cycle years' },
-  placeholder_badge:  { ar:'⚠️ قيمة مبدئية — تحتاج تأكيد',   en:'⚠️ Placeholder — needs confirmation' },
-  adjustments_list:   { ar:'سجلات تعديل مواعيد الموظفين',   en:'Employee Due-Date Adjustments' },
-  add_adjustment:     { ar:'إضافة تعديل',                  en:'Add Adjustment' },
-  edit_adjustment:    { ar:'تعديل سجل',                    en:'Edit Adjustment' },
-  col_employee:       { ar:'الموظف',                       en:'Employee' },
-  col_adj_type:       { ar:'نوع التعديل',                  en:'Adjustment Type' },
-  col_duration:       { ar:'المدة (أشهر)',                 en:'Duration (months)' },
-  col_decision_no:    { ar:'رقم القرار',                   en:'Decision No.' },
-  lbl_employee_req:   { ar:'الموظف *',                     en:'Employee *' },
-  lbl_adj_type_req:   { ar:'نوع التعديل *',                 en:'Adjustment Type *' },
-  lbl_duration_req:   { ar:'المدة بالأشهر *',               en:'Duration (months) *' },
-  lbl_decision_no:    { ar:'رقم القرار',                   en:'Decision No.' },
-  err_emp_type_duration:{ ar:'اختر الموظف ونوع التعديل وأدخل المدة', en:'Select employee, adjustment type and enter duration' },
+  col_due_promo:      { ar:'تاريخ استحقاق الترفيع القادم', en:'Next Promotion Due' },
+  col_due_allow:      { ar:'تاريخ استحقاق العلاوة القادمة', en:'Next Allowance Due' },
+  col_next_grade:     { ar:'الدرجة/المرحلة بعد التعديل',    en:'Grade/Step After Adjustment' },
+  lbl_next_grade:     { ar:'الدرجة/المرحلة بعد التعديل',    en:'Grade/Step After Adjustment' },
   due_soon_title:     { ar:'مواعيد استحقاق قريبة',          en:'Upcoming Due Dates' },
   due_type_allowance: { ar:'علاوة',                         en:'Allowance' },
   due_type_promotion: { ar:'ترفيع',                         en:'Promotion' },
@@ -220,7 +187,6 @@ const printTable = (id) => {
 export {
   useBackendLoad, today, addMonths,
   initEmployees, initOutgoing, initIncoming, initRetired,
-  initAdjustmentTypes, initPromotionCycles, initPromotionAdjustments,
   DOSSIER_TYPES_AR, DOSSIER_TYPES_EN, I18N,
   monthsAgo, monthsUntil, printTable,
 };

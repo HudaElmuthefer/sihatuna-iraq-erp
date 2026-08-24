@@ -130,16 +130,29 @@ const registerAllModules = (router) => {
     ],
   });
 
+  // ── ملاحظة: عمودا "تاريخ استحقاق الترفيع/العلاوة القادم" بصفحة الموظفين
+  // (hr/EmployeesTab.js) محسوبان حياً (calcPromotionDue/calcAllowanceDue من
+  // hr/promotionCalc.js اعتماداً على lastPromotion/lastAllowance/certificate)
+  // وليسا حقلين مخزَّنين بسجل الموظف — فلا يظهران هنا (لا معنى لاستيراد قيمة
+  // محسوبة)، ولا يظهران بالتصدير أيضاً (التصدير يعكس الحقول المخزَّنة فقط،
+  // راجع GET /:apiName/export-excel بـ pgCrud.js). الشهادة (certificate)
+  // وتاريخا آخر ترفيع/علاوة (lastPromotion/lastAllowance) هي المُدخلات
+  // الفعلية التي يُحسَب منها ذانك التاريخان، وهي حقول حقيقية مخزَّنة — أُضيفت
+  // هنا مع الدرجة/المرحلة بعد التعديل (nextGrade).
   registerExcelImport(router, 'employees', collectionSchemas.employees, {
     'الاسم': 'name', 'اسم الموظف': 'name', 'Name': 'name',
     'المسمى الوظيفي': 'jobTitle', 'Job Title': 'jobTitle',
     'القسم': 'dept', 'Department': 'dept',
     'الدرجة': 'grade', 'Grade': 'grade',
     'المرحلة': 'step', 'Step': 'step',
+    'الشهادة': 'certificate', 'Certificate': 'certificate',
     'الراتب': 'salary', 'Salary': 'salary',
     'تاريخ التعيين': 'hireDate', 'Hire Date': 'hireDate',
     'تاريخ الميلاد': 'birthDate', 'Birth Date': 'birthDate',
     'الهاتف': 'phone', 'Phone': 'phone',
+    'آخر ترفيع': 'lastPromotion', 'Last Promotion': 'lastPromotion',
+    'آخر علاوة': 'lastAllowance', 'Last Allowance': 'lastAllowance',
+    'الدرجة/المرحلة بعد التعديل': 'nextGrade', 'Grade/Step After Adjustment': 'nextGrade',
     'الحالة': 'status', 'Status': 'status',
   }, {
     hospitalScoped: true, permission: 'hr',
@@ -154,9 +167,15 @@ const registerAllModules = (router) => {
       { header: 'الاسم', example: 'رنا محمد النجار' },
       { header: 'المسمى الوظيفي', example: 'سكرتيرة' },
       { header: 'القسم', example: 'الإدارة' },
+      { header: 'الدرجة', example: 'الرابعة' },
+      { header: 'المرحلة', example: '3' },
+      { header: 'الشهادة', example: 'بكالوريوس' },
       { header: 'الراتب', example: '480000' },
       { header: 'تاريخ التعيين', example: '2024-01-15' },
       { header: 'الهاتف', example: '07701234567' },
+      { header: 'آخر ترفيع', example: '2023-01-15' },
+      { header: 'آخر علاوة', example: '2025-06-01' },
+      { header: 'الدرجة/المرحلة بعد التعديل', example: 'الرابعة/4' },
       { header: 'الحالة', example: 'نشط' },
     ],
   });
@@ -649,69 +668,70 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الحسابات: الترفيعات (promotions) ────────────────────────────────────────
-  registerExcelImport(router, 'promotions', collectionSchemas.promotions, {
+  // ── الحسابات: سجل الترفيعات والعلاوات المُوحَّد (promotionsAllowances) ──────────
+  // دمج جدولي الترفيعات والعلاوات السابقين بجدول واحد — كل صف Excel قد يحمل
+  // جانب الترفيع و/أو جانب العلاوة معاً، وكل جانب له رقم/تاريخ قرار مستقلان
+  // تماماً (بدل حقل "رقم القرار" المشترك سابقاً). راجع
+  // migrations-sql/014_merge_promotions_allowances.sql.
+  // ملاحظة: tableName صريح هنا لأن الجدول الفعلي promotions_allowances
+  // (بشرطة سفلية) بينما اسم apiName بصيغة camelCase — بدونه يحاول الاستيراد
+  // الكتابة على جدول "promotionsallowances" غير الموجود (Postgres يُحوِّل أي
+  // معرِّف غير مُقتبَس تلقائياً لحروف صغيرة).
+  registerExcelImport(router, 'promotionsAllowances', collectionSchemas.promotionsAllowances, {
     'الاسم': 'name', 'Name': 'name',
     'من درجة': 'fromGrade', 'From Grade': 'fromGrade',
     'إلى درجة': 'toGrade', 'To Grade': 'toGrade',
-    'التاريخ': 'date', 'Date': 'date',
+    'تاريخ الترفيع': 'promotionDate', 'Promotion Date': 'promotionDate',
     'الراتب قبل': 'salaryBefore', 'Salary Before': 'salaryBefore',
     'الراتب بعد': 'salaryAfter', 'Salary After': 'salaryAfter',
-    'رقم القرار': 'decisionNo', 'Decision No': 'decisionNo',
-    'الحالة': 'status', 'Status': 'status',
+    'رقم قرار الترفيع': 'promotionDecisionNo', 'Promotion Decision No': 'promotionDecisionNo',
+    'تاريخ قرار الترفيع': 'promotionDecisionDate', 'Promotion Decision Date': 'promotionDecisionDate',
+    'حالة الترفيع': 'promotionStatus', 'Promotion Status': 'promotionStatus',
+    'نوع العلاوة': 'allowanceType', 'Allowance Type': 'allowanceType',
+    'مبلغ العلاوة': 'amount', 'Allowance Amount': 'amount',
+    'تاريخ العلاوة': 'allowanceDate', 'Allowance Date': 'allowanceDate',
+    'رقم قرار العلاوة': 'allowanceDecisionNo', 'Allowance Decision No': 'allowanceDecisionNo',
+    'تاريخ قرار العلاوة': 'allowanceDecisionDate', 'Allowance Decision Date': 'allowanceDecisionDate',
+    'حالة العلاوة': 'allowanceStatus', 'Allowance Status': 'allowanceStatus',
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'accounts',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
-    indexedColumns: [{ field: 'status', column: 'status' }],
+    tableName: 'promotions_allowances',
+    indexedColumns: [],
     limiter: importLimiter,
-    duplicateCheck: ['name', 'decisionNo'],
+    duplicateCheck: ['name', 'promotionDecisionNo', 'allowanceDecisionNo'],
+    // ── الحالة تُعبَّأ فقط لو أُدخِلت فعلاً (لا نفرض قيمة افتراضية على جانب لم
+    // يُستخدَم إطلاقاً بهذا الصف — قد يكون الصف ترفيعاً فقط أو علاوة فقط أو كليهما).
     afterParse: (row) => {
-      const map = { 'منجز': 'مُنجَز', 'مُنجَز': 'مُنجَز', done: 'مُنجَز', 'مستحق': 'مستحق', due: 'مستحق', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
-      const s = (row.status || '').toString().trim();
-      return { ...row, status: map[s] || map[s.toLowerCase()] || 'قيد المعالجة' };
+      const promoMap = { 'منجز': 'مُنجَز', 'مُنجَز': 'مُنجَز', done: 'مُنجَز', 'مستحق': 'مستحق', due: 'مستحق', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
+      const allowMap = { 'مصرف': 'مدفوع', 'مُصرَف': 'مدفوع', 'مصروف': 'مدفوع', 'مدفوع': 'مدفوع', paid: 'مدفوع', 'مستحقة': 'مستحقة', due: 'مستحقة', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
+      if (row.promotionStatus) {
+        const ps = row.promotionStatus.toString().trim();
+        row.promotionStatus = promoMap[ps] || promoMap[ps.toLowerCase()] || ps;
+      }
+      if (row.allowanceStatus) {
+        const as = row.allowanceStatus.toString().trim();
+        row.allowanceStatus = allowMap[as] || allowMap[as.toLowerCase()] || as;
+      }
+      return row;
     },
     template: [
       { header: 'الاسم', example: 'محمد علي حسن' },
       { header: 'من درجة', example: 'الرابعة/3' },
       { header: 'إلى درجة', example: 'الرابعة/4' },
-      { header: 'التاريخ', example: '2026-07-01' },
+      { header: 'تاريخ الترفيع', example: '2026-07-01' },
       { header: 'الراتب قبل', example: '450000' },
       { header: 'الراتب بعد', example: '480000' },
-      { header: 'رقم القرار', example: 'DEC-2026-01' },
-      { header: 'الحالة', example: 'مُنجَز' },
-    ],
-  });
-
-  // ── الحسابات: البدلات (allowances) ──────────────────────────────────────────
-  registerExcelImport(router, 'allowances', collectionSchemas.allowances, {
-    'الاسم': 'name', 'Name': 'name',
-    'النوع': 'type', 'Type': 'type',
-    'المبلغ': 'amount', 'Amount': 'amount',
-    'التاريخ': 'date', 'Date': 'date',
-    'رقم القرار': 'decisionNo', 'Decision No': 'decisionNo',
-    'الحالة': 'status', 'Status': 'status',
-    'ملاحظات': 'notes', 'Notes': 'notes',
-  }, {
-    hospitalScoped: true, permission: 'accounts',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
-    indexedColumns: [{ field: 'status', column: 'status' }],
-    limiter: importLimiter,
-    duplicateCheck: ['name', 'decisionNo'],
-    afterParse: (row) => {
-      const map = { 'مصرف': 'مدفوع', 'مُصرَف': 'مدفوع', 'مصروف': 'مدفوع', 'مدفوع': 'مدفوع', paid: 'مدفوع', 'مستحقة': 'مستحقة', due: 'مستحقة', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
-      const s = (row.status || '').toString().trim();
-      return { ...row, status: map[s] || map[s.toLowerCase()] || 'قيد المعالجة' };
-    },
-    template: [
-      { header: 'الاسم', example: 'سارة جاسم' },
-      { header: 'النوع', example: 'annual' },
-      { header: 'المبلغ', example: '50000' },
-      { header: 'التاريخ', example: '2026-07-01' },
-      { header: 'رقم القرار', example: 'DEC-2026-05' },
-      { header: 'الحالة', example: 'مدفوع' },
+      { header: 'رقم قرار الترفيع', example: 'DEC-2026-01' },
+      { header: 'تاريخ قرار الترفيع', example: '2026-07-05' },
+      { header: 'حالة الترفيع', example: 'مُنجَز' },
+      { header: 'نوع العلاوة', example: '' },
+      { header: 'مبلغ العلاوة', example: '' },
+      { header: 'تاريخ العلاوة', example: '' },
+      { header: 'رقم قرار العلاوة', example: '' },
+      { header: 'تاريخ قرار العلاوة', example: '' },
+      { header: 'حالة العلاوة', example: '' },
+      { header: 'ملاحظات', example: '' },
     ],
   });
 
@@ -725,6 +745,10 @@ const registerAllModules = (router) => {
     'المسمى الوظيفي': 'jobTitle', 'Job Title': 'jobTitle',
     'القسم': 'dept', 'Department': 'dept',
     'الدرجة': 'grade', 'Grade': 'grade',
+    'الراتب الاسمي': 'baseSalary', 'Nominal Salary': 'baseSalary',
+    // ── إصلاح: "الراتب الأساسي" أُعيد تسميته "الراتب الاسمي" بكل الواجهة —
+    // يبقى مقبولاً هنا كمرادف قديم حتى لا يُكسَر استيراد أي ملف Excel محفوظ
+    // مسبقاً بالتسمية السابقة.
     'الراتب الأساسي': 'baseSalary', 'Base Salary': 'baseSalary',
     'الشهر': 'month', 'Month': 'month',
     'اسم بند الإضافة': 'additionLabelRaw', 'Addition Label': 'additionLabelRaw',
@@ -762,118 +786,13 @@ const registerAllModules = (router) => {
       { header: 'الاسم', example: 'رنا محمد النجار' },
       { header: 'المسمى الوظيفي', example: 'سكرتيرة' },
       { header: 'القسم', example: 'الإدارة' },
-      { header: 'الراتب الأساسي', example: '450000' },
+      { header: 'الراتب الاسمي', example: '450000' },
       { header: 'الشهر', example: '2026-07' },
       { header: 'اسم بند الإضافة', example: 'علاوة اجتماعية' },
       { header: 'مبلغ الإضافة', example: '30000' },
       { header: 'اسم بند الخصم', example: 'ضريبة' },
       { header: 'مبلغ الخصم', example: '10000' },
       { header: 'الحالة', example: 'معلق' },
-    ],
-  });
-
-  // ── نظام حساب استحقاق العلاوة/الترفيع: أنواع التعديلات ───────────────────────
-  registerExcelImport(router, 'adjustmentTypes', collectionSchemas.adjustmentTypes, {
-    'الاسم': 'name', 'Name': 'name',
-    'الاسم بالإنجليزية': 'nameEn', 'Name (English)': 'nameEn',
-    'الاتجاه': 'directionRaw', 'Direction': 'directionRaw',
-    'ملاحظات': 'notes', 'Notes': 'notes',
-  }, {
-    hospitalScoped: true, permission: 'hr',
-    indexedColumns: [],
-    limiter: importLimiter,
-    duplicateCheck: ['name'],
-    afterParse: (row) => {
-      const { directionRaw, ...rest } = row;
-      const map = { 'يقدّم': 'advances', 'يقدم': 'advances', advances: 'advances', 'يؤخّر': 'delays', 'يؤخر': 'delays', delays: 'delays' };
-      const d = (directionRaw || '').toString().trim();
-      rest.direction = map[d] || map[d.toLowerCase()] || 'delays';
-      return rest;
-    },
-    template: [
-      { header: 'الاسم', example: 'كتاب شكر وتقدير' },
-      { header: 'الاسم بالإنجليزية', example: 'Commendation Letter' },
-      { header: 'الاتجاه', example: 'يقدّم' },
-      { header: 'ملاحظات', example: 'يقدّم تاريخ الاستحقاق بمقدار مدة السجل' },
-    ],
-  });
-
-  // ── نظام حساب استحقاق العلاوة/الترفيع: جدول مدة الدورة حسب الشهادة/الدرجة ────
-  registerExcelImport(router, 'promotionCycles', collectionSchemas.promotionCycles, {
-    'الشهادة': 'certificate', 'Certificate': 'certificate',
-    'الشهادة بالإنجليزية': 'certificateEn', 'Certificate (English)': 'certificateEn',
-    'الدرجة الوظيفية': 'grade', 'Grade': 'grade',
-    'عدد سنوات الدورة': 'cycleYears', 'Cycle Years': 'cycleYears',
-    'ملاحظات': 'notes', 'Notes': 'notes',
-  }, {
-    hospitalScoped: true, permission: 'hr',
-    indexedColumns: [],
-    limiter: importLimiter,
-    duplicateCheck: ['certificate', 'grade'],
-    afterParse: (row) => {
-      row.cycleYears = Number(row.cycleYears) || 0;
-      row.grade = row.grade || '';
-      return row;
-    },
-    template: [
-      { header: 'الشهادة', example: 'بكالوريوس' },
-      { header: 'الشهادة بالإنجليزية', example: "Bachelor's" },
-      { header: 'الدرجة الوظيفية', example: '' },
-      { header: 'عدد سنوات الدورة', example: '4' },
-      { header: 'ملاحظات', example: '' },
-    ],
-  });
-
-  // ── نظام حساب استحقاق العلاوة/الترفيع: سجلات تعديل الموظفين ─────────────────
-  // نفس نمط admissions/documentLookupRoutes بالضبط: يُرسَل اسم الموظف واسم
-  // نوع التعديل كنص من Excel، ويُحوَّلان هنا لمعرّفين رقميين حقيقيين (employeeId
-  // وadjustmentTypeId) بالبحث المباشر بجدولي employees وadjustment_types —
-  // direction يُنسَخ وقت الإدخال من تعريف النوع الحالي (ثبات الحساب التاريخي
-  // حتى لو تغيّر تعريف النوع لاحقاً، راجع migrations-sql/012 للشرح الكامل).
-  registerExcelImport(router, 'promotionAdjustments', collectionSchemas.promotionAdjustments, {
-    'اسم الموظف': 'employeeName', 'Employee Name': 'employeeName',
-    'نوع التعديل': 'adjustmentTypeName', 'Adjustment Type': 'adjustmentTypeName',
-    'التاريخ': 'date', 'Date': 'date',
-    'المدة بالأشهر': 'durationMonths', 'Duration (Months)': 'durationMonths',
-    'رقم القرار': 'decisionNo', 'Decision No': 'decisionNo',
-    'ملاحظات': 'notes', 'Notes': 'notes',
-  }, {
-    hospitalScoped: true, permission: 'hr',
-    indexedColumns: [],
-    limiter: importLimiter,
-    duplicateCheck: ['employeeName', 'adjustmentTypeName', 'date'],
-    afterParse: async (row, hospitalId) => {
-      const { employeeName, adjustmentTypeName, ...rest } = row;
-      rest.employeeName = employeeName || '';
-      if (employeeName) {
-        try {
-          const conditions = [`data->>'name' = $1`];
-          const values = [employeeName];
-          if (hospitalId) { values.push(hospitalId); conditions.push(`data->>'hospitalId' = $${values.length}`); }
-          const result = await pool.query(`SELECT id FROM employees WHERE ${conditions.join(' AND ')} LIMIT 1`, values);
-          if (result.rows.length > 0) rest.employeeId = result.rows[0].id;
-        } catch { /* فشل البحث — employeeId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح بدل ربط خاطئ */ }
-      }
-      if (adjustmentTypeName) {
-        try {
-          const result = await pool.query(`SELECT id, data->>'direction' AS direction FROM adjustment_types WHERE data->>'name' = $1 LIMIT 1`, [adjustmentTypeName]);
-          if (result.rows.length > 0) {
-            rest.adjustmentTypeId = result.rows[0].id;
-            rest.adjustmentTypeName = adjustmentTypeName;
-            rest.direction = result.rows[0].direction;
-          }
-        } catch { /* فشل البحث — adjustmentTypeId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح */ }
-      }
-      rest.durationMonths = Number(rest.durationMonths) || 0;
-      return rest;
-    },
-    template: [
-      { header: 'اسم الموظف', example: 'رنا محمد النجار' },
-      { header: 'نوع التعديل', example: 'كتاب شكر وتقدير' },
-      { header: 'التاريخ', example: '2026-07-01' },
-      { header: 'المدة بالأشهر', example: '2' },
-      { header: 'رقم القرار', example: '' },
-      { header: 'ملاحظات', example: '' },
     ],
   });
 
@@ -1539,15 +1458,10 @@ const registerAllModules = (router) => {
   ], undefined, { hospitalScoped: true, permission: 'documents', extraFilterFields: ['type', 'status', 'priority'] });
   pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [{ field: 'category', column: 'category' }], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
   pgCrud(router, 'transactions', collectionSchemas.transactions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
-  pgCrud(router, 'promotions', collectionSchemas.promotions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
-  pgCrud(router, 'allowances', collectionSchemas.allowances, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
+  // ── سجل الترفيعات والعلاوات المُوحَّد (دمج promotions/allowances السابقين،
+  // راجع migrations-sql/014_merge_promotions_allowances.sql) ─────────────────
+  pgCrud(router, 'promotionsAllowances', collectionSchemas.promotionsAllowances, [], 'promotions_allowances', { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });
-  // ── نظام حساب استحقاق العلاوة/الترفيع ────────────────────────────────────────
-  // ثلاثة جداول عامة (راجع migrations-sql/012_promotion_cycle_system.sql
-  // لشرح كل جدول ولماذا adjustment_types قابل للتوسيع بدل ثوابت بالكود).
-  pgCrud(router, 'adjustmentTypes', collectionSchemas.adjustmentTypes, [], 'adjustment_types', { hospitalScoped: true, permission: 'hr' });
-  pgCrud(router, 'promotionCycles', collectionSchemas.promotionCycles, [], 'promotion_cycles', { hospitalScoped: true, permission: 'hr' });
-  pgCrud(router, 'promotionAdjustments', collectionSchemas.promotionAdjustments, [], 'promotion_adjustments', { hospitalScoped: true, permission: 'hr' });
   pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [{ field: 'status', column: 'status' }], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'ambulanceMaintenanceLog', collectionSchemas.ambulanceMaintenanceLog, [

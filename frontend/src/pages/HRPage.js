@@ -16,13 +16,10 @@ import IncomingTab from './hr/IncomingTab';
 import RetiredTab from './hr/RetiredTab';
 import DossiersTab from './hr/DossiersTab';
 import BarcodeTab from './hr/BarcodeTab';
-import AdjustmentTypesTab from './hr/AdjustmentTypesTab';
-import PromotionCyclesTab from './hr/PromotionCyclesTab';
-import EmployeeAdjustmentsTab from './hr/EmployeeAdjustmentsTab';
 import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg,#1c1917,#44403c)';
-const HR_TAB_KEYS = ['employees', 'outgoing', 'incoming', 'retired', 'dossiers', 'barcode', 'adjustmentTypes', 'promotionCycles', 'promotionAdjustments'];
+const HR_TAB_KEYS = ['employees', 'outgoing', 'incoming', 'retired', 'dossiers', 'barcode'];
 
 export default function HRPage() {
   const { lang } = useApp();
@@ -53,9 +50,6 @@ export default function HRPage() {
     { key:'retired',   label: L('tab_retired'),   icon:'👴' },
     { key:'dossiers',  label: L('tab_dossiers'),  icon:'📂' },
     { key:'barcode',   label: lang==='ar'?'باركود الكتب':'Letters Barcode', icon:'🏷️' },
-    { key:'adjustmentTypes',       label: L('tab_adjustment_types'),       icon:'🧩' },
-    { key:'promotionCycles',       label: L('tab_promotion_cycles'),       icon:'🔄' },
-    { key:'promotionAdjustments',  label: L('tab_promotion_adjustments'),  icon:'📝' },
   ];
 
   return (
@@ -74,10 +68,6 @@ export default function HRPage() {
       {tab === 'retired'   && <RetiredTab   lang={lang} />}
       {tab === 'dossiers'  && <DossiersTab  lang={lang} />}
       {tab === 'barcode'   && <BarcodeTab   lang={lang} />}
-      {tab === 'adjustmentTypes'      && <AdjustmentTypesTab      lang={lang} />}
-      {tab === 'promotionCycles'      && <PromotionCyclesTab      lang={lang} />}
-      {tab === 'promotionAdjustments' && <EmployeeAdjustmentsTab  lang={lang} />}
     </div>
   );
 }
-

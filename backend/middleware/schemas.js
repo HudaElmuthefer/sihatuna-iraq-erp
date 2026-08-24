@@ -86,28 +86,15 @@ module.exports = {
     desc: { required: true, type: 'string' },
     amount: { required: true },
   },
-  promotions: {
+  // ── سجل الترفيعات والعلاوات المُوحَّد (دمج promotions/allowances السابقين) —
+  // كل سجل قد يمثّل ترفيعاً و/أو علاوة لموظف واحد، لذا لا يُفرَض هنا سوى
+  // الاسم؛ صحة حقول كل جانب (grade/amount/...) تُفحَص بالواجهة حسب الجانب
+  // المُعبَّأ فعلياً بكل سجل.
+  promotionsAllowances: {
     name: { required: true, type: 'string' },
-  },
-  allowances: {
-    name: { required: true, type: 'string' },
-    amount: { required: true },
   },
   salaries: {
     name: { required: true, type: 'string' },
-  },
-  adjustmentTypes: {
-    name: { required: true, type: 'string' },
-    direction: { required: true, type: 'string' },
-  },
-  promotionCycles: {
-    certificate: { required: true, type: 'string' },
-    cycleYears: { required: true },
-  },
-  promotionAdjustments: {
-    employeeId: { required: true },
-    adjustmentTypeId: { required: true },
-    durationMonths: { required: true },
   },
   ambulanceVehicles: {
     code: { required: true, type: 'string' },

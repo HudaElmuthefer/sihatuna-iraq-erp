@@ -7,7 +7,8 @@ import useServerPagination from '../../hooks/useServerPagination';
 import Pagination from '../../components/Pagination';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
-import { useBackendLoad, initEmployees, initPromotionCycles, initPromotionAdjustments, I18N, monthsAgo, monthsUntil, printTable } from './shared';
+import { useBackendLoad, initEmployees, I18N, monthsAgo, monthsUntil, printTable } from './shared';
+import { calcPromotionDue, calcAllowanceDue } from './promotionCalc';
 import AlertBanner from './AlertBanner';
 import DateRangeFilter from '../../components/DateRangeFilter';
 
@@ -17,12 +18,6 @@ function EmployeesTab({ lang }) {
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [employees, setEmployees] = useState(initEmployees);
   useBackendLoad('employees', setEmployees);
-  // ── محرّك حساب استحقاق العلاوة/الترفيع يحتاج جدولي الدورات والتعديلات دفعة
-  // واحدة (راجع promotionCalc.js وAlertBanner.js أدناه).
-  const [promotionCycles, setPromotionCycles] = useState(initPromotionCycles);
-  useBackendLoad('promotionCycles', setPromotionCycles);
-  const [promotionAdjustments, setPromotionAdjustments] = useState(initPromotionAdjustments);
-  useBackendLoad('promotionAdjustments', setPromotionAdjustments);
 
   const [empSearch, setEmpSearch] = useState('');
   const [empDebouncedSearch, setEmpDebouncedSearch] = useState('');
@@ -45,7 +40,7 @@ function EmployeesTab({ lang }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
-  const empty = { name:'', jobTitle:'', dept:'', grade: lang==='ar'?'الأولى':'First', certificate:'', step:1, salary:'', hireDate:'', birthDate:'', phone:'', status: 'active', lastPromotion:'', lastAllowance:'', retirementDate:'', notes:'' };
+  const empty = { name:'', jobTitle:'', dept:'', grade: lang==='ar'?'الأولى':'First', certificate:'', step:1, salary:'', hireDate:'', birthDate:'', phone:'', status: 'active', lastPromotion:'', lastAllowance:'', nextGrade:'', retirementDate:'', notes:'' };
   const [form, setForm] = useState(empty);
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -108,7 +103,7 @@ function EmployeesTab({ lang }) {
 
   return (
     <div>
-      <AlertBanner employees={employees} cycles={promotionCycles} adjustments={promotionAdjustments} lang={lang} />
+      <AlertBanner employees={employees} lang={lang} />
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <h3 style={{ margin:0 }}>{L('emp_list')} ({empTotalItems})</h3>
         <input
@@ -168,6 +163,7 @@ function EmployeesTab({ lang }) {
               </th>
               <th>{L('col_name')}</th><th>{L('col_title')}</th><th>{L('col_dept')}</th><th>{L('col_grade')}</th><th>{L('lbl_certificate')}</th>
               <th>{L('col_salary')}</th><th>{L('col_hire')}</th><th>{L('col_last_promo')}</th><th>{L('col_last_allow')}</th>
+              <th>{L('col_due_promo')}</th><th>{L('col_due_allow')}</th><th>{L('col_next_grade')}</th>
               <th>{L('col_retire_date')}</th><th>{L('col_status')}</th><th>{L('col_actions')}</th>
             </tr></thead>
             <tbody>
@@ -175,6 +171,8 @@ function EmployeesTab({ lang }) {
                 const retireAlert = monthsUntil(e.retirementDate) <= 12 && monthsUntil(e.retirementDate) >= 0;
                 const allowAlert = monthsAgo(e.lastAllowance) >= 12;
                 const promAlert  = monthsAgo(e.lastPromotion) >= 24;
+                const promoDue = calcPromotionDue(e);
+                const allowDue = calcAllowanceDue(e);
                 return (
                   <tr key={e.id} style={{ background: retireAlert ? 'rgba(239,68,68,0.05)' : undefined }}>
                     <td><input type="checkbox" checked={selectedIds.has(e.id)} onChange={() => toggleSelect(e.id)} /></td>
@@ -187,6 +185,13 @@ function EmployeesTab({ lang }) {
                     <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{e.hireDate}</td>
                     <td style={{ fontSize:12, color: promAlert ? '#1a6bab' : 'var(--text-secondary)' }}>{e.lastPromotion}{promAlert && <span> ⬆️</span>}</td>
                     <td style={{ fontSize:12, color: allowAlert ? '#f59e0b' : 'var(--text-secondary)' }}>{e.lastAllowance}{allowAlert && <span> 💰</span>}</td>
+                    <td style={{ fontSize:12, color: promoDue.available && promoDue.overdue ? '#ef4444' : promoDue.available && promoDue.daysUntil <= 30 ? '#1a6bab' : 'var(--text-secondary)', fontWeight: promoDue.available && promoDue.overdue ? 700 : 400 }}>
+                      {promoDue.available ? promoDue.dueDate : '—'}
+                    </td>
+                    <td style={{ fontSize:12, color: allowDue.available && allowDue.overdue ? '#ef4444' : allowDue.available && allowDue.daysUntil <= 30 ? '#f59e0b' : 'var(--text-secondary)', fontWeight: allowDue.available && allowDue.overdue ? 700 : 400 }}>
+                      {allowDue.available ? allowDue.dueDate : '—'}
+                    </td>
+                    <td style={{ fontSize:13, color:'#1a6bab', fontWeight:600 }}>{e.nextGrade || '—'}</td>
                     <td style={{ fontSize:12, color: retireAlert ? '#ef4444' : 'var(--text-secondary)', fontWeight: retireAlert ? 700 : 400 }}>{e.retirementDate}</td>
                     <td><span style={{ background:`${statusColor(e.status)}15`, color:statusColor(e.status), padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{e.status==='active'?L('status_active'):e.status==='leave'?L('status_leave'):e.status==='inactive'?L('status_inactive'):e.status}</span></td>
                     <td><div style={{ display:'flex', gap:6 }}>
@@ -225,17 +230,23 @@ function EmployeesTab({ lang }) {
                 <div><label className="form-label">{L('lbl_step')}</label><input type="number" min={1} max={12} value={form.step} onChange={e=>setForm(p=>({...p,step:e.target.value}))} className="form-control" /></div>
                 <div>
                   <label className="form-label">{L('lbl_certificate')}</label>
-                  <input list="certificate-options" value={form.certificate} onChange={e=>setForm(p=>({...p,certificate:e.target.value}))} className="form-control" />
-                  <datalist id="certificate-options">
-                    {[...new Set(promotionCycles.map(c => (c.certificate || '').trim()).filter(Boolean))].map(c => <option key={c} value={c} />)}
-                  </datalist>
+                  <input value={form.certificate} onChange={e=>setForm(p=>({...p,certificate:e.target.value}))} className="form-control" />
                 </div>
                 <div><label className="form-label">{L('lbl_salary_iq')}</label><input type="number" value={form.salary} onChange={e=>setForm(p=>({...p,salary:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_phone')}</label><input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_birth')}</label><input type="date" value={form.birthDate} onChange={e=>setForm(p=>({...p,birthDate:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_hire_date')}</label><input type="date" value={form.hireDate} onChange={e=>setForm(p=>({...p,hireDate:e.target.value}))} className="form-control" /></div>
-                <div><label className="form-label">{L('lbl_last_promo')}</label><input type="date" value={form.lastPromotion} onChange={e=>setForm(p=>({...p,lastPromotion:e.target.value}))} className="form-control" /></div>
-                <div><label className="form-label">{L('lbl_last_allow')}</label><input type="date" value={form.lastAllowance} onChange={e=>setForm(p=>({...p,lastAllowance:e.target.value}))} className="form-control" /></div>
+                <div>
+                  <label className="form-label">{L('lbl_last_promo')}</label>
+                  <input type="date" value={form.lastPromotion} onChange={e=>setForm(p=>({...p,lastPromotion:e.target.value}))} className="form-control" />
+                  {(() => { const d = calcPromotionDue(form); return d.available ? <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:2 }}>{L('col_due_promo')}: {d.dueDate}</div> : null; })()}
+                </div>
+                <div>
+                  <label className="form-label">{L('lbl_last_allow')}</label>
+                  <input type="date" value={form.lastAllowance} onChange={e=>setForm(p=>({...p,lastAllowance:e.target.value}))} className="form-control" />
+                  {(() => { const d = calcAllowanceDue(form); return d.available ? <div style={{ fontSize:11, color:'var(--text-secondary)', marginTop:2 }}>{L('col_due_allow')}: {d.dueDate}</div> : null; })()}
+                </div>
+                <div><label className="form-label">{L('lbl_next_grade')}</label><input value={form.nextGrade} onChange={e=>setForm(p=>({...p,nextGrade:e.target.value}))} placeholder="الرابعة/4" className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_est_retire')}</label><input type="date" value={form.retirementDate} onChange={e=>setForm(p=>({...p,retirementDate:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_status')}</label>
                   <select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))} className="form-control">

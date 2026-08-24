@@ -4,6 +4,11 @@
 // لملفات أصغر بمجلد frontend/src/pages/accounts/ (كل تبويب بملفه الخاص +
 // shared.js للثوابت المشتركة). التقسيم نسخ حرفي بدون أي تغيير بالمنطق أو
 // السلوك — راجع مجلد accounts/ لتفاصيل كل تبويب.
+//
+// ── إصلاح: تبويبا "الترفيعات" و"العلاوات" كانا منفصلين بجدولين مختلفين رغم
+// كثرة الحالات المشتركة (نفس الموظف، نفس السجل الإداري) — دُمِجا بتبويب واحد
+// "سجل الترفيعات والعلاوات" (راجع accounts/PromotionsAllowancesTab.js
+// وmigrations-sql/014_merge_promotions_allowances.sql).
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useT } from '../translations';
@@ -11,8 +16,7 @@ import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import GeneralTab from './accounts/GeneralTab';
 import SalariesTab from './accounts/SalariesTab';
-import PromotionsTab from './accounts/PromotionsTab';
-import AllowancesTab from './accounts/AllowancesTab';
+import PromotionsAllowancesTab from './accounts/PromotionsAllowancesTab';
 import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg,#064e3b,#059669)';
@@ -20,8 +24,7 @@ const BANNER_GRADIENT = 'linear-gradient(135deg,#064e3b,#059669)';
 const ACCT_TABS = [
   { key:'general',    labelKey:'acc_tab_general',   icon:'💰' },
   { key:'salaries',   labelKey:'acc_tab_salaries',  icon:'💵' },
-  { key:'promotions', labelKey:'acc_tab_promotions', icon:'⬆️' },
-  { key:'allowances', labelKey:'acc_tab_allowances', icon:'🎁' },
+  { key:'promotionsAllowances', labelKey:'acc_promo_allow_title', icon:'⬆️' },
 ];
 
 export default function AccountsPage() {
@@ -45,24 +48,26 @@ export default function AccountsPage() {
   const { lang, user } = useApp();
   const tr = useT(lang);
 
-  // ── إصلاح: الأرقام الحمراء بجانب "الترفيعات" و"العلاوات" كانت تُحسَب من
-  // بيانات تجريبية ثابتة بالكود (initPromotions/initAllowances) — رقم مجمَّد
-  // لا علاقة له بالبيانات الحقيقية إطلاقاً، حتى لو كل الترفيعات الحقيقية
-  // منجَزة فعلاً كان يبقى يعرض تنبيهاً وهمياً (أو العكس). الآن يُجلَب مباشرة
-  // من قاعدة البيانات الحقيقية.
+  // ── إصلاح: الأرقام الحمراء بجانب "الترفيعات والعلاوات" كانت تُحسَب من
+  // بيانات تجريبية ثابتة بالكود سابقاً — رقم مجمَّد لا علاقة له بالبيانات
+  // الحقيقية إطلاقاً. الآن يُجلَب مباشرة من قاعدة البيانات الحقيقية، وكلا
+  // العدَّادين (ترفيع مستحق/علاوة مستحقة) يُحسَبان من نفس السجل المُوحَّد.
   const [promotionDue, setPromotionDue] = useState(0);
   const [allowanceDue, setAllowanceDue] = useState(0);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([api.get('/promotions').catch(() => []), api.get('/allowances').catch(() => [])])
-      .then(([promotions, allowances]) => {
+    api.get('/promotionsAllowances').catch(() => [])
+      .then((records) => {
         if (cancelled) return;
-        if (Array.isArray(promotions)) setPromotionDue(promotions.filter(p => p.status === 'مستحق').length);
-        if (Array.isArray(allowances)) setAllowanceDue(allowances.filter(a => a.status === 'مستحقة').length);
+        if (Array.isArray(records)) {
+          setPromotionDue(records.filter(r => r.promotionStatus === 'مستحق').length);
+          setAllowanceDue(records.filter(r => r.allowanceStatus === 'مستحقة').length);
+        }
       });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const totalDue = promotionDue + allowanceDue;
 
   return (
     <div className="page-content">
@@ -78,16 +83,14 @@ export default function AccountsPage() {
             display:'flex', alignItems:'center', gap:6, fontFamily:'inherit', position:'relative',
           }}>
             {t.icon} {tr(t.labelKey)}
-            {t.key==='promotions' && promotionDue>0 && <span style={{ background:'#ef4444', color:'#fff', borderRadius:'50%', width:18, height:18, fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{promotionDue}</span>}
-            {t.key==='allowances' && allowanceDue>0 && <span style={{ background:'#f59e0b', color:'#fff', borderRadius:'50%', width:18, height:18, fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{allowanceDue}</span>}
+            {t.key==='promotionsAllowances' && totalDue>0 && <span style={{ background:'#ef4444', color:'#fff', borderRadius:'50%', width:18, height:18, fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{totalDue}</span>}
           </button>
         ))}
       </div>
 
       {tab==='general'    && <GeneralTab />}
       {tab==='salaries'   && <SalariesTab />}
-      {tab==='promotions' && <PromotionsTab />}
-      {tab==='allowances' && <AllowancesTab />}
+      {tab==='promotionsAllowances' && <PromotionsAllowancesTab />}
     </div>
   );
 }

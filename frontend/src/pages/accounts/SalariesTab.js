@@ -180,7 +180,7 @@ function SalariesTab() {
                     <td style={{ fontSize:12 }}>{lang==='ar'?e.grade:e.gradeEn||gradeEn(e.grade)||e.grade}</td>
                     <td style={{ fontWeight:600 }}>
                       {hasBaseSalary(e) ? `${Number(e.baseSalary).toLocaleString('en-US')} ${tr('iqd')}` : (
-                        <span title={lang==='ar' ? 'الراتب الأساسي غير مُدخَل لهذا السجل — يُحتسَب كصفر بالإجمالي والمتوسط أعلاه' : 'Base salary not entered for this record — counted as zero in the total/average above'} style={{ color:'#f59e0b', cursor:'help', display:'inline-flex', alignItems:'center', gap:4 }}>
+                        <span title={lang==='ar' ? 'الراتب الاسمي غير مُدخَل لهذا السجل — يُحتسَب كصفر بالإجمالي والمتوسط أعلاه' : 'Nominal salary not entered for this record — counted as zero in the total/average above'} style={{ color:'#f59e0b', cursor:'help', display:'inline-flex', alignItems:'center', gap:4 }}>
                           ⚠️ {lang==='ar' ? 'غير مُدخَل' : 'Missing'}
                         </span>
                       )}

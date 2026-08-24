@@ -26,15 +26,11 @@ export const SIDEBAR_SUB_TABS = {
     { key: 'retired', ar: 'المتقاعدون', en: 'Retired' },
     { key: 'dossiers', ar: 'الإضابير الشخصية', en: 'Personal Dossiers' },
     { key: 'barcode', ar: 'باركود الكتب', en: 'Letters Barcode' },
-    { key: 'adjustmentTypes', ar: 'أنواع التعديلات', en: 'Adjustment Types' },
-    { key: 'promotionCycles', ar: 'دورات الترفيع', en: 'Promotion Cycles' },
-    { key: 'promotionAdjustments', ar: 'تعديلات الموظفين', en: 'Employee Adjustments' },
   ],
   accounts: [
     { key: 'general', ar: 'الحسابات العامة', en: 'General Accounts' },
     { key: 'salaries', ar: 'كشف الرواتب', en: 'Salaries' },
-    { key: 'promotions', ar: 'الترفيعات', en: 'Promotions' },
-    { key: 'allowances', ar: 'العلاوات', en: 'Allowances' },
+    { key: 'promotionsAllowances', ar: 'سجل الترفيعات والعلاوات', en: 'Promotions & Allowances Record' },
   ],
   quality: [
     { key: 'kpi', ar: 'مؤشرات الأداء', en: 'KPIs' },

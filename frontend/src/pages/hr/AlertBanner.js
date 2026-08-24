@@ -3,29 +3,30 @@
 // الموارد البشرية.
 //
 // ── إصلاح: منطق العلاوة/الترفيع كان يفترض 12/24 شهراً ثابتة بلا أي علاقة
-// بدورة الشهادة/الدرجة الفعلية للموظف — استُبدل بالكامل بمحرك الحساب الحقيقي
-// (promotionCalc.js)، الذي يأخذ بعين الاعتبار جدول دورة الشهادة وكل سجلات
-// التعديل (كتب شكر/إجازات/عقوبات) لكل موظف. منطق التقاعد لم يتغيّر.
+// بدورة الشهادة الفعلية للموظف — استُبدل بمحرك الحساب الحقيقي
+// (promotionCalc.js: calcPromotionDue/calcAllowanceDue)، يعمل مباشرة على
+// سجل الموظف (lastPromotion/lastAllowance/certificate) بلا أي جدول منفصل.
+// منطق التقاعد لم يتغيّر.
 import { I18N, monthsUntil } from './shared';
-import { calcAllDue } from './promotionCalc';
+import { calcPromotionDue, calcAllowanceDue } from './promotionCalc';
 
 export default
-function AlertBanner({ employees, cycles, adjustments, lang }) {
+function AlertBanner({ employees, lang }) {
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const alerts = [];
+  const DUE_WITHIN_DAYS = 30;
 
-  calcAllDue(employees, cycles || [], adjustments || []).forEach(({ employee: e, due }) => {
-    const daysMsg = due.overdue
-      ? L('due_overdue')
-      : `${L('due_in_days')} ${due.daysUntil} ${L('due_days_unit')}`;
-    alerts.push({
-      type: due.type,
-      name: e.name,
-      msg: `${due.type === 'promotion' ? L('due_type_promotion') : L('due_type_allowance')} — ${due.dueDate} (${daysMsg})`,
-    });
-  });
-
-  employees.forEach(e => {
+  (employees || []).forEach(e => {
+    const promoDue = calcPromotionDue(e);
+    if (promoDue.available && promoDue.daysUntil <= DUE_WITHIN_DAYS) {
+      const daysMsg = promoDue.overdue ? L('due_overdue') : `${L('due_in_days')} ${promoDue.daysUntil} ${L('due_days_unit')}`;
+      alerts.push({ type:'promotion', name:e.name, msg:`${L('due_type_promotion')} — ${promoDue.dueDate} (${daysMsg})` });
+    }
+    const allowDue = calcAllowanceDue(e);
+    if (allowDue.available && allowDue.daysUntil <= DUE_WITHIN_DAYS) {
+      const daysMsg = allowDue.overdue ? L('due_overdue') : `${L('due_in_days')} ${allowDue.daysUntil} ${L('due_days_unit')}`;
+      alerts.push({ type:'allowance', name:e.name, msg:`${L('due_type_allowance')} — ${allowDue.dueDate} (${daysMsg})` });
+    }
     const u = monthsUntil(e.retirementDate);
     if (u >= 0 && u <= 12)
       alerts.push({ type:'retire', name:e.name, msg:`${L('alert_retire')} ${u} ${L('alert_retire_left')}` });

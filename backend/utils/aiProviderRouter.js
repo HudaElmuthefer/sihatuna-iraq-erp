@@ -28,7 +28,7 @@ const { ollamaAvailable, callOllama, callOllamaWithImage } = require('./ollamaSe
 
 const SETTINGS_KEY = 'ai_provider_settings';
 // أسماء الميزات بالضبط كما تُستخدَم بمفاتيح الإعداد المحفوظ.
-const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck', 'billingAnomaly'];
+const FEATURES = ['invoiceReader', 'drugInteractions', 'prescriptionReader', 'aiDiagnosis', 'dosageValidation', 'allergyCheck', 'billingAnomaly', 'inventoryPrediction'];
 const VALID_MODES = ['bot', 'online', 'offline'];
 // الافتراضي 'online' يطابق تماماً السلوك الحالي قبل هذه الميزة (Gemini أولاً
 // دائماً) — لا يكسر أي نشر موجود لم يُعدِّل الإعداد صراحة بعد.

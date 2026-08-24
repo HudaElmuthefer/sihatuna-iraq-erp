@@ -32,6 +32,7 @@ import SettingsPage from './pages/SettingsPage';
 import InventoryPage from './pages/InventoryPage';
 import ProcurementPage from './pages/ProcurementPage';
 import BillingAnomalyPage from './pages/BillingAnomalyPage';
+import InventoryPredictionPage from './pages/InventoryPredictionPage';
 import ProjectsPage from './pages/ProjectsPage';
 import QualityPage from './pages/QualityPage';
 import LaboratoryPage from './pages/LaboratoryPage';
@@ -103,6 +104,7 @@ function AppRoutes() {
           <Route path="billing"            element={<ProtectedRoute pageKey="billing"><BillingPage /></ProtectedRoute>} />
           <Route path="procurement"        element={<ProtectedRoute pageKey="procurement"><ProcurementPage /></ProtectedRoute>} />
           <Route path="billing-anomaly"    element={<ProtectedRoute pageKey="billing-anomaly"><BillingAnomalyPage /></ProtectedRoute>} />
+          <Route path="inventory-prediction" element={<ProtectedRoute pageKey="inventory-prediction"><InventoryPredictionPage /></ProtectedRoute>} />
           {/* HR */}
           <Route path="hr"                 element={<ProtectedRoute pageKey="hr"><HRPage /></ProtectedRoute>} />
           {/* Projects */}

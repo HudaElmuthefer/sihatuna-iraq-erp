@@ -7,7 +7,7 @@ import useServerPagination from '../../hooks/useServerPagination';
 import Pagination from '../../components/Pagination';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
-import { useBackendLoad, initEmployees, I18N, monthsAgo, monthsUntil, printTable } from './shared';
+import { useBackendLoad, initEmployees, initPromotionCycles, initPromotionAdjustments, I18N, monthsAgo, monthsUntil, printTable } from './shared';
 import AlertBanner from './AlertBanner';
 import DateRangeFilter from '../../components/DateRangeFilter';
 
@@ -17,6 +17,12 @@ function EmployeesTab({ lang }) {
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [employees, setEmployees] = useState(initEmployees);
   useBackendLoad('employees', setEmployees);
+  // ── محرّك حساب استحقاق العلاوة/الترفيع يحتاج جدولي الدورات والتعديلات دفعة
+  // واحدة (راجع promotionCalc.js وAlertBanner.js أدناه).
+  const [promotionCycles, setPromotionCycles] = useState(initPromotionCycles);
+  useBackendLoad('promotionCycles', setPromotionCycles);
+  const [promotionAdjustments, setPromotionAdjustments] = useState(initPromotionAdjustments);
+  useBackendLoad('promotionAdjustments', setPromotionAdjustments);
 
   const [empSearch, setEmpSearch] = useState('');
   const [empDebouncedSearch, setEmpDebouncedSearch] = useState('');
@@ -39,7 +45,7 @@ function EmployeesTab({ lang }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
-  const empty = { name:'', jobTitle:'', dept:'', grade: lang==='ar'?'الأولى':'First', step:1, salary:'', hireDate:'', birthDate:'', phone:'', status: 'active', lastPromotion:'', lastAllowance:'', retirementDate:'', notes:'' };
+  const empty = { name:'', jobTitle:'', dept:'', grade: lang==='ar'?'الأولى':'First', certificate:'', step:1, salary:'', hireDate:'', birthDate:'', phone:'', status: 'active', lastPromotion:'', lastAllowance:'', retirementDate:'', notes:'' };
   const [form, setForm] = useState(empty);
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -102,7 +108,7 @@ function EmployeesTab({ lang }) {
 
   return (
     <div>
-      <AlertBanner employees={employees} lang={lang} />
+      <AlertBanner employees={employees} cycles={promotionCycles} adjustments={promotionAdjustments} lang={lang} />
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <h3 style={{ margin:0 }}>{L('emp_list')} ({empTotalItems})</h3>
         <input
@@ -160,7 +166,7 @@ function EmployeesTab({ lang }) {
                   });
                 }} />
               </th>
-              <th>{L('col_name')}</th><th>{L('col_title')}</th><th>{L('col_dept')}</th><th>{L('col_grade')}</th>
+              <th>{L('col_name')}</th><th>{L('col_title')}</th><th>{L('col_dept')}</th><th>{L('col_grade')}</th><th>{L('lbl_certificate')}</th>
               <th>{L('col_salary')}</th><th>{L('col_hire')}</th><th>{L('col_last_promo')}</th><th>{L('col_last_allow')}</th>
               <th>{L('col_retire_date')}</th><th>{L('col_status')}</th><th>{L('col_actions')}</th>
             </tr></thead>
@@ -176,6 +182,7 @@ function EmployeesTab({ lang }) {
                     <td style={{ fontSize:13 }}>{lang==='ar'?e.jobTitle:e.jobTitleEn||e.jobTitle}</td>
                     <td><span style={{ background:'rgba(26,107,171,0.1)', color:'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12 }}>{lang==='ar'?e.dept:e.deptEn||e.dept}</span></td>
                     <td style={{ fontSize:13, direction:'ltr', textAlign:'center' }}>{lang==='ar'?e.grade:e.gradeEn||e.grade} / {e.step}</td>
+                    <td style={{ fontSize:13, color:'var(--text-secondary)' }}>{e.certificate||'—'}</td>
                     <td style={{ fontWeight:600, color:'#22c55e' }}>{Number(e.salary).toLocaleString('en-US')} {L('iqd')}</td>
                     <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{e.hireDate}</td>
                     <td style={{ fontSize:12, color: promAlert ? '#1a6bab' : 'var(--text-secondary)' }}>{e.lastPromotion}{promAlert && <span> ⬆️</span>}</td>
@@ -216,6 +223,13 @@ function EmployeesTab({ lang }) {
                 <div><label className="form-label">{L('lbl_dept_lbl')}</label><select value={form.dept} onChange={e=>setForm(p=>({...p,dept:e.target.value}))} className="form-control"><option value="">{L('choose')}</option>{DEPTS.map(d=><option key={d}>{d}</option>)}</select></div>
                 <div><label className="form-label">{L('lbl_grade')}</label><select value={form.grade} onChange={e=>setForm(p=>({...p,grade:e.target.value}))} className="form-control">{GRADES.map(g=><option key={g}>{g}</option>)}</select></div>
                 <div><label className="form-label">{L('lbl_step')}</label><input type="number" min={1} max={12} value={form.step} onChange={e=>setForm(p=>({...p,step:e.target.value}))} className="form-control" /></div>
+                <div>
+                  <label className="form-label">{L('lbl_certificate')}</label>
+                  <input list="certificate-options" value={form.certificate} onChange={e=>setForm(p=>({...p,certificate:e.target.value}))} className="form-control" />
+                  <datalist id="certificate-options">
+                    {[...new Set(promotionCycles.map(c => (c.certificate || '').trim()).filter(Boolean))].map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
                 <div><label className="form-label">{L('lbl_salary_iq')}</label><input type="number" value={form.salary} onChange={e=>setForm(p=>({...p,salary:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_phone')}</label><input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} className="form-control" /></div>
                 <div><label className="form-label">{L('lbl_birth')}</label><input type="date" value={form.birthDate} onChange={e=>setForm(p=>({...p,birthDate:e.target.value}))} className="form-control" /></div>

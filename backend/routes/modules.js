@@ -769,6 +769,111 @@ const registerAllModules = (router) => {
     ],
   });
 
+  // ── نظام حساب استحقاق العلاوة/الترفيع: أنواع التعديلات ───────────────────────
+  registerExcelImport(router, 'adjustmentTypes', collectionSchemas.adjustmentTypes, {
+    'الاسم': 'name', 'Name': 'name',
+    'الاسم بالإنجليزية': 'nameEn', 'Name (English)': 'nameEn',
+    'الاتجاه': 'directionRaw', 'Direction': 'directionRaw',
+    'ملاحظات': 'notes', 'Notes': 'notes',
+  }, {
+    hospitalScoped: true, permission: 'hr',
+    indexedColumns: [],
+    limiter: importLimiter,
+    duplicateCheck: ['name'],
+    afterParse: (row) => {
+      const { directionRaw, ...rest } = row;
+      const map = { 'يقدّم': 'advances', 'يقدم': 'advances', advances: 'advances', 'يؤخّر': 'delays', 'يؤخر': 'delays', delays: 'delays' };
+      const d = (directionRaw || '').toString().trim();
+      rest.direction = map[d] || map[d.toLowerCase()] || 'delays';
+      return rest;
+    },
+    template: [
+      { header: 'الاسم', example: 'كتاب شكر وتقدير' },
+      { header: 'الاسم بالإنجليزية', example: 'Commendation Letter' },
+      { header: 'الاتجاه', example: 'يقدّم' },
+      { header: 'ملاحظات', example: 'يقدّم تاريخ الاستحقاق بمقدار مدة السجل' },
+    ],
+  });
+
+  // ── نظام حساب استحقاق العلاوة/الترفيع: جدول مدة الدورة حسب الشهادة/الدرجة ────
+  registerExcelImport(router, 'promotionCycles', collectionSchemas.promotionCycles, {
+    'الشهادة': 'certificate', 'Certificate': 'certificate',
+    'الشهادة بالإنجليزية': 'certificateEn', 'Certificate (English)': 'certificateEn',
+    'الدرجة الوظيفية': 'grade', 'Grade': 'grade',
+    'عدد سنوات الدورة': 'cycleYears', 'Cycle Years': 'cycleYears',
+    'ملاحظات': 'notes', 'Notes': 'notes',
+  }, {
+    hospitalScoped: true, permission: 'hr',
+    indexedColumns: [],
+    limiter: importLimiter,
+    duplicateCheck: ['certificate', 'grade'],
+    afterParse: (row) => {
+      row.cycleYears = Number(row.cycleYears) || 0;
+      row.grade = row.grade || '';
+      return row;
+    },
+    template: [
+      { header: 'الشهادة', example: 'بكالوريوس' },
+      { header: 'الشهادة بالإنجليزية', example: "Bachelor's" },
+      { header: 'الدرجة الوظيفية', example: '' },
+      { header: 'عدد سنوات الدورة', example: '4' },
+      { header: 'ملاحظات', example: '' },
+    ],
+  });
+
+  // ── نظام حساب استحقاق العلاوة/الترفيع: سجلات تعديل الموظفين ─────────────────
+  // نفس نمط admissions/documentLookupRoutes بالضبط: يُرسَل اسم الموظف واسم
+  // نوع التعديل كنص من Excel، ويُحوَّلان هنا لمعرّفين رقميين حقيقيين (employeeId
+  // وadjustmentTypeId) بالبحث المباشر بجدولي employees وadjustment_types —
+  // direction يُنسَخ وقت الإدخال من تعريف النوع الحالي (ثبات الحساب التاريخي
+  // حتى لو تغيّر تعريف النوع لاحقاً، راجع migrations-sql/012 للشرح الكامل).
+  registerExcelImport(router, 'promotionAdjustments', collectionSchemas.promotionAdjustments, {
+    'اسم الموظف': 'employeeName', 'Employee Name': 'employeeName',
+    'نوع التعديل': 'adjustmentTypeName', 'Adjustment Type': 'adjustmentTypeName',
+    'التاريخ': 'date', 'Date': 'date',
+    'المدة بالأشهر': 'durationMonths', 'Duration (Months)': 'durationMonths',
+    'رقم القرار': 'decisionNo', 'Decision No': 'decisionNo',
+    'ملاحظات': 'notes', 'Notes': 'notes',
+  }, {
+    hospitalScoped: true, permission: 'hr',
+    indexedColumns: [],
+    limiter: importLimiter,
+    duplicateCheck: ['employeeName', 'adjustmentTypeName', 'date'],
+    afterParse: async (row, hospitalId) => {
+      const { employeeName, adjustmentTypeName, ...rest } = row;
+      rest.employeeName = employeeName || '';
+      if (employeeName) {
+        try {
+          const conditions = [`data->>'name' = $1`];
+          const values = [employeeName];
+          if (hospitalId) { values.push(hospitalId); conditions.push(`data->>'hospitalId' = $${values.length}`); }
+          const result = await pool.query(`SELECT id FROM employees WHERE ${conditions.join(' AND ')} LIMIT 1`, values);
+          if (result.rows.length > 0) rest.employeeId = result.rows[0].id;
+        } catch { /* فشل البحث — employeeId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح بدل ربط خاطئ */ }
+      }
+      if (adjustmentTypeName) {
+        try {
+          const result = await pool.query(`SELECT id, data->>'direction' AS direction FROM adjustment_types WHERE data->>'name' = $1 LIMIT 1`, [adjustmentTypeName]);
+          if (result.rows.length > 0) {
+            rest.adjustmentTypeId = result.rows[0].id;
+            rest.adjustmentTypeName = adjustmentTypeName;
+            rest.direction = result.rows[0].direction;
+          }
+        } catch { /* فشل البحث — adjustmentTypeId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح */ }
+      }
+      rest.durationMonths = Number(rest.durationMonths) || 0;
+      return rest;
+    },
+    template: [
+      { header: 'اسم الموظف', example: 'رنا محمد النجار' },
+      { header: 'نوع التعديل', example: 'كتاب شكر وتقدير' },
+      { header: 'التاريخ', example: '2026-07-01' },
+      { header: 'المدة بالأشهر', example: '2' },
+      { header: 'رقم القرار', example: '' },
+      { header: 'ملاحظات', example: '' },
+    ],
+  });
+
   // ── الموارد البشرية: الكتب الصادرة (outgoing) ───────────────────────────────
   registerExcelImport(router, 'outgoing', collectionSchemas.outgoing, {
     'رقم الصادر': 'ref', 'Ref No': 'ref',
@@ -1434,6 +1539,12 @@ const registerAllModules = (router) => {
   pgCrud(router, 'promotions', collectionSchemas.promotions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
   pgCrud(router, 'allowances', collectionSchemas.allowances, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts', extraFilterFields: ['status'] });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });
+  // ── نظام حساب استحقاق العلاوة/الترفيع ────────────────────────────────────────
+  // ثلاثة جداول عامة (راجع migrations-sql/012_promotion_cycle_system.sql
+  // لشرح كل جدول ولماذا adjustment_types قابل للتوسيع بدل ثوابت بالكود).
+  pgCrud(router, 'adjustmentTypes', collectionSchemas.adjustmentTypes, [], 'adjustment_types', { hospitalScoped: true, permission: 'hr' });
+  pgCrud(router, 'promotionCycles', collectionSchemas.promotionCycles, [], 'promotion_cycles', { hospitalScoped: true, permission: 'hr' });
+  pgCrud(router, 'promotionAdjustments', collectionSchemas.promotionAdjustments, [], 'promotion_adjustments', { hospitalScoped: true, permission: 'hr' });
   pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [{ field: 'status', column: 'status' }], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
   // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
   pgCrud(router, 'ambulanceMaintenanceLog', collectionSchemas.ambulanceMaintenanceLog, [

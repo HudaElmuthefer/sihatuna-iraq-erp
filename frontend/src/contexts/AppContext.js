@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api, checkBackendReachable, LOGO_IMAGE_URL } from '../api';
+import { calcAllDue } from '../pages/hr/promotionCalc';
 
 const AppContext = createContext(null);
 export { AppContext };
@@ -1126,7 +1127,8 @@ export function AppProvider({ children }) {
   // فعلاً انحلّت المشكلة. الآن أي صفحة تستطيع طلب تحديث فوري لهذا المصدر عبر
   // refreshNotifSources() بعد أي إجراء يُفترَض يُسقِط تنبيهاً (إعطاء جرعة،
   // تصفير حالة "مستحق" بترفيع أو بدل...).
-  const [medNotifSource, setMedNotifSource] = useState({ admissions: [], orders: [], administrations: [], promotions: [], allowances: [] });
+  const EMPTY_NOTIF_SOURCE = { admissions: [], orders: [], administrations: [], promotions: [], allowances: [], employees: [], promotionCycles: [], promotionAdjustments: [] };
+  const [medNotifSource, setMedNotifSource] = useState(EMPTY_NOTIF_SOURCE);
   const [notifRefreshTick, setNotifRefreshTick] = useState(0);
   const refreshNotifSources = useCallback(() => setNotifRefreshTick(t => t + 1), []);
   useEffect(() => {
@@ -1138,15 +1140,19 @@ export function AppProvider({ children }) {
     // الآن تُجلَب فقط المجموعة التي يستطيع المستخدم فعلاً رؤية بياناتها.
     const canWards = user.role === 'admin' || (user.permissions || []).includes('wards');
     const canAccounts = user.role === 'admin' || (user.permissions || []).includes('accounts');
-    if (!canWards && !canAccounts) { setMedNotifSource({ admissions: [], orders: [], administrations: [], promotions: [], allowances: [] }); return; }
+    const canHR = user.role === 'admin' || (user.permissions || []).includes('hr');
+    if (!canWards && !canAccounts && !canHR) { setMedNotifSource(EMPTY_NOTIF_SOURCE); return; }
     Promise.all([
       canWards ? api.get('/admissions') : Promise.resolve([]),
       canWards ? api.get('/medicationOrders') : Promise.resolve([]),
       canWards ? api.get('/medicationAdministrations') : Promise.resolve([]),
       canAccounts ? api.get('/promotions') : Promise.resolve([]),
       canAccounts ? api.get('/allowances') : Promise.resolve([]),
+      canHR ? api.get('/employees') : Promise.resolve([]),
+      canHR ? api.get('/promotionCycles') : Promise.resolve([]),
+      canHR ? api.get('/promotionAdjustments') : Promise.resolve([]),
     ])
-      .then(([admissions, orders, administrations, promotions, allowances]) => {
+      .then(([admissions, orders, administrations, promotions, allowances, employees, promotionCycles, promotionAdjustments]) => {
         if (cancelled) return;
         setMedNotifSource({
           admissions: Array.isArray(admissions) ? admissions : [],
@@ -1154,6 +1160,9 @@ export function AppProvider({ children }) {
           administrations: Array.isArray(administrations) ? administrations : [],
           promotions: Array.isArray(promotions) ? promotions : [],
           allowances: Array.isArray(allowances) ? allowances : [],
+          employees: Array.isArray(employees) ? employees : [],
+          promotionCycles: Array.isArray(promotionCycles) ? promotionCycles : [],
+          promotionAdjustments: Array.isArray(promotionAdjustments) ? promotionAdjustments : [],
         });
       }).catch(() => {});
     return () => { cancelled = true; };
@@ -1298,6 +1307,22 @@ export function AppProvider({ children }) {
         time: lang === 'ar' ? 'الحسابات — البدلات' : 'Accounts — Allowances',
         link: '/accounts',
       }));
+
+    // ── مواعيد العلاوة/الترفيع القادمة (محرّك حساب حقيقي، راجع hr/promotionCalc.js) ──
+    calcAllDue(filterByViewingHospital(medNotifSource.employees), medNotifSource.promotionCycles, medNotifSource.promotionAdjustments)
+      .slice(0, 8)
+      .forEach(({ employee: e, due }) => {
+        const isPromo = due.type === 'promotion';
+        list.push({
+          id: `hrdue-${e.id}`,
+          type: 'alert',
+          message: lang === 'ar'
+            ? `${isPromo ? '⬆️ ترفيع' : '💰 علاوة'} ${due.overdue ? 'متأخر' : 'مستحق قريباً'} — ${e.name} (${due.dueDate})`
+            : `${isPromo ? '⬆️ Promotion' : '💰 Allowance'} ${due.overdue ? 'overdue' : 'due soon'} — ${e.name} (${due.dueDate})`,
+          time: lang === 'ar' ? 'الموارد البشرية' : 'HR',
+          link: '/hr',
+        });
+      });
 
     return list.map(n => ({ ...n, read: readNotifIds.has(n.id) }));
   }, [inventory, procurement, appointments, documents, invoices, patients, medNotifSource, readNotifIds, lang, filterByViewingHospital]);

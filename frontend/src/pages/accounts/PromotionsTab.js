@@ -1,6 +1,6 @@
 // frontend/src/pages/accounts/PromotionsTab.js
 // استُخرج من AccountsPage.js — تبويب الترفيعات.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
@@ -12,15 +12,26 @@ import { api } from '../../api';
 
 export default
 function PromotionsTab() {
-  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources } = useApp();
+  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources, user } = useApp();
   const tr = useT(lang);
   const [promotionsRaw, setPromotions] = usePersistedTab('acc_promotions', 'promotions', initPromotions);
   const promotions = filterByViewingHospital(promotionsRaw);
   const { pageItems: promoPageItems, currentPage: promoCurrentPage, setCurrentPage: setPromoCurrentPage, totalPages: promoTotalPages, totalItems: promoTotalItems } = usePagination(promotions, 50);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const empty = { name:'', fromGrade:'', toGrade:'', date:today, salaryBefore:'', salaryAfter:'', decisionNo:'', status:'done', notes:'' };
+  const empty = { employeeId:'', name:'', fromGrade:'', toGrade:'', date:today, salaryBefore:'', salaryAfter:'', decisionNo:'', status:'done', notes:'', pendingAccountsAction:false };
   const [form, setForm] = useState(empty);
+  // ── قائمة الموظفين لربط سجل الترفيع بموظف حقيقي (employeeId) بدل الاسم
+  // النصي فقط — ضروري لتحديث lastPromotion تلقائياً ولعلامة "بانتظار إجراء
+  // الحسابات" (راجع save() أدناه وبند 8 من مواصفة نظام حساب الاستحقاق).
+  const [employees, setEmployees] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api.get('/employees').then(data => { if (!cancelled && Array.isArray(data)) setEmployees(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  const pendingAction = promotions.filter(p => p.pendingAccountsAction);
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -57,14 +68,21 @@ function PromotionsTab() {
   const save = async () => {
     if (!form.name) { showToast(tr('msg_required'),'error'); return; }
     const prev = promotions;
+    // ── إصلاح ترفيعات مستحقة: إصدار/حفظ أمر ترفيع كـ"مُنجَز" لموظف مربوط
+    // (employeeId) هو نقطة التسليم للحسابات — يُعلَّم السجل pendingAccountsAction
+    // ليظهر بانتظار إجراء الحسابات، ويُحدَّث lastPromotion بالموظف نفسه
+    // لتصفير دورة الاستحقاق (راجع hr/promotionCalc.js). هذا لا يحسب الراتب
+    // تلقائياً — فقط إشارة يدوية يوضحها موظف الحسابات لاحقاً.
+    const justCompleted = form.status === 'مُنجَز' && form.employeeId && !(editing && editing.status === 'مُنجَز' && editing.employeeId === form.employeeId);
+    const payload = { ...form, pendingAccountsAction: justCompleted ? true : !!form.pendingAccountsAction };
     if (editing) {
-      const up = {...form,id:editing.id};
+      const up = {...payload,id:editing.id};
       setPromotions(p=>p.map(r=>r.id===editing.id?up:r));
       const ok = await syncToServer('promotions','update',up);
       if (!ok) { setPromotions(prev); return; }
       showToast(tr('msg_saved'),'success');
     } else {
-      const np = {...form,id:Date.now()};
+      const np = {...payload,id:Date.now()};
       setPromotions(p=>[...p,np]);
       const synced = await syncToServer('promotions','create',np);
       if (!synced) { setPromotions(prev); return; }
@@ -73,8 +91,17 @@ function PromotionsTab() {
       }
       showToast(tr('msg_saved'),'success');
     }
+    if (justCompleted) {
+      const emp = employees.find(e => String(e.id) === String(form.employeeId));
+      if (emp) await syncToServer('employees','update',{...emp,lastPromotion:form.date||today});
+    }
     setShowModal(false);
     refreshNotifSources();
+  };
+  const clearPendingAction = async (p) => {
+    const up = {...p, pendingAccountsAction:false};
+    setPromotions(prv=>prv.map(r=>r.id===p.id?up:r));
+    await syncToServer('promotions','update',up);
   };
 
   return (
@@ -84,6 +111,18 @@ function PromotionsTab() {
         <div style={{ background:'rgba(26,107,171,0.08)', border:'1px solid rgba(26,107,171,0.3)', borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
           <div style={{ fontWeight:700, color:'#1a6bab', marginBottom:6 }}>{tr('acc_due_promotions')} ({due.length})</div>
           {due.map(d=><div key={d.id} style={{ fontSize:13, color:'var(--text-primary)', padding:'3px 0' }}>• {d.name} — {d.notes}</div>)}
+        </div>
+      )}
+
+      {pendingAction.length > 0 && (
+        <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
+          <div style={{ fontWeight:700, color:'#f59e0b', marginBottom:6 }}>{tr('acc_pending_salary_banner')} ({pendingAction.length})</div>
+          {pendingAction.map(p=>(
+            <div key={p.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:13, color:'var(--text-primary)', padding:'3px 0' }}>
+              <span>• {p.name} — {p.date}</span>
+              <button onClick={()=>clearPendingAction(p)} style={{ padding:'3px 10px', borderRadius:6, border:'1px solid rgba(245,158,11,0.4)', background:'transparent', color:'#f59e0b', cursor:'pointer', fontSize:11 }}>{tr('acc_clear_pending_action')}</button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -145,7 +184,10 @@ function PromotionsTab() {
                 <td style={{ fontSize:13 }}>{p.salaryBefore?Number(p.salaryBefore).toLocaleString('en-US'):'—'}</td>
                 <td style={{ fontSize:13, color:'#22c55e', fontWeight:600 }}>{p.salaryAfter?Number(p.salaryAfter).toLocaleString('en-US'):'—'}</td>
                 <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{p.decisionNo||'—'}</td>
-                <td><span style={{ background:p.status==='done'?'#dcfce7':'rgba(26,107,171,0.1)', color:p.status==='done'?'#166534':'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{displayValue(p.status, tr)}</span></td>
+                <td>
+                  <span style={{ background:p.status==='done'?'#dcfce7':'rgba(26,107,171,0.1)', color:p.status==='done'?'#166534':'#1a6bab', padding:'2px 8px', borderRadius:8, fontSize:12, fontWeight:600 }}>{displayValue(p.status, tr)}</span>
+                  {p.pendingAccountsAction && <span style={{ display:'block', marginTop:4, background:'rgba(245,158,11,0.1)', color:'#f59e0b', padding:'2px 8px', borderRadius:8, fontSize:11, fontWeight:600 }}>{tr('acc_pending_salary_action')}</span>}
+                </td>
                 <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(p)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(p.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
               </tr>
             ))}
@@ -160,6 +202,13 @@ function PromotionsTab() {
             <div className="modal-header"><h3 style={{ margin:0 }}>{editing?(tr('auto_pair_11')):(tr('auto_pair_12'))}</h3><button onClick={()=>setShowModal(false)} style={{ background:'none',border:'none',cursor:'pointer',fontSize:22 }}>×</button></div>
             <div className="modal-body">
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label className="form-label">{tr('acc_select_employee')}</label>
+                  <select value={form.employeeId||''} onChange={e=>{ const emp = employees.find(x=>String(x.id)===e.target.value); setForm(p=>({...p, employeeId:e.target.value, name: emp ? emp.name : p.name})); }} className="form-control">
+                    <option value="">—</option>
+                    {employees.map(emp=><option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                  </select>
+                </div>
                 <div style={{ gridColumn:'1/-1' }}><label className="form-label">{tr('auto_pair_13')}</label><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="form-control" /></div>
                 {multiHospitalEnabled && (
                   <div><label className="form-label">{lang==='ar'?'المنشأة':'Facility'}</label>

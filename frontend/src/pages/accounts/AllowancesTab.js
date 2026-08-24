@@ -1,6 +1,6 @@
 // frontend/src/pages/accounts/AllowancesTab.js
 // استُخرج من AccountsPage.js — تبويب البدلات.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
@@ -12,16 +12,25 @@ import { api } from '../../api';
 
 export default
 function AllowancesTab() {
-  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources } = useApp();
+  const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources, user } = useApp();
   const tr = useT(lang);
   const [allowancesRaw, setAllowances] = usePersistedTab('acc_allowances', 'allowances', initAllowances);
   const allowances = filterByViewingHospital(allowancesRaw);
   const { pageItems: allowPageItems, currentPage: allowCurrentPage, setCurrentPage: setAllowCurrentPage, totalPages: allowTotalPages, totalItems: allowTotalItems } = usePagination(allowances, 50);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const empty = { name:'', type:'annual', amount:'', date:today, decisionNo:'', status:'مدفوع', notes:'' };
+  const empty = { employeeId:'', name:'', type:'annual', amount:'', date:today, decisionNo:'', status:'مدفوع', notes:'' };
   const [form, setForm] = useState(empty);
   const TYPES = ['annual','risk','field','specialty','social'];
+  // ── ربط سجل العلاوة بموظف حقيقي — يماثل PromotionsTab.js، لتحديث
+  // lastAllowance تلقائياً عند صرف العلاوة (راجع hr/promotionCalc.js).
+  const [employees, setEmployees] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api.get('/employees').then(data => { if (!cancelled && Array.isArray(data)) setEmployees(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id]);
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -57,6 +66,9 @@ function AllowancesTab() {
   const save = async () => {
     if (!form.name || !form.amount) { showToast(tr('msg_required'),'error'); return; }
     const prev = allowances;
+    // صرف علاوة (status='مدفوع') لموظف مربوط يحدّث lastAllowance تلقائياً —
+    // يماثل تحديث lastPromotion بـPromotionsTab.js.
+    const justPaid = form.status === 'مدفوع' && form.employeeId && !(editing && editing.status === 'مدفوع' && editing.employeeId === form.employeeId);
     if (editing) {
       const ua = {...form,id:editing.id};
       setAllowances(p=>p.map(a=>a.id===editing.id?ua:a));
@@ -72,6 +84,10 @@ function AllowancesTab() {
         setAllowances(p => p.map(a => a.id === na.id ? synced : a));
       }
       showToast(tr('msg_saved'),'success');
+    }
+    if (justPaid) {
+      const emp = employees.find(e => String(e.id) === String(form.employeeId));
+      if (emp) await syncToServer('employees','update',{...emp,lastAllowance:form.date||today});
     }
     setShowModal(false);
     refreshNotifSources();
@@ -159,6 +175,13 @@ function AllowancesTab() {
             <div className="modal-header"><h3 style={{ margin:0 }}>{editing?(tr('auto_pair_26')):(tr('auto_pair_27'))}</h3><button onClick={()=>setShowModal(false)} style={{ background:'none',border:'none',cursor:'pointer',fontSize:22 }}>×</button></div>
             <div className="modal-body">
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label className="form-label">{tr('acc_select_employee')}</label>
+                  <select value={form.employeeId||''} onChange={e=>{ const emp = employees.find(x=>String(x.id)===e.target.value); setForm(p=>({...p, employeeId:e.target.value, name: emp ? emp.name : p.name})); }} className="form-control">
+                    <option value="">—</option>
+                    {employees.map(emp=><option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                  </select>
+                </div>
                 <div style={{ gridColumn:'1/-1' }}><label className="form-label">{tr('auto_pair_28')}</label><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="form-control" /></div>
                 {multiHospitalEnabled && (
                   <div><label className="form-label">{lang==='ar'?'المنشأة':'Facility'}</label>

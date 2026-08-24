@@ -47,6 +47,11 @@ describe('GET/POST/DELETE /api/employees/:id/dossier', () => {
     const refetch = await request(app).get('/api/employees/1/dossier').set('Authorization', `Bearer ${token}`);
     expect(refetch.body.length).toBe(1);
     expect(refetch.body[0].filePath).toBe(res.body.filePath);
+
+    // تنظيف: خلافاً لاختبار الموظف 2 (يحذف صراحة ضمن اختباره)، هذا السجل
+    // كان يبقى بقاعدة الاختبار المشتركة (sihatuna_iraq_test) بعد انتهاء
+    // الاختبار، فيُفسد الاختبار الأول ("قائمة فارغة") بأي تشغيل تالٍ للسويت.
+    await request(app).delete(`/api/employees/1/dossier/${res.body.id}`).set('Authorization', `Bearer ${token}`);
   });
 
   test('حذف وثيقة يعمل بشكل صحيح', async () => {

@@ -96,6 +96,19 @@ module.exports = {
   salaries: {
     name: { required: true, type: 'string' },
   },
+  adjustmentTypes: {
+    name: { required: true, type: 'string' },
+    direction: { required: true, type: 'string' },
+  },
+  promotionCycles: {
+    certificate: { required: true, type: 'string' },
+    cycleYears: { required: true },
+  },
+  promotionAdjustments: {
+    employeeId: { required: true },
+    adjustmentTypeId: { required: true },
+    durationMonths: { required: true },
+  },
   ambulanceVehicles: {
     code: { required: true, type: 'string' },
     plate: { required: true, type: 'string' },

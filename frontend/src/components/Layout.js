@@ -37,6 +37,7 @@ export default function Layout() {
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
+  const notifRef = React.useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -88,6 +89,23 @@ export default function Layout() {
     window.addEventListener('afterprint', resetOverlay);
     return () => window.removeEventListener('afterprint', resetOverlay);
   }, [setPrintOverlay]);
+
+  // إصلاح خلل: قائمة الإشعارات المنسدلة (🔔) كانت بلا أي طريقة لإغلاقها سوى
+  // الضغط على إشعار بعينه أو زر الجرس نفسه مجدداً — لا الضغط خارجها، ولا
+  // التنقّل لصفحة أخرى. بما أن Layout (وبالتالي هذه القائمة) يبقى مثبَّتاً
+  // عبر كل الصفحات (فقط <Outlet/> يتغيّر)، فتحها مرة ثم التنقّل لأي صفحة
+  // أخرى (مثل الموظفين بالموارد البشرية أو سجل الترفيعات والعلاوات بالحسابات)
+  // كان يبقيها ظاهرة فوق محتوى تلك الصفحة — وهذا بالضبط ما بدا وكأنه "الجدول
+  // استُبدل بقائمة تنبيهات" على أكثر من صفحة مختلفة بلا أي علاقة فعلية بينها.
+  React.useEffect(() => {
+    if (!showNotif) return;
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotif]);
+  React.useEffect(() => { setShowNotif(false); }, [location.pathname]);
 
   const unread = notifications.filter(n => !n.read).length;
   // الصفحات الظاهرة = صلاحيات الدور (كما كان) + صفحات منشأة المستخدم المفعّلة
@@ -456,7 +474,7 @@ export default function Layout() {
             {/* Universal print-to-PDF (hidden on pages with their own custom print/export flow — see printConfig.js) */}
             <PrintButton hidden={printButtonHidden} onPrint={handlePrint} />
             {/* Notifications */}
-            <div style={{ position: 'relative' }}>
+            <div ref={notifRef} style={{ position: 'relative' }}>
               <button onClick={() => setShowNotif(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 16, position: 'relative' }}>
                 🔔
                 {unread > 0 && (

@@ -65,7 +65,7 @@ function PromotionsAllowancesTab() {
   const openEdit = (r) => { setEditing(r); setForm({...empty, ...r}); setShowModal(true); };
   const del = async (id) => {
     if (!(await confirmDialog(tr('x_hlantmtakd_laimknaltraja')))) return;
-    const prev = records;
+    const prev = recordsRaw;
     setRecords(p=>p.filter(r=>r.id!==id));
     const ok = await syncToServer('promotionsAllowances','delete',{id});
     if (!ok) { setRecords(prev); return; }
@@ -87,7 +87,7 @@ function PromotionsAllowancesTab() {
   };
   const save = async () => {
     if (!form.name) { showToast(tr('msg_required'),'error'); return; }
-    const prev = records;
+    const prev = recordsRaw;
     // ── إصدار/إنجاز أي من الجانبين (ترفيع أو علاوة) لموظف مربوط هو نقطة
     // التسليم للحسابات لذلك الجانب تحديداً — كل جانب يُعلَّم ويُحدَّث بشكل
     // مستقل تماماً عن الآخر (سجل واحد قد يكون فيه ترفيع مُنجَز وعلاوة لم
@@ -204,8 +204,18 @@ function PromotionsAllowancesTab() {
             </div>
           </div>
         )}
-        <div style={{ overflowX:'auto' }}>
-          <table id="promo-allow-table" className="table">
+        {/* .table-wrapper (overflow:auto) وحده لا يكفي هنا: الجدول width:100%
+            بتخطيط table-layout الافتراضي (auto) يستطيع "ضغط" أعمدة nowrap
+            أضيق من محتواها الفعلي بدل أن يتجاوز عرض الحاوية — فلا يكتشف
+            المتصفح أصلاً أن هناك تجاوزاً أفقياً يستدعي شريط تمرير (لا يظهر
+            سوى التمرير العمودي من max-height بالنمط). صفحات أخرى تستخدم نفس
+            .table-wrapper (المرضى 11 عموداً، الرموز الطبية 4 أعمدة) لا تُثبت
+            هذا فعلياً لأن أعمدتها أصلاً تتّسع بلا مشكلة — لا يوجد بهذا التطبيق
+            حتى الآن جدول واسع فعلاً كهذا (18 عموداً) يعتمد على .table-wrapper
+            وحده. الحل: min-width صريح على الجدول نفسه يفرض عرضاً أكبر من
+            الحاوية بوضوح، فيضطر المتصفح لإظهار شريط التمرير الأفقي فعلياً. */}
+        <div className="table-wrapper">
+          <table id="promo-allow-table" className="table" style={{ minWidth: 1900 }}>
             <thead><tr>
               <th style={{width:32}}>
                 <input type="checkbox" checked={pageItems.length > 0 && pageItems.every(r => selectedIds.has(r.id))} onChange={() => {

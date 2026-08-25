@@ -6,7 +6,7 @@
 // برقم/تاريخ قرار وحالة خاصة به)، بدل حقل "رقم القرار" الواحد المشترك
 // سابقاً. راجع migrations-sql/014_merge_promotions_allowances.sql لتفاصيل
 // الترحيل من الجدولين القديمين.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
@@ -60,6 +60,55 @@ function PromotionsAllowancesTab() {
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const [showImport, setShowImport] = useState(false);
+
+  // ── سحب-للتمرير الأفقي — الجدول واسع جداً (18 عموداً) وbanner التنبيهات
+  // أعلى الصفحة يدفع .table-wrapper بعيداً للأسفل، فشريط التمرير الأفقي
+  // الفعلي (أسفل صندوق .table-wrapper الطويل خاصته max-height:65vh) يبقى
+  // بعيد المنال بلا تمرير الصفحة كاملة للوصول له. الحل: تمكين السحب بالفأرة
+  // (Drag-to-Pan) في أي مكان بمنطقة الجدول (عدا العناصر التفاعلية كالأزرار
+  // وصناديق التحديد) لتمرير الأعمدة أفقياً دون الحاجة لبلوغ الشريط نفسه إطلاقاً
+  // — بالإضافة لدعم المتصفح الأصلي لـ Shift+عجلة الفأرة على أي صندوق overflow-x.
+  const wrapperRef = useRef(null);
+  const dragRef = useRef({ dragging:false, startX:0, startScrollLeft:0, moved:false });
+  const [isDragging, setIsDragging] = useState(false);
+  const onWrapperMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, a, input, select, textarea')) return;
+    // preventDefault هنا (لا فقط بـ onMove) ضروري — بدونه يبدأ المتصفح تحديد
+    // النص أصلاً من لحظة الضغط، وبما أن React state (isDragging) لا يُحدِّث
+    // الـ DOM إلا بعد إعادة رسم لاحقة، يفوت التحديد الأصلي فرصة الإيقاف قبل
+    // أن userSelect:none يصل فعلياً — فيُلغى هذا كلياً هنا بشكل متزامن بدل الاعتماد
+    // على إعادة الرسم.
+    e.preventDefault();
+    wrapperRef.current.style.userSelect = 'none';
+    // اتجاه الصفحة RTL — في كروم يكون المدى الصالح لـ scrollLeft هنا بين 0
+    // (أقصى اليمين) و -(scrollWidth-clientWidth) (أقصى اليسار)، عكس LTR
+    // تماماً. أي قيمة موجبة تُرفَض/تُقصّ صامتة (scrollLeft يبقى 0 بلا أي أثر
+    // ظاهر) — هذا بالضبط سبب عدم تحرّك الجدول رغم عمل المعالج نفسه بشكل
+    // صحيح. نعكس إشارة dx حسب الاتجاه الفعلي بدل افتراض LTR دائماً.
+    const isRTL = getComputedStyle(wrapperRef.current).direction === 'rtl';
+    const maxScroll = wrapperRef.current.scrollWidth - wrapperRef.current.clientWidth;
+    const min = isRTL ? -maxScroll : 0;
+    const max = isRTL ? 0 : maxScroll;
+    dragRef.current = { dragging:true, startX:e.clientX, startScrollLeft:wrapperRef.current.scrollLeft, moved:false };
+    const onMove = (ev) => {
+      if (!dragRef.current.dragging) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      if (Math.abs(dx) > 4) { dragRef.current.moved = true; setIsDragging(true); }
+      const next = dragRef.current.startScrollLeft + (isRTL ? dx : -dx);
+      wrapperRef.current.scrollLeft = Math.max(min, Math.min(max, next));
+      ev.preventDefault();
+    };
+    const onUp = () => {
+      dragRef.current.dragging = false;
+      setIsDragging(false);
+      if (wrapperRef.current) wrapperRef.current.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...empty, ...r}); setShowModal(true); };
@@ -213,8 +262,19 @@ function PromotionsAllowancesTab() {
             هذا فعلياً لأن أعمدتها أصلاً تتّسع بلا مشكلة — لا يوجد بهذا التطبيق
             حتى الآن جدول واسع فعلاً كهذا (18 عموداً) يعتمد على .table-wrapper
             وحده. الحل: min-width صريح على الجدول نفسه يفرض عرضاً أكبر من
-            الحاوية بوضوح، فيضطر المتصفح لإظهار شريط التمرير الأفقي فعلياً. */}
-        <div className="table-wrapper">
+            الحاوية بوضوح، فيضطر المتصفح لإظهار شريط التمرير الأفقي فعلياً.
+
+            شريط التمرير الأفقي نفسه (أسفل صندوق .table-wrapper) يبقى بعيد
+            المنال بدون تمرير الصفحة كاملة تقريباً، بسبب طول banners التنبيهات
+            أعلى الصفحة التي تدفع الجدول للأسفل. لذا نضيف أيضاً سحباً بالفأرة
+            (drag-to-pan) يعمل من أي نقطة ظاهرة بالجدول — حتى أول صف مرئي فقط —
+            دون الحاجة للوصول لشريط التمرير نفسه إطلاقاً. */}
+        <div
+          ref={wrapperRef}
+          className="table-wrapper"
+          onMouseDown={onWrapperMouseDown}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: isDragging ? 'none' : 'auto' }}
+        >
           <table id="promo-allow-table" className="table" style={{ minWidth: 1900 }}>
             <thead><tr>
               <th style={{width:32}}>

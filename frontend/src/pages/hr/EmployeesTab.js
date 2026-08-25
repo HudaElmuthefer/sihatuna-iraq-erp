@@ -1,6 +1,6 @@
 // frontend/src/pages/hr/EmployeesTab.js
 // استُخرج من HRPage.js — تبويب الموظفين.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { api } from '../../api';
 import useServerPagination from '../../hooks/useServerPagination';
@@ -101,6 +101,48 @@ function EmployeesTab({ lang }) {
   };
   const statusColor = (s) => ({ 'active':'#22c55e', 'leave':'#f59e0b', 'inactive':'#ef4444', 'نشط':'#22c55e', 'إجازة':'#f59e0b', 'متوقف':'#ef4444' }[s]||'#6b7280');
 
+  // ── سحب-للتمرير الأفقي — نفس الحل المُطبَّق بـ accounts/PromotionsAllowancesTab.js
+  // (راجعه لتفاصيل السبب): .table-wrapper وحده لا يكفي لجدول بهذا العرض (16
+  // عموداً) — يحتاج min-width صريح على <table> ليكتشف المتصفح التجاوز الأفقي
+  // أصلاً، وبما أن banner التنبيهات (AlertBanner) يدفع الجدول بعيداً للأسفل،
+  // شريط التمرير الأفقي الفعلي (أسفل صندوق .table-wrapper) يبقى بعيد المنال
+  // بلا تمرير الصفحة كاملة. السحب بالفأرة من أي نقطة بالجدول (عدا العناصر
+  // التفاعلية) يحل هذا دون الحاجة لبلوغ الشريط نفسه إطلاقاً. preventDefault +
+  // userSelect:none متزامنَين بـ mousedown يمنعان تحديد النص الافتراضي من
+  // المتصفح، وعكس إشارة dx بحالة RTL ضروري لأن مدى scrollLeft الصالح بكروم
+  // بـ RTL سالب (0 إلى -(scrollWidth-clientWidth))، عكس LTR تماماً.
+  const wrapperRef = useRef(null);
+  const dragRef = useRef({ dragging:false, startX:0, startScrollLeft:0, moved:false });
+  const [isDragging, setIsDragging] = useState(false);
+  const onWrapperMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, a, input, select, textarea')) return;
+    e.preventDefault();
+    wrapperRef.current.style.userSelect = 'none';
+    const isRTL = getComputedStyle(wrapperRef.current).direction === 'rtl';
+    const maxScroll = wrapperRef.current.scrollWidth - wrapperRef.current.clientWidth;
+    const min = isRTL ? -maxScroll : 0;
+    const max = isRTL ? 0 : maxScroll;
+    dragRef.current = { dragging:true, startX:e.clientX, startScrollLeft:wrapperRef.current.scrollLeft, moved:false };
+    const onMove = (ev) => {
+      if (!dragRef.current.dragging) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      if (Math.abs(dx) > 4) { dragRef.current.moved = true; setIsDragging(true); }
+      const next = dragRef.current.startScrollLeft + (isRTL ? dx : -dx);
+      wrapperRef.current.scrollLeft = Math.max(min, Math.min(max, next));
+      ev.preventDefault();
+    };
+    const onUp = () => {
+      dragRef.current.dragging = false;
+      setIsDragging(false);
+      if (wrapperRef.current) wrapperRef.current.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   return (
     <div>
       <AlertBanner employees={employees} lang={lang} />
@@ -148,8 +190,17 @@ function EmployeesTab({ lang }) {
             </div>
           </div>
         )}
-        <div style={{ overflowX:'auto' }}>
-          <table id="emp-table" className="table">
+        <div
+          ref={wrapperRef}
+          className="table-wrapper"
+          onMouseDown={onWrapperMouseDown}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: isDragging ? 'none' : 'auto' }}
+        >
+          {/* min-width: 16 عموداً (خانة تحديد + اسم/وظيفة/قسم/درجة/شهادة/راتب/
+              تعيين/آخر ترفيع/آخر علاوة/استحقاق ترفيع/استحقاق علاوة/الدرجة
+              القادمة/تقاعد/حالة/إجراءات) — نفس حساب PromotionsAllowancesTab.js
+              (~105px متوسط لكل عمود) مُقاساً بعدد أعمدة أقل هنا (16 مقابل 18). */}
+          <table id="emp-table" className="table" style={{ minWidth: 1700 }}>
             <thead><tr>
               <th style={{width:32}}>
                 <input type="checkbox" checked={empPageItems.length > 0 && empPageItems.every(e => selectedIds.has(e.id))} onChange={() => {

@@ -209,10 +209,18 @@ export default function Layout() {
         scrollbarWidth: 'thin',
         scrollbarColor: 'rgba(255,255,255,0.25) transparent' }}>
         <style>{`
-          nav::-webkit-scrollbar { width: 5px; }
+          nav::-webkit-scrollbar { width: 7px; }
           nav::-webkit-scrollbar-track { background: transparent; }
-          nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 10px; }
-          nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45); }
+          nav::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.25);
+            background-clip: padding-box;
+            border: 1.5px solid transparent;
+            border-radius: 10px;
+            transition: background-color 0.2s ease, border-width 0.2s ease;
+          }
+          nav::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.45); }
+          nav::-webkit-scrollbar-thumb:active { background-color: rgba(255,255,255,0.65); }
+          nav.scrollbar-near-edge::-webkit-scrollbar-thumb { border-width: 0; background-color: rgba(255,255,255,0.5); }
         `}</style>
 
         {(() => {

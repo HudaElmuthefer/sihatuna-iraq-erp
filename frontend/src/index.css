@@ -177,11 +177,40 @@ body.en {
   font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* ══════════════════════════════════════════════════════════════════════
+   Scrollbar — ينطبق عمومياً على أي عنصر قابل للتمرير في التطبيق (جداول،
+   Modals، لوحة الإشعارات، .page-main...) بلا حاجة لصنف مخصص لكل واحد.
+   عرض المسار (track) ثابت دائماً — لا Layout Shift أبداً — والسماكة
+   المرئية للـthumb تتغيّر فقط عبر حدّ شفاف (border + background-clip)، لا
+   عبر تغيير عرض ::-webkit-scrollbar نفسه (بند 11 صراحةً). .scrollbar-near-edge
+   يُضاف/يُزال آلياً بواسطة FuturisticCursor.js (اقتراب المؤشر من حافة
+   الشريط، أو تمرير فعلي بالعجلة/لوحة المفاتيح) — راجع
+   frontend/src/utils/scrollbarDetection.js. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-clip: padding-box;
+  border: 2.5px solid transparent;
+  background-color: #334155;
+  transition: background-color 0.2s ease, border-width 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--primary); }
+.scrollbar-near-edge::-webkit-scrollbar-thumb { border-width: 1px; }
+
+html { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background-color: rgba(var(--glow-accent-rgb), 0.32); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background-color: rgba(var(--glow-accent-rgb), 0.55); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:active { background-color: rgba(var(--glow-accent-rgb), 0.85); }
+[data-theme="dark"] .scrollbar-near-edge::-webkit-scrollbar-thumb { background-color: rgba(var(--glow-accent-rgb), 0.65); }
+[data-theme="dark"] { scrollbar-color: rgba(79, 195, 247, 0.4) transparent; }
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background-color: rgba(100, 120, 150, 0.32); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background-color: rgba(80, 180, 220, 0.5); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:active { background-color: rgba(220, 130, 190, 0.6); }
+[data-theme="light"] .scrollbar-near-edge::-webkit-scrollbar-thumb { background-color: rgba(80, 180, 220, 0.6); }
+[data-theme="light"] { scrollbar-color: rgba(100, 120, 150, 0.4) transparent; }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
@@ -280,6 +309,50 @@ button, a, [role="button"] {
 .card:hover {
   box-shadow: var(--shadow-lg), 0 0 28px rgba(var(--glow-accent-rgb), 0.32);
   border-color: rgba(var(--glow-accent-rgb), 0.55);
+}
+
+/* الوضع الفاتح — Pearl Glass 3D بدل مستطيل أبيض صافٍ (بند 12-15 صراحةً):
+   طبقة لؤلؤية شبه شفافة بلمسة سماوية/وردية، حافة علوية مضيئة، ظل داخلي
+   ناعم، وانعكاسان خفيفان في الزاويتين (وردي أعلى-يسار، سماوي أسفل-يمين).
+   لا تُعدَّل قاعدة .card المشتركة أعلاه (الوضع الداكن يبقى كما هو). */
+[data-theme="light"] .card {
+  background: linear-gradient(145deg, rgba(255,255,255,0.88) 0%, rgba(242,248,255,0.82) 45%, rgba(255,238,248,0.72) 100%);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -8px 16px rgba(140, 150, 190, 0.08),
+    0 10px 26px rgba(120, 130, 170, 0.14),
+    0 0 0 1px rgba(80, 180, 220, 0.08);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+[data-theme="light"] .card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(220, 130, 190, 0.5), rgba(80, 180, 220, 0.5), transparent);
+  pointer-events: none;
+}
+[data-theme="light"] .card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 6% 0%, rgba(220, 130, 190, 0.12), transparent 42%),
+    radial-gradient(circle at 100% 100%, rgba(80, 180, 220, 0.12), transparent 48%);
+  pointer-events: none;
+}
+[data-theme="light"] .card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(80, 180, 220, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -8px 16px rgba(140, 150, 190, 0.1),
+    0 18px 36px rgba(120, 130, 170, 0.18),
+    0 0 0 1px rgba(80, 180, 220, 0.2),
+    0 0 22px rgba(220, 130, 190, 0.18);
 }
 
 .card-header {
@@ -543,6 +616,27 @@ html[dir="ltr"] .table th, html[dir="ltr"] .table td { text-align: left; }
   transform: translateY(-3px) scale(1.03);
   box-shadow: var(--shadow-lg), 0 0 30px rgba(var(--glow-accent-rgb), 0.28);
   border-color: rgba(var(--glow-accent-rgb), 0.55);
+}
+
+/* Pearl Glass 3D — نفس هوية .card أعلاه، مطبَّقة على بطاقات الإحصاء الصغيرة
+   المنتشرة بترويسات الوحدات (Patients/Doctors/...). */
+[data-theme="light"] .stat-card {
+  background: linear-gradient(145deg, rgba(255,255,255,0.88) 0%, rgba(242,248,255,0.82) 45%, rgba(255,238,248,0.72) 100%);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -6px 14px rgba(140, 150, 190, 0.08),
+    0 8px 22px rgba(120, 130, 170, 0.14),
+    0 0 0 1px rgba(80, 180, 220, 0.08);
+}
+[data-theme="light"] .stat-card:hover {
+  border-color: rgba(80, 180, 220, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -6px 14px rgba(140, 150, 190, 0.1),
+    0 14px 30px rgba(120, 130, 170, 0.18),
+    0 0 0 1px rgba(80, 180, 220, 0.2),
+    0 0 20px rgba(220, 130, 190, 0.18);
 }
 
 .stat-icon {
@@ -984,9 +1078,15 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
    قاتماً — يبقى Light Mode حتى في أدنى نقطة). */
 [data-theme="light"] .desktop-sidebar,
 [data-theme="light"] .mobile-sidebar {
+  /* ثلاث طبقات مركّبة (بند 26 صراحةً: ليس تدرّجاً واحداً) — ضبابة علوية
+     وردية+سماوية كسابقاً، ثم توهّج أزرق عميق يتصاعد من الأسفل ويتلاشى قبل
+     المنتصف (بند 25/27)، فوق قاعدة لؤلؤية تنتقل من وردي-لافندر أعلى إلى
+     أزرق-لافندر أسفل (بند 25: من لؤلؤي-وردي بالأعلى إلى ظلّ أزرق بالأسفل،
+     دون أن تصبح رمادية قاتمة). */
   background:
     radial-gradient(ellipse at 8% 4%, rgba(230, 140, 195, 0.28) 0%, rgba(120, 200, 235, 0.16) 24%, rgba(255, 255, 255, 0.04) 48%, transparent 68%),
-    linear-gradient(180deg, rgba(255, 250, 253, 0.85) 0%, rgba(240, 244, 252, 0.82) 45%, rgba(232, 224, 238, 0.85) 100%) !important;
+    radial-gradient(ellipse 95% 46% at 50% 112%, rgba(18, 65, 125, 0.32) 0%, rgba(30, 90, 150, 0.16) 38%, transparent 72%),
+    linear-gradient(180deg, rgba(255, 250, 253, 0.92) 0%, rgba(250, 238, 246, 0.86) 26%, rgba(226, 222, 242, 0.84) 52%, rgba(196, 208, 232, 0.82) 76%, rgba(160, 184, 216, 0.8) 100%) !important;
   border-color: transparent !important;
   box-shadow: none !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
@@ -1104,14 +1204,26 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   box-shadow: 0 12px 30px rgba(0,0,0,0.45), 0 0 16px rgba(40,190,255,0.10);
 }
 
-[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar { width: 6px; }
+/* عرض ثابت (8px) دائماً — الفرق البصري بين "رفيع" و"أعرض عند الاقتراب"
+   يأتي فقط من سماكة حدّ شفاف حول الـthumb (بند 11: بلا أي Layout Shift). */
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar { width: 8px; }
 [data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-track { background: transparent; }
 [data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-thumb {
-  background: rgba(var(--glow-accent-rgb), 0.4);
+  background-color: rgba(var(--glow-accent-rgb), 0.35);
+  background-clip: padding-box;
+  border: 1.5px solid transparent;
   border-radius: 10px;
+  transition: background-color 0.2s ease, border-width 0.2s ease;
 }
 [data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--glow-accent-rgb), 0.65);
+  background-color: rgba(var(--glow-accent-rgb), 0.65);
+}
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-thumb:active {
+  background-color: rgba(var(--glow-accent-rgb), 0.9);
+}
+[data-theme="dark"] .header-dropdown-panel.scrollbar-near-edge::-webkit-scrollbar-thumb {
+  border-width: 0;
+  background-color: rgba(var(--glow-accent-rgb), 0.7);
 }
 
 [data-theme="dark"] .header-dropdown-option {
@@ -1272,14 +1384,24 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   box-shadow: 0 12px 30px rgba(120,130,170,0.18), 0 0 16px rgba(220,130,190,0.1);
 }
 
-[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar { width: 6px; }
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar { width: 8px; }
 [data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-track { background: transparent; }
 [data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb {
-  background: rgba(80, 180, 220, 0.35);
+  background-color: rgba(80, 180, 220, 0.35);
+  background-clip: padding-box;
+  border: 1.5px solid transparent;
   border-radius: 10px;
+  transition: background-color 0.2s ease, border-width 0.2s ease;
 }
 [data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(80, 180, 220, 0.6);
+  background-color: rgba(80, 180, 220, 0.6);
+}
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb:active {
+  background-color: rgba(220, 130, 190, 0.7);
+}
+[data-theme="light"] .header-dropdown-panel.scrollbar-near-edge::-webkit-scrollbar-thumb {
+  border-width: 0;
+  background-color: rgba(80, 180, 220, 0.65);
 }
 
 [data-theme="light"] .header-dropdown-option {
@@ -1487,13 +1609,18 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* الوضع الفاتح — كبسولة زجاجية لؤلؤية بحافة وردية-سماوية وإضاءة داخلية
    ناعمة (بند 13 صراحةً: ليس مستطيلاً أزرق قوياً). */
+/* لوحة تحكّم زجاجية عائمة (بند 30 صراحةً): إضاءة داخلية طفيفة، حافة سماوية
+   سفلية، انعكاس وردي علوي، ظل عمق ناعم، وارتفاع خفيف عن الخلفية. */
 [data-theme="light"] .sidebar-nav-item.active, [data-theme="light"] .sidebar-nav-item-active {
-  background: linear-gradient(90deg, rgba(220,130,190,0.10), rgba(80,180,220,0.16), rgba(220,130,190,0.10)) !important;
+  background: linear-gradient(180deg, rgba(220,130,190,0.14) 0%, rgba(255,255,255,0.14) 45%, rgba(80,180,220,0.16) 100%) !important;
   border: 1px solid rgba(120, 170, 210, 0.55) !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   box-shadow:
-    0 0 10px rgba(80,180,220,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.7) !important;
+    inset 0 1px 0 rgba(255, 225, 240, 0.9),
+    inset 0 -1px 0 rgba(80, 180, 220, 0.55),
+    0 3px 10px rgba(120, 140, 180, 0.16),
+    0 0 10px rgba(80,180,220,0.2) !important;
+  transform: translateY(-1px);
   color: #0f2133 !important;
   font-weight: 700 !important;
 }
@@ -2290,8 +2417,10 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   margin-bottom: 28px;
   padding: 34px 24px 26px;
   border-radius: 14px;
+  /* بلا خطوط أفقية متكررة (repeating-linear-gradient السابق) — خلفية نظيفة
+     ذات طبقتين فقط: توهج لؤلؤي هادئ من الأعلى، وقاعدة زجاجية دافئة. */
   background:
-    repeating-linear-gradient(180deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 14px),
+    radial-gradient(ellipse 70% 60% at 50% -10%, rgba(255, 240, 248, 0.5), transparent 70%),
     linear-gradient(180deg, rgba(255,250,252,0.55) 0%, rgba(238,245,251,0.55) 55%, rgba(226,220,232,0.4) 100%);
   border-top: 1px solid rgba(220, 130, 190, 0.35);
   border-bottom: 1px solid rgba(140, 170, 200, 0.18);
@@ -2310,23 +2439,33 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   pointer-events: none;
 }
 
-/* منصة واحدة مشتركة خلف الأربع أيقونات — فضية-لؤلؤية شاحبة بحافة سماوية
-   علوية، وليست سوداء (بند 20 صراحةً). */
+/* منصة واحدة مشتركة خلف الأربع أيقونات — رفّ زجاجي معدني كحلي عميق (وليست
+   فضية شاحبة ولا سوداء ثقيلة، بند 3-4 صراحةً): قلب كحلي غامق، حافة علوية
+   سماوية مضيئة، ولمسة وردية خفيفة جداً على الأطراف. */
 [data-theme="light"] .dqt-row-light::after {
   content: '';
   position: absolute;
   left: 5%;
   right: 5%;
   bottom: 78px;
-  height: 10px;
+  height: 11px;
   z-index: 0;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent 0%, rgba(200,205,215,0.85) 8%, #d8dbe3 20%, #e4e0e6 50%, #d8dbe3 80%, rgba(200,205,215,0.85) 92%, transparent 100%);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(210, 140, 190, 0.55) 6%,
+    #2a3f6e 18%,
+    #1c2c52 50%,
+    #2a3f6e 82%,
+    rgba(210, 140, 190, 0.55) 94%,
+    transparent 100%);
   box-shadow:
-    0 -1px 0 rgba(120,210,240,0.4),
-    0 1px 0 rgba(230,160,200,0.3),
-    0 5px 9px rgba(120,130,160,0.18),
-    0 12px 20px rgba(120,130,160,0.1);
+    0 -1.5px 0 rgba(120, 210, 250, 0.75),
+    0 1px 0 rgba(230, 160, 200, 0.35),
+    0 2px 6px rgba(20, 30, 60, 0.35),
+    0 6px 14px rgba(30, 60, 110, 0.22),
+    0 14px 22px rgba(30, 60, 110, 0.12),
+    inset 0 1px 0 rgba(160, 220, 255, 0.5);
   pointer-events: none;
 }
 
@@ -2352,26 +2491,57 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   z-index: 2;
   font-size: clamp(27px, 2vw, 34px);
   font-weight: 800;
-  background: linear-gradient(135deg, #d6437e 0%, #2fa9c9 100%);
+  /* أزرق داكن مهيمن + انعكاس سماوي/وردي خفيف عند الطرف (بند 10 صراحةً —
+     ليس وردياً مسطحاً). */
+  background: linear-gradient(135deg, #14305c 0%, #2f6fb0 45%, #2fa9c9 78%, #d6437e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1;
-  text-shadow: 0 0 14px rgba(160, 150, 220, 0.25);
+  text-shadow: 0 0 14px rgba(80, 150, 220, 0.22);
   pointer-events: none;
 }
 
 [data-theme="light"] .dqt-icon-wrap-light {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 108px;
+  height: 108px;
   border-radius: 18px;
   filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 14px rgba(220, 130, 190, 0.18));
   transition: filter 0.3s ease;
 }
 
 [data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light {
-  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 22px rgba(80, 180, 220, 0.4));
+  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 24px rgba(80, 180, 220, 0.5));
+}
+
+/* توزيع الضوء داخل الأيقونة: حافة زرقاء كهربائية مضيئة تتلاشى نحو زجاج
+   كحلي شفاف بالمركز (بند 6 صراحةً — المركز لا يصبح أسوداً)، مع لمسة وردية
+   خفيفة جداً على المحيط الخارجي (بند 7). قرص خلف جسم الأيقونة نفسها، وليس
+   خلف الانعكاس فقط — يظهر عبر أجزاء الـPNG الشفافة وحول حوافها. */
+[data-theme="light"] .dqt-icon-wrap-light::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(22, 40, 82, 0.65) 0%,
+    rgba(32, 70, 130, 0.55) 38%,
+    rgba(70, 165, 220, 0.55) 70%,
+    rgba(155, 225, 255, 0.85) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 205, 230, 0.35),
+    0 0 18px rgba(80, 180, 230, 0.5),
+    inset 0 0 16px rgba(15, 30, 65, 0.4);
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light::before {
+  box-shadow:
+    0 0 0 1px rgba(255, 205, 230, 0.5),
+    0 0 26px rgba(80, 180, 230, 0.7),
+    inset 0 0 16px rgba(15, 30, 65, 0.35);
 }
 
 [data-theme="light"] .dqt-icon-wrap-light img {
@@ -2603,6 +2773,22 @@ body.futuristic-cursor-over-text .futuristic-cursor-ring {
   opacity: 0 !important;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   منطقة شريط تمرير (FuturisticCursor.js يضيف/يزيل هذا الصنف على body) —
+   الماسح المخصص يختفي بسرعة (٨٠-١٢٠ms، بند 29) ويعود المؤشر الأصلي (سهم/يد
+   السحب) بدل ترك المنطقة بلا أي مؤشر ظاهر. يجب أن تأتي هذه القاعدة بعد
+   body.futuristic-cursor-active أعلاه لتفوز عند تساوي الخصوصية (كلا الصنفين
+   يكونان فعّالين معاً على body في آنٍ واحد). */
+body.futuristic-cursor-scroll-zone *:not(input):not(textarea) {
+  cursor: auto !important;
+}
+
+body.futuristic-cursor-scroll-zone .futuristic-cursor-core,
+body.futuristic-cursor-scroll-zone .futuristic-cursor-ring {
+  opacity: 0 !important;
+  transition: opacity 100ms ease !important;
+}
+
 @media (pointer: coarse), (hover: none) {
   .futuristic-cursor-core, .futuristic-cursor-ring, .futuristic-cursor-pulse { display: none; }
 }
@@ -2610,4 +2796,98 @@ body.futuristic-cursor-over-text .futuristic-cursor-ring {
 @media (prefers-reduced-motion: reduce) {
   .futuristic-cursor-core, .futuristic-cursor-ring, .futuristic-cursor-pulse { display: none; }
   body.futuristic-cursor-active, body.futuristic-cursor-active * { cursor: auto !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Dashboard "Welcome" hero (.hero-banner و.dept-card، مُعرَّفة inline بـ
+   DashboardPage.js) — كانت مستطيلاً أزرق صلباً ثابتاً بغضّ النظر عن الثيم
+   (بند 16 صراحةً). الوضع الداكن يبقى كما هو تماماً بلا أي تغيير هنا؛ هذه
+   الكتلة [data-theme="light"]-only فقط، وتفوز تلقائياً بسبب خصوصية أعلى
+   من القاعدة العامة .hero-banner بصرف النظر عن ترتيب حَقن <style> بالصفحة.
+   ══════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .hero-banner {
+  background:
+    radial-gradient(ellipse 70% 80% at 20% 0%, rgba(220, 130, 190, 0.16), transparent 60%),
+    radial-gradient(ellipse 70% 80% at 85% 100%, rgba(80, 180, 220, 0.16), transparent 60%),
+    linear-gradient(160deg, #fdf5f9 0%, #f2f4fb 55%, #eae6f2 100%);
+  border: 1px solid rgba(220, 130, 190, 0.3);
+  box-shadow:
+    0 10px 40px rgba(150, 130, 170, 0.16),
+    0 46px 50px -30px rgba(80, 180, 220, 0.2),
+    inset 0 1px 0 rgba(255,255,255,0.75),
+    inset 0 0 0 1px rgba(220, 130, 190, 0.12);
+}
+
+[data-theme="light"] .hero-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  z-index: 1;
+  background: linear-gradient(90deg, transparent, rgba(220, 130, 190, 0.6), rgba(80, 180, 220, 0.6), transparent);
+  pointer-events: none;
+}
+
+[data-theme="light"] .hero-logo-wrap {
+  filter: drop-shadow(0 4px 14px rgba(120, 130, 170, 0.25));
+}
+
+[data-theme="light"] .hero-badge {
+  background: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,240,248,0.5) 100%);
+  color: #33445c;
+  border: 1px solid rgba(220, 130, 190, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 10px rgba(80, 180, 220, 0.12);
+}
+
+[data-theme="light"] .hero-title {
+  color: #17293c;
+  text-shadow: 0 0 18px rgba(220, 130, 190, 0.18);
+}
+
+[data-theme="light"] .hero-sub {
+  color: #55637a;
+}
+
+[data-theme="light"] .hs-icon {
+  color: rgba(60, 80, 110, 0.55);
+}
+
+[data-theme="light"] .hero-search input {
+  border: 2px solid rgba(220, 130, 190, 0.3);
+  background: rgba(255, 255, 255, 0.55);
+  color: #17293c;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+[data-theme="light"] .hero-search input::placeholder { color: rgba(60, 80, 110, 0.5); }
+[data-theme="light"] .hero-search input:focus {
+  border-color: rgba(80, 180, 220, 0.55);
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 3px rgba(80, 180, 220, 0.14);
+}
+
+[data-theme="light"] .hero-circle {
+  border-color: rgba(220, 130, 190, 0.18);
+}
+[data-theme="light"] .hero-circle-2 {
+  border-color: rgba(80, 180, 220, 0.18);
+}
+
+/* Department cards — زجاج لؤلؤي-سماوي بدل خلفية مسطّحة (بند 35-36). */
+[data-theme="light"] .dept-card {
+  background: linear-gradient(145deg, rgba(255,255,255,0.85) 0%, rgba(240,247,255,0.75) 100%);
+  border: 1px solid rgba(80, 180, 220, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 6px 16px rgba(120, 130, 170, 0.1);
+}
+[data-theme="light"] .dept-card:hover {
+  border-color: var(--dept-color, rgba(80, 180, 220, 0.5));
+  background: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,238,248,0.55) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 10px 22px rgba(120, 130, 170, 0.16),
+    0 0 16px rgba(220, 130, 190, 0.18);
+}
+[data-theme="light"] .dept-card-icon {
+  filter: drop-shadow(0 0 6px rgba(80, 180, 220, 0.35));
 }

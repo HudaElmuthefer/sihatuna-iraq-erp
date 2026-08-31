@@ -5,6 +5,7 @@ import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import { FaBell, FaCalendarAlt, FaUser, FaChartBar, FaExclamationTriangle, FaCheckDouble, FaShoppingCart, FaFileAlt } from 'react-icons/fa';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
+import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
 
 const icons = {
   appointment: <FaCalendarAlt />,
@@ -26,6 +27,11 @@ export default function NotificationPanel({ onClose, anchorRef }) {
   const { notifications, markNotifRead, markAllNotifRead, lang } = useApp();
   const tr = useT(lang);
   const navigate = useNavigate();
+  // العقدة القابلة للتمرير الفعلية هي القسم السفلي فقط (maxHeight:360 +
+  // overflowY:auto أدناه)، وليس اللوحة كلها (تحتوي أيضاً ترويسة ثابتة غير
+  // قابلة للتمرير) — راجع الشرح الكامل بـ
+  // frontend/src/hooks/useScrollableCursorSuspend.js.
+  const cursorSuspend = useScrollableCursorSuspend();
 
   // إصلاح: الضغط على الإشعار كان يكتفي بتعليمه كمقروء بدون أي تنقّل — الآن
   // ينقل فعلياً لصفحة الإشعار (كل إشعار يحمل link حقيقي) ويقفل القائمة.
@@ -78,7 +84,12 @@ export default function NotificationPanel({ onClose, anchorRef }) {
         </button>
       </div>
 
-      <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+      <div
+        ref={cursorSuspend.ref}
+        onPointerEnter={cursorSuspend.onPointerEnter}
+        onPointerLeave={cursorSuspend.onPointerLeave}
+        style={{ maxHeight: 360, overflowY: 'auto' }}
+      >
         {notifications.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
             {tr('notifications_empty')}

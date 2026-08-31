@@ -9,6 +9,7 @@ import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
 import HeaderSelectDropdown from './HeaderSelectDropdown';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
+import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
 import { isPrintButtonHidden } from '../config/printConfig';
 import './Layout.dark.css';
 // ملاحظة: صورة القائمة الجانبية المرجعية (كانت مستوردة هنا سابقاً باسم
@@ -87,6 +88,7 @@ export default function Layout() {
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = React.useRef(null);
   const searchWrapRef = React.useRef(null);
+  const searchResultsCursorSuspend = useScrollableCursorSuspend();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -489,6 +491,11 @@ export default function Layout() {
                 // Portal — نفس سبب لوحة الإشعارات بالضبط: .glass-header
                 // overflow:hidden كانت تقصّ هذه القائمة (ابن عادي داخلها سابقاً).
                 <HeaderFloatingPanel anchorRef={searchWrapRef} open align="end" style={{ minWidth: 240, background:'var(--bg-secondary)', border:'1px solid var(--border)', borderRadius:10, padding:8, boxShadow:'0 8px 24px rgba(0,0,0,0.15)' }}>
+                <div
+                  ref={searchResultsCursorSuspend.ref}
+                  onPointerEnter={searchResultsCursorSuspend.onPointerEnter}
+                  onPointerLeave={searchResultsCursorSuspend.onPointerLeave}
+                >
                   {[
                     {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
                     {label:tr('nav_patients'), path:'/patients', icon:'👥'},
@@ -520,6 +527,7 @@ export default function Layout() {
                       {tr('layout_press_enter_search')}
                     </div>
                   )}
+                </div>
                 </HeaderFloatingPanel>
               )}
             </div>

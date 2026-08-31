@@ -9,7 +9,8 @@ import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
 import HeaderSelectDropdown from './HeaderSelectDropdown';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
-import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
+import HolographicScrollHandle from './HolographicScrollHandle';
+import FuturePageShell from './future/FuturePageShell';
 import { isPrintButtonHidden } from '../config/printConfig';
 import './Layout.dark.css';
 // ملاحظة: صورة القائمة الجانبية المرجعية (كانت مستوردة هنا سابقاً باسم
@@ -24,7 +25,7 @@ import './Layout.dark.css';
 // .mobile-sidebar (index.css)، فبقيت كما هي تماماً بعد حذف الصورة. الملف
 // نفسه لم يُحذف من القرص (frontend/src/assets/sidebar/) تحسباً لحاجة لاحقة.
 import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
-import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell } from 'react-icons/fa';
+import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell, FaRocket } from 'react-icons/fa';
 import {
   FaUsers, FaTags, FaUserMd, FaCalendarAlt, FaBuilding, FaSyringe, FaBed, FaBaby,
   FaRunning, FaTicketAlt, FaPills, FaBalanceScale, FaBan, FaHospital, FaBrain,
@@ -82,13 +83,24 @@ const GROUP_LABELS = {
 };
 
 export default function Layout() {
-  const { user, logout, theme, toggleTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
+  const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
+  // FUTURE MODE (mod ثالث مستقل — راجع Final Important بالطلب: ليس مجرد
+  // متغيّر Dark). الشاشة/الشريط الجانبي يعيدان استخدام نفس أصناف الوضع
+  // الداكن كأساس هيكلي (isDark) — إعادة كتابة عشرات ternaries بثلاث حالات
+  // منفصلة هنا خطر تراجع غير ضروري بلا فائدة بصرية تُذكر، بما أن هوية
+  // Future الفعلية (الخلفية/التوهج/الألوان) مبنية بالكامل عبر متغيّرات CSS
+  // مُعرَّفة تحت [data-theme="future"] بـindex.css (--glow-accent-rgb وغيرها)
+  // + Layout.dark.css القابل للتوسعة بنفس الاختيار — فتحصل Future على مواد
+  // إضاءة مختلفة فعلياً رغم اشتراك أسماء الأصناف مع الداكن.
+  const isDark = theme === 'dark' || theme === 'future';
+  const isFuture = theme === 'future';
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = React.useRef(null);
   const searchWrapRef = React.useRef(null);
-  const searchResultsCursorSuspend = useScrollableCursorSuspend();
+  const searchResultsRef = React.useRef(null);
+  const searchResultsRailSide = document.documentElement.dir === 'ltr' ? 'right' : 'left';
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -184,18 +196,18 @@ export default function Layout() {
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
-      <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
+      <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
         {/* اتجاه صريح بدل الاعتماد على انعكاس flex التلقائي مع direction:rtl —
            بقية هذا الملف يعتمد نفس الأسلوب (موضع زر الطيّ، textAlign عناصر
            القائمة...) بدل ترك أي تموضع RTL ضمنياً. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: lang === 'ar' ? 'row-reverse' : 'row' }}>
-          <div className={theme === 'dark' ? 'sidebar-logo-frame' : 'sidebar-logo-frame-light'} style={{ borderRadius: 10, flexShrink: 0 }}>
+          <div className={isDark ? 'sidebar-logo-frame' : 'sidebar-logo-frame-light'} style={{ borderRadius: 10, flexShrink: 0 }}>
             <AppLogo size={38} radius={10} fontSize={20} />
           </div>
           {!sidebarCollapsed && (
             <div style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}>
-              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{appName} ERP</div>
-              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.6)' : '#4b6478', fontSize: 12 }}>{tr("app_subtitle")}</div>
+              <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{appName} ERP</div>
+              <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.6)' : '#4b6478', fontSize: 12 }}>{tr("app_subtitle")}</div>
             </div>
           )}
         </div>
@@ -241,9 +253,9 @@ export default function Layout() {
             // اتفاقاً بسبب الترتيب.
             const isSettingsFooter = group === 'settingsFooter';
             return (
-              <div key={group} style={isSettingsFooter ? { marginTop: 8, paddingTop: 8, borderTop: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)' } : undefined}>
+              <div key={group} style={isSettingsFooter ? { marginTop: 8, paddingTop: 8, borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)' } : undefined}>
                 {!sidebarCollapsed && gLabel.ar && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: theme === 'dark' ? 'rgba(255,255,255,0.3)' : '#1b3245', padding: '10px 14px 4px', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.3)' : '#1b3245', padding: '10px 14px 4px', letterSpacing: '0.05em' }}>
                     {lang === 'ar' ? gLabel.ar : gLabel.en}
                   </div>
                 )}
@@ -257,7 +269,7 @@ export default function Layout() {
                   const activeSubTabKey = isOnThisPage ? (searchParams.get('tab') || subTabs[0]?.key) : null;
                   const commonLabel = lang === 'ar' ? page.label : (page.labelEn || tr(page.navKey));
                   const arrow = (
-                    <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: theme === 'dark'
+                    <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: isDark
                       ? (isOnThisPage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)')
                       : (isOnThisPage ? '#14283d' : '#5a7185') }}>▶</span>
                   );
@@ -281,7 +293,7 @@ export default function Layout() {
                             padding: sidebarCollapsed ? '11px 0' : '9px 14px',
                             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                             border: 'none', cursor: 'pointer',
-                            color: isOnThisPage ? 'var(--text-active)' : (theme === 'dark' ? 'rgba(255,255,255,0.7)' : '#20384b'),
+                            color: isOnThisPage ? 'var(--text-active)' : (isDark ? 'rgba(255,255,255,0.7)' : '#20384b'),
                             fontFamily: 'inherit',
                             textAlign: lang === 'ar' ? 'right' : 'left',
                           }}
@@ -337,10 +349,10 @@ export default function Layout() {
                                   // صراحةً الآن (كان أبيض/أزرق فاتح ثابتاً بصرف النظر عن
                                   // السمة، فيظهر باهتاً جداً فوق سايدبار لؤلؤي فاتح — بند
                                   // 7-10 من طلب توحيد ألوان السايدبار).
-                                  color: theme === 'dark'
+                                  color: isDark
                                     ? (active ? '#ffffff' : 'rgba(159,199,232,0.8)')
                                     : (active ? '#0f2133' : '#3d5a75'),
-                                  background: active ? (theme === 'dark' ? 'rgba(26,107,171,0.4)' : 'rgba(80,180,220,0.28)') : 'transparent',
+                                  background: active ? (isDark ? 'rgba(26,107,171,0.4)' : 'rgba(80,180,220,0.28)') : 'transparent',
                                   borderRadius: 8,
                                   marginBottom: 1,
                                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -362,22 +374,22 @@ export default function Layout() {
       </nav>
 
       {/* User info at bottom */}
-      <div style={{ padding: sidebarCollapsed ? '12px 8px' : '12px 16px', borderTop: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
+      <div style={{ padding: sidebarCollapsed ? '12px 8px' : '12px 16px', borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
         {!sidebarCollapsed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: '50%', background: user?.color || '#1a6bab', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
               {user?.avatar || 'م'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.55)' : '#4b6478', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
+              <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.55)' : '#4b6478', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
             </div>
-            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme === 'dark' ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 16, padding: 4 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 16, padding: 4 }}>🚪</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: user?.color || '#1a6bab', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 12 }}>{user?.avatar || 'م'}</div>
-            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme === 'dark' ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 14 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 14 }}>🚪</button>
           </div>
         )}
       </div>
@@ -389,7 +401,7 @@ export default function Layout() {
       <div className="app-bg-blur" />
       {/* زخارف Sci-Fi HUD خفيفة الحضور (خطوط/أقواس CSS متجاوبة، لا صور ثابتة)
           خلف كل المحتوى — الوضع الداكن فقط، راجع .sci-fi-arc بـindex.css */}
-      {theme === 'dark' && (
+      {isDark && (
         <>
           <div className="sci-fi-arc sci-fi-arc-1" aria-hidden="true" />
           <div className="sci-fi-arc sci-fi-arc-2" aria-hidden="true" />
@@ -408,7 +420,7 @@ export default function Layout() {
           display: 'flex', flexDirection: 'column',
           transition: 'width 0.3s ease',
           overflow: 'hidden',
-          zIndex: 100 }} className={`desktop-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
+          zIndex: 100 }} className={`desktop-sidebar no-print ${isDark ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           {/* Collapse toggle */}
           <button onClick={toggleSidebar} className="sidebar-control-btn" style={{
             position: 'absolute', [lang === 'ar' ? 'left' : 'right']: -14, top: 72, width: 28, height: 28,
@@ -430,7 +442,7 @@ export default function Layout() {
         <aside style={{
           position: 'fixed', [lang === 'ar' ? 'right' : 'left']: mobileOpen ? 0 : -280, top: 0, bottom: 0,
           width: 'var(--sidebar-width)', boxSizing: 'border-box',
-          zIndex: 200, transition: 'all 0.3s ease', overflow: 'hidden' }} className={`mobile-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
+          zIndex: 200, transition: 'all 0.3s ease', overflow: 'hidden' }} className={`mobile-sidebar no-print ${isDark ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>
             {SidebarContent()}
           </div>
@@ -452,17 +464,17 @@ export default function Layout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
             <button onClick={() => setMobileOpen(true)} className="mobile-menu-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-primary)', display: 'none' }}>☰</button>
             {/* Back button */}
-            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               {/* أيقونة بدل الرمز النصي "←" الأصلي — نفس الاتجاه بالضبط بغض
                  النظر عن اللغة، لا تغيير سلوكي، فقط استبدال بصري. */}
               <FaArrowLeft />
             </button>
             {/* Home button */}
-            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               <FaHome />
             </button>
             <div ref={searchWrapRef} style={{ position:'relative', flex: '1 1 auto', minWidth: 0, maxWidth: 420 }} className="header-search-wrap">
-              <div className={`header-search-inner ${theme === 'dark' ? 'header-search-dark' : 'header-search-light'}`}>
+              <div className={`header-search-inner ${isDark ? 'header-search-dark' : 'header-search-light'}`}>
                 <span className="header-search-icon">🔍</span>
                 <input
                   value={globalSearch}
@@ -491,10 +503,11 @@ export default function Layout() {
                 // Portal — نفس سبب لوحة الإشعارات بالضبط: .glass-header
                 // overflow:hidden كانت تقصّ هذه القائمة (ابن عادي داخلها سابقاً).
                 <HeaderFloatingPanel anchorRef={searchWrapRef} open align="end" style={{ minWidth: 240, background:'var(--bg-secondary)', border:'1px solid var(--border)', borderRadius:10, padding:8, boxShadow:'0 8px 24px rgba(0,0,0,0.15)' }}>
+                <div style={{ position: 'relative' }}>
                 <div
-                  ref={searchResultsCursorSuspend.ref}
-                  onPointerEnter={searchResultsCursorSuspend.onPointerEnter}
-                  onPointerLeave={searchResultsCursorSuspend.onPointerLeave}
+                  ref={searchResultsRef}
+                  className="hsh-hide-native-scrollbar"
+                  style={{ maxHeight: 320, overflowY: 'auto' }}
                 >
                   {[
                     {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
@@ -528,6 +541,8 @@ export default function Layout() {
                     </div>
                   )}
                 </div>
+                <HolographicScrollHandle targetRef={searchResultsRef} side={searchResultsRailSide} />
+                </div>
                 </HeaderFloatingPanel>
               )}
             </div>
@@ -554,7 +569,7 @@ export default function Layout() {
                   value={viewingHospitalId}
                   onChange={setViewingHospitalId}
                   title={lang === 'ar' ? 'أشوف الآن بيانات:' : 'Currently viewing:'}
-                  dark={theme === 'dark'}
+                  dark={isDark}
                   options={[
                     { value: 'all', label: lang === 'ar' ? 'كل المنشآت' : 'All facilities', icon: '🏥' },
                     ...hospitals.map(h => ({ value: h.id, label: h.name_ar, icon: '🏥' })),
@@ -562,12 +577,22 @@ export default function Layout() {
                 />
               )
             )}
-            {/* Theme */}
-            <button onClick={toggleTheme} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
-              {theme === 'dark' ? <FaSun /> : <FaMoon />}
-            </button>
+            {/* Theme — مفتاح ثلاثي واضح (light | dark | future) بدل toggle
+               ثنائي سابق — راجع طلب "FUTURE MODE": يجب أن يكون التبديل
+               واضحاً وسهلاً، لا تخميناً بالنقر المتكرر على زر واحد. */}
+            <div className={`theme-switcher ${isDark ? 'theme-switcher-dark' : 'theme-switcher-light'}`} role="group" aria-label={lang === 'ar' ? 'اختيار الوضع البصري' : 'Theme mode'}>
+              <button type="button" onClick={() => setTheme('light')} className={`theme-switcher-btn ${theme === 'light' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'فاتح' : 'Light'} aria-pressed={theme === 'light'}>
+                <FaSun />
+              </button>
+              <button type="button" onClick={() => setTheme('dark')} className={`theme-switcher-btn ${theme === 'dark' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'داكن' : 'Dark'} aria-pressed={theme === 'dark'}>
+                <FaMoon />
+              </button>
+              <button type="button" onClick={() => setTheme('future')} className={`theme-switcher-btn theme-switcher-btn-future ${theme === 'future' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'مستقبلي' : 'Future'} aria-pressed={theme === 'future'}>
+                <FaRocket />
+              </button>
+            </div>
             {/* Lang */}
-            <button onClick={toggleLang} className={theme === 'dark' ? 'header-pill-btn-dark' : 'header-pill-btn-light'} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
+            <button onClick={toggleLang} className={isDark ? 'header-pill-btn-dark' : 'header-pill-btn-light'} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
               {lang === 'ar' ? 'EN' : 'AR'}
             </button>
             {/* Universal print-to-PDF (hidden on pages with their own custom print/export flow — see printConfig.js) */}
@@ -579,7 +604,7 @@ export default function Layout() {
                لقصّ الشارة، وليس أي overflow أو z-index. الـwrapper نفسه بلا
                clip-path فتظهر الشارة كاملة فوق حافة الزر تماماً كالتصميم. */}
             <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowNotif(p => !p)} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+              <button onClick={() => setShowNotif(p => !p)} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                 <FaBell />
               </button>
               {unread > 0 && (
@@ -602,7 +627,11 @@ export default function Layout() {
 
         {/* Page content */}
         <main className="page-main" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-          {location.pathname !== '/' && <div className="no-print"><HealthBanner /></div>}
+          {/* Future Mode: الصفحة الرئيسية (/) تعرض FutureHub بدلاً من
+             HealthBanner+المحتوى العادي (يُبنى داخل DashboardPage.js نفسه)،
+             وبقية الصفحات لا تعرض HealthBanner (FuturePageShell أدناه يمنحها
+             إطارها البصري الخاص بدلاً منها — تفادياً لازدواج العناصر). */}
+          {location.pathname !== '/' && !isFuture && <div className="no-print"><HealthBanner /></div>}
           {/* printable-content is the only thing left visible when printing —
               see the .no-print / @media print rules below */}
           <div id="printable-content" className="printable-content">
@@ -622,7 +651,11 @@ export default function Layout() {
               </div>
             )}
 
-            <Outlet />
+            {isFuture && location.pathname !== '/' ? (
+              <FuturePageShell><Outlet /></FuturePageShell>
+            ) : (
+              <Outlet />
+            )}
 
             {printOverlay?.includeFooter && (
               // printOverlay.footerText already carries the resolved

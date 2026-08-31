@@ -1,11 +1,11 @@
 /* eslint-disable no-unused-vars */
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import { FaBell, FaCalendarAlt, FaUser, FaChartBar, FaExclamationTriangle, FaCheckDouble, FaShoppingCart, FaFileAlt } from 'react-icons/fa';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
-import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
+import HolographicScrollHandle from './HolographicScrollHandle';
 
 const icons = {
   appointment: <FaCalendarAlt />,
@@ -29,9 +29,11 @@ export default function NotificationPanel({ onClose, anchorRef }) {
   const navigate = useNavigate();
   // العقدة القابلة للتمرير الفعلية هي القسم السفلي فقط (maxHeight:360 +
   // overflowY:auto أدناه)، وليس اللوحة كلها (تحتوي أيضاً ترويسة ثابتة غير
-  // قابلة للتمرير) — راجع الشرح الكامل بـ
-  // frontend/src/hooks/useScrollableCursorSuspend.js.
-  const cursorSuspend = useScrollableCursorSuspend();
+  // قابلة للتمرير) — لذا يُلَفّ هذا القسم بغلاف position:relative خاص به
+  // (وليس اللوحة كاملة) كي يبقى الـrail مثبَّتاً بصرياً على ارتفاع القسم
+  // القابل للتمرير فقط أثناء السحب، لا يمتد فوق الترويسة الثابتة.
+  const scrollBodyRef = useRef(null);
+  const railSide = document.documentElement.dir === 'ltr' ? 'right' : 'left';
 
   // إصلاح: الضغط على الإشعار كان يكتفي بتعليمه كمقروء بدون أي تنقّل — الآن
   // ينقل فعلياً لصفحة الإشعار (كل إشعار يحمل link حقيقي) ويقفل القائمة.
@@ -84,10 +86,10 @@ export default function NotificationPanel({ onClose, anchorRef }) {
         </button>
       </div>
 
+      <div style={{ position: 'relative' }}>
       <div
-        ref={cursorSuspend.ref}
-        onPointerEnter={cursorSuspend.onPointerEnter}
-        onPointerLeave={cursorSuspend.onPointerLeave}
+        ref={scrollBodyRef}
+        className="hsh-hide-native-scrollbar"
         style={{ maxHeight: 360, overflowY: 'auto' }}
       >
         {notifications.length === 0 ? (
@@ -134,6 +136,8 @@ export default function NotificationPanel({ onClose, anchorRef }) {
             </div>
           ))
         )}
+      </div>
+      <HolographicScrollHandle targetRef={scrollBodyRef} side={railSide} />
       </div>
     </div>
     </HeaderFloatingPanel>

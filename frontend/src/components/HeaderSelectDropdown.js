@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
-import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
+import HolographicScrollHandle from './HolographicScrollHandle';
 
 /*
  * Themed replacement for a native <select> in the top toolbar. A native
@@ -17,11 +17,11 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
   const [highlighted, setHighlighted] = useState(-1);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
-  // القائمة الفعلية هنا هي العقدة القابلة للتمرير نفسها (نفس عنصر
-  // .header-dropdown-panel المُستخدَم أصلاً لاكتشاف النقر الخارجي) — لا
-  // حاجة لـref إضافي منفصل، يكفي استدعاء الدالتين على نفس العقدة (راجع
-  // الدمج بالـref أدناه).
-  const cursorSuspend = useScrollableCursorSuspend();
+  // جانب الـrail: يمين تحت RTL يُظهر الشريط الأصلي على اليسار فعلياً (كما
+  // لوحظ بصرياً)، فيُوضَع مقبض السحب هناك؛ LTR يعكسها. يُقرَأ من
+  // document.documentElement.dir مباشرة (المصدر الموحّد بالمشروع بالفعل —
+  // راجع AppContext.js) بدل افتراض جانب ثابت.
+  const railSide = document.documentElement.dir === 'ltr' ? 'right' : 'left';
 
   const selected = options.find(o => o.value === value) || options[0];
 
@@ -81,20 +81,18 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
 
       <HeaderFloatingPanel anchorRef={triggerRef} open={open} align="end" style={{ minWidth: 210 }}>
         <div
-          ref={(node) => { panelRef.current = node; cursorSuspend.ref.current = node; }}
+          ref={panelRef}
           role="listbox"
           tabIndex={-1}
           onKeyDown={handlePanelKeyDown}
-          onPointerEnter={cursorSuspend.onPointerEnter}
-          onPointerLeave={cursorSuspend.onPointerLeave}
-          className="header-dropdown-panel"
-          // علامة صريحة موثَّقة (بند 2 بالطلب الحالي) — الاكتشاف نفسه يبقى
-          // عاماً (useScrollableCursorSuspend يفحص scrollHeight/clientHeight
-          // من جديد في كل onPointerEnter) ويعمل بلا هذه الخاصية أصلاً؛ هذا
-          // فقط توثيق واضح أن هذه اللوحة تحديداً (قائمة "كل المنشآت" وغيرها
-          // من لوحات HeaderSelectDropdown) هي العقدة الحقيقية المُختبَرة —
-          // مُركَّبة عبر Portal (راجع HeaderFloatingPanel.js)، وليست ابناً
-          // عادياً لـ.glass-header/الـtrigger.
+          className="header-dropdown-panel hsh-hide-native-scrollbar"
+          // العقدة الفعلية المُختبَرة (بند 2 بالطلب الحالي) — مُركَّبة عبر
+          // Portal (راجع HeaderFloatingPanel.js)، وليست ابناً عادياً
+          // لـ.glass-header/الـtrigger. الـnative scrollbar الخاص بها مخفي
+          // بصرياً فقط (hsh-hide-native-scrollbar، بند 26-27: overflow يبقى
+          // auto، wheel/keyboard/touchpad تعمل طبيعياً) — السحب أصبح عبر
+          // HolographicScrollHandle أدناه حصراً، لا عبر محاولة تمييز مؤشر
+          // الشريط الأصلي بعد الآن.
           data-scroll-cursor-aware="true"
         >
           {options.map((opt, i) => {
@@ -114,6 +112,7 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
             );
           })}
         </div>
+        <HolographicScrollHandle targetRef={panelRef} side={railSide} />
       </HeaderFloatingPanel>
     </>
   );

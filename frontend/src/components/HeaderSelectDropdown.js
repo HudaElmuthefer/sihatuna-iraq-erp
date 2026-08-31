@@ -91,9 +91,8 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
           // لـ.glass-header/الـtrigger. الـnative scrollbar الخاص بها مخفي
           // بصرياً فقط (hsh-hide-native-scrollbar، بند 26-27: overflow يبقى
           // auto، wheel/keyboard/touchpad تعمل طبيعياً) — السحب أصبح عبر
-          // HolographicScrollHandle أدناه حصراً، لا عبر محاولة تمييز مؤشر
-          // الشريط الأصلي بعد الآن.
-          data-scroll-cursor-aware="true"
+          // HolographicScrollHandle أدناه، والمؤشر الأصلي مفروض طوال بقاء
+          // اللوحة مفتوحة عبر HeaderFloatingPanel (useScrollableCursorSuspend).
         >
           {options.map((opt, i) => {
             const isSelected = opt.value === value;

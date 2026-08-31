@@ -91,65 +91,16 @@
   --text-active: #0f2133;
 }
 
-[data-theme="dark"] {
-  --bg-primary: #0a0f1a;
-  --bg-secondary: #111827;
-  --bg-card: #1a2332;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  /* إصلاح تباين: كانت #64748b تعطي 3.32:1 فقط مقابل --bg-card الغامقة (يحتاج
-     4.5:1 لـ WCAG AA) — مستخدَمة بـ50+ موضع بالنظام (تواريخ، أسماء أقسام
-     بالجداول، تسميات إحصاءات...). القيمة الجديدة تعطي 4.93:1. */
-  --text-muted: #8291a8;
-  --border: #1e2d3f;
-  --shadow: 0 2px 15px rgba(0,0,0,0.3);
-  --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
-
-  --num-color: #4fc3f7;
-  --border-glass: rgba(255, 255, 255, 0.15);
-  --bg-glass: rgba(15, 25, 35, 0.45);
-  --text-active: #00d2ff;
-
-  /* Futuristic glass/glow design tokens — extracted from components/dark
-     reference renders (icy cyan glow, gunmetal brushed-glass panels). */
-  --glow-accent: var(--num-color);
-  --glow-accent-rgb: 79, 195, 247;
-  /* Panel tones sampled directly from components/dark/Gemini_Generated_Image_v4irlnv4irlnv4ir.png
-     (header/sidebar sampled at #576C7D top → #3B5667 mid → #252B37 bottom),
-     not a default/invented palette. */
-  --glass-panel-bg: linear-gradient(160deg, rgba(87,108,125,0.5) 0%, rgba(37,43,55,0.32) 100%);
-  --glass-panel-bg-strong: linear-gradient(180deg, rgba(87,108,125,0.55) 0%, rgba(59,86,103,0.5) 45%, rgba(37,43,55,0.8) 100%);
-  --glass-blur: 18px;
-  --cursor-core: #4fc3f7;
-
-  /* Named palette, sampled pixel-by-pixel from the reference image
-     (GetPixel via System.Drawing on specific regions — not from memory).
-     Organizational aliases requested for the dashboard's dark surfaces;
-     the app-wide --bg-primary/--bg-card/--border tokens above are left
-     untouched (used by all 32 modules — restyling those is a much larger,
-     separately-scoped change, not part of this dashboard pass). */
-  --dash-bg-header: #C4D8E1;      /* header strip, brightest point */
-  --dash-bg-sidebar-top: #576C7D; /* sidebar gradient start */
-  --dash-bg-sidebar-mid: #3B5667;
-  --dash-bg-sidebar-bottom: #252B37; /* sidebar gradient end */
-  --dash-surface-card: #3C4856;   /* icon-plate / stat-tile glass fill */
-  --dash-surface-search: #334859; /* header search field's dark inset */
-  --dash-cyan-primary: #4fc3f7;   /* == --num-color/--glow-accent above */
-  --dash-cyan-border: #557284;    /* active-item border, muted (pre-glow) tone */
-  --dash-text-primary: #C0CAD4;   /* stat numbers / hero title base color */
-  --dash-text-secondary: #8D9399; /* sparkle / muted labels */
-  --cursor-ring-rgb: 79, 195, 247;
-}
-
 /* ══════════════════════════════════════════════════════════════════════
-   FUTURE MODE — مود ثالث مستقل تماماً (ليس متغيّراً من Dark، بند 33
-   بالطلب صراحةً). Layout.js يعيد استخدام أصناف الوضع الداكن الهيكلية
-   (isDark = theme==='dark' || theme==='future') لتفادي إعادة كتابة عشرات
-   ternaries بلا داعٍ — لكن كل الألوان/التوهج الفعلي لهذا المود يأتي حصراً
-   من متغيّرات CSS هنا، فتحصل نفس البنية على "مواد" مختلفة فعلياً: أزرق
-   كهربائي/سماوي جليدي مهيمن، بنفسجي خفيف كعمق، توهّج teal ناعم، مع لمسة
-   وردية/بنفسجية محدودة جداً فقط عند الحاجة (بند 8 صراحةً — ليس Cyberpunk). */
-[data-theme="future"] {
+   الوضع الداكن — أُعيد تصميمه بالكامل كـ"غرفة تحكم هولوغرافية طبية
+   مستقبلية": كحلي عميق/زجاج مُدخَّن كقاعدة، سماوي كهربائي كطاقة رئيسية
+   مهيمنة، وذهبي شمبانيا كلمسة هيكلية محدودة جداً (ليس أصفر صريحاً)، مع
+   بنفسجي خافت جداً كعمق إضافي. لا Cyberpunk (لا وردي/نيون صارخ، لا وميض) —
+   أناقة طبية سينمائية هادئة. هذا المود الوحيد المتبقي غير الفاتح — لا يوجد
+   مود "مستقبلي" منفصل بعد الآن؛ هويته البصرية هذه هي فعلياً ما كان يُعرَض
+   سابقاً تحت [data-theme="future"] (أُدمجت هنا وحُذف ذلك المفتاح كلياً).
+   ══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
   --bg-primary: #050a14;
   --bg-secondary: #0a1220;
   --bg-card: #0d1826;
@@ -160,18 +111,32 @@
   --shadow: 0 2px 18px rgba(0,0,0,0.45);
   --shadow-lg: 0 12px 44px rgba(0,0,0,0.55);
 
-  --num-color: #4fe3ff;
-  --border-glass: rgba(120, 220, 255, 0.18);
+  /* أزرق نيون دقيق للحالة الطبيعية/طاقة الواجهة، وذهبي/برتقالي حصراً
+     للتنبيهات والطوارئ (--warning مُعاد توجيهها — تستخدمها عشرات الشارات
+     بالفعل بلا أي سلك جديد). */
+  --num-color: #00f3ff;
+  --border-glass: rgba(0, 243, 255, 0.2);
   --bg-glass: rgba(8, 20, 34, 0.55);
   --text-active: #baf3ff;
 
   --glow-accent: var(--num-color);
-  --glow-accent-rgb: 79, 227, 255;
+  --glow-accent-rgb: 0, 243, 255;
   --glass-panel-bg: linear-gradient(160deg, rgba(30,60,90,0.5) 0%, rgba(10,20,35,0.35) 100%);
   --glass-panel-bg-strong: linear-gradient(180deg, rgba(45,80,115,0.55) 0%, rgba(20,40,60,0.5) 45%, rgba(6,12,22,0.85) 100%);
   --glass-blur: 20px;
-  --cursor-core: #4fe3ff;
-  --cursor-ring-rgb: 79, 227, 255;
+  --cursor-core: #00f3ff;
+  --cursor-ring-rgb: 0, 243, 255;
+
+  --warning: #ffb703;
+  --glow-alert: #ffb703;
+  --glow-alert-rgb: 255, 183, 3;
+
+  /* لمسة هيكلية ذهبية-شمبانيا محدودة جداً (بند "ذهبي كلمسة فقط، ليس
+     مهيمناً" صراحةً) — العنصر النشط بالحلقة/السايدبار، وإضاءة داخلية خفيفة
+     للوحة المركزية المختارة فقط. لا استخدام آخر لها. */
+  --gold-accent: #d9b878;
+  --gold-accent-rgb: 217, 184, 120;
+  --violet-depth-rgb: 124, 108, 214;
 
   --dash-bg-header: #12283a;
   --dash-bg-sidebar-top: #1b3a52;
@@ -179,7 +144,7 @@
   --dash-bg-sidebar-bottom: #060d16;
   --dash-surface-card: #10202f;
   --dash-surface-search: #0d1c2a;
-  --dash-cyan-primary: #4fe3ff;
+  --dash-cyan-primary: #00f3ff;
   --dash-cyan-border: #2c6f8e;
   --dash-text-primary: #cdeeff;
   --dash-text-secondary: #7ea3b8;
@@ -232,6 +197,32 @@ body {
     radial-gradient(ellipse 55% 45% at 90% 85%, rgba(80, 190, 230, 0.07), transparent 65%),
     var(--bg-primary);
   background-attachment: fixed;
+}
+
+/* خلفية الوضع الداكن — طبقات (ليست Gradient واحداً): توهجان بعيدان خافتان
+   جداً (أزرق كهربائي + بنفسجي خافت جداً) فوق قاعدة كحلي شبه أسود عميقة —
+   إحساس "غرفة تحكم هولوغرافية" لا "صفحة ويب داكنة" مسطّحة. */
+[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 55% 45% at 18% 8%, rgba(0, 243, 255, 0.09), transparent 65%),
+    radial-gradient(ellipse 50% 45% at 85% 88%, rgba(var(--violet-depth-rgb), 0.07), transparent 65%),
+    linear-gradient(160deg, #030710 0%, #060f1c 45%, #02060c 100%);
+  background-attachment: fixed;
+}
+
+/* شبكة HUD طبية شبه غير مرئية — زخرفية بحتة، ثابتة على body عبر ::before. */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
 }
 
 body.en {
@@ -1114,15 +1105,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
    الأسفل أسود خالصاً. هذه الخلفية هي CSS الخاص بالحاوية نفسها (background)،
    فتغطي 100% من عرض/ارتفاع السايدبار تلقائياً بلا أي حافة مرئية للطبقة —
    لا وجود لصورة أصغر/أضيق موضوعة فوقها لتترك أثراً. */
-/* [data-theme="future"] مضافة صراحةً هنا (بند 15 بالطلب: سايدبار مندمج مع
-   المشهد، ليس مجرد نسخة عن Dark) — القاعدة نفسها المستخدَمة بالوضع الداكن،
-   لكنها تلتقط تلقائياً ألوان Future الفعلية لأن كل قيمة هنا مبنية على
-   متغيّرات CSS (--dash-bg-sidebar-*) مُعرَّفة بشكل مختلف تحت [data-theme=
-   "future"] أعلاه — لا حاجة لتكرار الإعلانات، فقط توسيع مطابقة المحدِّد. */
 [data-theme="dark"] .desktop-sidebar,
-[data-theme="dark"] .mobile-sidebar,
-[data-theme="future"] .desktop-sidebar,
-[data-theme="future"] .mobile-sidebar {
+[data-theme="dark"] .mobile-sidebar {
   background:
     radial-gradient(ellipse at 8% 4%, rgba(92, 220, 255, 0.30) 0%, rgba(32, 150, 210, 0.15) 22%, rgba(8, 35, 55, 0.06) 46%, transparent 68%),
     linear-gradient(180deg, rgba(30, 88, 115, 0.40) 0%, rgba(12, 40, 58, 0.34) 35%, rgba(5, 18, 28, 0.88) 100%),
@@ -1135,8 +1119,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* حافة توهج رفيعة حول إطار القائمة فقط (خط حد، وليس لوحاً مملوءاً) — لا
    تنافس الصورة نفسها ولا تضيف طبقة "لوح" ثانية خلفها. */
-[data-theme="dark"] .sidebar-glow-frame,
-[data-theme="future"] .sidebar-glow-frame {
+[data-theme="dark"] .sidebar-glow-frame {
   box-shadow:
     1px 0 0 rgba(var(--glow-accent-rgb), 0.35),
     0 0 18px rgba(var(--glow-accent-rgb), 0.14) !important;
@@ -3257,45 +3240,7 @@ html.custom-cursor-suspended *:not(input):not(textarea) {
   .dept-card:hover .dept-card-icon { transform: none; }
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   FUTURE MODE — مود ثالث مستقل (light/dark لم يُحذفا ولم يتغيّرا). القيم
-   اللونية (--glow-accent-rgb، --dash-bg-sidebar-*...) مُعرَّفة تحت
-   [data-theme="future"] بأعلى الملف؛ هذا القسم يضيف: (أ) خلفية الصفحة
-   العامة (غرفة تحكم مستقبلية، بند 9)، (ب) مفتاح التبديل الثلاثي بالهيدر،
-   (ج) FutureHub (الصفحة الرئيسية)، (د) FutureGlassCard (لوحة/بطاقة مصغّرة
-   قابلة لإعادة الاستخدام)، (هـ) FuturePageShell (إطار الصفحات الأخرى).
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* خلفية عامة — طبقات (بند 9 صراحةً: ليست Gradient واحداً): توهجان بعيدان
-   خافتان جداً (أزرق كهربائي + بنفسجي خافت جداً) فوق قاعدة كحلي شبه أسود
-   عميقة جداً (أعمق من الوضع الداكن الحالي عمداً — إحساس "غرفة تحكم" لا
-   "صفحة ويب داكنة"). */
-[data-theme="future"] body {
-  background:
-    radial-gradient(ellipse 55% 45% at 18% 8%, rgba(79, 227, 255, 0.09), transparent 65%),
-    radial-gradient(ellipse 50% 45% at 85% 88%, rgba(120, 100, 230, 0.07), transparent 65%),
-    linear-gradient(160deg, #030710 0%, #060f1c 45%, #02060c 100%);
-  background-attachment: fixed;
-}
-
-/* شبكة HUD طبية شبه غير مرئية — نفس تقنية LoginPage.js (grid + mask)، هنا
-   ثابتة على body عبر ::before بدل عنصر React مخصَّص (لا حاجة لعنصر DOM
-   لتأثير زخرفي بحت يغطي كامل الصفحة). */
-[data-theme="future"] body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(79, 227, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(79, 227, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
-  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
-}
-
-/* ── Theme Switcher (بند 2 بالطلب صراحةً) ───────────────────────────── */
+/* ── Theme Switcher (فاتح/داكن فقط) ──────────────────────────────────── */
 .theme-switcher {
   display: inline-flex;
   align-items: center;
@@ -3335,234 +3280,7 @@ html.custom-cursor-suspended *:not(input):not(textarea) {
   color: #fff;
   box-shadow: 0 0 10px rgba(var(--glow-accent-rgb), 0.45);
 }
-.theme-switcher-btn-future.theme-switcher-btn-active {
-  background: linear-gradient(135deg, #0f4c75, #4fe3ff);
-  color: #04121c;
-}
 @media (prefers-reduced-motion: reduce) {
   .theme-switcher-btn:hover, .theme-switcher-btn:active { transform: none; }
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   FutureGlassCard — وحدة تحكّم زجاجية مصغَّرة قابلة لإعادة الاستخدام (بند
-   16/26 بالطلب صراحةً)، تُستخدَم داخل FutureHub (بطاقات عادية + المركزية)
-   وكعنصر "المستنسخ" العائم أثناء حركة السحب (variant="focus").
-   ══════════════════════════════════════════════════════════════════════ */
-.fgc {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(160deg, rgba(30,60,90,0.55) 0%, rgba(8,16,28,0.65) 100%);
-  border: 1px solid rgba(79,227,255,0.28);
-  box-shadow:
-    inset 0 1px 0 rgba(160,225,255,0.1),
-    0 14px 30px rgba(0,0,0,0.4),
-    0 0 16px rgba(79,227,255,0.1);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  color: #dff4ff;
-  cursor: pointer;
-  font-family: inherit;
-  overflow: hidden;
-  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.3s ease, filter 0.3s ease;
-}
-.fgc:hover {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow:
-    inset 0 1px 0 rgba(160,225,255,0.15),
-    0 20px 40px rgba(0,0,0,0.5),
-    0 0 26px rgba(79,227,255,0.3);
-  border-color: rgba(79,227,255,0.6);
-}
-.fgc:active { transform: translateY(-1px) scale(0.99); }
-
-.fgc-edge {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(79,227,255,0.85), transparent);
-  pointer-events: none;
-}
-
-.fgc-icon { font-size: 30px; line-height: 1; filter: drop-shadow(0 0 8px rgba(79,227,255,0.5)); }
-.fgc-title { font-size: 14px; font-weight: 700; text-align: center; }
-.fgc-count {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1;
-  background: linear-gradient(135deg, #4fe3ff 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.fgc-center {
-  min-height: 220px;
-  padding: 28px;
-  border-radius: 26px;
-  background: linear-gradient(160deg, rgba(45,90,130,0.6) 0%, rgba(10,20,35,0.75) 100%);
-  border: 1px solid rgba(79,227,255,0.48);
-  box-shadow:
-    inset 0 1px 0 rgba(180,235,255,0.18),
-    0 26px 60px rgba(0,0,0,0.5),
-    0 0 40px rgba(79,227,255,0.25);
-  cursor: default;
-}
-.fgc-center .fgc-icon { font-size: 46px; }
-.fgc-center .fgc-title { font-size: 18px; }
-.fgc-center:hover { transform: none; }
-
-.fgc-focus {
-  min-height: 0;
-  border-radius: 22px;
-  box-shadow:
-    inset 0 1px 0 rgba(180,235,255,0.22),
-    0 34px 70px rgba(0,0,0,0.55),
-    0 0 55px rgba(79,227,255,0.4);
-  cursor: default;
-}
-.fgc-focus .fgc-icon { font-size: 42px; }
-.fgc-focus .fgc-title { font-size: 18px; }
-.fgc-focus:hover { transform: none; }
-
-.fgc-dimmed { opacity: 0.32; filter: blur(1.5px) saturate(60%); transform: scale(0.96); }
-.fgc-hidden { opacity: 0; pointer-events: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  .fgc { transition: box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease; }
-  .fgc:hover, .fgc:active { transform: none; }
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   FUTURE HUB — الصفحة الرئيسية (بند 5-6/20 بالطلب صراحةً): لوحة مركزية +
-   ست لوحات موزَّعة حولها عبر CSS Grid (3×3، بلا أي منطق RTL/LTR يدوي —
-   Grid يعكس ترتيب الأعمدة تلقائياً تحت direction:rtl).
-   ══════════════════════════════════════════════════════════════════════ */
-.fh-stage {
-  position: relative;
-  min-height: calc(100vh - 170px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 12px;
-}
-
-.fh-atmosphere {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.fh-stage-focusing .fh-atmosphere { opacity: 0.45; }
-
-.fh-atmosphere-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(79,227,255,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(79,227,255,0.05) 1px, transparent 1px);
-  background-size: 46px 46px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, black, transparent 80%);
-  mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, black, transparent 80%);
-}
-.fh-atmosphere-arc {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid rgba(79,227,255,0.12);
-  pointer-events: none;
-}
-.fh-atmosphere-arc-1 { width: 68%; height: 68%; top: 16%; left: 16%; }
-.fh-atmosphere-arc-2 { width: 44%; height: 44%; top: 28%; left: 28%; border-color: rgba(150,130,230,0.1); }
-
-.fh-grid {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 1180px);
-  height: min(68vh, 620px);
-  display: grid;
-  grid-template-columns: 1fr 1.6fr 1fr;
-  grid-template-rows: 1fr 1.3fr 1fr;
-  grid-template-areas:
-    "s1 .      s2"
-    "s3 center s4"
-    "s5 .      s6";
-  gap: 18px;
-  margin: 0 auto;
-}
-.fh-slot { display: flex; min-width: 0; min-height: 0; }
-.fh-slot-center { grid-area: center; }
-.fh-slot-s1 { grid-area: s1; }
-.fh-slot-s2 { grid-area: s2; }
-.fh-slot-s3 { grid-area: s3; }
-.fh-slot-s4 { grid-area: s4; }
-.fh-slot-s5 { grid-area: s5; }
-.fh-slot-s6 { grid-area: s6; }
-
-.fh-clone {
-  position: fixed;
-  z-index: 500;
-  border-radius: 22px;
-  will-change: transform;
-  pointer-events: none;
-}
-
-@media (max-width: 1100px) {
-  .fh-stage { min-height: auto; padding: 8px 8px 24px; }
-  .fh-grid {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: auto;
-    width: 100%;
-    gap: 16px;
-  }
-  .fh-slot { width: 100%; max-width: 420px; }
-  .fh-slot-center { order: -1; max-width: 480px; }
-}
-
-@media print {
-  .fh-stage, .fps-shell { background: none !important; box-shadow: none !important; }
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   FuturePageShell — إطار زجاجي موحّد لبقية الصفحات (بند 13 صراحةً).
-   ══════════════════════════════════════════════════════════════════════ */
-.fps-shell {
-  position: relative;
-  border-radius: 22px;
-  padding: 26px;
-  background: linear-gradient(165deg, rgba(20,40,60,0.5) 0%, rgba(6,12,22,0.55) 100%);
-  border: 1px solid rgba(79,227,255,0.22);
-  box-shadow:
-    inset 0 1px 0 rgba(160,225,255,0.08),
-    0 20px 50px rgba(0,0,0,0.4);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  overflow: hidden;
-}
-.fps-glow {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(60px);
-  z-index: 0;
-}
-.fps-glow-a { width: 320px; height: 320px; top: -120px; inset-inline-start: -80px; background: rgba(79,227,255,0.14); }
-.fps-glow-b { width: 260px; height: 260px; bottom: -100px; inset-inline-end: -60px; background: rgba(120,110,230,0.12); }
-.fps-workspace { position: relative; z-index: 1; }
-
-@media print {
-  .fps-shell { background: none !important; border: none !important; box-shadow: none !important; backdrop-filter: none !important; padding: 0 !important; }
-  .fps-glow { display: none !important; }
-}

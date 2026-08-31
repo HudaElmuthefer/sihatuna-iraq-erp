@@ -1,0 +1,377 @@
+/* ══════════════════════════════════════════════════════════════════════
+   الوضع الداكن الهولوغرافي — غرفة تحكم طبية مستقبلية (حلقة صفحات ثلاثية
+   الأبعاد + مساحة عمل مركزية زجاجية منحنية + سايدبار زجاجي عائم). يُستورَد
+   مرة واحدة من Layout.js. لا يمسّ الوضع الفاتح إطلاقاً — كل قاعدة هنا إما
+   مُطبَّقة داخل مكوّنات holo/ نفسها (لا تُركَّب إلا بالوضع الداكن أصلاً) أو
+   مُقيَّدة صراحةً بـ[data-theme="dark"].
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── تحسينات عامة للمواد الزجاجية (بطاقات/جداول موجودة أصلاً — index.css) ──
+   .card/.table/.btn تعتمد بالفعل على متغيّرات CSS (--bg-card/--glow-accent-rgb)
+   التي أصبحت الآن سماوي/كحلي هولوغرافي تلقائياً؛ هذا القسم فقط يضيف لمسة
+   "زجاج" إضافية لعناصر كانت بألوان صريحة ثابتة (تركيز الحقول، الأزرار
+   الأساسية، النوافذ المنبثقة). ── */
+[data-theme="dark"] .form-control {
+  background: rgba(8, 20, 34, 0.55);
+  border-color: rgba(var(--glow-accent-rgb), 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+[data-theme="dark"] .form-control:focus {
+  border-color: rgba(var(--glow-accent-rgb), 0.75);
+  box-shadow: 0 0 0 3px rgba(var(--glow-accent-rgb), 0.18), 0 0 16px rgba(var(--glow-accent-rgb), 0.25);
+}
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #0f4c75, rgba(var(--glow-accent-rgb), 0.9));
+  color: #04121c;
+  font-weight: 700;
+}
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(135deg, #12608f, rgb(var(--glow-accent-rgb)));
+  box-shadow: 0 4px 18px rgba(var(--glow-accent-rgb), 0.4);
+}
+
+[data-theme="dark"] .modal {
+  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.28);
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(var(--glow-accent-rgb), 0.12);
+}
+
+[data-theme="dark"] .header-dropdown-option:hover,
+[data-theme="dark"] .header-dropdown-option-highlighted {
+  background: rgba(var(--glow-accent-rgb), 0.12);
+}
+[data-theme="dark"] .header-dropdown-option-selected {
+  border-inline-start: 2px solid rgba(var(--gold-accent-rgb), 0.85);
+}
+
+/* لمسة ذهبية-شمبانيا داخلية للعنصر النشط بالسايدبار — فوق الإطار السماوي
+   الموجود أصلاً بـindex.css، لا بديلاً عنه (بند: "ذهبي كلمسة محدودة فقط،
+   ليس أصفر صريحاً" صراحةً). */
+[data-theme="dark"] .sidebar-nav-item.active::after,
+[data-theme="dark"] .sidebar-nav-item-active::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgb(var(--gold-accent-rgb));
+  box-shadow: 0 0 8px rgba(var(--gold-accent-rgb), 0.7);
+}
+
+@media print {
+  .dhh-shell, .chw-shell { background: none !important; box-shadow: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DarkHolographicHome — الصفحة الرئيسية (الحلقة + المركز الخامل)
+   ══════════════════════════════════════════════════════════════════════ */
+.dhh-shell {
+  position: relative;
+  min-height: calc(100vh - 170px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.dhh-center-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dhh-idle {
+  position: relative;
+  text-align: center;
+  padding: 18px 26px;
+  pointer-events: none;
+}
+.dhh-idle-title {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dash-text-secondary);
+  margin-bottom: 14px;
+}
+.dhh-idle-stats {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+}
+.dhh-idle-stat { min-width: 76px; }
+.dhh-idle-value {
+  font-size: 30px;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgb(var(--glow-accent-rgb)) 0%, rgb(var(--gold-accent-rgb)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(var(--glow-accent-rgb), 0.35));
+}
+.dhh-idle-label {
+  font-size: 11px;
+  color: var(--dash-text-secondary);
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   منطقة الإفلات المغناطيسية بالمركز
+   ══════════════════════════════════════════════════════════════════════ */
+.hcd-zone {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.25s ease;
+}
+.hcd-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(var(--glow-accent-rgb), 0.3);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.hcd-ring-1 { inset: 0; }
+.hcd-ring-2 { inset: 22px; }
+.hcd-label {
+  position: absolute;
+  bottom: -26px;
+  font-size: 10px;
+  color: var(--dash-text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.hcd-zone.hcd-armed { opacity: 1; }
+.hcd-zone.hcd-armed .hcd-ring {
+  border-color: rgba(var(--gold-accent-rgb), 0.9);
+  border-style: solid;
+  box-shadow: 0 0 24px rgba(var(--gold-accent-rgb), 0.4);
+}
+.hcd-zone.hcd-armed .hcd-ring-1 { transform: scale(1.08); }
+.hcd-zone.hcd-armed .hcd-label { opacity: 1; color: rgb(var(--gold-accent-rgb)); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   HolographicPageRing — المسرح والمشهد ثلاثي الأبعاد
+   ══════════════════════════════════════════════════════════════════════ */
+.hpr-stage {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: calc(100vh - 170px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  perspective: 1400px;
+  touch-action: pan-y;
+  outline: none;
+  cursor: grab;
+}
+.hpr-stage.hpr-dragging { cursor: grabbing; }
+.hpr-stage:focus-visible { box-shadow: inset 0 0 0 2px rgba(var(--glow-accent-rgb), 0.4); }
+
+.hpr-scene {
+  position: relative;
+  width: min(100%, 1300px);
+  height: min(60vh, 520px);
+  transform-style: preserve-3d;
+}
+
+.hpr-controls {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+  pointer-events: auto;
+}
+.hpr-nav-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.35);
+  background: rgba(8, 20, 34, 0.55);
+  color: rgb(var(--glow-accent-rgb));
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.hpr-nav-btn:hover { background: rgba(var(--glow-accent-rgb), 0.18); box-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.35); transform: scale(1.08); }
+.hpr-nav-btn:active { transform: scale(0.94); }
+
+@media (max-width: 1400px) {
+  .hpr-scene { height: min(56vh, 460px); }
+}
+/* 1366×768 — أولوية للاستخدامية، تصغير الحلقة صراحةً (بند بالمواصفة). */
+@media (max-width: 1400px) and (max-height: 800px) {
+  .hpr-scene { height: min(48vh, 380px); }
+  .dhh-idle-value { font-size: 24px; }
+  .dhh-idle-stats { gap: 18px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   HolographicPagePanel — لوحة صفحة مقوَّسة واحدة على الحلقة
+   ══════════════════════════════════════════════════════════════════════ */
+.hpp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(150px, 15vw, 190px);
+  height: clamp(170px, 17vw, 210px);
+  margin: calc(-1 * clamp(85px, 8.5vw, 105px)) 0 0 calc(-1 * clamp(75px, 7.5vw, 95px));
+  border-radius: 20px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(30,60,90,0.55) 0%, rgba(8,16,28,0.68) 100%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(160,225,255,0.1),
+    0 14px 30px rgba(0,0,0,0.4),
+    0 0 16px rgba(var(--glow-accent-rgb), 0.1);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  color: #dff4ff;
+  user-select: none;
+  touch-action: none;
+  will-change: transform;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.25s ease, filter 0.25s ease;
+}
+
+.hpp-front {
+  border-color: rgba(var(--glow-accent-rgb), 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(180,235,255,0.2),
+    0 0 6px 2px rgba(var(--gold-accent-rgb), 0.35),
+    0 26px 55px rgba(0,0,0,0.5),
+    0 0 46px rgba(var(--glow-accent-rgb), 0.4);
+}
+
+.hpp-draggable { cursor: grab; }
+.hpp-draggable:active { cursor: grabbing; }
+.hpp.hpp-magnet { border-color: rgba(var(--gold-accent-rgb), 0.9); box-shadow: 0 0 50px rgba(var(--gold-accent-rgb), 0.5); }
+
+.hpp-opening {
+  transform: translate(-50%, -50%) translateZ(260px) scale(1.9) !important;
+  opacity: 1 !important;
+  z-index: 3000 !important;
+  border-color: rgb(var(--glow-accent-rgb));
+  box-shadow: 0 0 90px rgba(var(--glow-accent-rgb), 0.6);
+}
+
+.hpp-edge-top, .hpp-edge-bottom {
+  content: '';
+  position: absolute;
+  inset-inline: 10px;
+  height: 1px;
+  pointer-events: none;
+}
+.hpp-edge-top { top: 0; background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.85), transparent); }
+.hpp-edge-bottom { bottom: 0; background: linear-gradient(90deg, transparent, rgba(var(--gold-accent-rgb), 0.5), transparent); }
+.hpp-reflection {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255,255,255,0.10) 0%, transparent 30%);
+  pointer-events: none;
+}
+
+.hpp-icon { font-size: 26px; line-height: 1; filter: drop-shadow(0 0 8px rgba(var(--glow-accent-rgb), 0.5)); }
+.hpp-title { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+.hpp-preview { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hpp { transition: opacity 0.2s ease, filter 0.2s ease; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MiniPagePreview — معاينات مصغَّرة داخل كل لوحة
+   ══════════════════════════════════════════════════════════════════════ */
+.mpp { width: 100%; font-size: 10px; color: rgba(223, 244, 255, 0.75); }
+.mpp-count { font-size: 18px; font-weight: 800; color: rgb(var(--glow-accent-rgb)); line-height: 1; margin-bottom: 4px; }
+
+.mpp-rows .mpp-row { display: flex; align-items: center; gap: 5px; padding: 2px 0; overflow: hidden; }
+.mpp-row-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mpp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.mpp-avatar { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: 700; }
+
+.mpp-timeline .mpp-tl-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.mpp-tl-time { font-size: 9px; color: rgb(var(--gold-accent-rgb)); flex-shrink: 0; width: 30px; }
+.mpp-tl-bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(var(--glow-accent-rgb), 0.35); }
+
+.mpp-grid { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.mpp-chip { width: 22px; height: 22px; border-radius: 6px; border: 1px solid; display: flex; align-items: center; justify-content: center; font-size: 11px; background: rgba(255,255,255,0.04); }
+
+.mpp-stat-value { font-size: 22px; font-weight: 800; color: rgb(var(--glow-accent-rgb)); }
+.mpp-stat-sub { font-size: 10px; color: var(--dash-text-secondary); margin-top: 2px; }
+.mpp-stat-sub[data-alert="true"] { color: #f87171; }
+
+.mpp-progress-track { width: 100%; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 4px; }
+.mpp-progress-fill { height: 100%; background: linear-gradient(90deg, rgb(var(--glow-accent-rgb)), rgb(var(--gold-accent-rgb))); }
+
+.mpp-generic { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mpp-generic-icon { font-size: 22px; filter: drop-shadow(0 0 6px rgba(var(--glow-accent-rgb), 0.4)); }
+.mpp-generic-bar { display: block; height: 3px; border-radius: 2px; background: rgba(var(--glow-accent-rgb), 0.25); }
+.mpp-generic-bar-1 { width: 70%; }
+.mpp-generic-bar-2 { width: 45%; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   CentralHolographicWorkspace — إطار الصفحات الأخرى (غير '/')
+   ══════════════════════════════════════════════════════════════════════ */
+.chw-shell {
+  position: relative;
+  border-radius: 22px;
+  padding: 26px;
+  background: linear-gradient(165deg, rgba(20,40,60,0.5) 0%, rgba(6,12,22,0.55) 100%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(160,225,255,0.08),
+    0 20px 50px rgba(0,0,0,0.4);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  overflow: hidden;
+  animation: chwArrive 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes chwArrive {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.chw-glow { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(60px); z-index: 0; }
+.chw-glow-a { width: 320px; height: 320px; top: -120px; inset-inline-start: -80px; background: rgba(var(--glow-accent-rgb), 0.14); }
+.chw-glow-b { width: 260px; height: 260px; bottom: -100px; inset-inline-end: -60px; background: rgba(var(--violet-depth-rgb), 0.12); }
+.chw-edge-top, .chw-edge-bottom { position: absolute; inset-inline: 20px; height: 1px; pointer-events: none; z-index: 1; }
+.chw-edge-top { top: 0; background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.7), transparent); }
+.chw-edge-bottom { bottom: 0; background: linear-gradient(90deg, transparent, rgba(var(--gold-accent-rgb), 0.4), transparent); }
+.chw-workspace { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chw-shell { animation: none; }
+}
+
+@media print {
+  .chw-shell { background: none !important; border: none !important; box-shadow: none !important; backdrop-filter: none !important; padding: 0 !important; }
+  .chw-glow { display: none !important; }
+}

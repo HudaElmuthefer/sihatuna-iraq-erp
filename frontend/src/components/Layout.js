@@ -10,9 +10,10 @@ import NotificationPanel from './NotificationPanel';
 import HeaderSelectDropdown from './HeaderSelectDropdown';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
 import HolographicScrollHandle from './HolographicScrollHandle';
-import FuturePageShell from './future/FuturePageShell';
+import CentralHolographicWorkspace from './holo/CentralHolographicWorkspace';
 import { isPrintButtonHidden } from '../config/printConfig';
 import './Layout.dark.css';
+import '../styles/holographic-dark.css';
 // ملاحظة: صورة القائمة الجانبية المرجعية (كانت مستوردة هنا سابقاً باسم
 // sidebarDarkV3، من components/dark/ChatGPT Image Aug 30, 2026, 05_36_27 PM
 // (3).png) أُزيلت من الرندر نهائياً. السبب: الصورة بأكملها عبارة عن عناصر
@@ -25,7 +26,7 @@ import './Layout.dark.css';
 // .mobile-sidebar (index.css)، فبقيت كما هي تماماً بعد حذف الصورة. الملف
 // نفسه لم يُحذف من القرص (frontend/src/assets/sidebar/) تحسباً لحاجة لاحقة.
 import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
-import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell, FaRocket } from 'react-icons/fa';
+import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell } from 'react-icons/fa';
 import {
   FaUsers, FaTags, FaUserMd, FaCalendarAlt, FaBuilding, FaSyringe, FaBed, FaBaby,
   FaRunning, FaTicketAlt, FaPills, FaBalanceScale, FaBan, FaHospital, FaBrain,
@@ -84,16 +85,7 @@ const GROUP_LABELS = {
 
 export default function Layout() {
   const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
-  // FUTURE MODE (mod ثالث مستقل — راجع Final Important بالطلب: ليس مجرد
-  // متغيّر Dark). الشاشة/الشريط الجانبي يعيدان استخدام نفس أصناف الوضع
-  // الداكن كأساس هيكلي (isDark) — إعادة كتابة عشرات ternaries بثلاث حالات
-  // منفصلة هنا خطر تراجع غير ضروري بلا فائدة بصرية تُذكر، بما أن هوية
-  // Future الفعلية (الخلفية/التوهج/الألوان) مبنية بالكامل عبر متغيّرات CSS
-  // مُعرَّفة تحت [data-theme="future"] بـindex.css (--glow-accent-rgb وغيرها)
-  // + Layout.dark.css القابل للتوسعة بنفس الاختيار — فتحصل Future على مواد
-  // إضاءة مختلفة فعلياً رغم اشتراك أسماء الأصناف مع الداكن.
-  const isDark = theme === 'dark' || theme === 'future';
-  const isFuture = theme === 'future';
+  const isDark = theme === 'dark';
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -106,6 +98,22 @@ export default function Layout() {
   const [searchParams] = useSearchParams();
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // جسر تنقّل بسيط بين السايدبار وحلقة الصفحات الهولوغرافية (DarkHolographicHome
+  // — تُركَّب فقط على '/' بالوضع الداكن، عبر Outlet context أدناه). لو كانت
+  // الحلقة مركَّبة فعلاً (المستخدم على '/')، النقر على عنصر سايدبار يُشغِّل
+  // تنقّلها الخاص (تدوير ثم فتح) بدل تنقّل فوري؛ أي حالة أخرى تتراجع تلقائياً
+  // للتنقّل الفوري المعتاد (ringApiRef.current يبقى null).
+  const ringApiRef = React.useRef(null);
+  const handleNavClick = (e, page) => {
+    if (isDark && ringApiRef.current && page.path !== location.pathname) {
+      e.preventDefault();
+      setMobileOpen(false);
+      ringApiRef.current.selectAndOpen(page.key);
+    } else {
+      setMobileOpen(false);
+    }
+  };
 
   // ── القوائم الفرعية القابلة للتوسّع (للصفحات ذات التبويبات الداخلية،
   // مثل HR/الحسابات/الجودة) — مجموعة مفاتيح الصفحات المفتوحة حالياً. أكثر
@@ -283,7 +291,10 @@ export default function Layout() {
                           onClick={() => {
                             setMobileOpen(false);
                             toggleNavExpanded(page.key);
-                            if (!isOnThisPage) navigate(page.path);
+                            if (!isOnThisPage) {
+                              if (isDark && ringApiRef.current) ringApiRef.current.selectAndOpen(page.key);
+                              else navigate(page.path);
+                            }
                           }}
                           aria-expanded={isExpanded}
                           aria-label={isExpanded ? (lang === 'ar' ? `طيّ القائمة الفرعية: ${commonLabel}` : `Collapse submenu: ${commonLabel}`) : (lang === 'ar' ? `توسيع القائمة الفرعية: ${commonLabel}` : `Expand submenu: ${commonLabel}`)}
@@ -306,7 +317,7 @@ export default function Layout() {
                         <NavLink
                           to={page.path}
                           end={page.path === '/'}
-                          onClick={() => setMobileOpen(false)}
+                          onClick={(e) => handleNavClick(e, page)}
                           className={({ isActive }) => `sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10,
@@ -577,18 +588,13 @@ export default function Layout() {
                 />
               )
             )}
-            {/* Theme — مفتاح ثلاثي واضح (light | dark | future) بدل toggle
-               ثنائي سابق — راجع طلب "FUTURE MODE": يجب أن يكون التبديل
-               واضحاً وسهلاً، لا تخميناً بالنقر المتكرر على زر واحد. */}
+            {/* Theme — فاتح/داكن فقط. */}
             <div className={`theme-switcher ${isDark ? 'theme-switcher-dark' : 'theme-switcher-light'}`} role="group" aria-label={lang === 'ar' ? 'اختيار الوضع البصري' : 'Theme mode'}>
               <button type="button" onClick={() => setTheme('light')} className={`theme-switcher-btn ${theme === 'light' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'فاتح' : 'Light'} aria-pressed={theme === 'light'}>
                 <FaSun />
               </button>
               <button type="button" onClick={() => setTheme('dark')} className={`theme-switcher-btn ${theme === 'dark' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'داكن' : 'Dark'} aria-pressed={theme === 'dark'}>
                 <FaMoon />
-              </button>
-              <button type="button" onClick={() => setTheme('future')} className={`theme-switcher-btn theme-switcher-btn-future ${theme === 'future' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'مستقبلي' : 'Future'} aria-pressed={theme === 'future'}>
-                <FaRocket />
               </button>
             </div>
             {/* Lang */}
@@ -627,11 +633,11 @@ export default function Layout() {
 
         {/* Page content */}
         <main className="page-main" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-          {/* Future Mode: الصفحة الرئيسية (/) تعرض FutureHub بدلاً من
-             HealthBanner+المحتوى العادي (يُبنى داخل DashboardPage.js نفسه)،
-             وبقية الصفحات لا تعرض HealthBanner (FuturePageShell أدناه يمنحها
-             إطارها البصري الخاص بدلاً منها — تفادياً لازدواج العناصر). */}
-          {location.pathname !== '/' && !isFuture && <div className="no-print"><HealthBanner /></div>}
+          {/* الوضع الداكن: الصفحة الرئيسية (/) تعرض DarkHolographicHome بدلاً
+             من HealthBanner+المحتوى العادي (يُبنى داخل DashboardPage.js
+             نفسه)، وبقية الصفحات لا تعرض HealthBanner (CentralHolographicWorkspace
+             أدناه يمنحها إطارها الزجاجي المنحني بدلاً منها). */}
+          {location.pathname !== '/' && !isDark && <div className="no-print"><HealthBanner /></div>}
           {/* printable-content is the only thing left visible when printing —
               see the .no-print / @media print rules below */}
           <div id="printable-content" className="printable-content">
@@ -651,10 +657,10 @@ export default function Layout() {
               </div>
             )}
 
-            {isFuture && location.pathname !== '/' ? (
-              <FuturePageShell><Outlet /></FuturePageShell>
+            {isDark && location.pathname !== '/' ? (
+              <CentralHolographicWorkspace><Outlet context={ringApiRef} /></CentralHolographicWorkspace>
             ) : (
-              <Outlet />
+              <Outlet context={ringApiRef} />
             )}
 
             {printOverlay?.includeFooter && (

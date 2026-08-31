@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
+import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
 
 /*
  * Renders `children` into a React Portal at document.body, positioned to
@@ -19,6 +20,12 @@ import ReactDOM from 'react-dom';
  */
 export default function HeaderFloatingPanel({ anchorRef, open, align = 'end', children, className = '', style = {} }) {
   const [rect, setRect] = useState(null);
+
+  // كل لوحة تُركَّب عبر هذا المكوّن (القوائم المنسدلة، الإشعارات، نتائج
+  // البحث) قابلة للتمرير فعلياً — فرض المؤشر الأصلي طوال بقائها مفتوحة هنا
+  // مرة واحدة يغطيها جميعاً، بدل تكرار المنطق بكل لوحة على حدة (راجع
+  // useScrollableCursorSuspend.js).
+  useScrollableCursorSuspend(open);
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) return undefined;

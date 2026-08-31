@@ -301,7 +301,13 @@ export function AppProvider({ children }) {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  // 'future' كان مودَ ثالثاً منفصلاً سابقاً، أُلغي ودُمجت هويته البصرية داخل
+  // 'dark' نفسها — أي متصفح لا يزال يحمل هذه القيمة القديمة بـlocalStorage
+  // يتراجع تلقائياً لـ'dark' بدل قيمة ثيم غير معروفة بلا أي تنسيق فعلي.
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem('theme');
+    return stored === 'future' ? 'dark' : (stored || 'light');
+  });
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'ar');
   // إعدادات الطباعة العامة (افتراضية لكل طبعة، قابلة للتجاوز مؤقتاً من لوحة
   // خيارات الطباعة قبل كل عملية طباعة دون تغيير هذه القيم المحفوظة)

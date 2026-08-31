@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useId } from 'react';
+import { suspendCursor as suspendCursorGlobal, restoreCursor as restoreCursorGlobal } from '../utils/cursorSuspend';
 
 /*
  * استراتيجية جديدة كلياً لسحب القوائم المنسدلة الطويلة — تستبدل كل محاولات
@@ -86,15 +87,19 @@ export default function HolographicScrollHandle({ targetRef, side = 'left' }) {
     };
   }, [targetRef, recompute]);
 
+  // عدّاد مرجعي مشترك (utils/cursorSuspend.js) بدل تبديل الصنف مباشرة — قد
+  // تكون هذه القائمة نفسها معلَّقة أصلاً عبر useScrollableCursorSuspend
+  // (HeaderFloatingPanel، طوال بقاء اللوحة مفتوحة)؛ suspendedRef المحلي هنا
+  // يمنع فقط الزيادة المزدوجة لنفس المصدر، لا يتعارض مع المصدر الآخر.
   const suspendCursor = () => {
     if (suspendedRef.current) return;
     suspendedRef.current = true;
-    document.documentElement.classList.add('custom-cursor-suspended');
+    suspendCursorGlobal();
   };
   const restoreCursor = () => {
     if (!suspendedRef.current) return;
     suspendedRef.current = false;
-    document.documentElement.classList.remove('custom-cursor-suspended');
+    restoreCursorGlobal();
   };
   useEffect(() => () => restoreCursor(), []);
 

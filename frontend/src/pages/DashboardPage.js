@@ -6,7 +6,7 @@ import { useApp, DEFAULT_DASHBOARD_WIDGETS } from '../contexts/AppContext';
 import HealthBanner from '../components/HealthBanner';
 import DashboardQuickTiles from '../components/DashboardQuickTiles';
 import AppLogo from '../components/AppLogo';
-import FutureHub from '../components/future/FutureHub';
+import DarkHolographicHome from '../components/holo/DarkHolographicHome';
 import './DashboardPage.dark.css';
 
 import {
@@ -238,12 +238,12 @@ export default function DashboardPage() {
     </div>
   );
 
-  // FUTURE MODE — الصفحة الرئيسية تتحول بالكامل إلى FUTURE HUB (بند 5
-  // بالطلب صراحةً: ليست Dashboard عادياً مع Sidebar فقط) بدل أي من الأقسام
-  // التالية. المكوّن مستقل بالكامل (frontend/src/components/future/) —
-  // Routes/منطق الصفحات الأخرى لم يتغيّر إطلاقاً (بند 24).
-  if (theme === 'future') {
-    return <FutureHub />;
+  // الوضع الداكن: الصفحة الرئيسية تتحول بالكامل إلى مركز التحكم الهولوغرافي
+  // (حلقة الصفحات ثلاثية الأبعاد + مساحة العمل المركزية) بدل أي من الأقسام
+  // التالية. المكوّن مستقل بالكامل (frontend/src/components/holo/) — بقية
+  // مسارات/صفحات النظام لم تتغيّر.
+  if (theme === 'dark') {
+    return <DarkHolographicHome />;
   }
 
   return (

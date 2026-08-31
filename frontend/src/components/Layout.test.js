@@ -236,10 +236,10 @@ describe('Sidebar expandable sub-navigation', () => {
       // is what this assertion needs (the inactive-state color).
       const subLink = document.querySelectorAll('.sidebar-subtab-link')[1];
       expect(subLink).toBeInTheDocument();
-      // Inactive sub-tab color (light blue family) must differ from the
-      // main item's inactive color (neutral rgba(255,255,255,0.65)).
-      expect(subLink.style.color).not.toBe('rgba(255, 255, 255, 0.65)');
-      expect(subLink.style.color).toBe('rgba(159, 199, 232, 0.8)');
+      // Inactive sub-tab color (deep steel blue, readable on the light pearl
+      // sidebar) must differ from the main item's inactive navy color.
+      expect(subLink.style.color).not.toBe('rgb(32, 56, 75)');
+      expect(subLink.style.color).toBe('rgb(61, 90, 117)');
     });
 
     test('a sub-tab link renders with a smaller font size than a main nav item', () => {

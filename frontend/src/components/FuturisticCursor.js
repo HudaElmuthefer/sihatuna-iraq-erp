@@ -1,5 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { findScrollableAncestor, scrollbarProximity, isScrollableY, isScrollableX } from '../utils/scrollbarDetection';
+import { findScrollableAncestor, scrollbarZoneState, computeActivationZone, isScrollableY, isScrollableX } from '../utils/scrollbarDetection';
+
+// وحدة تشخيص مؤقتة (بند 30 بالطلب) — مُطفأة افتراضياً وفي أي production
+// build. للتفعيل أثناء الاختبار اليدوي: افتح Console واكتب
+// `window.__CURSOR_DEBUG__ = true` (بلا الحاجة لإعادة بناء المشروع)، ثم
+// `= false` لإيقافه. لا تُترَك مفعّلة بشكل دائم.
+function cursorDebug(...args) {
+  if (process.env.NODE_ENV === 'production') return;
+  if (typeof window !== 'undefined' && window.__CURSOR_DEBUG__) {
+    // eslint-disable-next-line no-console
+    console.log('[CursorDebug]', ...args);
+  }
+}
 
 // Single on/off switch — flip to false to fully disable the custom cursor
 // (e.g. if it ever turns out to cost too much on low-end machines) without
@@ -25,16 +37,48 @@ const TEXT_INPUT_SELECTOR = [
   'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="image"])',
 ].join(', ');
 
-// راجع frontend/src/utils/scrollbarDetection.js — hitZone أكبر قليلاً من
-// عرض الشريط الحقيقي (بند 8)، revealZone أوسع قليلاً (يُظهر الشريط قبل أن
-// يصل المؤشر إليه فعلياً، بند 14).
-const SCROLLBAR_HIT_ZONE = 16;
-const SCROLLBAR_REVEAL_ZONE = 24;
-// Hysteresis عند الخروج من منطقة الشريط قبل إعادة إظهار المؤشر المخصص (بند
-// 28: 50-100ms) — يمنع وميض ON/OFF سريع عند الحافة بالضبط.
-const CURSOR_REVEAL_DELAY = 80;
+// PRE-ARM EDGE DETECTION (إعادة كتابة كاملة لمنطق شريط التمرير — الطلب
+// الحالي صراحةً): لا يحاول أي كود هنا اكتشاف الـthumb الحقيقي (ليس عنصر
+// DOM موثوق عبر elementFromPoint/closest). بدلاً من ذلك يُقاس بُعد المؤشر
+// عن حافة الصندوق المحيط (getBoundingClientRect) لعنصر التمرير نفسه فقط،
+// وتُفعَّل "وضعية المؤشر الأصلي" قبل وصول المؤشر فعلياً لأي شريط — راجع
+// frontend/src/utils/scrollbarDetection.js (scrollbarZoneState).
+// Hysteresis بالمسافة (وليس فقط بالوقت، بند 13): الدخول عند 22px، الخروج
+// فقط بعد الابتعاد لأكثر من 34px — يمنع تذبذب native/holographic السريع
+// عند حواف المنطقة تماماً.
+const SCROLLBAR_ENTER_ZONE = 22;
+const SCROLLBAR_EXIT_ZONE = 34;
 // يبقى الشريط ظاهراً هذه المدة بعد آخر تمرير/اقتراب قبل أن يتلاشى (بند 17: 500-900ms).
 const SCROLLBAR_FADE_DELAY = 700;
+
+// ═══════════════════════════════════════════════════════════════════════
+// تغيير استراتيجية كامل (طلب صريح: توقف عن ترقيع اكتشاف الحافة/الـthumb
+// للقوائم المنسدلة — لم ينجح عملياً). النظام أعلاه (pre-arm edge detection)
+// يبقى فقط لمنطقتي التمرير البنيويتين الدائمتي الحضور: صفحة المحتوى
+// (.page-main) وقائمة السايدبار الداخلية — حيث منطقة "ما قبل التفعيل"
+// الصغيرة عند الحافة منطقية فعلاً (المستخدم يمرّر مؤشره عبر مساحة واسعة من
+// المحتوى أصلاً). أي عنصر آخر قابل للتمرير (قائمة منسدلة، لوحة إشعارات،
+// نتائج بحث، أي Popup) يُعامَل بمنطق مختلف كلياً أدناه: مجرد دخول Pointer
+// لكامل حدود ذلك العنصر (وليس فقط حافته) يُوقف الـCustom Cursor تماماً
+// طوال بقائه بداخله، ويعود المؤشر الأصلي؛ لا محاولة لاكتشاف الـthumb ولا
+// حساب مسافة عن حافة الشريط إطلاقاً لهذه الفئة.
+function isStructuralScrollRegion(el) {
+  if (!el || !el.classList) return false;
+  if (el.classList.contains('page-main')) return true;
+  return !!(el.closest && el.closest('.desktop-sidebar, .mobile-sidebar'));
+}
+
+/* ملاحظة معمارية: القوائم المنسدلة/اللوحات المنبثقة (dropdowns/popups) لا
+   تُدار من هذا الملف إطلاقاً بعد الآن — كانت تُدار سابقاً عبر تفويض عالمي
+   (document-level pointerenter/pointerleave بمرحلة الالتقاط)، لكن الاختبار
+   الفعلي في المتصفح أثبت أن ذلك لم يعمل بشكل موثوق. الاستراتيجية الجديدة:
+   كل مكوّن قائمة منسدلة يستخدم Hook مخصصاً مباشرة على عقدة الـDOM الحقيقية
+   الخاصة به (بما فيها المُركَّبة عبر Portal) — راجع
+   frontend/src/hooks/useScrollableCursorSuspend.js — والذي يُبدِّل صنف
+   .custom-cursor-suspended على <html> مباشرة بنفسه دون أي وسيط هنا. هذا
+   الملف يبقى مسؤولاً حصراً عن: (1) تتبّع نقطة المؤشر/التوهج/الحوم العادي،
+   و(2) نظام pre-arm الخاص بمنطقتي التمرير البنيويتين فقط (.page-main
+   والسايدبار) عبر isStructuralScrollRegion أدناه — لا علاقة له بالقوائم. */
 
 /*
  * Small glowing dot + a slightly-trailing outer ring, colored per-theme via
@@ -76,9 +120,9 @@ export default function FuturisticCursor() {
 
     document.body.classList.add('futuristic-cursor-active');
 
-    // ── Scrollbar awareness ────────────────────────────────────────────
-    // fadeTimers: عنصر DOM → معرّف setTimeout المُجدوَل لإخفاء توهجه (بند
-    // 17). revealTimer: يُلغي/يعيد جدولة الأول عند أي اقتراب/تمرير جديد.
+    // ── Scrollbar awareness — PRE-ARM EDGE DETECTION ────────────────────
+    // fadeTimers: عنصر DOM → معرّف setTimeout المُجدوَل لإخفاء توهجه البصري
+    // (.scrollbar-near-edge، بند 17: يبقى ظاهراً 500-900ms بعد آخر نشاط).
     const fadeTimers = new Map();
     const scheduleReveal = (el) => {
       if (!el) return;
@@ -95,55 +139,62 @@ export default function FuturisticCursor() {
       fadeTimers.set(el, id);
     };
 
-    let lastRevealEl = null;
-    let inScrollZone = false; // isDragging || pointer within SCROLLBAR_HIT_ZONE
-    let exitTimer = null;
-    const isDraggingRef = { current: false };
+    // العنصر البنيوي القابل للتمرير "النشط" الأخير (.page-main أو سايدبار
+    // فقط — راجع isStructuralScrollRegion أعلاه) — يُحتفَظ به حتى بعد
+    // ابتعاد المؤشر عن أي عنصر ابن مباشر، ولا يُمسَح إلا عند: (أ) الابتعاد
+    // الفعلي عن حدوده بأكثر من SCROLLBAR_EXIT_ZONE، أو (ب) عندما لا يعود
+    // متصلاً بالـDOM.
+    const activeScrollableRef = { current: null };
+    const isScrollbarDraggingRef = { current: false };
     const dragElRef = { current: null };
+    let nativeMode = false;
 
-    const setCursorScrollZone = (on) => {
-      if (on) {
-        if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
-        if (!inScrollZone) { inScrollZone = true; document.body.classList.add('futuristic-cursor-scroll-zone'); }
-      } else if (inScrollZone && !exitTimer) {
-        exitTimer = setTimeout(() => {
-          inScrollZone = false;
-          exitTimer = null;
-          document.body.classList.remove('futuristic-cursor-scroll-zone');
-        }, CURSOR_REVEAL_DELAY);
-      }
+    const setNativeMode = (on) => {
+      if (on === nativeMode) return;
+      nativeMode = on;
+      // html.native-scroll-cursor — وليس body فقط — كي يغطي أيضاً أي عنصر
+      // مُركَّب عبر Portal مباشرة إلى document.body (لوحات القوائم المنسدلة
+      // العائمة) بلا استثناء (بند 10 بالطلب صراحةً).
+      document.documentElement.classList.toggle('native-scroll-cursor', on);
+      cursorDebug('Native mode:', on);
     };
 
     const handleMove = (e) => { coreX = e.clientX; coreY = e.clientY; };
 
-    const handleDown = (e) => {
-      ring.classList.add('cursor-ring-active');
-      // إذا بدأ الضغط داخل منطقة شريط تمرير: قفل "وضع Native" حتى pointerup
-      // بغضّ النظر عن خروج المؤشر من الحافة قليلاً أثناء السحب (بند 9).
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const scrollEl = findScrollableAncestor(el);
-      const prox = scrollbarProximity(scrollEl, e.clientX, e.clientY, SCROLLBAR_HIT_ZONE);
-      if (scrollEl && (prox.vertical || prox.horizontal)) {
-        isDraggingRef.current = true;
+    const releaseDragLock = () => {
+      if (!isScrollbarDraggingRef.current) return;
+      isScrollbarDraggingRef.current = false;
+      cursorDebug('Drag lock:', false);
+      if (dragElRef.current) scheduleHide(dragElRef.current);
+      dragElRef.current = null;
+    };
+
+    // القفل يُفعَّل عند pointerdown داخل منطقة ما-قبل-التفعيل نفسها (وليس
+    // فوق الـthumb الحقيقي حصراً — بند 14 بالطلب: القرار يُبنى دائماً على
+    // نفس قياس المسافة عن الصندوق المحيط، لا على استهداف عنصر بعينه).
+    const handlePointerDown = (e) => {
+      if (ring) ring.classList.add('cursor-ring-active');
+      const scrollEl = activeScrollableRef.current;
+      if (!scrollEl || !scrollEl.isConnected) return;
+      const zone = computeActivationZone(scrollEl, SCROLLBAR_ENTER_ZONE);
+      const state = scrollbarZoneState(scrollEl, e.clientX, e.clientY, zone);
+      if (state.vertical || state.horizontal) {
+        isScrollbarDraggingRef.current = true;
         dragElRef.current = scrollEl;
-        setCursorScrollZone(true);
+        setNativeMode(true);
         scheduleReveal(scrollEl);
+        cursorDebug('Drag lock:', true, '| side:', state.side, '| distance:', Math.round(state.distance));
       }
     };
 
-    const handleUp = () => {
-      ring.classList.remove('cursor-ring-active');
-      if (isDraggingRef.current && dragElRef.current) {
-        scheduleHide(dragElRef.current);
-      }
-      isDraggingRef.current = false;
-      dragElRef.current = null;
-      // نبضة الإفراج الهولوغرافية (holographic release pulse) — حلقة رفيعة
-      // تتوسع وتتلاشى بسرعة عند مركز المؤشر الحالي بالضبط. إعادة تشغيل
-      // الرسوم المتحركة عبر إزالة الصنف ثم فرض reflow (تقييم offsetWidth)
-      // قبل إعادته، بدل إنشاء/حذف عنصر DOM جديد بكل نقرة. تُقفَز فقط إذا لم
-      // نكن نخرج للتوّ من سحب شريط تمرير (نبضة طاقة فوق thumb لا معنى لها).
-      if (pulse && !dragElRef.current) {
+    // بند 15 بالطلب صراحةً: pointerup/pointercancel عالميان على window (لا
+    // على العنصر نفسه) — يفكّان القفل حتى لو انتهى السحب خارج حدود القائمة
+    // أو خارج النافذة تماماً. blur إضافية دفاعية (تبديل تبويب أثناء السحب).
+    const handlePointerUp = () => {
+      if (ring) ring.classList.remove('cursor-ring-active');
+      const wasDragging = isScrollbarDraggingRef.current;
+      releaseDragLock();
+      if (pulse && !wasDragging) {
         pulse.style.transform = `translate(${coreX}px, ${coreY}px)`;
         pulse.classList.remove('cursor-pulse-firing');
         void pulse.offsetWidth;
@@ -153,12 +204,11 @@ export default function FuturisticCursor() {
 
     // يلتقط scroll من أي عنصر ابن (لا يصعد bubbling طبيعياً، لكن مرحلة
     // الالتقاط تعمل معه) — يغطي التمرير بالعجلة/اللمس التاتش-باد وأيضاً
-    // PageUp/PageDown دون أي معالجة منفصلة لكل منها (بند 18). يجدول
-    // الإخفاء فوراً أيضاً (وليس فقط الإظهار) — إذا استمر التمرير، كل حدث
-    // لاحق يُلغي مؤقّت الإخفاء المُجدوَل ويعيد جدولته (راجع scheduleReveal)،
-    // فيبقى العدّاد يتجدد طوال مدة التمرير الفعلي بالضبط كما هو مطلوب.
-    // بدون هذا: تمرير بلوحة المفاتيح بينما الفأرة في مكان آخر تماماً كان
-    // يترك الشريط مضاءً للأبد (لا شيء يزور ذلك العنصر مجدداً في tick()).
+    // PageUp/PageDown دون أي معالجة منفصلة لكل منها. يجدول الإخفاء فوراً
+    // أيضاً (وليس فقط الإظهار) — إذا استمر التمرير، كل حدث لاحق يُلغي مؤقّت
+    // الإخفاء المُجدوَل ويعيد جدولته، فيبقى العدّاد يتجدد طوال مدة التمرير
+    // الفعلي. بدون هذا: تمرير بلوحة المفاتيح بينما الفأرة في مكان آخر تماماً
+    // كان يترك الشريط مضاءً للأبد (لا شيء يزور ذلك العنصر مجدداً في tick()).
     const handleScrollCapture = (e) => {
       const el = e.target === document ? document.documentElement : e.target;
       if (!el || !(isScrollableY(el) || isScrollableX(el))) return;
@@ -177,52 +227,81 @@ export default function FuturisticCursor() {
       const el = document.elementFromPoint(coreX, coreY);
       const isTextInput = !!(el && el.closest && el.closest(TEXT_INPUT_SELECTOR));
 
-      // أقرب سلف قابل للتمرير تحت المؤشر الآن، ومدى قربه من شريطه الفعلي.
-      const scrollEl = isDraggingRef.current ? dragElRef.current : findScrollableAncestor(el);
-      const proxHit = scrollbarProximity(scrollEl, coreX, coreY, SCROLLBAR_HIT_ZONE);
-      const proxReveal = scrollbarProximity(scrollEl, coreX, coreY, SCROLLBAR_REVEAL_ZONE);
-      const inHitZone = isDraggingRef.current || proxHit.vertical || proxHit.horizontal;
-      const inRevealZone = isDraggingRef.current || proxReveal.vertical || proxReveal.horizontal;
-
-      if (scrollEl && inRevealZone) {
-        scheduleReveal(scrollEl);
-      } else if (lastRevealEl && lastRevealEl !== scrollEl) {
-        scheduleHide(lastRevealEl);
-      } else if (scrollEl && !inRevealZone) {
-        scheduleHide(scrollEl);
+      // تحديث activeScrollableRef: منطقة بنيوية فقط (.page-main/سايدبار) —
+      // القوائم المنسدلة تُدار حصراً عبر pointerenter/pointerleave أعلاه،
+      // لا عبر هذا المسار إطلاقاً (بند C بالطلب صراحةً).
+      const found = findScrollableAncestor(el);
+      const structuralFound = found && isStructuralScrollRegion(found) ? found : null;
+      if (structuralFound) {
+        if (activeScrollableRef.current !== structuralFound) {
+          cursorDebug('Scrollable found:', structuralFound.className || structuralFound.tagName);
+        }
+        activeScrollableRef.current = structuralFound;
       }
-      lastRevealEl = inRevealZone ? scrollEl : null;
 
-      setCursorScrollZone(inHitZone);
+      const scrollEl = isScrollbarDraggingRef.current ? dragElRef.current : activeScrollableRef.current;
+      const stillConnected = !!(scrollEl && scrollEl.isConnected);
+
+      let inZone = false;
+      if (isScrollbarDraggingRef.current) {
+        // القفل يفوق أي حساب مسافة (بند 16 بالطلب صراحةً) — حتى لو خرج
+        // المؤشر تماماً عن حدود العنصر أثناء السحب.
+        inZone = true;
+        if (dragElRef.current) scheduleReveal(dragElRef.current);
+      } else if (stillConnected) {
+        // Hysteresis بالمسافة (بند 13): منطقة الدخول (22px) أصغر من منطقة
+        // الخروج (34px) — تمنع التذبذب السريع عند حافة المنطقة بالضبط، لا
+        // تعتمد فقط على مؤقّت زمني.
+        const zonePx = nativeMode ? SCROLLBAR_EXIT_ZONE : SCROLLBAR_ENTER_ZONE;
+        const activationWidth = computeActivationZone(scrollEl, zonePx);
+        const state = scrollbarZoneState(scrollEl, coreX, coreY, activationWidth);
+        inZone = state.vertical || state.horizontal;
+        if (inZone) {
+          scheduleReveal(scrollEl);
+        } else {
+          scheduleHide(scrollEl);
+        }
+      } else {
+        // القائمة/اللوحة أُغلقت أو أُزيلت من الـDOM — امسح المرجع وأوقف
+        // الوضعية الأصلية فوراً (بند 26 بالطلب صراحةً) بدل تركها عالقة.
+        activeScrollableRef.current = null;
+      }
+
+      setNativeMode(inZone);
 
       // فوق منطقة شريط تمرير: لا Scan Ring ولا توهج نواة — نفس معاملة حقل
-      // الكتابة (بند 30: لا حلقة، لا مؤشر هولوغرافي، فقط Native). isHovering
-      // يبقى false هنا عمداً حتى لو كان العنصر تحته زر/رابط تقنياً (نادر عند
-      // حافة شريط تمرير فعلي).
-      const isHovering = !isTextInput && !inHitZone && !!(el && el.closest && el.closest(HOVER_SELECTOR));
+      // الكتابة. isHovering يبقى false هنا عمداً حتى لو كان العنصر تحته
+      // زر/رابط تقنياً (نادر عند حافة شريط تمرير فعلي).
+      const isHovering = !isTextInput && !inZone && !!(el && el.closest && el.closest(HOVER_SELECTOR));
       if (ring) ring.classList.toggle('cursor-ring-hover', isHovering);
       if (core) core.classList.toggle('cursor-core-hover', isHovering);
       // فوق حقول الكتابة أو منطقة شريط تمرير: نخفي الماسح المخصص ونعيد
       // المؤشر الأصلي (I-beam فوق النص، سهم/يد عادية فوق شريط التمرير) بدل
       // تركه بلا أي مؤشر ظاهر.
-      document.body.classList.toggle('futuristic-cursor-over-text', isTextInput && !inHitZone);
+      document.body.classList.toggle('futuristic-cursor-over-text', isTextInput && !inZone);
 
       raf = requestAnimationFrame(tick);
     };
 
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mousedown', handleDown);
-    window.addEventListener('mouseup', handleUp);
+    // بند 21 بالطلب صراحةً: capture:true على window (لا على عنصر React
+    // محدَّد) كي لا يُفوَّت أي حدث بصرف النظر عن أين يبدأ في الشجرة.
+    window.addEventListener('pointermove', handleMove, { capture: true, passive: true });
+    window.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    window.addEventListener('pointerup', handlePointerUp, { capture: true });
+    window.addEventListener('pointercancel', handlePointerUp, { capture: true });
+    window.addEventListener('blur', releaseDragLock);
     document.addEventListener('scroll', handleScrollCapture, true);
     raf = requestAnimationFrame(tick);
 
     return () => {
-      document.body.classList.remove('futuristic-cursor-active', 'futuristic-cursor-over-text', 'futuristic-cursor-scroll-zone');
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mousedown', handleDown);
-      window.removeEventListener('mouseup', handleUp);
+      document.body.classList.remove('futuristic-cursor-active', 'futuristic-cursor-over-text');
+      document.documentElement.classList.remove('native-scroll-cursor');
+      window.removeEventListener('pointermove', handleMove, { capture: true });
+      window.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      window.removeEventListener('pointerup', handlePointerUp, { capture: true });
+      window.removeEventListener('pointercancel', handlePointerUp, { capture: true });
+      window.removeEventListener('blur', releaseDragLock);
       document.removeEventListener('scroll', handleScrollCapture, true);
-      if (exitTimer) clearTimeout(exitTimer);
       fadeTimers.forEach((id, el) => { clearTimeout(id); el.classList.remove('scrollbar-near-edge'); });
       fadeTimers.clear();
       cancelAnimationFrame(raf);

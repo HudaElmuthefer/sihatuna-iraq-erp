@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import HeaderFloatingPanel from './HeaderFloatingPanel';
+import useScrollableCursorSuspend from '../hooks/useScrollableCursorSuspend';
 
 /*
  * Themed replacement for a native <select> in the top toolbar. A native
@@ -16,6 +17,11 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
   const [highlighted, setHighlighted] = useState(-1);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
+  // القائمة الفعلية هنا هي العقدة القابلة للتمرير نفسها (نفس عنصر
+  // .header-dropdown-panel المُستخدَم أصلاً لاكتشاف النقر الخارجي) — لا
+  // حاجة لـref إضافي منفصل، يكفي استدعاء الدالتين على نفس العقدة (راجع
+  // الدمج بالـref أدناه).
+  const cursorSuspend = useScrollableCursorSuspend();
 
   const selected = options.find(o => o.value === value) || options[0];
 
@@ -75,11 +81,21 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
 
       <HeaderFloatingPanel anchorRef={triggerRef} open={open} align="end" style={{ minWidth: 210 }}>
         <div
-          ref={panelRef}
+          ref={(node) => { panelRef.current = node; cursorSuspend.ref.current = node; }}
           role="listbox"
           tabIndex={-1}
           onKeyDown={handlePanelKeyDown}
+          onPointerEnter={cursorSuspend.onPointerEnter}
+          onPointerLeave={cursorSuspend.onPointerLeave}
           className="header-dropdown-panel"
+          // علامة صريحة موثَّقة (بند 2 بالطلب الحالي) — الاكتشاف نفسه يبقى
+          // عاماً (useScrollableCursorSuspend يفحص scrollHeight/clientHeight
+          // من جديد في كل onPointerEnter) ويعمل بلا هذه الخاصية أصلاً؛ هذا
+          // فقط توثيق واضح أن هذه اللوحة تحديداً (قائمة "كل المنشآت" وغيرها
+          // من لوحات HeaderSelectDropdown) هي العقدة الحقيقية المُختبَرة —
+          // مُركَّبة عبر Portal (راجع HeaderFloatingPanel.js)، وليست ابناً
+          // عادياً لـ.glass-header/الـtrigger.
+          data-scroll-cursor-aware="true"
         >
           {options.map((opt, i) => {
             const isSelected = opt.value === value;

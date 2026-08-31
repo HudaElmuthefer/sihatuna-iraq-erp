@@ -83,6 +83,14 @@
   --cursor-ring-rgb: 200, 95, 122;
 }
 
+[data-theme="light"] {
+  /* يُستخدم حصراً بزر القائمة الفرعية النشط بالسايدبار (Layout.js) — القيمة
+     الافتراضية بـ:root أعلاه (#ffffff) صالحة للوضع الداكن فقط بالمصادفة
+     (كانت تُطبَّق حرفياً بالوضع الفاتح أيضاً قبل هذا السطر، فيظهر نص أبيض
+     غير مقروء فوق سايدبار لؤلؤي فاتح — بند 7 من طلب توحيد ألوان السايدبار). */
+  --text-active: #0f2133;
+}
+
 [data-theme="dark"] {
   --bg-primary: #0a0f1a;
   --bg-secondary: #111827;
@@ -140,7 +148,17 @@
 }
 
 html {
-  direction: rtl;
+  /* لا تُثبَّت direction هنا عمداً (كانت rtl ثابتة دائماً) — كقاعدة من
+     المؤلف (author stylesheet) كانت تتفوّق دوماً على تأثير خاصية dir
+     (`document.documentElement.dir = lang==='ar'?'rtl':'ltr'` بـ
+     AppContext.js) عبر ورقة أنماط المتصفح الافتراضية، فتجمّد اتجاه <html>
+     على rtl حتى عند التبديل الفعلي للإنجليزية. أي عنصر يُركَّب عبر Portal
+     مباشرة إلى document.body (لوحات القوائم المنسدلة العائمة عبر
+     HeaderFloatingPanel.js — تتخطى .app-shell وتوجيهه الصريح الصحيح) كان
+     يرث rtl الخاطئ هذا دائماً بصرف النظر عن اللغة الفعلية، فيُحسَب جانب
+     شريط تمرير القائمة (scrollbarDetection.js) على الحافة الخاطئة أحياناً.
+     public/index.html يضبط dir="rtl" ثابتاً كقيمة ابتدائية صحيحة قبل أي
+     JS، وAppContext.js يُحدِّثها لاحقاً بشكل صحيح — لا حاجة لتكرارها هنا. */
   font-size: 16px;
 }
 
@@ -208,7 +226,9 @@ html { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb { background-color: rgba(100, 120, 150, 0.32); }
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background-color: rgba(80, 180, 220, 0.5); }
-[data-theme="light"] ::-webkit-scrollbar-thumb:active { background-color: rgba(220, 130, 190, 0.6); }
+/* السحب الفعلي (Dragging) يكون أزرق كهربائي واضح — الوردي يبقى انعكاساً
+   خفيفاً بحالة السكون فقط (بند 61 صراحةً)، وليس لون حالة السحب. */
+[data-theme="light"] ::-webkit-scrollbar-thumb:active { background-color: rgba(45, 155, 215, 0.88); }
 [data-theme="light"] .scrollbar-near-edge::-webkit-scrollbar-thumb { background-color: rgba(80, 180, 220, 0.6); }
 [data-theme="light"] { scrollbar-color: rgba(100, 120, 150, 0.4) transparent; }
 
@@ -1397,7 +1417,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   background-color: rgba(80, 180, 220, 0.6);
 }
 [data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb:active {
-  background-color: rgba(220, 130, 190, 0.7);
+  background-color: rgba(45, 155, 215, 0.9);
+  box-shadow: 0 0 6px rgba(80, 180, 220, 0.5);
 }
 [data-theme="light"] .header-dropdown-panel.scrollbar-near-edge::-webkit-scrollbar-thumb {
   border-width: 0;
@@ -1517,9 +1538,23 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   font-size: 14px;
   font-weight: 500;
   background: transparent;
-  transition: all 0.2s ease;
+  /* transform منفصلة بتوقيتها/easing الخاصين (نفس MASTER INTERACTION
+     REFERENCE المستخرج من .dqt-tile hover — راجع index.css هناك) بدل
+     `transition: all` السابقة التي كانت ستُستبدَل بالكامل (لا تُدمَج) لو
+     أُضيف transform منفصل بقاعدة أخرى بنفس الخاصية. */
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   border: 1px solid transparent;
   border-bottom: 1px solid rgba(140, 170, 190, 0.14);
+}
+
+/* Hover — نفس لغة الحركة المرجعية (بند 11-19 صراحةً): scale خفيف جداً فقط
+   (transform لا يغيّر width/height فيؤثّر على تخطيط بقية القائمة)، "يتقدّم"
+   بصرياً بلا أي Layout Shift. لا نطبّقها إذا كان العنصر نشطاً وله transform
+   خاص به بالفعل (!important بقاعدة .active أدناه تفوز تلقائياً). */
+.sidebar-nav-item:hover { transform: scale(1.02); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav-item:hover { transform: none; }
 }
 
 /* لون النص الأساسي — مُقسَّم بحسب الثيم صراحةً (كان موحّداً بلون سماوي فاتح
@@ -1572,21 +1607,28 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .sidebar-nav-item svg {
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
 }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav-item:hover svg { transform: none !important; }
+}
+/* توهّج حواف أزرق متدرّج (بند 20/24-25 صراحةً: حافة خارجية أوضح تتلاشى نحو
+   المركز) — طبقتان: توهّج ضيق كهربائي + توهّج أوسع أنعم، بدل طبقة واحدة
+   مسطّحة. Active أقوى بوضوح من Hover (بند 32: لا يجب أن يتفوّق Hover على
+   Active). */
 [data-theme="dark"] .sidebar-nav-item svg {
   color: #c3d3dc;
-  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.45));
+  filter: drop-shadow(0 0 2px rgba(var(--glow-accent-rgb), 0.35)) drop-shadow(0 0 6px rgba(var(--glow-accent-rgb), 0.18));
 }
 [data-theme="dark"] .sidebar-nav-item:hover svg {
-  transform: translateY(-1px) scale(1.1);
-  filter: drop-shadow(0 0 5px rgba(var(--glow-accent-rgb), 0.75));
+  transform: translateY(-1px) scale(1.07);
+  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.6)) drop-shadow(0 0 9px rgba(var(--glow-accent-rgb), 0.4));
 }
 [data-theme="light"] .sidebar-nav-item svg {
   color: #3d5a75;
-  filter: drop-shadow(0 0 2px rgba(220, 130, 190, 0.3));
+  filter: drop-shadow(0 0 1.5px rgba(80, 180, 220, 0.35)) drop-shadow(0 0 5px rgba(220, 130, 190, 0.2));
 }
 [data-theme="light"] .sidebar-nav-item:hover svg {
-  transform: translateY(-1px) scale(1.1);
-  filter: drop-shadow(0 0 4px rgba(80, 180, 220, 0.5));
+  transform: translateY(-1px) scale(1.07);
+  filter: drop-shadow(0 0 2.5px rgba(80, 180, 220, 0.65)) drop-shadow(0 0 8px rgba(80, 180, 220, 0.35));
 }
 
 /* Active item — إطار سماوي رفيع + خلفية زجاجية شبه شفافة (وليس مستطيلاً
@@ -1604,7 +1646,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 [data-theme="dark"] .sidebar-nav-item.active::before, [data-theme="dark"] .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
 [data-theme="dark"] .sidebar-nav-item.active svg, [data-theme="dark"] .sidebar-nav-item-active svg {
   color: #eef8fc;
-  filter: drop-shadow(0 0 4px rgba(var(--glow-accent-rgb), 0.8));
+  filter: drop-shadow(0 0 4px rgba(var(--glow-accent-rgb), 0.85)) drop-shadow(0 0 12px rgba(var(--glow-accent-rgb), 0.55));
 }
 
 /* الوضع الفاتح — كبسولة زجاجية لؤلؤية بحافة وردية-سماوية وإضاءة داخلية
@@ -1614,7 +1656,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 [data-theme="light"] .sidebar-nav-item.active, [data-theme="light"] .sidebar-nav-item-active {
   background: linear-gradient(180deg, rgba(220,130,190,0.14) 0%, rgba(255,255,255,0.14) 45%, rgba(80,180,220,0.16) 100%) !important;
   border: 1px solid rgba(120, 170, 210, 0.55) !important;
-  border-radius: 8px !important;
+  border-radius: 6px !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 225, 240, 0.9),
     inset 0 -1px 0 rgba(80, 180, 220, 0.55),
@@ -1627,7 +1669,24 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 [data-theme="light"] .sidebar-nav-item.active::before, [data-theme="light"] .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
 [data-theme="light"] .sidebar-nav-item.active svg, [data-theme="light"] .sidebar-nav-item-active svg {
   color: #0f2133;
-  filter: drop-shadow(0 0 4px rgba(80, 180, 220, 0.5));
+  filter: drop-shadow(0 0 4px rgba(80, 180, 220, 0.55)) drop-shadow(0 0 11px rgba(80, 180, 220, 0.35));
+}
+
+/* أزرار التحكّم التفاعلية بالسايدبار (طيّ/فتح، تسجيل خروج...) — نفس لغة
+   الحركة المرجعية (بند 22-23 صراحةً): scale خفيف + توهّج أقوى، transform
+   فقط فلا Layout Shift. لا تُطبَّق على نصوص غير تفاعلية (الشعار/اسم
+   المستخدم ليسا أزراراً). */
+.sidebar-control-btn {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.sidebar-control-btn:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 6px rgba(80, 180, 220, 0.5));
+}
+.sidebar-control-btn:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-control-btn:hover { transform: none; }
 }
 
 /* Glass cards & widgets */
@@ -2235,17 +2294,18 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
    (documents/projects/today's appointments/inventory) and link to the
    real module pages — see DashboardQuickTiles.js.
    ══════════════════════════════════════════════════════════════════════ */
-/* Structural "rail" the quick-action objects stand on, instead of them
-   floating on the bare page background — a dark horizontal band with a
-   reflective floor gradient underneath, echoing the reference's console-
-   like composition (panel → rail → objects → floor), not background+icons
-   with nothing connecting them. */
-/* أرضية مستقبلية عاكسة (وليست مستطيلاً عادياً): خطوط أفقية معمارية متباعدة
-   تدريجياً (توحي بمنظور perspective بسيط دون transform ثلاثي الأبعاد فعلي
-   يعقّد التموضع)، حافة سماوية رفيعة أعلى اللوح تربطها بصرياً بحافة البانر
-   فوقها مباشرة (margin-top سالب بسيط + نفس لون التوهج)، وتدرّج عمق من
-   الزجاج الداكن أعلى اللوح إلى انعكاس معدني/أزرق أفتح أسفله. */
-[data-theme="dark"] .dqt-row {
+/* ══════════════════════════════════════════════════════════════════════
+   Shared structural sizing — عرض/ارتفاع/حشو/فجوات/مواضع مطابقة تماماً بين
+   الداكن والفاتح (بند 6-7 صراحةً: الاختلاف بينهما مواد/لون/توهّج فقط، أبداً
+   Layout). كانت هذه القيم مكرَّرة بقاعدتين منفصلتين (dqt-row وdqt-row-light
+   إلخ) بنفس الأرقام بالضبط بالصدفة — أي تعديل مستقبلي لأحدهما فقط كان
+   سيكسر التطابق بصمت. الآن مصدر واحد فقط، بمحدِّد مركَّب لكلا الصنفين.
+   حجم منصة الأيقونات (icon stage) كُبِّر من 96px إلى 104px (~8%، بند 9) —
+   منصة الإحصائيات (dqt-row::after) والتسمية (dqt-label) لا يتحرّكان لأن
+   بنية .dqt-tile (عمود flex: أيقونة ثم تسمية بمسافة ثابتة) تُبقي المسافة
+   بين "أسفل الأيقونة" و"أسفل الصف" ثابتة بصرف النظر عن ارتفاع الأيقونة
+   نفسه — فقط الأيقونة تكبر لأعلى، لا شيء آخر يتزحزح. */
+.dqt-row, .dqt-row-light {
   position: relative;
   display: flex;
   justify-content: center;
@@ -2256,38 +2316,22 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   margin-bottom: 28px;
   padding: 34px 24px 26px;
   border-radius: 14px;
-  background:
-    repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 14px),
-    linear-gradient(180deg, rgba(20,28,36,0.4) 0%, rgba(45,58,70,0.25) 55%, rgba(80,100,115,0.16) 100%);
-  border-top: 1px solid rgba(var(--glow-accent-rgb), 0.4);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  box-shadow:
-    0 0 24px rgba(var(--glow-accent-rgb), 0.08),
-    inset 0 1px 0 rgba(var(--glow-accent-rgb), 0.25);
   overflow: hidden;
 }
 
-/* شريط ضوء رفيع يمتد أفقياً أعلى الأرضية مباشرة — استمرارية بصرية مع الحافة
-   السفلية المضيئة للبانر فوقه (نفس الأسلوب المستخدم بـ.health-hero-dark-inner::after)،
-   بدل ظهورهما كقطعتين منفصلتين. */
-[data-theme="dark"] .dqt-row::before {
+.dqt-row::before, .dqt-row-light::before {
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
   pointer-events: none;
 }
 
-/* قاعدة/أرضية واحدة تمتد أفقياً خلف مجموعة الأيقونات الأربعة كلها معاً (وليس
-   خطاً منفصلاً تحت كل أيقونة) — أساسها أسود/معدني داكن جداً، بحافة سماوية
-   خافتة أعلاها فقط. رُفعت لتقع خلف الجزء السفلي من جسم الأيقونة نفسها (لا
-   خلف انعكاسها أسفلها) — راجع .dqt-icon-wrap img (-webkit-box-reflect)
-   الذي عُدِّل ليقتصر على شريط قصير تحت هذا الخط مباشرة، فيصبح الترتيب
-   البصري: الأيقونة ← المنصة ← انعكاس قصير، لا العكس. القيمة (bottom:78px،
-   ارتفاع 10px) تحقّقتُ منها عبر قياس فعلي بالمتصفح (getBoundingClientRect)
-   لموضع .dqt-icon-wrap فعلياً، وليست تخميناً. */
-[data-theme="dark"] .dqt-row::after {
+/* قاعدة/أرضية واحدة تمتد أفقياً خلف مجموعة الأيقونات الأربعة معاً — الموضع
+   (bottom:78px) مُحقَّق عبر قياس فعلي بالمتصفح (getBoundingClientRect) ولا
+   يعتمد على ارتفاع الأيقونة نفسه (راجع الشرح أعلاه)، فيبقى صحيحاً بعد
+   التكبير إلى 104px دون أي تعديل. */
+.dqt-row::after, .dqt-row-light::after {
   content: '';
   position: absolute;
   left: 5%;
@@ -2296,15 +2340,10 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   height: 10px;
   z-index: 0;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent 0%, rgba(2,7,10,0.9) 8%, #010508 20%, #02070b 50%, #010508 80%, rgba(2,7,10,0.9) 92%, transparent 100%);
-  box-shadow:
-    0 -1px 0 rgba(105,220,255,0.25),
-    0 5px 9px rgba(0,0,0,0.65),
-    0 12px 20px rgba(0,0,0,0.35);
   pointer-events: none;
 }
 
-[data-theme="dark"] .dqt-tile {
+.dqt-tile, .dqt-tile-light {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2315,14 +2354,21 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   /* Room above the icon for the overlapping number (see .dqt-num) so it
      doesn't get clipped by the row's own top edge. */
   padding-top: 18px;
+  /* MASTER INTERACTION REFERENCE (بند 11-13): هذا الـtransform/timing هو
+     المرجع الذي طُبِّق حرفياً على Sidebar hover أدناه — نفس easing، نفس
+     المدة، فقط قيم scale/translate أخف تناسب عنصر قائمة صغير. */
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-[data-theme="dark"] .dqt-tile:hover { transform: translateY(-6px) scale(1.03); }
+.dqt-tile:hover, .dqt-tile-light:hover { transform: translateY(-6px) scale(1.03); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dqt-tile:hover, .dqt-tile-light:hover { transform: none; }
+}
 
 /* Rises from / overlaps the tile's top edge, per the reference — not a
    plain text line sitting in its own row above the icon. */
-[data-theme="dark"] .dqt-num {
+.dqt-num, .dqt-num-light {
   position: absolute;
   top: -6px;
   left: 50%;
@@ -2330,50 +2376,43 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   z-index: 2;
   font-size: clamp(27px, 2vw, 34px);
   font-weight: 800;
-  background: linear-gradient(180deg, #ffffff 0%, #cfe4ee 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   line-height: 1;
-  text-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.7);
   pointer-events: none;
 }
 
-[data-theme="dark"] .dqt-icon-wrap {
+.dqt-icon-wrap, .dqt-icon-wrap-light {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   border-radius: 18px;
-  /* Base ambient glow behind the glass object itself (the PNG already
-     carries its own baked bevel/highlight/inset-shadow render — this adds
-     the *environmental* glow around it, echoing the reference's localized
-     light pooling around each object) + a grounding drop shadow. */
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 14px rgba(var(--glow-accent-rgb), 0.22));
+  /* يمنع تسرّب mix-blend-mode الخاص بـ::before (توهّج الحواف) إلى المنصة/
+     الخلفية خلف البلاطة — الامتزاج يبقى محصوراً بين الأيقونة وطبقتها فقط. */
+  isolation: isolate;
   transition: filter 0.3s ease;
 }
 
-[data-theme="dark"] .dqt-tile:hover .dqt-icon-wrap {
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 24px rgba(var(--glow-accent-rgb), 0.6));
-}
-
-[data-theme="dark"] .dqt-icon-wrap img {
+.dqt-icon-wrap img, .dqt-icon-wrap-light img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   position: relative;
   z-index: 1;
-  /* انعكاس خفيف جداً أسفل كل أيقونة، مُنزَل ومختصر عمداً كي يقع تحت منصة
-     الإحصائيات (.dqt-row::after) لا فوقها — الترتيب البصري المطلوب: أيقونة
-     ← منصة ← انعكاس قصير، وليس أيقونة ← انعكاس ← منصة. Chrome/WebKit فقط
-     (-webkit-box-reflect)؛ يتدهور بأمان (تختفي الخاصية فقط) على متصفحات
-     أخرى. */
-  -webkit-box-reflect: below 8px linear-gradient(to bottom, transparent, rgba(255,255,255,0.12) 10%, transparent 40%);
+  /* تطبيع الحجم البصري الفعلي (بند 2-3 صراحةً: ليس فقط CSS height) — كل
+     PNG الأربعة تملك padding شفافاً داخلياً مختلفاً (46.7%-58.2% نسبة
+     ارتفاع مرئي، راجع تدقيق الأصول)، فرغم تطابق صندوق الـimg تماماً كانت
+     الأيقونات تظهر بارتفاعات بصرية مختلفة فعلياً. --icon-visual-scale قيمة
+     محسوبة لكل أيقونة/ثيم على حدة (DashboardQuickTiles.js) لتوحيد النسبة
+     المرئية لجميعها عند ~58% تقريباً، بدل تعديل عشوائي أو offset يدوي. */
+  transform: scale(var(--icon-visual-scale, 1));
+  transition: transform 0.3s ease;
 }
 
-/* Floor reflection puddle beneath each glass object — same device used
-   under the hero caduceus, so every glowing object in the page reads as
-   sitting on the same lit surface instead of floating independently. */
-[data-theme="dark"] .dqt-icon-wrap::after {
+@media (prefers-reduced-motion: reduce) {
+  .dqt-icon-wrap img, .dqt-icon-wrap-light img { transition: none; }
+}
+
+/* Floor reflection puddle beneath each glass object. */
+.dqt-icon-wrap::after, .dqt-icon-wrap-light::after {
   content: '';
   position: absolute;
   bottom: -8px;
@@ -2381,42 +2420,127 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   width: 76%;
   height: 7px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(var(--glow-accent-rgb), 0.55), transparent 75%);
   filter: blur(2px);
   transition: opacity 0.3s ease;
   opacity: 0.7;
 }
 
-[data-theme="dark"] .dqt-tile:hover .dqt-icon-wrap::after {
+.dqt-tile:hover .dqt-icon-wrap::after,
+.dqt-tile-light:hover .dqt-icon-wrap-light::after {
   opacity: 1;
 }
 
-[data-theme="dark"] .dqt-label {
+/* توهّج الحواف الزرقاء المُقنَّع بشكل الأيقونة نفسه (بند 24-27 صراحةً: ليس
+   دائرة/هالة خلف الأيقونة) — --icon-mask مضبوطة inline لكل بلاطة/ثيم
+   (DashboardQuickTiles.js) على رابط نفس ملف PNG المعروض، فلا يظهر الضوء
+   إلا داخل حدود الأيقونة الحقيقية الشفافة. mix-blend-mode: screen يضيف
+   ضوءاً فقط فوق الألوان الأصلية، لا يستبدلها (بند 30: الأيقونة تحافظ على
+   هويتها اللونية). مشتركة الهيكل بين الثيمين، الألوان فقط مختلفة أدناه. */
+.dqt-icon-wrap::before, .dqt-icon-wrap-light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  -webkit-mask-image: var(--icon-mask);
+  mask-image: var(--icon-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: scale(var(--icon-visual-scale, 1));
+  transition: opacity 0.3s ease;
+}
+
+.dqt-tile:hover .dqt-icon-wrap::before,
+.dqt-tile-light:hover .dqt-icon-wrap-light::before {
+  opacity: 1;
+}
+
+.dqt-label, .dqt-label-light {
   margin-top: 6px;
   font-size: 15px;
   font-weight: 600;
-  color: #aebdc7;
   letter-spacing: 0.3px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   نفس بنية/تسلسل الوضع الداكن أعلاه بالضبط (رقم ← جسم الأيقونة ← منصة ←
-   انعكاس ← تسمية، نفس المقاسات وسرعات الحركة) — فقط المواد/الإضاءة/الألوان
-   تغيّرت: لؤلؤي/زجاجي بدل الزجاج الداكن، منصة معدنية فضية-وردية باهتة بدل
-   الأسود، انعكاس سماوي/وردي شاحب بدل الأبيض. صفوف .dqt-row-light منفصلة عن
-   .dqt-row (الداكن) تماماً — لا تُعدَّل قواعد الوضع الداكن أعلاه إطلاقاً.
+   من هنا فصاعداً: مواد/ألوان/توهّج فقط لكل ثيم — لا أبعاد، لا مواضع، لا
+   حشو. أي قيمة px هنا هي offset لوني (ظل/توهّج) وليست تخطيطاً.
    ══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .dqt-row {
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 14px),
+    linear-gradient(180deg, rgba(20,28,36,0.4) 0%, rgba(45,58,70,0.25) 55%, rgba(80,100,115,0.16) 100%);
+  border-top: 1px solid rgba(var(--glow-accent-rgb), 0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    0 0 24px rgba(var(--glow-accent-rgb), 0.08),
+    inset 0 1px 0 rgba(var(--glow-accent-rgb), 0.25);
+}
+
+[data-theme="dark"] .dqt-row::before {
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
+}
+
+[data-theme="dark"] .dqt-row::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(2,7,10,0.9) 8%, #010508 20%, #02070b 50%, #010508 80%, rgba(2,7,10,0.9) 92%, transparent 100%);
+  box-shadow:
+    0 -1px 0 rgba(105,220,255,0.25),
+    0 5px 9px rgba(0,0,0,0.65),
+    0 12px 20px rgba(0,0,0,0.35);
+}
+
+[data-theme="dark"] .dqt-num {
+  background: linear-gradient(180deg, #ffffff 0%, #cfe4ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.7);
+}
+
+[data-theme="dark"] .dqt-icon-wrap {
+  /* Base ambient glow behind the glass object itself (the PNG already
+     carries its own baked bevel/highlight/inset-shadow render) + a
+     grounding drop shadow. */
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 14px rgba(var(--glow-accent-rgb), 0.22));
+}
+
+[data-theme="dark"] .dqt-tile:hover .dqt-icon-wrap {
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 24px rgba(var(--glow-accent-rgb), 0.6));
+}
+
+[data-theme="dark"] .dqt-icon-wrap img {
+  /* انعكاس خفيف جداً أسفل كل أيقونة، مُنزَل ومختصر عمداً كي يقع تحت منصة
+     الإحصائيات لا فوقها. Chrome/WebKit فقط (-webkit-box-reflect)؛ يتدهور
+     بأمان (تختفي الخاصية فقط) على متصفحات أخرى. */
+  -webkit-box-reflect: below 8px linear-gradient(to bottom, transparent, rgba(255,255,255,0.12) 10%, transparent 40%);
+}
+
+[data-theme="dark"] .dqt-icon-wrap::after {
+  background: radial-gradient(ellipse, rgba(var(--glow-accent-rgb), 0.55), transparent 75%);
+}
+
+/* بند 28-29 صراحةً: نفس فلسفة توهّج الحواف الزرقاء بالفاتح، بقوة أعلى
+   قليلاً (خلفية داكنة تحتاج تبايناً أقوى) — دون تغيير الألوان الأساسية. */
+[data-theme="dark"] .dqt-icon-wrap::before {
+  background: radial-gradient(circle at 50% 50%,
+    rgba(var(--glow-accent-rgb), 0) 0%,
+    rgba(var(--glow-accent-rgb), 0) 22%,
+    rgba(var(--glow-accent-rgb), 0.5) 55%,
+    rgba(var(--glow-accent-rgb), 0.8) 82%,
+    rgba(200, 240, 255, 0.92) 100%);
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .dqt-label {
+  color: #aebdc7;
+}
+
 [data-theme="light"] .dqt-row-light {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 40px;
-  flex-wrap: wrap;
-  margin-top: -4px;
-  margin-bottom: 28px;
-  padding: 34px 24px 26px;
-  border-radius: 14px;
   /* بلا خطوط أفقية متكررة (repeating-linear-gradient السابق) — خلفية نظيفة
      ذات طبقتين فقط: توهج لؤلؤي هادئ من الأعلى، وقاعدة زجاجية دافئة. */
   background:
@@ -2427,30 +2551,16 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   box-shadow:
     0 8px 24px rgba(120, 140, 180, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  overflow: hidden;
 }
 
 [data-theme="light"] .dqt-row-light::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
   background: linear-gradient(90deg, transparent, rgba(220, 130, 190, 0.55), rgba(80, 180, 220, 0.55), transparent);
-  pointer-events: none;
 }
 
 /* منصة واحدة مشتركة خلف الأربع أيقونات — رفّ زجاجي معدني كحلي عميق (وليست
    فضية شاحبة ولا سوداء ثقيلة، بند 3-4 صراحةً): قلب كحلي غامق، حافة علوية
    سماوية مضيئة، ولمسة وردية خفيفة جداً على الأطراف. */
 [data-theme="light"] .dqt-row-light::after {
-  content: '';
-  position: absolute;
-  left: 5%;
-  right: 5%;
-  bottom: 78px;
-  height: 11px;
-  z-index: 0;
-  border-radius: 999px;
   background: linear-gradient(90deg,
     transparent 0%,
     rgba(210, 140, 190, 0.55) 6%,
@@ -2466,117 +2576,63 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
     0 6px 14px rgba(30, 60, 110, 0.22),
     0 14px 22px rgba(30, 60, 110, 0.12),
     inset 0 1px 0 rgba(160, 220, 255, 0.5);
-  pointer-events: none;
 }
-
-[data-theme="light"] .dqt-tile-light {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  cursor: pointer;
-  position: relative;
-  z-index: 1;
-  padding-top: 18px;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-[data-theme="light"] .dqt-tile-light:hover { transform: translateY(-6px) scale(1.03); }
 
 [data-theme="light"] .dqt-num-light {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  font-size: clamp(27px, 2vw, 34px);
-  font-weight: 800;
   /* أزرق داكن مهيمن + انعكاس سماوي/وردي خفيف عند الطرف (بند 10 صراحةً —
      ليس وردياً مسطحاً). */
   background: linear-gradient(135deg, #14305c 0%, #2f6fb0 45%, #2fa9c9 78%, #d6437e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  line-height: 1;
   text-shadow: 0 0 14px rgba(80, 150, 220, 0.22);
-  pointer-events: none;
 }
 
 [data-theme="light"] .dqt-icon-wrap-light {
-  position: relative;
-  width: 108px;
-  height: 108px;
-  border-radius: 18px;
-  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 14px rgba(220, 130, 190, 0.18));
-  transition: filter 0.3s ease;
+  /* توهّج خارجي حقيقي يتتبّع الشكل الفعلي (الشفاف) للـPNG نفسه — وليس
+     دائرة/إطاراً محيطاً، بند 2-3 صراحةً. طبقتان: توهّج سماوي كهربائي ضيق،
+     وتوهّج أزرق أوسع وأنعم. */
+  filter:
+    drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22))
+    drop-shadow(0 0 4px rgba(120, 220, 255, 0.55))
+    drop-shadow(0 0 16px rgba(70, 165, 220, 0.35));
 }
 
 [data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light {
-  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 24px rgba(80, 180, 220, 0.5));
-}
-
-/* توزيع الضوء داخل الأيقونة: حافة زرقاء كهربائية مضيئة تتلاشى نحو زجاج
-   كحلي شفاف بالمركز (بند 6 صراحةً — المركز لا يصبح أسوداً)، مع لمسة وردية
-   خفيفة جداً على المحيط الخارجي (بند 7). قرص خلف جسم الأيقونة نفسها، وليس
-   خلف الانعكاس فقط — يظهر عبر أجزاء الـPNG الشفافة وحول حوافها. */
-[data-theme="light"] .dqt-icon-wrap-light::before {
-  content: '';
-  position: absolute;
-  inset: 8%;
-  z-index: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%,
-    rgba(22, 40, 82, 0.65) 0%,
-    rgba(32, 70, 130, 0.55) 38%,
-    rgba(70, 165, 220, 0.55) 70%,
-    rgba(155, 225, 255, 0.85) 100%);
-  box-shadow:
-    0 0 0 1px rgba(255, 205, 230, 0.35),
-    0 0 18px rgba(80, 180, 230, 0.5),
-    inset 0 0 16px rgba(15, 30, 65, 0.4);
-  transition: box-shadow 0.3s ease, filter 0.3s ease;
-}
-
-[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light::before {
-  box-shadow:
-    0 0 0 1px rgba(255, 205, 230, 0.5),
-    0 0 26px rgba(80, 180, 230, 0.7),
-    inset 0 0 16px rgba(15, 30, 65, 0.35);
+  filter:
+    drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22))
+    drop-shadow(0 0 6px rgba(120, 220, 255, 0.75))
+    drop-shadow(0 0 22px rgba(70, 165, 220, 0.5));
 }
 
 [data-theme="light"] .dqt-icon-wrap-light img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
   -webkit-box-reflect: below 8px linear-gradient(to bottom, transparent, rgba(80,180,220,0.14) 10%, transparent 40%);
 }
 
 [data-theme="light"] .dqt-icon-wrap-light::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 12%;
-  width: 76%;
-  height: 7px;
-  border-radius: 50%;
   background: radial-gradient(ellipse, rgba(220, 130, 190, 0.35), transparent 75%);
-  filter: blur(2px);
-  transition: opacity 0.3s ease;
-  opacity: 0.7;
 }
 
-[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light::after {
+/* توزيع الضوء داخل جسم الأيقونة نفسه: حافة زرقاء كهربائية مضيئة تتلاشى نحو
+   زجاج كحلي شفاف بالمركز (بند 5/25 صراحةً — المركز لا يصبح أسوداً)، مع
+   لمسة وردية خفيفة جداً عند الطرف الخارجي (بند 28). */
+[data-theme="light"] .dqt-icon-wrap-light::before {
+  background: radial-gradient(circle at 50% 50%,
+    rgba(20, 35, 75, 0) 0%,
+    rgba(20, 35, 75, 0) 26%,
+    rgba(40, 95, 150, 0.35) 55%,
+    rgba(80, 190, 230, 0.65) 80%,
+    rgba(160, 230, 255, 0.85) 94%,
+    rgba(245, 200, 225, 0.5) 100%);
+  opacity: 0.85;
+}
+
+[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light::before {
   opacity: 1;
 }
 
 [data-theme="light"] .dqt-label-light {
-  margin-top: 6px;
-  font-size: 15px;
-  font-weight: 600;
   color: #3a4a63;
-  letter-spacing: 0.3px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2695,7 +2751,13 @@ a:not([aria-disabled="true"]):active,
   margin: -2.5px 0 0 -2.5px;
   background: #eafcff;
   box-shadow: 0 0 4px rgba(var(--cursor-ring-rgb), 0.9), 0 0 10px rgba(var(--cursor-ring-rgb), 0.45);
-  transition: box-shadow 0.18s ease;
+  opacity: 1;
+  /* opacity منفصلة بمدتها الخاصة (140ms) — بدون هذا كانت النواة تعود فوراً
+     (Pop مفاجئ بلا انتقال) عند مغادرة منطقة شريط التمرير، لأن القاعدة
+     المؤقتة !important الخاصة بـhtml.native-scroll-cursor تُزال مع
+     الصنف نفسه ولا شيء غيرها كان يُعرِّف transition لخاصية opacity هنا
+     (بند 46: العودة يجب أن تكون 120-160ms، وليست فورية). */
+  transition: box-shadow 0.18s ease, opacity 0.14s ease;
   z-index: 9999;
 }
 
@@ -2716,7 +2778,10 @@ a:not([aria-disabled="true"]):active,
   box-shadow: inset 0 0 5px rgba(var(--cursor-ring-rgb), 0.15);
   opacity: 0.4;
   transform: scale(0.75);
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  /* opacity مضبوطة على 140ms تحديداً (لا 180ms) كي تقع العودة من منطقة
+     شريط التمرير ضمن مدى 120-160ms المطلوب (بند 46) — باقي الخصائص تبقى
+     180ms كسابقاً (لا علاقة لها بهذا الشرط). */
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.14s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 /* Hover — "Scan Ring" تظهر فعلياً: scale 0.75→1، opacity →0.65، حدّ سماوي
@@ -2774,19 +2839,63 @@ body.futuristic-cursor-over-text .futuristic-cursor-ring {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   منطقة شريط تمرير (FuturisticCursor.js يضيف/يزيل هذا الصنف على body) —
-   الماسح المخصص يختفي بسرعة (٨٠-١٢٠ms، بند 29) ويعود المؤشر الأصلي (سهم/يد
-   السحب) بدل ترك المنطقة بلا أي مؤشر ظاهر. يجب أن تأتي هذه القاعدة بعد
-   body.futuristic-cursor-active أعلاه لتفوز عند تساوي الخصوصية (كلا الصنفين
-   يكونان فعّالين معاً على body في آنٍ واحد). */
-body.futuristic-cursor-scroll-zone *:not(input):not(textarea) {
+   منطقة شريط تمرير — PRE-ARM EDGE DETECTION (FuturisticCursor.js يضيف/يزيل
+   هذا الصنف على <html> نفسه، لا على body — بند 10 بالطلب صراحةً، كي يغطي
+   حتى أي لوحة عائمة مُركَّبة عبر Portal مباشرة إلى document.body، إذ كلاهما
+   يبقى سلسلة أسلاف صحيحة من <html>). الماسح المخصص يختفي بسرعة (100ms)
+   ويعود المؤشر الأصلي (سهم/يد السحب) بدل ترك المنطقة بلا أي مؤشر ظاهر. يجب
+   أن تأتي هذه القاعدة بعد body.futuristic-cursor-active أعلاه لتفوز عند
+   تساوي الخصوصية. */
+html.native-scroll-cursor *:not(input):not(textarea) {
+  cursor: default !important;
+}
+
+html.native-scroll-cursor .futuristic-cursor-core,
+html.native-scroll-cursor .futuristic-cursor-ring,
+html.native-scroll-cursor .futuristic-cursor-pulse {
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 100ms ease !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SUSPEND-WHOLE-CONTAINER — القوائم المنسدلة/اللوحات المنبثقة القابلة
+   للتمرير (غير .page-main/السايدبار أعلاه). استراتيجية جديدة بالكامل: لا
+   اكتشاف لحافة شريط التمرير أو الـthumb هنا إطلاقاً. useScrollableCursorSuspend
+   (frontend/src/hooks/useScrollableCursorSuspend.js) يُبدِّل هذا الصنف على
+   <html> مباشرة عبر onPointerEnter/onPointerLeave الموضوعة على عقدة الـDOM
+   الحقيقية للقائمة نفسها (بما فيها المُركَّبة عبر Portal) — لا وسيط عالمي.
+   يجب أن تأتي هذه الكتلة بعد body.futuristic-cursor-active أعلاه لتفوز عند
+   تساوي الخصوصية. */
+html.custom-cursor-suspended .futuristic-cursor-core,
+html.custom-cursor-suspended .futuristic-cursor-ring,
+html.custom-cursor-suspended .futuristic-cursor-pulse {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* استعادة صريحة للمؤشر الأصلي على مستوى الصفحة كلها أثناء التعليق (بند 8
+   بالطلب صراحةً) — بالإضافة إلى (وليس بدلاً من) قاعدة `*` أدناه، التي تبقى
+   ضرورية فعلياً لأن body.futuristic-cursor-active تفرض cursor:none على كل
+   عنصر عبر محدِّد شامل (*) لا عبر التوريث، فتبديل cursor على body وحدها لا
+   يكفي لإرجاعه لكل الأبناء. */
+html.custom-cursor-suspended,
+html.custom-cursor-suspended body {
+  cursor: auto !important;
+}
+html.custom-cursor-suspended *:not(input):not(textarea) {
   cursor: auto !important;
 }
 
-body.futuristic-cursor-scroll-zone .futuristic-cursor-core,
-body.futuristic-cursor-scroll-zone .futuristic-cursor-ring {
-  opacity: 0 !important;
-  transition: opacity 100ms ease !important;
+.scrollable-native-cursor,
+.scrollable-native-cursor * {
+  cursor: auto !important;
+}
+.scrollable-native-cursor a,
+.scrollable-native-cursor button,
+.scrollable-native-cursor [role="button"],
+.scrollable-native-cursor [role="option"] {
+  cursor: pointer !important;
 }
 
 @media (pointer: coarse), (hover: none) {
@@ -2887,7 +2996,50 @@ body.futuristic-cursor-scroll-zone .futuristic-cursor-ring {
     inset 0 1px 0 rgba(255,255,255,0.9),
     0 10px 22px rgba(120, 130, 170, 0.16),
     0 0 16px rgba(220, 130, 190, 0.18);
+  transform: translateY(-3px);
 }
+[data-theme="light"] .dept-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+}
+/* إضاءة زرقاء هولوغرافية من حواف الأيقونة الفعلية تتلاشى نحو الوسط (بند
+   17-20 صراحةً: ليست دائرة كبيرة خلف الأيقونة، ولا تحوّل الأيقونة لأزرق
+   أحادي بالكامل) — طبقات drop-shadow تتبع الشكل الحقيقي للرمز (إيموجي)
+   نفسه بدل خلفية/إطار مضاف، فتحافظ على ألوان ومعنى الأيقونة الأصلية. */
 [data-theme="light"] .dept-card-icon {
-  filter: drop-shadow(0 0 6px rgba(80, 180, 220, 0.35));
+  filter:
+    drop-shadow(0 0 2px rgba(140, 225, 255, 0.7))
+    drop-shadow(0 0 9px rgba(70, 165, 220, 0.45));
+  transition: filter 0.3s ease;
+}
+[data-theme="light"] .dept-card:hover .dept-card-icon {
+  filter:
+    drop-shadow(0 0 3px rgba(140, 225, 255, 0.9))
+    drop-shadow(0 0 14px rgba(70, 165, 220, 0.65));
+}
+
+/* الوضع الداكن — نفس فلسفة توهّج الحواف الزرقاء، بقوة أعلى قليلاً (بند 29
+   صراحةً)، بلا أي تعديل على خلفية/حدود البطاقة نفسها (لم تُطلَب هنا). */
+[data-theme="dark"] .dept-card-icon {
+  filter:
+    drop-shadow(0 0 2px rgba(var(--glow-accent-rgb), 0.8))
+    drop-shadow(0 0 10px rgba(var(--glow-accent-rgb), 0.5));
+  transition: filter 0.3s ease;
+}
+[data-theme="dark"] .dept-card:hover .dept-card-icon {
+  filter:
+    drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 1))
+    drop-shadow(0 0 16px rgba(var(--glow-accent-rgb), 0.75));
+}
+
+/* Icon نفسه يكبر قليلاً عند Hover (بند 31 صراحةً) — مشترك بين الثيمين،
+   نفس المدة/الـeasing المرجعية. */
+.dept-card-icon {
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dept-card:hover .dept-card-icon {
+  transform: scale(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dept-card:hover .dept-card-icon { transform: none; }
 }

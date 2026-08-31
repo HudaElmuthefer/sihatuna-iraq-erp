@@ -30,11 +30,21 @@ export default function DashboardQuickTiles({ theme, documentsCount, projectsCou
   const L = (ar, en) => (lang === 'ar' ? ar : en);
   const isDark = theme === 'dark';
 
+  // كل PNG الأربعة (لكلا الثيمين) مربّعة 1254×1254، لكن هامش الشفافية
+  // الداخلي يختلف فعلياً بين ملف وآخر — فحص فعلي عبر قياس صندوق البكسلات
+  // غير الشفافة (System.Drawing، ليس تخميناً) أعطى نسبة "ارتفاع مرئي/ارتفاع
+  // الملف" التالية: documents 50.6%(dark)/52.6%(light)، projects
+  // 53.0%/49.3%، calendar 50.2%/46.7%، warehouse 58.2%/57.4%. بما أن كل
+  // الأيقونات تُعرَض بصندوق متطابق تماماً (object-fit:contain على مربّع)،
+  // هذا التفاوت هو مصدر اختلاف "الارتفاع البصري" الفعلي الذي كان يظهر رغم
+  // تطابق CSS height. visualScale أدناه يُطبَّع الجميع نحو ~58% (أعلى قيمة
+  // مقاسة، فلا حاجة لتصغير أي أيقونة، فقط تكبير البقية) — راجع
+  // --icon-visual-scale بـindex.css (.dqt-icon-wrap img).
   const tiles = [
-    { icon: isDark ? iconDocumentsDark : iconDocumentsLight, value: documentsCount, label: L('المستندات', 'Documents'), path: '/documents' },
-    { icon: isDark ? iconProjectsDark : iconProjectsLight, value: projectsCount, label: L('المشاريع', 'Projects'), path: '/projects' },
-    { icon: isDark ? iconCalendarDark : iconCalendarLight, value: todayApptsCount, label: L('المواعيد اليوم', 'Calendar'), path: '/appointments' },
-    { icon: isDark ? iconWarehouseDark : iconWarehouseLight, value: inventoryCount, label: L('المخزون', 'Warehouse'), path: '/inventory' },
+    { icon: isDark ? iconDocumentsDark : iconDocumentsLight, visualScale: isDark ? 1.15 : 1.10, value: documentsCount, label: L('المستندات', 'Documents'), path: '/documents' },
+    { icon: isDark ? iconProjectsDark : iconProjectsLight, visualScale: isDark ? 1.09 : 1.18, value: projectsCount, label: L('المشاريع', 'Projects'), path: '/projects' },
+    { icon: isDark ? iconCalendarDark : iconCalendarLight, visualScale: isDark ? 1.16 : 1.24, value: todayApptsCount, label: L('المواعيد اليوم', 'Calendar'), path: '/appointments' },
+    { icon: isDark ? iconWarehouseDark : iconWarehouseLight, visualScale: isDark ? 1.00 : 1.01, value: inventoryCount, label: L('المخزون', 'Warehouse'), path: '/inventory' },
   ];
 
   // Magnetic hover (2-5px max) على جسم الأيقونة فقط — المنصة والصف نفسه لا
@@ -53,7 +63,11 @@ export default function DashboardQuickTiles({ theme, documentsCount, projectsCou
           {/* الرقم متراكب فعلياً مع الحافة العلوية للوح الزجاجي (موضع مطلق
              بإزاحة سالبة) — وليس نصاً عادياً فوقه بمسافة، كما بالمرجع
              بالضبط. */}
-          <div className={`dqt-icon-wrap ${isDark ? '' : 'dqt-icon-wrap-light'}`} ref={iconRefs[i]}>
+          <div
+            className={`dqt-icon-wrap ${isDark ? '' : 'dqt-icon-wrap-light'}`}
+            ref={iconRefs[i]}
+            style={{ '--icon-mask': `url(${t.icon})`, '--icon-visual-scale': t.visualScale }}
+          >
             <div className={`dqt-num ${isDark ? '' : 'dqt-num-light'}`}>{t.value}</div>
             <img src={t.icon} alt={t.label} />
           </div>

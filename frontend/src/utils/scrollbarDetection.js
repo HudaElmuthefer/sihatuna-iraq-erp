@@ -5,9 +5,15 @@
  * "Scrollable" is derived purely from scrollHeight/scrollWidth vs the
  * client box + the element's own computed overflow — not a hardcoded list.
  *
- * RTL-aware: a vertical scrollbar sits on the LEFT of its element when that
- * element's own computed `direction` is rtl (this app toggles direction at
- * runtime via the language switch), on the RIGHT otherwise. Never assumed.
+ * PRE-ARM MODEL (rewritten — the previous "detect the thumb" approach was
+ * unreliable in practice, per live testing): a native scrollbar thumb is
+ * NOT a real DOM node — event.target/elementFromPoint over it can behave
+ * inconsistently across engines/OS scrollbar styles. So this module never
+ * tries to detect the thumb itself. Instead it only ever measures the
+ * pointer's distance to the SCROLLABLE ELEMENT'S OWN bounding-box edge
+ * (the edge the scrollbar visually sits against) and lets the caller
+ * (FuturisticCursor.js) arm "native cursor mode" *before* the pointer ever
+ * reaches the real scrollbar — see scrollbarZoneState()'s `zone` param.
  */
 
 const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll']);
@@ -23,8 +29,7 @@ export function isScrollableX(el) {
 }
 
 /* أقرب سلف (أو العنصر نفسه) قابل فعلياً للتمرير — يتوقف عند documentElement،
-   ثم يتحقق من الصفحة نفسها (.page-main يقع ضمنها فيُكتشَف أثناء الصعود
-   غالباً قبل الوصول لهذه النقطة أصلاً). */
+   ثم يتحقق من الصفحة نفسها. */
 export function findScrollableAncestor(el) {
   let node = el;
   while (node && node !== document.documentElement) {
@@ -38,25 +43,65 @@ export function findScrollableAncestor(el) {
 }
 
 /*
- * هل (x, y) داخل منطقة اكتشاف شريط تمرير `el` (رأسي و/أو أفقي)؟ hitZone
- * أكبر قليلاً من عرض الشريط الحقيقي عمداً (بند 8) — سهولة استخدام، وليس
- * دقة بكسل مطلقة.
+ * أي جانب يقع عليه الشريط العمودي فعلياً — لا تُفترض من direction وحدها
+ * (بند 5 صراحةً بالطلب): clientLeft يشمل عرض الشريط نفسه (وليس فقط الحد)
+ * عندما يقع على اليسار (سلوك موثَّق بـChromium/Firefox لعنصر RTL بشريط
+ * أيسر) — فإذا كان clientLeft أكبر بوضوح من عرض الحد الأيسر المُصرَّح به،
+ * فهذا دليل فعلي (وليس افتراضاً) على أن الشريط يستهلك تلك المساحة يساراً.
+ * direction تبقى fallback فقط عند غياب أي دليل حاسم.
  */
-export function scrollbarProximity(el, x, y, hitZone) {
-  if (!el) return { vertical: false, horizontal: false };
+export function getVerticalScrollbarSide(el) {
+  if (!el) return 'right';
+  const style = getComputedStyle(el);
+  const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+  if (el.clientLeft > borderLeft + 1) return 'left';
+  const borderRight = parseFloat(style.borderRightWidth) || 0;
+  // بعض المتصفحات تُبلغ عبر الحد الأيمن بدل الأيسر لعناصر معيّنة — تحقّق
+  // مقابل لتفادي false negative فقط لأننا فحصنا جهة واحدة.
+  const clientRightGap = el.offsetWidth - el.clientWidth - el.clientLeft;
+  if (clientRightGap > borderRight + 1 && style.direction !== 'rtl') return 'right';
+  return style.direction === 'rtl' ? 'left' : 'right';
+}
+
+export function getScrollbarWidth(el) {
+  if (!el) return 0;
+  return Math.max(0, el.offsetWidth - el.clientWidth);
+}
+
+/*
+ * حالة "منطقة شريط التمرير" عند نقطة (x, y) بالنسبة لعنصر `el` — تُقاس
+ * دائماً مقابل الصندوق المحيط (getBoundingClientRect) الخاص بالعنصر
+ * القابل للتمرير نفسه، لا مقابل أي محاولة لتحديد الـthumb. `zone` يحدّد
+ * مدى الحساسية (مساحة "ما قبل التفعيل" قبل الوصول الفعلي للشريط — بند 4).
+ */
+export function scrollbarZoneState(el, x, y, zone) {
+  if (!el) return { vertical: false, horizontal: false, side: null, distance: Infinity };
   const rect = el.getBoundingClientRect();
-  const rtl = getComputedStyle(el).direction === 'rtl';
 
   let vertical = false;
+  let side = null;
+  let distance = Infinity;
   if (isScrollableY(el)) {
-    const edgeX = rtl ? rect.left : rect.right;
-    vertical = Math.abs(x - edgeX) <= hitZone && y >= rect.top - hitZone && y <= rect.bottom + hitZone;
+    side = getVerticalScrollbarSide(el);
+    distance = side === 'left' ? (x - rect.left) : (rect.right - x);
+    vertical = distance <= zone && y >= rect.top - zone && y <= rect.bottom + zone;
   }
 
   let horizontal = false;
+  let hDistance = Infinity;
   if (isScrollableX(el)) {
-    horizontal = Math.abs(y - rect.bottom) <= hitZone && x >= rect.left - hitZone && x <= rect.right + hitZone;
+    hDistance = rect.bottom - y;
+    horizontal = hDistance <= zone && x >= rect.left - zone && x <= rect.right + zone;
+    if (hDistance < distance) distance = hDistance;
   }
 
-  return { vertical, horizontal };
+  return { vertical, horizontal, side, distance };
+}
+
+// يُبقي القياس بعيداً عن الصندوق الحقيقي (لا يفترض عرض شريط ثابت 5px/10px،
+// بند 7 صراحةً) — يُستخدَم لضبط منطقة "ما قبل التفعيل" الفعلية بإضافة عرض
+// الشريط الحقيقي المقاس فوق مساحة إضافية ثابتة.
+export function computeActivationZone(el, extraPx) {
+  const scrollbarWidth = getScrollbarWidth(el);
+  return Math.max(scrollbarWidth, 8) + extraPx;
 }

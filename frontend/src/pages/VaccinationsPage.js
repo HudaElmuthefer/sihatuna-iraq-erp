@@ -213,7 +213,15 @@ export default function VaccinationsPage() {
                 <tr key={r.id}>
                   <td style={{ fontWeight: 600 }}>{r.patient}</td>
                   <td>{vaccineLabel(r.vaccine)}</td>
-                  <td><span style={{ background: 'rgba(26,107,171,0.1)', color: '#1a6bab', padding: '2px 8px', borderRadius: 8, fontSize: 12 }}>{doseLabel(r.dose, lang)}</span></td>
+                  <td>
+                    <span style={{
+                      display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      textAlign: 'center', background: 'rgba(26,107,171,0.1)', color: '#1a6bab',
+                      padding: '4px 10px', borderRadius: 8, fontSize: 12, lineHeight: 1.35, whiteSpace: 'nowrap',
+                    }}>
+                      {doseLabel(r.dose, lang).split(' ').map((word, i) => <span key={i}>{word}</span>)}
+                    </span>
+                  </td>
                   <td>{r.date}</td>
                   <td>{r.nextDate || '—'}</td>
                   <td>

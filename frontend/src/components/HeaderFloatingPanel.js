@@ -41,6 +41,14 @@ export default function HeaderFloatingPanel({ anchorRef, open, align = 'end', ch
   return ReactDOM.createPortal(
     <div
       className={className}
+      // البوابة (Portal) تُركَّب مباشرة تحت document.body، خارج شجرة
+      // .app-shell التي تحمل الاتجاه (direction) الصحيح الفعلي كـinline
+      // style — فبلا هذا السطر يعتمد اتجاه اللوحة على وراثة <html>/<body>
+      // فقط، وهو ما كان يُجمَّد خطأً على rtl دائماً (راجع الشرح بجانب قاعدة
+      // html بـindex.css). قراءة صريحة هنا تضمن الاتجاه الصحيح دائماً بصرف
+      // النظر عن أي وراثة CSS خارجية — تشمل كل لوحة تستخدم هذا المكوّن
+      // (القوائم المنسدلة، الإشعارات، نتائج البحث) لا رقعة خاصة بواحدة منها.
+      dir={document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl'}
       style={{
         position: 'fixed',
         top: rect.bottom + 8,

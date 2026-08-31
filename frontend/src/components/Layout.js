@@ -182,7 +182,7 @@ export default function Layout() {
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
-      <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+      <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
         {/* اتجاه صريح بدل الاعتماد على انعكاس flex التلقائي مع direction:rtl —
            بقية هذا الملف يعتمد نفس الأسلوب (موضع زر الطيّ، textAlign عناصر
            القائمة...) بدل ترك أي تموضع RTL ضمنياً. */}
@@ -192,8 +192,8 @@ export default function Layout() {
           </div>
           {!sidebarCollapsed && (
             <div style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}>
-              <div style={{ color: 'rgba(235, 248, 255, 0.95)', fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{appName} ERP</div>
-              <div style={{ color: 'rgba(235, 248, 255, 0.6)', fontSize: 12 }}>{tr("app_subtitle")}</div>
+              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{appName} ERP</div>
+              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.6)' : '#4b6478', fontSize: 12 }}>{tr("app_subtitle")}</div>
             </div>
           )}
         </div>
@@ -239,9 +239,9 @@ export default function Layout() {
             // اتفاقاً بسبب الترتيب.
             const isSettingsFooter = group === 'settingsFooter';
             return (
-              <div key={group} style={isSettingsFooter ? { marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' } : undefined}>
+              <div key={group} style={isSettingsFooter ? { marginTop: 8, paddingTop: 8, borderTop: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)' } : undefined}>
                 {!sidebarCollapsed && gLabel.ar && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', padding: '10px 14px 4px', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: theme === 'dark' ? 'rgba(255,255,255,0.3)' : '#1b3245', padding: '10px 14px 4px', letterSpacing: '0.05em' }}>
                     {lang === 'ar' ? gLabel.ar : gLabel.en}
                   </div>
                 )}
@@ -255,7 +255,9 @@ export default function Layout() {
                   const activeSubTabKey = isOnThisPage ? (searchParams.get('tab') || subTabs[0]?.key) : null;
                   const commonLabel = lang === 'ar' ? page.label : (page.labelEn || tr(page.navKey));
                   const arrow = (
-                    <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: isOnThisPage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)' }}>▶</span>
+                    <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: theme === 'dark'
+                      ? (isOnThisPage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)')
+                      : (isOnThisPage ? '#14283d' : '#5a7185') }}>▶</span>
                   );
                   const iconGlow = navGlowFilter(navIndex++);
                   return (
@@ -277,7 +279,7 @@ export default function Layout() {
                             padding: sidebarCollapsed ? '11px 0' : '9px 14px',
                             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                             border: 'none', cursor: 'pointer',
-                            color: isOnThisPage ? 'var(--text-active)' : 'rgba(255,255,255,0.7)',
+                            color: isOnThisPage ? 'var(--text-active)' : (theme === 'dark' ? 'rgba(255,255,255,0.7)' : '#20384b'),
                             fontFamily: 'inherit',
                             textAlign: lang === 'ar' ? 'right' : 'left',
                           }}
@@ -329,14 +331,14 @@ export default function Layout() {
                                   paddingTop: 7, paddingBottom: 7,
                                   fontSize: 11.5, fontWeight: active ? 500 : 400,
                                   textDecoration: 'none',
-                                  // لون مختلف عن نص القائمة الرئيسية (rgba(255,255,255,...)
-                                  // محايد أبيض/رمادي) — أزرق فاتح من نفس عائلة #1a6bab،
-                                  // يبقى مقروءاً بوضوح فوق خلفية الشريط الجانبي الداكنة
-                                  // الثابتة (لا تتغيّر مع تبديل سمة فاتح/داكن — راجع
-                                  // ملاحظة التقرير: الشريط الجانبي بالكامل غير متأثر
-                                  // بمتغيّر السمة أصلاً).
-                                  color: active ? '#ffffff' : 'rgba(159,199,232,0.8)',
-                                  background: active ? 'rgba(26,107,171,0.4)' : 'transparent',
+                                  // لون فرعي من نفس عائلة أزرق #1a6bab، لكن مُقسَّم بالثيم
+                                  // صراحةً الآن (كان أبيض/أزرق فاتح ثابتاً بصرف النظر عن
+                                  // السمة، فيظهر باهتاً جداً فوق سايدبار لؤلؤي فاتح — بند
+                                  // 7-10 من طلب توحيد ألوان السايدبار).
+                                  color: theme === 'dark'
+                                    ? (active ? '#ffffff' : 'rgba(159,199,232,0.8)')
+                                    : (active ? '#0f2133' : '#3d5a75'),
+                                  background: active ? (theme === 'dark' ? 'rgba(26,107,171,0.4)' : 'rgba(80,180,220,0.28)') : 'transparent',
                                   borderRadius: 8,
                                   marginBottom: 1,
                                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -358,22 +360,22 @@ export default function Layout() {
       </nav>
 
       {/* User info at bottom */}
-      <div style={{ padding: sidebarCollapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+      <div style={{ padding: sidebarCollapsed ? '12px 8px' : '12px 16px', borderTop: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(150,130,170,0.14)', flexShrink: 0 }}>
         {!sidebarCollapsed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: '50%', background: user?.color || '#1a6bab', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
               {user?.avatar || 'م'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: 'rgba(235, 248, 255, 0.95)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-              <div style={{ color: 'rgba(235, 248, 255, 0.55)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
+              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ color: theme === 'dark' ? 'rgba(235, 248, 255, 0.55)' : '#4b6478', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
             </div>
-            <button onClick={handleLogout} title={tr('btn_logout')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, padding: 4 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme === 'dark' ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 16, padding: 4 }}>🚪</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: user?.color || '#1a6bab', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 12 }}>{user?.avatar || 'م'}</div>
-            <button onClick={handleLogout} title={tr('btn_logout')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme === 'dark' ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 14 }}>🚪</button>
           </div>
         )}
       </div>
@@ -406,11 +408,11 @@ export default function Layout() {
           overflow: 'hidden',
           zIndex: 100 }} className={`desktop-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           {/* Collapse toggle */}
-          <button onClick={toggleSidebar} style={{
+          <button onClick={toggleSidebar} className="sidebar-control-btn" style={{
             position: 'absolute', [lang === 'ar' ? 'left' : 'right']: -14, top: 72, width: 28, height: 28,
             borderRadius: '50%', background: 'var(--primary)', border: '2px solid var(--border-glass)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 12, zIndex: 10, transition: 'all 0.3s' }}>
+            color: '#fff', fontSize: 12, zIndex: 10 }}>
             {sidebarCollapsed ? (lang === 'ar' ? '▷' : '◁') : (lang === 'ar' ? '◁' : '▷')}
           </button>
           <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>

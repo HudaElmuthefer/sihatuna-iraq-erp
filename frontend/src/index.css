@@ -199,31 +199,10 @@ body {
   background-attachment: fixed;
 }
 
-/* خلفية الوضع الداكن — طبقات (ليست Gradient واحداً): توهجان بعيدان خافتان
-   جداً (أزرق كهربائي + بنفسجي خافت جداً) فوق قاعدة كحلي شبه أسود عميقة —
-   إحساس "غرفة تحكم هولوغرافية" لا "صفحة ويب داكنة" مسطّحة. */
-[data-theme="dark"] body {
-  background:
-    radial-gradient(ellipse 55% 45% at 18% 8%, rgba(0, 243, 255, 0.09), transparent 65%),
-    radial-gradient(ellipse 50% 45% at 85% 88%, rgba(var(--violet-depth-rgb), 0.07), transparent 65%),
-    linear-gradient(160deg, #030710 0%, #060f1c 45%, #02060c 100%);
-  background-attachment: fixed;
-}
-
-/* شبكة HUD طبية شبه غير مرئية — زخرفية بحتة، ثابتة على body عبر ::before. */
-[data-theme="dark"] body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(0, 243, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
-  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black, transparent 82%);
-}
+/* ملاحظة: .app-bg-blur (عنصر DOM حقيقي بـLayout.js، fixed/inset:0) يُرسَم
+   فوق خلفية body مباشرة ويغطّيها بالكامل بصرياً — أي تخصيص لخلفية body هنا
+   لن يظهر إطلاقاً عملياً. التخصيص الفعلي المرئي للوضع الداكن موجود بالأسفل
+   عند [data-theme="dark"] .app-bg-blur، وليس هنا. */
 
 body.en {
   direction: ltr;

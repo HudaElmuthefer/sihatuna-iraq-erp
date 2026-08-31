@@ -36,7 +36,11 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
     onOpenPage(pages[index]);
   }, [onOpenPage, pages]);
 
-  const ring = useHolographicRing(pages.length, handleOpenByIndex);
+  // البدء من منتصف قائمة الصفحات (لا 0) — حتى تظهر الحلقة متناظرة الشكل
+  // القوسي حول المركز فور التحميل (لوحات على الجانبين)، بدل تكديس أحادي
+  // الجانب لو بدأنا من أول صفحة بالقائمة.
+  const initialIndex = Math.floor((pages.length - 1) / 2);
+  const ring = useHolographicRing(pages.length, handleOpenByIndex, initialIndex);
 
   useImperativeHandle(ref, () => ({
     selectAndOpen(pageKey) {

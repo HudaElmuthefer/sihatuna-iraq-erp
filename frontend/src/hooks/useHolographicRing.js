@@ -22,13 +22,13 @@ function prefersReducedMotion() {
  * @param {number} count عدد الصفحات على الحلقة
  * @param {(index:number)=>void} onOpen يُستدعى بعد اكتمال حركة الفتح (تدوير+انفصال+تكبير)
  */
-export default function useHolographicRing(count, onOpen) {
-  const [continuousPosition, setContinuousPosition] = useState(0);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+export default function useHolographicRing(count, onOpen, initialIndex = 0) {
+  const [continuousPosition, setContinuousPosition] = useState(initialIndex);
+  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [isDragging, setIsDragging] = useState(false);
   const [openingIndex, setOpeningIndex] = useState(null);
 
-  const posRef = useRef(0);
+  const posRef = useRef(initialIndex);
   const dragStartRef = useRef({ x: 0, pos: 0 });
   const tweenRef = useRef(null);
   const countRef = useRef(count);

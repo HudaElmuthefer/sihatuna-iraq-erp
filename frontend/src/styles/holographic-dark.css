@@ -48,24 +48,134 @@
   border-inline-start: 2px solid rgba(var(--gold-accent-rgb), 0.85);
 }
 
-/* لمسة ذهبية-شمبانيا داخلية للعنصر النشط بالسايدبار — فوق الإطار السماوي
-   الموجود أصلاً بـindex.css، لا بديلاً عنه (بند: "ذهبي كلمسة محدودة فقط،
-   ليس أصفر صريحاً" صراحةً). */
-[data-theme="dark"] .sidebar-nav-item.active::after,
-[data-theme="dark"] .sidebar-nav-item-active::after {
+/* ══════════════════════════════════════════════════════════════════════
+   السايدبار الداكن — إعادة بناء بصرية فعلية (ليست مجرد إعادة تلوين): كل
+   عنصر تنقّل يصبح قطعة زجاجية عائمة منفصلة (segment)، متصلة بخط "عمود
+   فقري" هولوغرافي رفيع على الحافة الداخلية، بدل قائمة متلاصقة عادية. لا
+   تغيير على منطق React/الصلاحيات/التوجيه — تعديل بصري بحت فوق نفس البنية.
+   ══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .desktop-sidebar nav,
+[data-theme="dark"] .mobile-sidebar nav {
+  position: relative;
+  padding-inline-start: 16px !important;
+}
+/* العمود الفقري المضيء — خط سماوي رفيع متقطّع بمقاطع صغيرة، مع علامة ذهبية
+   عند ارتفاع العنصر النشط (بند "HOLOGRAPHIC NAVIGATION SPINE" صراحةً). */
+[data-theme="dark"] .desktop-sidebar nav::before,
+[data-theme="dark"] .mobile-sidebar nav::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  inset-inline-start: 6px;
+  width: 2px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(var(--glow-accent-rgb), 0.55) 0px,
+    rgba(var(--glow-accent-rgb), 0.55) 6px,
+    transparent 6px,
+    transparent 11px
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .sidebar-nav-item {
+  margin-bottom: 7px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(150deg, rgba(22,44,66,0.4) 0%, rgba(6,14,24,0.55) 100%) !important;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.14) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+/* شارة صغيرة مضيئة داخل حافة كل عنصر (بند "small structural illuminated
+   tabs") — داخل حدود العنصر نفسه صراحةً (لا خارجها)، لأن .sidebar-nav-item
+   يحمل overflow:hidden أصلاً (لقصّ تأثير الـripple ضمن حدوده) فأي عنصر زخرفي
+   بموضع سالب خارج الصندوق كان سيُقَصّ ولا يظهر إطلاقاً. */
+[data-theme="dark"] .sidebar-nav-item::after {
   content: '';
   position: absolute;
   inset-inline-start: 0;
-  top: 2px;
-  bottom: 2px;
+  top: 3px;
+  bottom: 3px;
   width: 2px;
   border-radius: 2px;
+  background: rgba(var(--glow-accent-rgb), 0.35);
+}
+[data-theme="dark"] .sidebar-nav-item:hover {
+  border-color: rgba(var(--glow-accent-rgb), 0.4) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 14px rgba(var(--glow-accent-rgb), 0.18);
+}
+
+/* العنصر النشط — قطعة زجاجية مرفوعة بإطار سماوي + توهّج ذهبي داخلي (لا
+   أصفر صريح) + إسقاط أمامي طفيف (RTL: "أمام" = بعيداً عن حافة السايدبار
+   اليمنى، أي إزاحة يسارية بسيطة). يفوز على قاعدة index.css الأقدم (نفس
+   العناصر !important) عبر تخصيص أعلى: سلسلة صنفين معاً بدل صنف واحد. */
+[data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
+  background:
+    linear-gradient(120deg, rgba(var(--gold-accent-rgb), 0.16) 0%, transparent 55%),
+    linear-gradient(150deg, rgba(28,60,86,0.55) 0%, rgba(8,18,30,0.68) 100%) !important;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.75) !important;
+  box-shadow:
+    inset 0 0 14px rgba(var(--gold-accent-rgb), 0.18),
+    0 0 16px rgba(var(--glow-accent-rgb), 0.35),
+    0 6px 18px rgba(0,0,0,0.35) !important;
+  transform: translateX(-3px) !important;
+}
+html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
+  transform: translateX(3px) !important;
+}
+[data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active::after {
   background: rgb(var(--gold-accent-rgb));
-  box-shadow: 0 0 8px rgba(var(--gold-accent-rgb), 0.7);
+  box-shadow: 0 0 8px rgba(var(--gold-accent-rgb), 0.8);
+  width: 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active { transform: none !important; }
+}
+
+/* هوية السايدبار العلوية — وحدة زجاجية عائمة مستقلة، لا شريط ملاصق للأعلى. */
+[data-theme="dark"] .sidebar-logo-frame {
+  border-radius: 12px !important;
+  background: linear-gradient(150deg, rgba(22,44,66,0.5), rgba(6,14,24,0.6));
 }
 
 @media print {
   .dhh-shell, .chw-shell { background: none !important; box-shadow: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   خلفية التطبيق العامة — .app-bg-blur هو العنصر المرئي فعلياً (fixed،
+   inset:0، يُرسَم فوق خلفية body) — index.css الأصلي يعطيه أربع فقاعات
+   بنفس اللون السماوي فقط، فتبدو مسطّحة موحّدة اللون. هذا التخصيص يستبدلها
+   بتدرّج طبقي حقيقي (كحلي عميق → زجاج غرافيت → لمسة بنفسجية خافتة كعمق)
+   + شبكة HUD تقنية شبه غير مرئية، دون أي جسيمات (بند صريح: لا particles). */
+[data-theme="dark"] .app-bg-blur {
+  background:
+    radial-gradient(ellipse 50% 40% at 15% 10%, rgba(var(--glow-accent-rgb), 0.16), transparent 60%),
+    radial-gradient(ellipse 45% 38% at 88% 15%, rgba(var(--violet-depth-rgb), 0.12), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 20% 92%, rgba(var(--violet-depth-rgb), 0.09), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 85% 90%, rgba(var(--glow-accent-rgb), 0.12), transparent 58%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(var(--gold-accent-rgb), 0.035), transparent 65%),
+    linear-gradient(160deg, #030710 0%, #071324 40%, #050b16 70%, #02060c 100%);
+}
+[data-theme="dark"] .app-bg-blur::before {
+  /* الأصل: خطّان قطريان زاويتان فقط. إضافة شبكة HUD تقنية خافتة جداً تغطي
+     كامل الخلفية (لا تستبدل الخطوط — نستخدم عنصراً ثالثاً بدلها). */
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.32), transparent);
+}
+.app-bg-blur-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(var(--glow-accent-rgb), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--glow-accent-rgb), 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 38%, black, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 38%, black, transparent 78%);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -93,8 +203,13 @@
 .dhh-idle {
   position: relative;
   text-align: center;
-  padding: 18px 26px;
+  padding: 14px 22px;
   pointer-events: none;
+  /* تنزل عن مركز المشهد الرأسي الحقيقي (حيث تجلس اللوحة الأمامية بالحلقة
+     و.hcd-zone معاً) بدل التموضع بنفس النقطة تماماً — .hcd-zone (شقيقها)
+     يبقى بالمركز الحقيقي دون تأثّر (موضعها الخاص أدناه)، فتفادينا تداخلاً
+     بصرياً مباشراً بدل تراتب عمق مقصود. */
+  transform: translateY(clamp(70px, 12vh, 120px));
 }
 .dhh-idle-title {
   font-size: 12px;
@@ -231,7 +346,15 @@
 /* ══════════════════════════════════════════════════════════════════════
    HolographicPagePanel — لوحة صفحة مقوَّسة واحدة على الحلقة
    ══════════════════════════════════════════════════════════════════════ */
-.hpp {
+/* .hpr-scene .hpp (لا .hpp وحدها) — عمداً: index.css يحمل قاعدة عامة
+   `button, a, [role="button"] { position: relative; }` (لتثبيت .ripple-effect)
+   بنفس درجة التخصيص (0,1,0) — بما أن .hpp يحمل role="button" لإتاحة الوصول،
+   كانت هذه القاعدة العامة تفوز أحياناً بترتيب الـcascade وتُلغي position:absolute
+   هنا كلياً، فتنهار كل هندسة الحلقة إلى التموضع الطبيعي (normal flow) — وهذا
+   بالضبط سبب اختفاء الحلقة الفعلي (كل اللوحات كانت تنزلق لمواضع flow عادية
+   بعيدة تماماً عن مركز المشهد). زيادة التخصيص هنا (0,2,0) تضمن الفوز دائماً
+   بصرف النظر عن ترتيب استيراد الملفات. */
+.hpr-scene .hpp {
   position: absolute;
   top: 50%;
   left: 50%;

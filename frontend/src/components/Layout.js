@@ -414,6 +414,7 @@ export default function Layout() {
           خلف كل المحتوى — الوضع الداكن فقط، راجع .sci-fi-arc بـindex.css */}
       {isDark && (
         <>
+          <div className="app-bg-blur-grid" aria-hidden="true" />
           <div className="sci-fi-arc sci-fi-arc-1" aria-hidden="true" />
           <div className="sci-fi-arc sci-fi-arc-2" aria-hidden="true" />
         </>

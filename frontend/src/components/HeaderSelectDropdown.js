@@ -67,7 +67,7 @@ export default function HeaderSelectDropdown({ value, onChange, options, title, 
         aria-expanded={open}
         onClick={() => { setOpen(o => !o); setHighlighted(Math.max(0, options.findIndex(o2 => o2.value === value))); }}
         onKeyDown={handleTriggerKeyDown}
-        className={`header-dropdown-trigger ${dark ? 'header-dropdown-trigger-dark' : ''} ${open ? 'header-dropdown-trigger-open' : ''}`}
+        className={`header-dropdown-trigger ${dark ? 'header-dropdown-trigger-dark' : 'header-dropdown-trigger-light'} ${open ? 'header-dropdown-trigger-open' : ''}`}
       >
         <span className="header-dropdown-trigger-label">{selected?.icon} {selected?.label}</span>
         <FaChevronDown className="header-dropdown-chevron" />

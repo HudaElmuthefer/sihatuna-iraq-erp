@@ -32,16 +32,18 @@
   --sidebar-width: clamp(240px, 18vw, 270px);
   --sidebar-collapsed: 70px;
 
-  /* Main content */
-  --bg-primary: #f0f4f8;
-  --bg-secondary: #ffffff;
+  /* Main content — لؤلؤي دافئ بدل أبيض مسطّح (#ffffff/#f0f4f8 القديمين)،
+     بلا تغيير على النصوص/الحدود التي تعتمد عليه أصلاً في 32 وحدة. الظلال
+     خُفِّفت (أوسع وأقل عتامة) بدل أسود صلب. */
+  --bg-primary: #f5f8fc;
+  --bg-secondary: #fefbfd;
   --bg-card: #ffffff;
   --text-primary: #1a2332;
   --text-secondary: #4a5568;
   --text-muted: #718096;
   --border: #e2e8f0;
-  --shadow: 0 2px 15px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+  --shadow: 0 4px 20px rgba(120, 130, 170, 0.08);
+  --shadow-lg: 0 14px 45px rgba(120, 130, 170, 0.12);
 
   /* Bottom nav */
   --bottom-nav-bg: #1565c0;
@@ -156,6 +158,18 @@ body {
      صريح خاص به) — أي عنصر بلا h1..h6 (التي لها قاعدة مباشرة منفصلة بلا
      transition) يتأثر. تبديل الثيم يجب أن يكون فورياً هنا، لا يحتاج انتقالاً
      سلساً أصلاً. */
+}
+
+/* جو محيط خفيف جداً للوضع الفاتح فقط — توهجان (وردي + سماوي) بعتامة منخفضة
+   جداً خلف الصفحة كلها، ثابتان (لا يتحركان) خلف المحتوى القابل للتمرير، كي
+   لا تبدو الخلفية بيضاء صافية بلا حياة (بند 42-43 صراحةً) دون أن تصبح
+   ملوَّنة بإزعاج. */
+[data-theme="light"] body {
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 8%, rgba(230, 140, 195, 0.07), transparent 65%),
+    radial-gradient(ellipse 55% 45% at 90% 85%, rgba(80, 190, 230, 0.07), transparent 65%),
+    var(--bg-primary);
+  background-attachment: fixed;
 }
 
 body.en {
@@ -962,6 +976,29 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
     0 0 18px rgba(var(--glow-accent-rgb), 0.14) !important;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   الوضع الفاتح — نفس منطق التوزيع الضوئي أعلاه بالضبط (مصدر ساطع بأعلى
+   الحافة الداخلية يتلاشى بنعومة نزولاً)، لكن بمواد/ألوان لؤلؤية-وردية-سماوية
+   بدل الزجاج الداكن: ضبابة علوية-يسارية وردية+سماوية فوق زجاج صقيعي شاحب،
+   ينتهي بلوح لؤلؤي أفتح قليلاً بالأسفل (بند 9 صراحةً: لا يصبح رمادياً
+   قاتماً — يبقى Light Mode حتى في أدنى نقطة). */
+[data-theme="light"] .desktop-sidebar,
+[data-theme="light"] .mobile-sidebar {
+  background:
+    radial-gradient(ellipse at 8% 4%, rgba(230, 140, 195, 0.28) 0%, rgba(120, 200, 235, 0.16) 24%, rgba(255, 255, 255, 0.04) 48%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 250, 253, 0.85) 0%, rgba(240, 244, 252, 0.82) 45%, rgba(232, 224, 238, 0.85) 100%) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+}
+
+[data-theme="light"] .sidebar-glow-frame-light {
+  box-shadow:
+    1px 0 0 rgba(220, 130, 190, 0.35),
+    0 0 18px rgba(80, 180, 220, 0.16) !important;
+}
+
 /* Glassmorphism header */
 .glass-header {
   margin: 12px 18px 8px 18px !important;
@@ -1143,6 +1180,156 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   text-overflow: ellipsis;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   نسخة الوضع الفاتح من عناصر الـHeader (أيقونات/pill/بحث/dropdown) — لؤلؤي
+   شبه شفاف بحافة زرقاء ناعمة وانعكاس وردي خفيف، بدل الدائرة الرمادية
+   الافتراضية القديمة. لا تُعدَّل نظائرها الداكنة أعلاه إطلاقاً. */
+.header-icon-btn-light {
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,0.75) 0%, rgba(240,244,252,0.55) 100%) !important;
+  border: 1px solid rgba(120, 170, 210, 0.35) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    0 2px 8px rgba(140, 150, 190, 0.15),
+    0 0 8px rgba(220, 130, 190, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: box-shadow 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+}
+
+.header-icon-btn-light svg {
+  color: #2c4a63;
+  filter: drop-shadow(0 0 2px rgba(220, 130, 190, 0.25));
+}
+
+.header-icon-btn-light:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 2px 8px rgba(140, 150, 190, 0.18),
+    0 0 14px rgba(80, 180, 220, 0.25);
+  transform: translateY(-1px);
+}
+
+.header-pill-btn-light {
+  background: linear-gradient(160deg, rgba(255,255,255,0.75) 0%, rgba(240,244,252,0.55) 100%) !important;
+  border: 1px solid rgba(120, 170, 210, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 8px rgba(220, 130, 190, 0.12);
+  border-radius: 10px !important;
+  color: #2c4a63 !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.header-pill-btn-light:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 0 14px rgba(80, 180, 220, 0.25);
+}
+
+.sidebar-logo-frame-light {
+  padding: 3px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.8) 0%, rgba(245,240,250,0.55) 100%);
+  border: 1px solid rgba(220, 130, 190, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 0 8px rgba(80, 180, 220, 0.15);
+}
+
+.header-search-light {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(240,244,252,0.65) 100%) !important;
+  border: 1px solid rgba(120, 170, 210, 0.3) !important;
+  box-shadow: inset 0 1px 3px rgba(140,150,190,0.1), 0 0 8px rgba(220,130,190,0.08);
+}
+
+.header-search-light:focus-within {
+  border-color: rgba(80, 180, 220, 0.5) !important;
+  box-shadow: 0 0 12px rgba(80, 180, 220, 0.2);
+}
+
+.header-search-light .header-search-icon { color: #6b7a99; }
+.header-search-light .header-search-input { color: #1f3348; }
+.header-search-light .header-search-input::placeholder { color: rgba(60, 80, 110, 0.5); }
+
+.header-dropdown-trigger-light {
+  background: linear-gradient(160deg, rgba(255,255,255,0.8) 0%, rgba(240,244,252,0.6) 100%);
+  border: 1px solid rgba(120, 170, 210, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 0 8px rgba(220, 130, 190, 0.1);
+  color: #2c4a63;
+}
+
+.header-dropdown-trigger-light.header-dropdown-trigger-open {
+  border-color: rgba(80, 180, 220, 0.55);
+  background: rgba(230, 245, 252, 0.85);
+  box-shadow: 0 0 10px rgba(80, 180, 220, 0.18);
+}
+
+[data-theme="light"] .header-dropdown-panel {
+  min-width: 210px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(245,242,250,0.98));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(120, 170, 210, 0.35);
+  box-shadow: 0 12px 30px rgba(120,130,170,0.18), 0 0 16px rgba(220,130,190,0.1);
+}
+
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar { width: 6px; }
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-track { background: transparent; }
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb {
+  background: rgba(80, 180, 220, 0.35);
+  border-radius: 10px;
+}
+[data-theme="light"] .header-dropdown-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 180, 220, 0.6);
+}
+
+[data-theme="light"] .header-dropdown-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #253a52;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease-out;
+}
+
+[data-theme="light"] .header-dropdown-option:active { transform: scale(0.98); }
+[data-theme="light"] .header-dropdown-option + .header-dropdown-option { margin-top: 2px; }
+
+[data-theme="light"] .header-dropdown-option:hover,
+[data-theme="light"] .header-dropdown-option-highlighted {
+  background: linear-gradient(90deg, rgba(220,130,190,0.10), rgba(80,180,220,0.16), rgba(220,130,190,0.10));
+  color: #14283d;
+  border-color: rgba(80,180,220,0.25);
+}
+
+[data-theme="light"] .header-dropdown-option-selected {
+  background: rgba(80, 180, 220, 0.10);
+  color: #0f2133;
+  font-weight: 600;
+}
+
+[data-theme="light"] .header-dropdown-option-selected::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #d6437e, #2fa9c9);
+  box-shadow: 0 0 6px rgba(80, 180, 220, 0.5);
+}
+
 /* Header search field — enlarged to match the other header controls (was a
    fixed 180px box with a default ~13px font, noticeably smaller than the
    36px icon buttons beside it). Colors here are the exact pre-existing
@@ -1207,18 +1394,28 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  color: rgba(235, 248, 255, 0.85);
   background: transparent;
   transition: all 0.2s ease;
   border: 1px solid transparent;
   border-bottom: 1px solid rgba(140, 170, 190, 0.14);
 }
 
+/* لون النص الأساسي — مُقسَّم بحسب الثيم صراحةً (كان موحّداً بلون سماوي فاتح
+   يصلح فوق خلفية داكنة فقط، فيصبح شبه غير مقروء فوق سايدبار فاتح). */
+[data-theme="dark"] .sidebar-nav-item { color: rgba(235, 248, 255, 0.85); }
+[data-theme="dark"] .sidebar-nav-item:hover { color: rgba(235, 248, 255, 0.98); }
+/* الوضع الفاتح: كحلي داكن (بند 14 صراحةً — ليس أبيض). */
+[data-theme="light"] .sidebar-nav-item { color: #20384b; }
+[data-theme="light"] .sidebar-nav-item:hover { color: #14283d; }
+
 /* الوضع الداكن فقط: أُزيل الخط الفاصل بين الصفوف — كان يرسم شبكة صفوف خاصة
    به فوق الصورة المعتمدة (التي تحمل خطوطها الفاصلة الخاصة أصلاً)، فيظهر
    وكأن هناك "سايد بار قديم" بشبكته المستقلة خلف الصورة الجديدة. */
 [data-theme="dark"] .sidebar-nav-item {
   border-bottom-color: transparent;
+}
+[data-theme="light"] .sidebar-nav-item {
+  border-bottom-color: rgba(150, 130, 170, 0.14);
 }
 
 /* Thin glow line that slides in along the item's leading edge on hover. */
@@ -1230,38 +1427,49 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   bottom: 4px;
   width: 3px;
   border-radius: 3px;
-  background: linear-gradient(180deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
   opacity: 0;
   transform: scaleY(0.4);
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
 }
-
-.sidebar-nav-item:hover {
-  background: rgba(var(--glow-accent-rgb), 0.08);
-  /* النص يصبح أوضح قليلاً عند المرور — ليس القائمة كلها تتحرك، فقط سطوع
-     النص (اللون موروث من هنا لنص التسمية). */
-  color: rgba(235, 248, 255, 0.98);
+[data-theme="dark"] .sidebar-nav-item::before {
+  background: linear-gradient(180deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
 }
+[data-theme="light"] .sidebar-nav-item::before {
+  background: linear-gradient(180deg, transparent, rgba(220, 130, 190, 0.8), rgba(80, 180, 220, 0.8), transparent);
+}
+
+[data-theme="dark"] .sidebar-nav-item:hover { background: rgba(var(--glow-accent-rgb), 0.08); }
+[data-theme="light"] .sidebar-nav-item:hover { background: rgba(220, 130, 190, 0.08); }
 .sidebar-nav-item:hover::before { opacity: 1; transform: scaleY(1); }
 
-/* Icon: pale metallic with a controlled cyan-tinted shadow — not a flat
-   white glyph, not a colored emoji-style icon. حركة/توهج دقيقان جداً عند
-   المرور (ليس القائمة كلها)، بنفس لغة الحركة المرجعية (Documents/Projects)
-   لكن بمقياس أصغر يناسب أيقونة صغيرة داخل صف قائمة. */
+/* Icon: حركة/توهج دقيقان جداً عند المرور (ليس القائمة كلها)، بنفس لغة
+   الحركة المرجعية (Documents/Projects) لكن بمقياس أصغر يناسب أيقونة صغيرة
+   داخل صف قائمة. الألوان مقسَّمة بالثيم (فاتح: كحلي مائل للوردي، بلا توهج
+   سماوي كان يبدو باهتاً فوق خلفية فاتحة). */
 .sidebar-nav-item svg {
-  color: #c3d3dc;
-  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.45));
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
 }
-.sidebar-nav-item:hover svg {
+[data-theme="dark"] .sidebar-nav-item svg {
+  color: #c3d3dc;
+  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.45));
+}
+[data-theme="dark"] .sidebar-nav-item:hover svg {
   transform: translateY(-1px) scale(1.1);
   filter: drop-shadow(0 0 5px rgba(var(--glow-accent-rgb), 0.75));
+}
+[data-theme="light"] .sidebar-nav-item svg {
+  color: #3d5a75;
+  filter: drop-shadow(0 0 2px rgba(220, 130, 190, 0.3));
+}
+[data-theme="light"] .sidebar-nav-item:hover svg {
+  transform: translateY(-1px) scale(1.1);
+  filter: drop-shadow(0 0 4px rgba(80, 180, 220, 0.5));
 }
 
 /* Active item — إطار سماوي رفيع + خلفية زجاجية شبه شفافة (وليس مستطيلاً
    أزرق قوياً/صلباً). */
-.sidebar-nav-item.active, .sidebar-nav-item-active {
+[data-theme="dark"] .sidebar-nav-item.active, [data-theme="dark"] .sidebar-nav-item-active {
   background: linear-gradient(90deg, rgba(18,176,255,0.07), rgba(18,176,255,0.18), rgba(18,176,255,0.07)) !important;
   border: 1px solid rgba(80,210,255,0.65) !important;
   border-radius: 6px !important;
@@ -1271,10 +1479,28 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   color: #eef8fc !important;
   font-weight: 700 !important;
 }
-.sidebar-nav-item.active::before, .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
-.sidebar-nav-item.active svg, .sidebar-nav-item-active svg {
+[data-theme="dark"] .sidebar-nav-item.active::before, [data-theme="dark"] .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
+[data-theme="dark"] .sidebar-nav-item.active svg, [data-theme="dark"] .sidebar-nav-item-active svg {
   color: #eef8fc;
   filter: drop-shadow(0 0 4px rgba(var(--glow-accent-rgb), 0.8));
+}
+
+/* الوضع الفاتح — كبسولة زجاجية لؤلؤية بحافة وردية-سماوية وإضاءة داخلية
+   ناعمة (بند 13 صراحةً: ليس مستطيلاً أزرق قوياً). */
+[data-theme="light"] .sidebar-nav-item.active, [data-theme="light"] .sidebar-nav-item-active {
+  background: linear-gradient(90deg, rgba(220,130,190,0.10), rgba(80,180,220,0.16), rgba(220,130,190,0.10)) !important;
+  border: 1px solid rgba(120, 170, 210, 0.55) !important;
+  border-radius: 6px !important;
+  box-shadow:
+    0 0 10px rgba(80,180,220,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.7) !important;
+  color: #0f2133 !important;
+  font-weight: 700 !important;
+}
+[data-theme="light"] .sidebar-nav-item.active::before, [data-theme="light"] .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
+[data-theme="light"] .sidebar-nav-item.active svg, [data-theme="light"] .sidebar-nav-item-active svg {
+  color: #0f2133;
+  filter: drop-shadow(0 0 4px rgba(80, 180, 220, 0.5));
 }
 
 /* Glass cards & widgets */
@@ -1669,6 +1895,212 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   Light Mode hero — نفس بنية/مقاسات الوضع الداكن أعلاه حرفياً (نفس
+   padding/min-height/gap/عرض الهولوغرام)، فقط لؤلؤي-وردي-سماوي بدل الزجاج
+   المعدني الداكن. لا تُعدَّل أي قاعدة [data-theme="dark"] أعلاه.
+   ══════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .health-hero-light {
+  position: relative;
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, #ffe6f0 0%, #eef0fb 100%);
+  border: 1px solid rgba(220, 130, 190, 0.3);
+  box-shadow:
+    0 10px 40px rgba(150, 130, 170, 0.18),
+    0 46px 50px -30px rgba(80, 180, 220, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+[data-theme="light"] .health-hero-light-inner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 360px;
+  padding: 30px 28px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #fdf5f9 0%, #f2f4fb 55%, #eae6f2 100%);
+  box-shadow:
+    inset 0 3px 10px rgba(160, 140, 180, 0.12),
+    inset 0 0 0 1px rgba(220, 130, 190, 0.2);
+}
+
+[data-theme="light"] .health-hero-light-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(220, 130, 190, 0.6), rgba(80, 180, 220, 0.6), transparent);
+  pointer-events: none;
+}
+
+[data-theme="light"] .health-hero-light-content {
+  position: relative;
+  z-index: 2;
+  max-width: 44%;
+}
+
+[data-theme="light"] .health-hero-light-eyebrow {
+  font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  color: #5a6b85;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+[data-theme="light"] .health-hero-light-title {
+  font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #17293c;
+  line-height: 1.2;
+  text-shadow: 0 0 18px rgba(220, 130, 190, 0.18);
+}
+
+/* نفس حاوية/حجم الهولوغرام بالضبط (الصورة الفعلية المزوَّدة تُعرَض كاملة
+   بلا قص، object-fit:contain — راجع الملاحظة المطابقة بالوضع الداكن). */
+[data-theme="light"] .health-hero-caduceus {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 460px;
+  max-width: 58%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="light"] .hero-medical-hologram {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+@media (max-width: 768px) {
+  [data-theme="light"] .health-hero-light-inner { flex-direction: column; text-align: center; padding: 24px 20px; min-height: 0; }
+  [data-theme="light"] .health-hero-light-content { max-width: 100%; }
+  [data-theme="light"] .health-hero-caduceus { width: 200px; height: 160px; max-width: 100%; }
+}
+
+/* زر التخصيص — نفس موضع/مقاسات القاعدة المشتركة بالوضع الداكن (كانت
+   [data-theme="dark"]-only، فلا تنطبق على الوضع الفاتح تلقائياً). */
+[data-theme="light"] .health-hero-customize {
+  position: absolute;
+  bottom: -16px;
+  left: 28px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(150, 130, 170, 0.25);
+}
+
+@media (max-width: 768px) {
+  [data-theme="light"] .health-hero-customize { position: static; margin: 10px auto 0; }
+}
+
+/* نفس الموضع/المقاسات، مواد لؤلؤية-وردية. */
+[data-theme="light"] .health-hero-customize-label-light {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 22px 0 38px;
+  margin-inline-end: -20px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.7) 0%, transparent 40%),
+    linear-gradient(160deg, rgba(255,235,245,0.95) 0%, rgba(240,242,251,0.95) 100%);
+  border: 1px solid rgba(220, 130, 190, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    inset 0 -2px 4px rgba(160,140,180,0.15),
+    0 0 10px rgba(80, 180, 220, 0.15);
+  color: #33445c;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* نواة التحكّم — نفس فلسفة "أسطع بالمركز" بألوان أبيض+وردي/سماوي، وحافة
+   خارجية أغمق (رمادي مزرق-وردي معدني، وليس أسود خالصاً — يبقى Light Mode). */
+[data-theme="light"] .health-hero-customize-gear-light {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(245, 190, 220, 0.85) 18%,
+    rgba(150, 195, 225, 0.55) 48%,
+    rgba(170, 160, 185, 0.6) 78%,
+    rgba(120, 115, 140, 0.75) 100%);
+  border: 1px solid rgba(220, 130, 190, 0.55);
+  box-shadow:
+    0 0 8px rgba(220, 130, 190, 0.25),
+    inset 0 0 10px rgba(150, 130, 170, 0.25),
+    inset 0 0 4px rgba(255, 255, 255, 0.6);
+  color: #3a2c3c;
+  font-size: 15px;
+}
+
+[data-theme="light"] .health-hero-customize:hover .health-hero-customize-gear-light {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(250, 200, 225, 0.95) 22%,
+    rgba(140, 200, 230, 0.65) 50%,
+    rgba(170, 160, 185, 0.6) 78%,
+    rgba(120, 115, 140, 0.75) 100%);
+  box-shadow:
+    0 0 14px rgba(220, 130, 190, 0.4),
+    inset 0 0 10px rgba(150, 130, 170, 0.25),
+    inset 0 0 6px rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="light"] .health-hero-customize:active .health-hero-customize-gear-light {
+  animation: controlCorePulseLight 0.35s ease-out;
+}
+
+@keyframes controlCorePulseLight {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(220, 130, 190, 0.25),
+      inset 0 0 10px rgba(150, 130, 170, 0.25),
+      inset 0 0 4px rgba(255, 255, 255, 0.6);
+  }
+  45% {
+    box-shadow:
+      0 0 22px rgba(80, 180, 220, 0.45),
+      inset 0 0 6px rgba(150, 130, 170, 0.15),
+      inset 0 0 14px rgba(255, 255, 255, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="light"] .health-hero-customize:active .health-hero-customize-gear-light {
+    animation: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    Dark-mode dashboard quick-access tiles (Documents / Projects / Calendar
    / Warehouse) — the 4 stat tiles from the same reference image, built
    with the real cropped icon assets. Unlike the reference mockup's fake
@@ -1837,6 +2269,143 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
   font-size: 15px;
   font-weight: 600;
   color: #aebdc7;
+  letter-spacing: 0.3px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   نفس بنية/تسلسل الوضع الداكن أعلاه بالضبط (رقم ← جسم الأيقونة ← منصة ←
+   انعكاس ← تسمية، نفس المقاسات وسرعات الحركة) — فقط المواد/الإضاءة/الألوان
+   تغيّرت: لؤلؤي/زجاجي بدل الزجاج الداكن، منصة معدنية فضية-وردية باهتة بدل
+   الأسود، انعكاس سماوي/وردي شاحب بدل الأبيض. صفوف .dqt-row-light منفصلة عن
+   .dqt-row (الداكن) تماماً — لا تُعدَّل قواعد الوضع الداكن أعلاه إطلاقاً.
+   ══════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .dqt-row-light {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-top: -4px;
+  margin-bottom: 28px;
+  padding: 34px 24px 26px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 14px),
+    linear-gradient(180deg, rgba(255,250,252,0.55) 0%, rgba(238,245,251,0.55) 55%, rgba(226,220,232,0.4) 100%);
+  border-top: 1px solid rgba(220, 130, 190, 0.35);
+  border-bottom: 1px solid rgba(140, 170, 200, 0.18);
+  box-shadow:
+    0 8px 24px rgba(120, 140, 180, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+}
+
+[data-theme="light"] .dqt-row-light::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(220, 130, 190, 0.55), rgba(80, 180, 220, 0.55), transparent);
+  pointer-events: none;
+}
+
+/* منصة واحدة مشتركة خلف الأربع أيقونات — فضية-لؤلؤية شاحبة بحافة سماوية
+   علوية، وليست سوداء (بند 20 صراحةً). */
+[data-theme="light"] .dqt-row-light::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 78px;
+  height: 10px;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent 0%, rgba(200,205,215,0.85) 8%, #d8dbe3 20%, #e4e0e6 50%, #d8dbe3 80%, rgba(200,205,215,0.85) 92%, transparent 100%);
+  box-shadow:
+    0 -1px 0 rgba(120,210,240,0.4),
+    0 1px 0 rgba(230,160,200,0.3),
+    0 5px 9px rgba(120,130,160,0.18),
+    0 12px 20px rgba(120,130,160,0.1);
+  pointer-events: none;
+}
+
+[data-theme="light"] .dqt-tile-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  padding-top: 18px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="light"] .dqt-tile-light:hover { transform: translateY(-6px) scale(1.03); }
+
+[data-theme="light"] .dqt-num-light {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: clamp(27px, 2vw, 34px);
+  font-weight: 800;
+  background: linear-gradient(135deg, #d6437e 0%, #2fa9c9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(160, 150, 220, 0.25);
+  pointer-events: none;
+}
+
+[data-theme="light"] .dqt-icon-wrap-light {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
+  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 14px rgba(220, 130, 190, 0.18));
+  transition: filter 0.3s ease;
+}
+
+[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light {
+  filter: drop-shadow(0 8px 18px rgba(120, 130, 170, 0.22)) drop-shadow(0 0 22px rgba(80, 180, 220, 0.4));
+}
+
+[data-theme="light"] .dqt-icon-wrap-light img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  -webkit-box-reflect: below 8px linear-gradient(to bottom, transparent, rgba(80,180,220,0.14) 10%, transparent 40%);
+}
+
+[data-theme="light"] .dqt-icon-wrap-light::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 12%;
+  width: 76%;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(220, 130, 190, 0.35), transparent 75%);
+  filter: blur(2px);
+  transition: opacity 0.3s ease;
+  opacity: 0.7;
+}
+
+[data-theme="light"] .dqt-tile-light:hover .dqt-icon-wrap-light::after {
+  opacity: 1;
+}
+
+[data-theme="light"] .dqt-label-light {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3a4a63;
   letter-spacing: 0.3px;
 }
 

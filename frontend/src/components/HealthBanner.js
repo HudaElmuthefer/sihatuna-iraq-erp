@@ -16,6 +16,11 @@ import AppLogo from './AppLogo';
 // أُزيلت كل الطبقات الزخرفية اليدوية السابقة (HudRings/HudCoil/particles)
 // لتفادي ازدواجية العناصر.
 import sihatunaExactFutureHologram from '../assets/hero/sihatuna-exact-future-hologram.png';
+// نظير الوضع الفاتح — من components/light، شفافية حقيقية موجودة أصلاً في
+// الملف المزوَّد (تحقّق: زوايا alpha=0، القاعدة/الشاشات alpha 190-251، لا
+// حاجة لأي معالجة إضافية). نفس تركيبة الوضع الداكن (كوكب/صولجان/DNA/دماغ/
+// تشريح/حلقات مدارية/قاعدة) لكن بلوحة ألوان وردية-سماوية-لافندر.
+import sihatunaLightFutureHologram from '../assets/hero/sihatuna-light-future-hologram.png';
 
 // ملاحظة تعمّد عدم استخدام banner-glass-frame.png هنا (رغم كونها من الأصول
 // المعتمدة): تلك الصورة ترسم إطاراً مزدوجاً بالفعل (بروَاز معدني خارجي +
@@ -75,6 +80,44 @@ export default function HealthBanner({ hero = false, onCustomize, customizeLabel
           <button type="button" onClick={onCustomize} className="health-hero-customize">
             <span className="health-hero-customize-label">{customizeLabel}</span>
             <span ref={customizeGearRef} className="health-hero-customize-gear" aria-hidden="true">
+              <FaBullseye />
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // نسخة الوضع الفاتح — نفس بنية الوضع الداكن أعلاه بالضبط (إطار خارجي + لوح
+  // داخلي غائر + صورة الهولوغرام كاملة بلا قص + نص + زر تخصيص)، فقط
+  // المواد/الألوان تغيّرت إلى لؤلؤي/وردي/سماوي (راجع .health-hero-light
+  // بـindex.css). لا تُستخدَم الآن إلا هنا — البانر التقليدي أدناه (gradient
+  // أزرق-أخضر قديم) يبقى fallback للاستخدامات الأخرى غير لوحة التحكم فقط.
+  if (hero && theme === 'light') {
+    return (
+      <div className="health-hero-light">
+        <div className="health-hero-light-inner">
+          <div className="health-hero-caduceus">
+            <img
+              src={sihatunaLightFutureHologram}
+              alt=""
+              aria-hidden="true"
+              className="hero-medical-hologram"
+            />
+          </div>
+          <div className="health-hero-light-content">
+            <div className="health-hero-light-eyebrow">
+              {L('نظام إدارة المعلومات الصحية', 'Health Information Management System')}
+            </div>
+            <div className="health-hero-light-title">
+              {L('صحّتك أمانة بأيدٍ متخصصة', 'Your Health, Our Priority')}
+            </div>
+          </div>
+        </div>
+        {onCustomize && (
+          <button type="button" onClick={onCustomize} className="health-hero-customize health-hero-customize-light">
+            <span className="health-hero-customize-label health-hero-customize-label-light">{customizeLabel}</span>
+            <span ref={customizeGearRef} className="health-hero-customize-gear health-hero-customize-gear-light" aria-hidden="true">
               <FaBullseye />
             </span>
           </button>

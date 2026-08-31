@@ -1,0 +1,296 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Page banner — dark futuristic medical glass, unconditional (like the
+   sidebar: always this identity, not gated behind the light/dark theme
+   toggle). --pb-accent (set inline per instance) tints the icon glow, the
+   count badge, and the border very slightly per page — see PageBanner.js.
+   ══════════════════════════════════════════════════════════════════════ */
+.page-banner-dark {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: 100px;
+  padding: 24px 26px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(15, 48, 68, 0.95), rgba(6, 25, 40, 0.98));
+  border: 1px solid rgba(90, 210, 255, 0.22);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(180, 235, 255, 0.06),
+    0 0 20px rgba(35, 180, 240, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+}
+
+/* مصدر ضوء هادئ جداً من أعلى الوسط تقريباً، يتلاشى بنعومة — وليس Flash. */
+.page-banner-dark-haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 90% at 30% -10%, rgba(var(--pb-accent, 92, 210, 255), 0.16), transparent 65%);
+}
+
+.page-banner-dark-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* أيقونة الصفحة — كبسولة زجاجية داكنة بحافة سماوية مضيئة، بلا مربع أسود ثقيل. */
+.page-banner-dark-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 24px;
+  background: radial-gradient(circle at 35% 25%, rgba(var(--pb-accent, 92, 210, 255), 0.22) 0%, rgba(10, 22, 32, 0.75) 70%);
+  border: 1px solid rgba(var(--pb-accent, 92, 210, 255), 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 14px rgba(var(--pb-accent, 92, 210, 255), 0.18);
+  color: #eaf9ff;
+}
+
+.page-banner-dark-text {
+  min-width: 0;
+}
+
+.page-banner-dark-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 0.2px;
+}
+
+.page-banner-dark-subtitle {
+  margin: 5px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(220, 240, 250, 0.82);
+}
+
+/* Badge العدد — pill صغير منسجم، وليس عنصراً غريباً منفصلاً. */
+.page-banner-dark-count {
+  background: rgba(120, 220, 255, 0.14);
+  border: 1px solid rgba(120, 220, 255, 0.28);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 10px;
+  line-height: 1.4;
+}
+
+.page-banner-dark-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* أزرار البنر — نفس الهوية الزجاجية/السماوية بغضّ النظر عن أي inline style
+   مرّرته الصفحة (كل صفحة كانت تلوّن أزرارها يدوياً لتطابق تدرّجها القديم؛
+   الآن موحّدة مركزياً هنا بدل تعديل 36 ملفاً). :last-of-type يُميَّز بلمسة
+   أوضح قليلاً (الإجراء الأساسي عادة آخر زر في كل صفحة — "إضافة ..."). */
+.page-banner-dark-actions button,
+.page-banner-dark-actions a {
+  background: rgba(var(--pb-accent, 92, 210, 255), 0.12) !important;
+  border: 1px solid rgba(var(--pb-accent, 92, 210, 255), 0.35) !important;
+  color: #eaf9ff !important;
+  border-radius: 10px !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.page-banner-dark-actions button:hover,
+.page-banner-dark-actions a:hover {
+  background: rgba(var(--pb-accent, 92, 210, 255), 0.22) !important;
+  box-shadow: 0 0 12px rgba(var(--pb-accent, 92, 210, 255), 0.25);
+  transform: translateY(-2px);
+}
+
+.page-banner-dark-actions button:active,
+.page-banner-dark-actions a:active {
+  transform: scale(0.96);
+}
+
+.page-banner-dark-actions button:last-of-type,
+.page-banner-dark-actions a:last-of-type {
+  background: rgba(var(--pb-accent, 92, 210, 255), 0.9) !important;
+  border-color: rgba(var(--pb-accent, 92, 210, 255), 0.9) !important;
+  color: #071018 !important;
+  font-weight: 700 !important;
+}
+
+.page-banner-dark-actions button:last-of-type:hover,
+.page-banner-dark-actions a:last-of-type:hover {
+  background: rgb(var(--pb-accent, 92, 210, 255)) !important;
+  box-shadow: 0 0 16px rgba(var(--pb-accent, 92, 210, 255), 0.45);
+}
+
+@media (max-width: 900px) {
+  .page-banner-dark { padding: 20px 22px; }
+  .page-banner-dark-title { font-size: 24px; }
+}
+
+@media (max-width: 640px) {
+  .page-banner-dark-actions { width: 100%; justify-content: flex-start; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Page banner — Light Mode identity: pearl glass + rose-pink/icy-cyan
+   gradient lighting + soft metallic reflection (never orange/red/green).
+   Exact same structure/sizing as the dark version above — only the
+   materials/colors differ. PageBanner.js selects this set only when the
+   app theme is 'light', so it can never appear alongside the dark rules.
+   ══════════════════════════════════════════════════════════════════════ */
+.page-banner-light {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: 100px;
+  padding: 24px 26px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(255, 246, 250, 0.92), rgba(240, 244, 252, 0.95));
+  border: 1px solid rgba(220, 130, 190, 0.25);
+  box-shadow:
+    0 10px 25px rgba(140, 130, 170, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 20px rgba(80, 180, 220, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #17293c;
+}
+
+.page-banner-light-haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 90% at 30% -10%, rgba(var(--pb-accent, 210, 110, 170), 0.14), transparent 65%);
+}
+
+.page-banner-light-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.page-banner-light-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 24px;
+  background: radial-gradient(circle at 35% 25%, rgba(var(--pb-accent, 210, 110, 170), 0.22) 0%, rgba(255, 255, 255, 0.7) 70%);
+  border: 1px solid rgba(var(--pb-accent, 210, 110, 170), 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 12px rgba(var(--pb-accent, 210, 110, 170), 0.16);
+  color: #4a3040;
+}
+
+.page-banner-light-text { min-width: 0; }
+
+.page-banner-light-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #17293c;
+  letter-spacing: 0.2px;
+}
+
+.page-banner-light-subtitle {
+  margin: 5px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #55637a;
+}
+
+.page-banner-light-count {
+  background: rgba(80, 180, 220, 0.14);
+  border: 1px solid rgba(80, 180, 220, 0.3);
+  color: #14283d;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 10px;
+  line-height: 1.4;
+}
+
+.page-banner-light-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.page-banner-light-actions button,
+.page-banner-light-actions a {
+  background: rgba(var(--pb-accent, 210, 110, 170), 0.12) !important;
+  border: 1px solid rgba(var(--pb-accent, 210, 110, 170), 0.35) !important;
+  color: #33445c !important;
+  border-radius: 10px !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.page-banner-light-actions button:hover,
+.page-banner-light-actions a:hover {
+  background: rgba(var(--pb-accent, 210, 110, 170), 0.22) !important;
+  box-shadow: 0 0 12px rgba(var(--pb-accent, 210, 110, 170), 0.2);
+  transform: translateY(-2px);
+}
+
+.page-banner-light-actions button:active,
+.page-banner-light-actions a:active {
+  transform: scale(0.96);
+}
+
+.page-banner-light-actions button:last-of-type,
+.page-banner-light-actions a:last-of-type {
+  background: rgb(var(--pb-accent, 210, 110, 170)) !important;
+  border-color: rgb(var(--pb-accent, 210, 110, 170)) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.page-banner-light-actions button:last-of-type:hover,
+.page-banner-light-actions a:last-of-type:hover {
+  box-shadow: 0 0 16px rgba(var(--pb-accent, 210, 110, 170), 0.4);
+}
+
+@media (max-width: 900px) {
+  .page-banner-light { padding: 20px 22px; }
+  .page-banner-light-title { font-size: 24px; }
+}
+
+@media (max-width: 640px) {
+  .page-banner-light-actions { width: 100%; justify-content: flex-start; }
+}

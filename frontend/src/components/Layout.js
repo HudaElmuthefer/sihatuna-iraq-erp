@@ -187,7 +187,7 @@ export default function Layout() {
            بقية هذا الملف يعتمد نفس الأسلوب (موضع زر الطيّ، textAlign عناصر
            القائمة...) بدل ترك أي تموضع RTL ضمنياً. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: lang === 'ar' ? 'row-reverse' : 'row' }}>
-          <div className={theme === 'dark' ? 'sidebar-logo-frame' : ''} style={{ borderRadius: 10, flexShrink: 0 }}>
+          <div className={theme === 'dark' ? 'sidebar-logo-frame' : 'sidebar-logo-frame-light'} style={{ borderRadius: 10, flexShrink: 0 }}>
             <AppLogo size={38} radius={10} fontSize={20} />
           </div>
           {!sidebarCollapsed && (
@@ -396,7 +396,7 @@ export default function Layout() {
           display: 'flex', flexDirection: 'column',
           transition: 'width 0.3s ease',
           overflow: 'hidden',
-          zIndex: 100 }} className={`desktop-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : ''}`}>
+          zIndex: 100 }} className={`desktop-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           {/* Collapse toggle */}
           <button onClick={toggleSidebar} style={{
             position: 'absolute', [lang === 'ar' ? 'left' : 'right']: -14, top: 72, width: 28, height: 28,
@@ -418,7 +418,7 @@ export default function Layout() {
         <aside style={{
           position: 'fixed', [lang === 'ar' ? 'right' : 'left']: mobileOpen ? 0 : -280, top: 0, bottom: 0,
           width: 'var(--sidebar-width)', boxSizing: 'border-box',
-          zIndex: 200, transition: 'all 0.3s ease', overflow: 'hidden' }} className={`mobile-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : ''}`}>
+          zIndex: 200, transition: 'all 0.3s ease', overflow: 'hidden' }} className={`mobile-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>
             {SidebarContent()}
           </div>
@@ -440,17 +440,17 @@ export default function Layout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
             <button onClick={() => setMobileOpen(true)} className="mobile-menu-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-primary)', display: 'none' }}>☰</button>
             {/* Back button */}
-            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               {/* أيقونة بدل الرمز النصي "←" الأصلي — نفس الاتجاه بالضبط بغض
                  النظر عن اللغة، لا تغيير سلوكي، فقط استبدال بصري. */}
               <FaArrowLeft />
             </button>
             {/* Home button */}
-            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               <FaHome />
             </button>
             <div ref={searchWrapRef} style={{ position:'relative', flex: '1 1 auto', minWidth: 0, maxWidth: 420 }} className="header-search-wrap">
-              <div className={`header-search-inner ${theme === 'dark' ? 'header-search-dark' : ''}`}>
+              <div className={`header-search-inner ${theme === 'dark' ? 'header-search-dark' : 'header-search-light'}`}>
                 <span className="header-search-icon">🔍</span>
                 <input
                   value={globalSearch}
@@ -527,40 +527,29 @@ export default function Layout() {
                 }}>
                   🏥 {hospitals.find(h => h.id === user.hospitalId)?.name_ar || '—'}
                 </div>
-              ) : theme === 'dark' ? (
-                // الوضع الداكن: بديل مُصمَّم بالكامل بدل <select> الأصلي — قائمة
-                // <select> المفتوحة يرسمها المتصفح/نظام التشغيل نفسه ولا يمكن
-                // تنسيقها بـCSS إطلاقاً، وهذا بالضبط سبب "عدم الوضوح" (وليس
-                // مجرد تباين ألوان). راجع HeaderSelectDropdown.js.
+              ) : (
+                // بديل مُصمَّم بالكامل بدل <select> الأصلي (لكلا الثيمين الآن) —
+                // قائمة <select> المفتوحة يرسمها المتصفح/نظام التشغيل نفسه ولا
+                // يمكن تنسيقها بـCSS إطلاقاً، وهذا سبب "عدم الوضوح" الأصلي في
+                // كلا الوضعين، وليس مجرد تباين ألوان. راجع HeaderSelectDropdown.js.
                 <HeaderSelectDropdown
                   value={viewingHospitalId}
                   onChange={setViewingHospitalId}
                   title={lang === 'ar' ? 'أشوف الآن بيانات:' : 'Currently viewing:'}
-                  dark
+                  dark={theme === 'dark'}
                   options={[
                     { value: 'all', label: lang === 'ar' ? 'كل المنشآت' : 'All facilities', icon: '🏥' },
                     ...hospitals.map(h => ({ value: h.id, label: h.name_ar, icon: '🏥' })),
                   ]}
                 />
-              ) : (
-                // الوضع الفاتح: <select> الأصلي كما كان تماماً، بلا أي تغيير.
-                <select
-                  value={viewingHospitalId}
-                  onChange={e => setViewingHospitalId(e.target.value)}
-                  title={lang === 'ar' ? 'أشوف الآن بيانات:' : 'Currently viewing:'}
-                  style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer', maxWidth: 160 }}
-                >
-                  <option value="all">🏥 {lang === 'ar' ? 'كل المنشآت' : 'All facilities'}</option>
-                  {hospitals.map(h => <option key={h.id} value={h.id}>{h.name_ar}</option>)}
-                </select>
               )
             )}
             {/* Theme */}
-            <button onClick={toggleTheme} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+            <button onClick={toggleTheme} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
               {theme === 'dark' ? <FaSun /> : <FaMoon />}
             </button>
             {/* Lang */}
-            <button onClick={toggleLang} className={theme === 'dark' ? 'header-pill-btn-dark' : ''} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
+            <button onClick={toggleLang} className={theme === 'dark' ? 'header-pill-btn-dark' : 'header-pill-btn-light'} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
               {lang === 'ar' ? 'EN' : 'AR'}
             </button>
             {/* Universal print-to-PDF (hidden on pages with their own custom print/export flow — see printConfig.js) */}
@@ -572,7 +561,7 @@ export default function Layout() {
                لقصّ الشارة، وليس أي overflow أو z-index. الـwrapper نفسه بلا
                clip-path فتظهر الشارة كاملة فوق حافة الزر تماماً كالتصميم. */}
             <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowNotif(p => !p)} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+              <button onClick={() => setShowNotif(p => !p)} className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                 <FaBell />
               </button>
               {unread > 0 && (

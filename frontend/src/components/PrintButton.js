@@ -31,7 +31,7 @@ export default function PrintButton({ hidden, onPrint }) {
       <button
         onClick={() => setShowOptions(true)}
         title={tr('btn_print')}
-        className={theme === 'dark' ? 'header-icon-btn-dark' : ''}
+        className={theme === 'dark' ? 'header-icon-btn-dark' : 'header-icon-btn-light'}
         style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 15, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <FaPrint />

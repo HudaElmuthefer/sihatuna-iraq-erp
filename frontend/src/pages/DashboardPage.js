@@ -259,18 +259,18 @@ export default function DashboardPage() {
       {/* ─── HEALTH BRANDING BANNER ─────────────────────────── */}
       <HealthBanner hero onCustomize={openCustomize} customizeLabel={tr('dash_customize_btn')} />
 
-      {/* ─── DARK-MODE QUICK-ACCESS TILES (Documents/Projects/Calendar/
-          Warehouse — matches components/dark reference image; real counts,
-          real links, dark mode only) ─────────────────────────────────── */}
-      {theme === 'dark' && (
-        <DashboardQuickTiles
-          documentsCount={documents.length}
-          projectsCount={projects.length}
-          todayApptsCount={todayApts.length}
-          inventoryCount={inventory.length}
-          lang={lang}
-        />
-      )}
+      {/* ─── QUICK-ACCESS TILES (Documents/Projects/Calendar/Warehouse) —
+          real counts, real links, themed per components/dark or
+          components/light reference assets (DashboardQuickTiles.js picks
+          the right icon set/styling from the `theme` prop). ──────────── */}
+      <DashboardQuickTiles
+        theme={theme}
+        documentsCount={documents.length}
+        projectsCount={projects.length}
+        todayApptsCount={todayApts.length}
+        inventoryCount={inventory.length}
+        lang={lang}
+      />
 
       {/* ─── ERP INDICATORS ─────────────────────────────────── */}
       {showWidget('erp') && (

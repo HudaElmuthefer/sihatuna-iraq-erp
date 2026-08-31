@@ -1,58 +1,70 @@
 // frontend/src/components/PageBanner.js
 //
-// Shared colored page-header banner — replaces three inconsistent patterns
-// that existed across pages (inline gradient banners on some pages, a plain
-// transparent ".page-header" CSS class on others, and fully custom local
-// styles with no color at all on the rest). Every page now gets the same
-// layout (icon, title, optional count badge, subtitle, action slot) with a
-// per-page gradient identity passed in by the caller.
+// Shared page-header banner, used by all 36 module pages. Previously each
+// page passed its own raw CSS `gradient` (some navy/blue, several orange,
+// red or other saturated colors — e.g. PatientsPage.js used
+// 'linear-gradient(135deg, #9a3412 0%, #ea580c 100%)'), so the banner had no
+// consistent identity of its own and clashed with the glass/glow look
+// established elsewhere (sidebar, header, dashboard). Fixed centrally here
+// instead of editing 36 files: the banner now renders one of two fixed
+// identities based on the current theme (dark futuristic glass/cyan, or
+// light pearl/rose-pink/icy-cyan glass — see PageBanner.css), and the
+// legacy `gradient` prop (kept for backward compatibility, no caller needs
+// to change) is only used to derive a faint per-page accent hue so pages
+// don't all look 100% identical, without ever reintroducing a jarring color.
 //
 // No logo here — the uploaded org logo only ever appears in the sidebar,
 // the login page, next to HealthBanner's thin info bar, and the print
 // header (see AppLogo.js usages). It does not render inside this banner.
-//
-// Text is always white/near-white here deliberately: every gradient passed
-// to this component is a dark/saturated color pair (see each page's usage),
-// so white text reliably has enough contrast — this isn't computed from the
-// gradient because inline CSS gradients aren't introspectable at runtime.
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useApp } from '../contexts/AppContext';
+import './PageBanner.css';
 
-export default function PageBanner({ icon, title, subtitle, gradient, count, children }) {
+// يستخرج أول لون Hex من الـ gradient القديم (إن وُجد) ويمزجه بقوة نحو هوية
+// كل ثيم (سماوي للداكن، وردي-سماوي للفاتح) — يمنع أي إمكانية لعودة لون
+// برتقالي/أحمر صارخ، مع الإبقاء على لمسة شخصية خفيفة جداً لكل صفحة (بند 28
+// من طلب الوضع الداكن، وبند 32 من طلب الوضع الفاتح). لا حاجة لتعديل أي من
+// الصفحات الـ36 — القيمة القديمة تُقرأ وتُلطَّف هنا فقط.
+function deriveAccentRgb(gradient, accent, isDark) {
+  const hex = accent || (typeof gradient === 'string' ? gradient.match(/#([0-9a-fA-F]{6})/)?.[1] : null);
+  const fallback = isDark ? '92, 210, 255' : '210, 110, 170';
+  if (!hex) return fallback;
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  if ([r, g, b].some(Number.isNaN)) return fallback;
+  // مزج 30% من اللون الأصلي مع 70% هوية الثيم — كافٍ لإحساس مختلف طفيف بلا
+  // خروج عن العائلة اللونية.
+  const blend = (c, target) => Math.round(c * 0.3 + target * 0.7);
+  return isDark
+    ? `${blend(r, 90)}, ${blend(g, 205)}, ${blend(b, 255)}`
+    : `${blend(r, 210)}, ${blend(g, 110)}, ${blend(b, 170)}`;
+}
+
+export default function PageBanner({ icon, title, subtitle, gradient, count, children, accent }) {
+  const { theme } = useApp();
+  const isDark = theme === 'dark';
+  const accentRgb = useMemo(() => deriveAccentRgb(gradient, accent, isDark), [gradient, accent, isDark]);
+  const suffix = isDark ? 'dark' : 'light';
+
   return (
-    <div style={{
-      background: gradient,
-      borderRadius: 16,
-      padding: '24px 28px',
-      marginBottom: 24,
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: 16,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {icon && <span style={{ fontSize: 36, flexShrink: 0 }}>{icon}</span>}
-        <div>
-          {/* color must be set explicitly here (not just on the outer div) —
-              index.css has a global `h1{color:var(--text-primary)}` rule that
-              otherwise wins over inherited color, since a direct rule always
-              beats inheritance regardless of specificity. Same for the <p>
-              below (no global rule targets it today, but explicit is safer
-              than relying on inheritance holding forever). */}
-          <h1 style={{ margin: 0, fontSize: 22, display: 'flex', alignItems: 'center', gap: 10, color: '#fff' }}>
+    <div className={`page-banner-${suffix}`} style={{ '--pb-accent': accentRgb }}>
+      <div className={`page-banner-${suffix}-haze`} aria-hidden="true" />
+      <div className={`page-banner-${suffix}-main`}>
+        {icon && <span className={`page-banner-${suffix}-icon`}>{icon}</span>}
+        <div className={`page-banner-${suffix}-text`}>
+          <h1 className={`page-banner-${suffix}-title`}>
             {title}
             {count !== undefined && count !== null && (
-              <span style={{ background: 'rgba(255,255,255,0.22)', color: '#fff', padding: '2px 11px', borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
-                {count}
-              </span>
+              <span className={`page-banner-${suffix}-count`}>{count}</span>
             )}
           </h1>
-          {subtitle && <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 13, color: '#fff' }}>{subtitle}</p>}
+          {subtitle && <p className={`page-banner-${suffix}-subtitle`}>{subtitle}</p>}
         </div>
       </div>
       {children && (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className={`page-banner-${suffix}-actions`}>
           {children}
         </div>
       )}

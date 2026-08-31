@@ -15,7 +15,7 @@ import { useApp } from '../contexts/AppContext';
 import PrintOptionsModal from './PrintOptionsModal';
 
 export default function PrintButton({ hidden, onPrint }) {
-  const { lang } = useApp();
+  const { lang, theme } = useApp();
   const tr = useT(lang);
   const [showOptions, setShowOptions] = useState(false);
 
@@ -31,6 +31,7 @@ export default function PrintButton({ hidden, onPrint }) {
       <button
         onClick={() => setShowOptions(true)}
         title={tr('btn_print')}
+        className={theme === 'dark' ? 'header-icon-btn-dark' : ''}
         style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 15, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <FaPrint />

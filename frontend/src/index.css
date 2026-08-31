@@ -1,4 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap');
+/* IBM Plex Sans Arabic — chosen after a live on-screen re-test of all 5
+   requested candidates specifically for a "futuristic/techno" feel (this
+   is a different question from the earlier "closest match to the
+   reference photo" test, which had picked Cairo). See the note at
+   .health-hero-dark-title for what was tried. Scoped to the hero banner
+   only, per this task's explicit "leave the rest of the page as-is". */
+/* Font choice for the dark-mode hero title was tested live, on-screen,
+   against 4 candidates (not picked by name) — see the comparison notes at
+   .health-hero-dark-title below for what was tried and why Cairo 900 won. */
 
 :root {
   /* Brand Colors */
@@ -18,7 +27,9 @@
   --sidebar-active: #1a6bab;
   --sidebar-text: #94a3b8;
   --sidebar-text-active: #ffffff;
-  --sidebar-width: 260px;
+  /* قيمة موحّدة — تُستخدم فعلياً بعرض القائمة الجانبية في Layout.js (بدل رقم
+     260 ثابت مكرَّر)، بدل تعريفها هنا فقط دون استخدام حقيقي كما كانت. */
+  --sidebar-width: clamp(240px, 18vw, 270px);
   --sidebar-collapsed: 70px;
 
   /* Main content */
@@ -51,6 +62,23 @@
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 16px;
+
+  --num-color: #c85f7a;
+  --border-glass: rgba(255, 255, 255, 0.45);
+  --bg-glass: rgba(255, 255, 255, 0.25);
+  --text-active: #ffffff;
+
+  /* Futuristic glass/glow design tokens — extracted from components/light
+     reference renders (rose/gold glow, brushed-glass panels). RGB triplets
+     exist alongside the hex value so box-shadow/background rules below can
+     compose them at arbitrary alpha via rgba(var(--glow-accent-rgb), x). */
+  --glow-accent: var(--num-color);
+  --glow-accent-rgb: 200, 95, 122;
+  --glass-panel-bg: linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,240,242,0.28) 100%);
+  --glass-panel-bg-strong: linear-gradient(180deg, rgba(255,245,247,0.72) 0%, rgba(233,205,208,0.42) 100%);
+  --glass-blur: 18px;
+  --cursor-core: #c85f7a;
+  --cursor-ring-rgb: 200, 95, 122;
 }
 
 [data-theme="dark"] {
@@ -66,6 +94,41 @@
   --border: #1e2d3f;
   --shadow: 0 2px 15px rgba(0,0,0,0.3);
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
+
+  --num-color: #4fc3f7;
+  --border-glass: rgba(255, 255, 255, 0.15);
+  --bg-glass: rgba(15, 25, 35, 0.45);
+  --text-active: #00d2ff;
+
+  /* Futuristic glass/glow design tokens — extracted from components/dark
+     reference renders (icy cyan glow, gunmetal brushed-glass panels). */
+  --glow-accent: var(--num-color);
+  --glow-accent-rgb: 79, 195, 247;
+  /* Panel tones sampled directly from components/dark/Gemini_Generated_Image_v4irlnv4irlnv4ir.png
+     (header/sidebar sampled at #576C7D top → #3B5667 mid → #252B37 bottom),
+     not a default/invented palette. */
+  --glass-panel-bg: linear-gradient(160deg, rgba(87,108,125,0.5) 0%, rgba(37,43,55,0.32) 100%);
+  --glass-panel-bg-strong: linear-gradient(180deg, rgba(87,108,125,0.55) 0%, rgba(59,86,103,0.5) 45%, rgba(37,43,55,0.8) 100%);
+  --glass-blur: 18px;
+  --cursor-core: #4fc3f7;
+
+  /* Named palette, sampled pixel-by-pixel from the reference image
+     (GetPixel via System.Drawing on specific regions — not from memory).
+     Organizational aliases requested for the dashboard's dark surfaces;
+     the app-wide --bg-primary/--bg-card/--border tokens above are left
+     untouched (used by all 32 modules — restyling those is a much larger,
+     separately-scoped change, not part of this dashboard pass). */
+  --dash-bg-header: #C4D8E1;      /* header strip, brightest point */
+  --dash-bg-sidebar-top: #576C7D; /* sidebar gradient start */
+  --dash-bg-sidebar-mid: #3B5667;
+  --dash-bg-sidebar-bottom: #252B37; /* sidebar gradient end */
+  --dash-surface-card: #3C4856;   /* icon-plate / stat-tile glass fill */
+  --dash-surface-search: #334859; /* header search field's dark inset */
+  --dash-cyan-primary: #4fc3f7;   /* == --num-color/--glow-accent above */
+  --dash-cyan-border: #557284;    /* active-item border, muted (pre-glow) tone */
+  --dash-text-primary: #C0CAD4;   /* stat numbers / hero title base color */
+  --dash-text-secondary: #8D9399; /* sparkle / muted labels */
+  --cursor-ring-rgb: 79, 195, 247;
 }
 
 * {
@@ -116,6 +179,18 @@ h1, h2, h3, h4, h5, h6 {
 /* Links */
 a { text-decoration: none; color: inherit; }
 
+/* يمنح كل عنصر تفاعلي طبيعي سياق تموضع (positioning context) بلا أي تأثير
+   على التخطيط (position:relative بلا أي إزاحة top/left يبقى مطابقاً تماماً
+   لـstatic بصرياً) — ضروري فقط ليرتكز .ripple-effect (حلقة النقر الشاملة،
+   راجع useRippleEffect.js) داخل العنصر نفسه بدل أقرب سلف آخر مُموضَع، بعد
+   توسيع RIPPLE_SELECTOR ليشمل button/a/[role="button"] عموماً. تعمّدت عدم
+   إضافة overflow:hidden هنا (كما بـ.btn) لأن بعض الأزرار تحمل شارات/عناصر
+   متراكبة تتجاوز حدودها عمداً (مثال: شارة عدد الإشعارات فوق زر الجرس
+   بـLayout.js) — قصّها كان سيكسرها. */
+button, a, [role="button"] {
+  position: relative;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -128,9 +203,14 @@ a { text-decoration: none; color: inherit; }
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  transition: var(--transition);
+  transition: var(--transition), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
+
+.btn:hover { transform: scale(1.045); box-shadow: 0 0 16px rgba(var(--glow-accent-rgb), 0.35); }
+.btn:active { transform: scale(0.97); }
 
 .btn-primary {
   background: var(--primary);
@@ -163,21 +243,30 @@ a { text-decoration: none; color: inherit; }
 /* Cards */
 .card {
   background: var(--bg-card);
+  /* Progressive enhancement only — browsers without color-mix() just keep
+     the solid --bg-card above. Frosted-glass look without dropping opacity
+     low enough to hurt text contrast over dense tables/forms. */
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+  /* Visible at rest, not just on :hover — a resting glow is what actually
+     reads as "glass" at a glance instead of looking like the old plain
+     card until someone happens to mouse over it. */
+  box-shadow: var(--shadow), 0 0 16px rgba(var(--glow-accent-rgb), 0.1);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.22);
   overflow: hidden;
-  /* Scoped to box-shadow only (the one thing that actually changes on
-     :hover below) — NOT `transition: var(--transition)` (all 0.3s...).
-     Confirmed via live testing: transitioning `background`/`border-color`
-     when they're driven by CSS custom properties (--bg-card/--border) can
-     get stuck showing the pre-toggle light-mode value after a dark-mode
-     switch, because the browser treats the custom-property change as an
-     attempted (but not properly completing) transition instead of an
-     instant snap. Scoping to box-shadow avoids the whole bug class. */
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  /* Scoped to box-shadow/border-color/transform only — NOT background/color
+     (see note above this file's [data-theme] blocks): transitioning a
+     custom-property-driven background/color can get stuck on the
+     pre-toggle theme's value instead of snapping instantly. */
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.card:hover { box-shadow: var(--shadow-lg); }
+.card:hover {
+  box-shadow: var(--shadow-lg), 0 0 28px rgba(var(--glow-accent-rgb), 0.32);
+  border-color: rgba(var(--glow-accent-rgb), 0.55);
+}
 
 .card-header {
   padding: 20px 24px;
@@ -233,6 +322,12 @@ select.form-control {
   border-radius: var(--radius);
   max-height: 65vh;
   position: relative;
+  border: 1px solid transparent;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.table-wrapper:hover {
+  border-color: rgba(var(--glow-accent-rgb), 0.3);
+  box-shadow: 0 0 20px rgba(var(--glow-accent-rgb), 0.1);
 }
 
 .table-wrapper .table thead th {
@@ -265,7 +360,7 @@ select.form-control {
   vertical-align: middle;
 }
 
-.table tr:hover td { background: rgba(26,107,171,0.04); }
+.table tr:hover td { background: rgba(var(--glow-accent-rgb), 0.06); }
 
 /* English mode: text-align stays hardcoded 'right' above regardless of
    language, so headers/data cling to the wrong edge once direction flips to
@@ -415,17 +510,26 @@ html[dir="ltr"] .table th, html[dir="ltr"] .table td { text-align: left; }
 
 .stat-card {
   background: var(--bg-card);
+  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   border-radius: var(--radius);
   padding: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow), 0 0 18px rgba(var(--glow-accent-rgb), 0.14);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.28);
   transition: var(--transition);
   cursor: default;
+  position: relative;
+  overflow: hidden;
 }
-.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.stat-card:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(var(--glow-accent-rgb), 0.28);
+  border-color: rgba(var(--glow-accent-rgb), 0.55);
+}
 
 .stat-icon {
   width: 56px;
@@ -660,15 +764,20 @@ html[dir="ltr"] .table th, html[dir="ltr"] .table td { text-align: left; }
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  transition: var(--transition);
+  transition: var(--transition), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
+  position: relative;
+  overflow: hidden;
 }
 
 .page-btn:hover, .page-btn.active {
   background: var(--primary);
   border-color: var(--primary);
   color: white;
+  transform: scale(1.08);
+  box-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.4);
 }
+.page-btn:active { transform: scale(0.94); }
 
 /* Tooltip */
 [data-tooltip] {
@@ -711,4 +820,1225 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 * { font-variant-numeric: lining-nums tabular-nums; }
 [dir="ltr"], [dir="ltr"] * {
   font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* ── Mockup Glassmorphism Styles ────────────────────────────────────────── */
+
+/* Ambient background glow — soft theme-colored blobs instead of a blurred
+   static mockup screenshot (CRA's css-loader can't resolve url() paths
+   into /public from a CSS file without ejecting, and a full fake-UI
+   render blurred behind the real app added no real value anyway). */
+.app-bg-blur {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Alpha values here matter more than they look: backdrop-filter blur on
+     the sidebar/header/cards above only reads as "glass" when there's
+     enough colored, out-of-focus content behind them to actually blur — a
+     near-flat backdrop makes every glass panel look almost identical to a
+     plain solid one at rest, which is exactly why the first pass of this
+     effect was barely visible without hovering anything. */
+  background:
+    radial-gradient(circle at 12% 12%, rgba(var(--glow-accent-rgb), 0.45), transparent 42%),
+    radial-gradient(circle at 88% 20%, rgba(var(--glow-accent-rgb), 0.32), transparent 38%),
+    radial-gradient(circle at 25% 85%, rgba(var(--glow-accent-rgb), 0.3), transparent 40%),
+    radial-gradient(circle at 78% 92%, rgba(var(--glow-accent-rgb), 0.28), transparent 38%),
+    var(--bg-primary);
+}
+
+/* Thin glowing diagonal accent lines in two page corners — Sci-Fi HUD
+   touch, dark mode only. Pure CSS gradients (not images), so they scale
+   with the viewport instead of a fixed-resolution asset. Low opacity by
+   design: felt, not distracting. */
+[data-theme="dark"] .app-bg-blur::before,
+[data-theme="dark"] .app-bg-blur::after {
+  content: '';
+  position: absolute;
+  height: 1px;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .app-bg-blur::before {
+  top: 9%;
+  left: -6%;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.32), transparent);
+  transform: rotate(-7deg);
+}
+
+[data-theme="dark"] .app-bg-blur::after {
+  bottom: 11%;
+  right: -6%;
+  width: 36%;
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.26), transparent);
+  transform: rotate(6deg);
+}
+
+/* Partial circular HUD arcs — big thin rings positioned mostly off-screen
+   so only a curved edge shows in a page corner, echoing the reference's
+   circular data-rings around the hologram. CSS borders, not raster images
+   — responsive by construction, and disabled below 768px where there's no
+   room for them to read as anything but clutter. */
+[data-theme="dark"] .sci-fi-arc {
+  position: fixed;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.14);
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="dark"] .sci-fi-arc-1 {
+  width: 560px;
+  height: 560px;
+  top: -230px;
+  right: -230px;
+}
+
+[data-theme="dark"] .sci-fi-arc-2 {
+  width: 420px;
+  height: 420px;
+  bottom: -190px;
+  left: -190px;
+  border-color: rgba(var(--glow-accent-rgb), 0.1);
+}
+
+@media (max-width: 768px) {
+  [data-theme="dark"] .sci-fi-arc { display: none; }
+}
+
+/* Glassmorphism Container */
+.app-shell {
+  position: relative;
+  background: transparent !important;
+  z-index: 1;
+}
+
+/* Glassmorphism sidebar (light mode only — see the dark-mode override
+   immediately below, which removes this entirely). */
+.desktop-sidebar {
+  background: var(--glass-panel-bg-strong) !important;
+  border-left: 1px solid var(--border-glass) !important;
+  border-right: 1px solid var(--border-glass) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), inset -1px 0 0 rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+}
+
+.mobile-sidebar {
+  background: var(--glass-panel-bg-strong) !important;
+  border-left: 1px solid var(--border-glass) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+}
+
+/* الوضع الداكن فقط — طبقة إضاءة/جو بصري CSS خالص (لا صورة/screenshot إطلاقاً،
+   لا أيقونات، لا شعار، لا نص): مصدر الضوء متعمَّد في أعلى الحافة الداخلية
+   للسايدبار (الحافة الملاصقة لمحتوى الصفحة — يمين الشاشة، فيسار الصندوق
+   نفسه)، لا تناظر بصري متساوٍ. طبقة radial-gradient علوية-يسارية ساطعة
+   تتلاشى بنعومة شديدة، فوق طبقة linear-gradient رأسية تُعتم تدريجياً كلما
+   نزلنا (بلا حدّ فاصل واضح بين المناطق)، فوق التدرّج المعدني الأساسي (نفس
+   ألوان الصورة المرجعية المُستخرجة مسبقاً بجولة سابقة) كقاعدة تضمن ألا يصبح
+   الأسفل أسود خالصاً. هذه الخلفية هي CSS الخاص بالحاوية نفسها (background)،
+   فتغطي 100% من عرض/ارتفاع السايدبار تلقائياً بلا أي حافة مرئية للطبقة —
+   لا وجود لصورة أصغر/أضيق موضوعة فوقها لتترك أثراً. */
+[data-theme="dark"] .desktop-sidebar,
+[data-theme="dark"] .mobile-sidebar {
+  background:
+    radial-gradient(ellipse at 8% 4%, rgba(92, 220, 255, 0.30) 0%, rgba(32, 150, 210, 0.15) 22%, rgba(8, 35, 55, 0.06) 46%, transparent 68%),
+    linear-gradient(180deg, rgba(30, 88, 115, 0.40) 0%, rgba(12, 40, 58, 0.34) 35%, rgba(5, 18, 28, 0.88) 100%),
+    linear-gradient(180deg, var(--dash-bg-sidebar-top) 0%, var(--dash-bg-sidebar-mid) 45%, var(--dash-bg-sidebar-bottom) 100%) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* حافة توهج رفيعة حول إطار القائمة فقط (خط حد، وليس لوحاً مملوءاً) — لا
+   تنافس الصورة نفسها ولا تضيف طبقة "لوح" ثانية خلفها. */
+[data-theme="dark"] .sidebar-glow-frame {
+  box-shadow:
+    1px 0 0 rgba(var(--glow-accent-rgb), 0.35),
+    0 0 18px rgba(var(--glow-accent-rgb), 0.14) !important;
+}
+
+/* Glassmorphism header */
+.glass-header {
+  margin: 12px 18px 8px 18px !important;
+  height: 64px !important;
+  background: var(--glass-panel-bg) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Thin glowing edge along the header's top, echoing the bright highlight
+   strip seen along every glass panel in the reference renders. */
+/* The reference's header strip is a distinctly BRIGHT brushed-metal band —
+   noticeably lighter than the sidebar/banner, not the same dark glass tone
+   (sampled directly from the reference: ~#C4D8E1 top / #B8CCD7 mid, vs. the
+   sidebar's #576C7D-#252B37 range). Overriding only the dark header here —
+   not --glass-panel-bg itself, which the sidebar also uses and should stay
+   dark per the same reference. */
+[data-theme="dark"] .glass-header {
+  background: linear-gradient(160deg, rgba(196,216,225,0.22) 0%, rgba(184,204,215,0.14) 100%) !important;
+  border-color: rgba(var(--glow-accent-rgb), 0.3) !important;
+}
+
+.glass-header::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.8), transparent);
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Header dropdown (HeaderSelectDropdown.js) — themed replacement for a
+   native <select> in the top toolbar (dark mode only; light mode keeps the
+   plain native <select> untouched). The panel itself renders through
+   HeaderFloatingPanel (a portal to document.body) so .glass-header's own
+   overflow:hidden (needed for its rounded corners + top edge glow) never
+   clips it — fixing the actual cause of "dropdown unclear" rather than
+   lowering opacity or removing overflow from the header.
+   ══════════════════════════════════════════════════════════════════════ */
+.header-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  max-width: 180px;
+}
+
+.header-dropdown-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-dropdown-chevron {
+  flex-shrink: 0;
+  font-size: 10px;
+  transition: transform 180ms ease;
+}
+
+.header-dropdown-trigger-open .header-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+[data-theme="dark"] .header-dropdown-trigger-dark {
+  background: radial-gradient(circle at 35% 25%, rgba(110,135,150,0.45) 0%, rgba(26,33,42,0.85) 60%, rgba(12,16,22,0.9) 100%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 3px rgba(0,0,0,0.4), 0 0 10px rgba(var(--glow-accent-rgb), 0.18);
+  color: rgba(235, 248, 255, 0.94);
+}
+
+/* حالة الفتح — التريغر نفسه يصبح أوضح قليلاً ليعرف المستخدم أي قائمة فتحها. */
+[data-theme="dark"] .header-dropdown-trigger-dark.header-dropdown-trigger-open {
+  border-color: rgba(100, 220, 255, 0.55);
+  background: rgba(40, 170, 220, 0.12);
+  box-shadow: 0 0 10px rgba(40, 200, 255, 0.12);
+}
+
+/* اللوحة — خلفية داكنة شبه زجاجية بتباين كافٍ (ليست شفافة زيادة عن اللزوم)،
+   حدّ وتوهج سماويان خفيفان، منفصلة بصرياً تماماً عن الـHeader. */
+[data-theme="dark"] .header-dropdown-panel {
+  min-width: 210px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(16,42,58,0.97), rgba(5,20,30,0.98));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(100,220,255,0.35);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45), 0 0 16px rgba(40,190,255,0.10);
+}
+
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar { width: 6px; }
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-track { background: transparent; }
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-thumb {
+  background: rgba(var(--glow-accent-rgb), 0.4);
+  border-radius: 10px;
+}
+[data-theme="dark"] .header-dropdown-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--glow-accent-rgb), 0.65);
+}
+
+[data-theme="dark"] .header-dropdown-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(235, 248, 255, 0.94);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease-out;
+}
+
+/* استجابة نقر أخف من الأزرار الكبيرة (قائمة صغيرة) — نفس لغة الضغط، مقياس أصغر. */
+[data-theme="dark"] .header-dropdown-option:active {
+  transform: scale(0.98);
+}
+
+[data-theme="dark"] .header-dropdown-option + .header-dropdown-option {
+  margin-top: 2px;
+}
+
+[data-theme="dark"] .header-dropdown-option:hover,
+[data-theme="dark"] .header-dropdown-option-highlighted {
+  background: linear-gradient(90deg, rgba(15,125,175,0.10), rgba(35,190,245,0.20), rgba(15,125,175,0.10));
+  color: #ffffff;
+  border-color: rgba(100,220,255,0.18);
+  box-shadow: inset 0 0 12px rgba(70,210,255,0.07);
+}
+
+/* المختار — مختلف عن hover: شريط سماوي مضيء رفيع على الجانب (الأيمن، يناسب
+   RTL) + نص أكثر سطوعاً + خلفية زجاجية خفيفة جداً، بلا أزرق ممتلئ قوي. */
+[data-theme="dark"] .header-dropdown-option-selected {
+  background: rgba(var(--glow-accent-rgb), 0.08);
+  color: #eef8fc;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .header-dropdown-option-selected::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgb(var(--glow-accent-rgb));
+  box-shadow: 0 0 6px rgba(var(--glow-accent-rgb), 0.8);
+}
+
+[data-theme="dark"] .header-dropdown-option-icon {
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .header-dropdown-option-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Header search field — enlarged to match the other header controls (was a
+   fixed 180px box with a default ~13px font, noticeably smaller than the
+   36px icon buttons beside it). Colors here are the exact pre-existing
+   light-mode values (var(--bg-primary)/var(--border)), so light mode's
+   look is unchanged — only size/responsiveness changed for both themes;
+   the actual glass/glow treatment is dark-mode-only (.header-search-dark
+   in Layout.dark.css). */
+.header-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 12px;
+  padding: 11px 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.header-search-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.header-search-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  width: 100%;
+  min-width: 0;
+}
+
+.header-search-input::placeholder {
+  font-size: 15px;
+}
+
+@media (max-width: 900px) {
+  .header-search-wrap { max-width: 220px !important; }
+}
+
+@media (max-width: 768px) {
+  .header-search-wrap { display: none; }
+}
+
+/* Nav links in sidebar — reference shows rows in a physical control panel
+   (thin separator under every row, near-zero gap between rows, square
+   corners on the row itself), not floating rounded pill buttons with
+   visible gaps. Only the ACTIVE row gets its own small-radius illuminated
+   housing (below). */
+.sidebar-nav-item {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 4px;
+  margin-bottom: 0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(235, 248, 255, 0.85);
+  background: transparent;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  border-bottom: 1px solid rgba(140, 170, 190, 0.14);
+}
+
+/* الوضع الداكن فقط: أُزيل الخط الفاصل بين الصفوف — كان يرسم شبكة صفوف خاصة
+   به فوق الصورة المعتمدة (التي تحمل خطوطها الفاصلة الخاصة أصلاً)، فيظهر
+   وكأن هناك "سايد بار قديم" بشبكته المستقلة خلف الصورة الجديدة. */
+[data-theme="dark"] .sidebar-nav-item {
+  border-bottom-color: transparent;
+}
+
+/* Thin glow line that slides in along the item's leading edge on hover. */
+.sidebar-nav-item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(var(--glow-accent-rgb), 0.08);
+  /* النص يصبح أوضح قليلاً عند المرور — ليس القائمة كلها تتحرك، فقط سطوع
+     النص (اللون موروث من هنا لنص التسمية). */
+  color: rgba(235, 248, 255, 0.98);
+}
+.sidebar-nav-item:hover::before { opacity: 1; transform: scaleY(1); }
+
+/* Icon: pale metallic with a controlled cyan-tinted shadow — not a flat
+   white glyph, not a colored emoji-style icon. حركة/توهج دقيقان جداً عند
+   المرور (ليس القائمة كلها)، بنفس لغة الحركة المرجعية (Documents/Projects)
+   لكن بمقياس أصغر يناسب أيقونة صغيرة داخل صف قائمة. */
+.sidebar-nav-item svg {
+  color: #c3d3dc;
+  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.45));
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+.sidebar-nav-item:hover svg {
+  transform: translateY(-1px) scale(1.1);
+  filter: drop-shadow(0 0 5px rgba(var(--glow-accent-rgb), 0.75));
+}
+
+/* Active item — إطار سماوي رفيع + خلفية زجاجية شبه شفافة (وليس مستطيلاً
+   أزرق قوياً/صلباً). */
+.sidebar-nav-item.active, .sidebar-nav-item-active {
+  background: linear-gradient(90deg, rgba(18,176,255,0.07), rgba(18,176,255,0.18), rgba(18,176,255,0.07)) !important;
+  border: 1px solid rgba(80,210,255,0.65) !important;
+  border-radius: 6px !important;
+  box-shadow:
+    0 0 12px rgba(0,190,255,0.20),
+    inset 0 0 10px rgba(0,190,255,0.08) !important;
+  color: #eef8fc !important;
+  font-weight: 700 !important;
+}
+.sidebar-nav-item.active::before, .sidebar-nav-item-active::before { opacity: 1; transform: scaleY(1); }
+.sidebar-nav-item.active svg, .sidebar-nav-item-active svg {
+  color: #eef8fc;
+  filter: drop-shadow(0 0 4px rgba(var(--glow-accent-rgb), 0.8));
+}
+
+/* Glass cards & widgets */
+.glass-card {
+  background: var(--bg-glass) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Dashboard Mockup Center Banner */
+.mockup-hero-banner {
+  background: var(--banner-bg-img) no-repeat center/cover;
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 40px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.mockup-banner-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  z-index: 2;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.mockup-banner-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.mockup-banner-sub {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  opacity: 0.95;
+}
+
+.mockup-caduceus-sphere {
+  width: 200px;
+  height: 200px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 25px rgba(45,135,208,0.5));
+  animation: floatSphere 4s ease-in-out infinite alternate;
+}
+
+@keyframes floatSphere {
+  0% { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-8px) scale(1.02); }
+}
+
+/* Mockup Bottom Indicator Cards */
+.mockup-indicators-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 32px;
+  margin-top: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.mockup-indicator-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.mockup-indicator-card:hover {
+  transform: translateY(-8px) scale(1.04);
+}
+
+.mockup-indicator-num {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--num-color);
+  line-height: 1;
+  margin-bottom: 6px;
+  text-shadow: 0 0 16px var(--num-color);
+  font-family: 'Cairo', 'Inter', sans-serif;
+}
+
+.mockup-indicator-icon-btn {
+  width: 110px;
+  height: 110px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 20px;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));
+  transition: filter 0.3s;
+}
+
+.mockup-indicator-card:hover .mockup-indicator-icon-btn {
+  filter: drop-shadow(0 12px 24px var(--num-color));
+}
+
+.mockup-indicator-label {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Dark-mode dashboard hero banner — rebuilt to literally match
+   components/dark/Gemini_Generated_Image_v4irlnv4irlnv4ir.png, using the
+   real cropped asset files (not a CSS/SVG approximation). Rendered only
+   when theme === 'dark' (see HealthBanner.js) — light mode never reaches
+   this markup, and every selector below is additionally scoped under
+   [data-theme="dark"] as a second layer of isolation.
+   ══════════════════════════════════════════════════════════════════════ */
+/* Single CSS-drawn glass panel — deliberately not a stretched background
+   image (see the comment in HealthBanner.js for why: the only individual
+   asset for this was itself a "frame within a frame", which duplicated
+   borders once stretched to a variable banner width). One gradient, one
+   border, one glow ring — nothing layered on top of another copy of
+   itself. Gradient stops use the exact hex values sampled from the
+   reference image (#576C7D / #3B5667 / #252B37). */
+/* Outer metal frame — thick enough to show its own bezel color around the
+   recessed inner panel (below), matching the reference's "screen inside a
+   physical housing" construction instead of one flat card. position:
+   relative here (not just overflow:hidden) is what lets the customize
+   control anchor to THIS element's edges. */
+[data-theme="dark"] .health-hero-dark {
+  position: relative;
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, #5a6b78 0%, #33404c 100%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.3);
+  box-shadow:
+    0 10px 40px rgba(0,0,0,0.45),
+    0 46px 50px -30px rgba(var(--glow-accent-rgb), 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* Recessed inner surface — darker than the frame, inset shadow along the
+   top/left so it reads as sunken glass, not a raised card. Everything
+   that used to live directly on .health-hero-dark now lives in here. */
+[data-theme="dark"] .health-hero-dark-inner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 360px;
+  padding: 30px 28px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #414f5c 0%, #2a333d 55%, #171d24 100%);
+  box-shadow:
+    inset 0 3px 10px rgba(0,0,0,0.55),
+    inset 0 0 0 1px rgba(var(--glow-accent-rgb), 0.18);
+}
+
+/* Thin bright edge along the top of the RECESSED panel (not the outer
+   frame) — echoes the reference's illuminated screen-edge highlight. */
+[data-theme="dark"] .health-hero-dark-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.85), transparent);
+  pointer-events: none;
+}
+
+/* Compound customize control — mounted onto the frame's lower-left seam,
+   straddling the boundary between the outer frame and the page floor
+   below it (negative bottom offset), exactly like the reference instead
+   of floating in its own row above the banner. */
+[data-theme="dark"] .health-hero-customize {
+  position: absolute;
+  bottom: -16px;
+  left: 28px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+/* زجاج علوي رفيع فوق تدرّج اللوح المعدني — يعطي إحساس "سطح زجاجي فوق جسم
+   معدني" بدل لوح واحد مسطح، بالإضافة لحافة مضيئة رفيعة (luminous edge). */
+[data-theme="dark"] .health-hero-customize-label {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 22px 0 38px;
+  margin-inline-end: -20px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 40%),
+    linear-gradient(160deg, rgba(90,110,125,0.95) 0%, rgba(35,43,53,0.95) 100%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    inset 0 -2px 4px rgba(0,0,0,0.45),
+    0 0 10px rgba(var(--glow-accent-rgb), 0.2);
+  color: #dbe6ec;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* "نواة تحكّم" (Control Core) — إضاءة مركزها الأكثر سطوعاً في الوسط تماماً
+   وتتلاشى نحو الحواف (عكس بقية عناصر الصفحة التي يأتي ضوؤها من الأعلى):
+   قلب أبيض/سماوي مضيء → حلقة سماوية متوسطة → حافة داكنة جداً (dark rim)،
+   عبر radial-gradient واحد متعدد المراحل. أكبر قليلاً من السابق (36→42px). */
+[data-theme="dark"] .health-hero-customize-gear {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center,
+    rgba(210, 248, 255, 0.95) 0%,
+    rgba(80, 210, 255, 0.75) 18%,
+    rgba(15, 110, 165, 0.35) 48%,
+    rgba(3, 20, 30, 0.92) 78%,
+    rgba(0, 5, 10, 1) 100%);
+  border: 1px solid rgba(80, 210, 255, 0.5);
+  box-shadow:
+    0 0 8px rgba(40, 190, 255, 0.30),
+    inset 0 0 10px rgba(0, 0, 0, 0.75),
+    inset 0 0 4px rgba(120, 230, 255, 0.30);
+  color: #eaf9ff;
+  font-size: 15px;
+}
+
+/* Hover — المركز يزداد سطوعاً والتوهج المتوسط يتّسع، لكن الحافة الخارجية
+   الداكنة (آخر توقّفين بالتدرّج) تبقى كما هي بلا تغيير — لا تضيء الأيقونة
+   بالكامل بالتساوي. */
+[data-theme="dark"] .health-hero-customize:hover .health-hero-customize-gear {
+  background: radial-gradient(circle at center,
+    rgba(230, 253, 255, 1) 0%,
+    rgba(100, 220, 255, 0.88) 22%,
+    rgba(20, 130, 185, 0.42) 50%,
+    rgba(3, 20, 30, 0.92) 78%,
+    rgba(0, 5, 10, 1) 100%);
+  box-shadow:
+    0 0 14px rgba(40, 190, 255, 0.5),
+    inset 0 0 10px rgba(0, 0, 0, 0.75),
+    inset 0 0 6px rgba(120, 230, 255, 0.45);
+}
+
+/* Click — نبضة طاقة قصيرة من المركز (سماوي/أبيض، وليست Flash أبيض قوي)،
+   ثم عودة فورية للوضع الطبيعي — "تفعيل نواة التحكّم". */
+[data-theme="dark"] .health-hero-customize:active .health-hero-customize-gear {
+  animation: controlCorePulse 0.35s ease-out;
+}
+
+@keyframes controlCorePulse {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(40, 190, 255, 0.30),
+      inset 0 0 10px rgba(0, 0, 0, 0.75),
+      inset 0 0 4px rgba(120, 230, 255, 0.30);
+  }
+  45% {
+    box-shadow:
+      0 0 22px rgba(120, 230, 255, 0.75),
+      inset 0 0 6px rgba(0, 0, 0, 0.5),
+      inset 0 0 14px rgba(190, 245, 255, 0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="dark"] .health-hero-customize:active .health-hero-customize-gear {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Desktop (1365×768) is the priority reference target — on narrow
+     screens the button keeps working but drops the frame-mounted overlap
+     (no room for it) and sits as a normal static control instead. */
+  [data-theme="dark"] .health-hero-customize { position: static; margin: 10px auto 0; }
+}
+
+[data-theme="dark"] .health-hero-dark-content {
+  position: relative;
+  z-index: 2;
+  max-width: 44%;
+}
+
+[data-theme="dark"] .health-hero-dark-eyebrow {
+  font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  color: #c3d3dc;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+/* Font choice verified visually (zoomed live-browser screenshot vs. the
+   reference image), not picked by name: tried Changa first — its Arabic
+   letterforms are noticeably more geometric/slab-like than the reference's
+   rounded, moderately-bold headline. Cairo at weight 900 (already loaded,
+   used everywhere as the body font) turned out to be the closer match, so
+   the extra Changa font is no longer used for this or anything else. */
+/* Font choice — two separate live on-screen rounds, both by actually
+   looking at zoomed screenshots of this exact element, not by name:
+   Round 1 (closest match to the reference photo's letterforms): Noto Kufi
+   Arabic was too blocky/geometric-Kufi, Tajawal 800 too round/wide, IBM
+   Plex 700 elegant but thinner than the reference's bold weight — Cairo
+   900 won on pure resemblance to the source image.
+   Round 2 (this request — most "futuristic/techno" feel, a different
+   question from resemblance): re-tested IBM Plex Sans Arabic 700 and Noto
+   Sans Arabic against Cairo 900. Noto Sans Arabic read as the most
+   generic/neutral humanist sans of the set — the opposite of futuristic.
+   IBM Plex Sans Arabic, with +0.5px letter-spacing, reads narrower and
+   more technical/precise on screen — closer to a HUD-readout feel — so it
+   replaces Cairo here. Scoped to the hero banner's two headings only; the
+   sidebar and every other heading in the app keep Cairo/Tajawal untouched,
+   per this task's explicit "leave the rest of the page as-is". */
+[data-theme="dark"] .health-hero-dark-title {
+  font-family: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #eef4f8;
+  line-height: 1.2;
+  text-shadow: 0 0 22px rgba(var(--glow-accent-rgb), 0.32);
+}
+
+/* المصباح/الهولوغرام مكبَّر بوضوح (كان 320px/46%) ليحتل مساحة بصرية أكبر
+   من وسط ويمين البانر، مع الحفاظ على aspect ratio عبر hero-medical-hologram
+   (object-fit: contain, بلا stretch وبلا اقتصاص — راجع القاعدة الخاصة به). */
+[data-theme="dark"] .health-hero-caduceus {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 460px;
+  max-width: 58%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* الصورة المزوَّدة صراحةً تُعرَض كما هي بلا اقتصاص — الملف نفسه يحتوي على
+   كل التفاصيل (الحلقات، DNA، لوحات HUD، الكوكب، القاعدة)، فلا حاجة لأي
+   قناع أو تدرج أو زخرفة CSS/SVG إضافية فوقه في هذه الجولة. عرض كامل
+   (width:100%) بارتفاع تلقائي كي تظهر كل عناصر الصورة دون قص أي جزء. */
+[data-theme="dark"] .hero-medical-hologram {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+@media (max-width: 768px) {
+  [data-theme="dark"] .health-hero-dark-inner { flex-direction: column; text-align: center; padding: 24px 20px; min-height: 0; }
+  [data-theme="dark"] .health-hero-dark-content { max-width: 100%; }
+  [data-theme="dark"] .health-hero-caduceus { width: 200px; height: 160px; max-width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Dark-mode dashboard quick-access tiles (Documents / Projects / Calendar
+   / Warehouse) — the 4 stat tiles from the same reference image, built
+   with the real cropped icon assets. Unlike the reference mockup's fake
+   demo numbers, these show REAL counts already loaded on the dashboard
+   (documents/projects/today's appointments/inventory) and link to the
+   real module pages — see DashboardQuickTiles.js.
+   ══════════════════════════════════════════════════════════════════════ */
+/* Structural "rail" the quick-action objects stand on, instead of them
+   floating on the bare page background — a dark horizontal band with a
+   reflective floor gradient underneath, echoing the reference's console-
+   like composition (panel → rail → objects → floor), not background+icons
+   with nothing connecting them. */
+/* أرضية مستقبلية عاكسة (وليست مستطيلاً عادياً): خطوط أفقية معمارية متباعدة
+   تدريجياً (توحي بمنظور perspective بسيط دون transform ثلاثي الأبعاد فعلي
+   يعقّد التموضع)، حافة سماوية رفيعة أعلى اللوح تربطها بصرياً بحافة البانر
+   فوقها مباشرة (margin-top سالب بسيط + نفس لون التوهج)، وتدرّج عمق من
+   الزجاج الداكن أعلى اللوح إلى انعكاس معدني/أزرق أفتح أسفله. */
+[data-theme="dark"] .dqt-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-top: -4px;
+  margin-bottom: 28px;
+  padding: 34px 24px 26px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 14px),
+    linear-gradient(180deg, rgba(20,28,36,0.4) 0%, rgba(45,58,70,0.25) 55%, rgba(80,100,115,0.16) 100%);
+  border-top: 1px solid rgba(var(--glow-accent-rgb), 0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    0 0 24px rgba(var(--glow-accent-rgb), 0.08),
+    inset 0 1px 0 rgba(var(--glow-accent-rgb), 0.25);
+  overflow: hidden;
+}
+
+/* شريط ضوء رفيع يمتد أفقياً أعلى الأرضية مباشرة — استمرارية بصرية مع الحافة
+   السفلية المضيئة للبانر فوقه (نفس الأسلوب المستخدم بـ.health-hero-dark-inner::after)،
+   بدل ظهورهما كقطعتين منفصلتين. */
+[data-theme="dark"] .dqt-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent);
+  pointer-events: none;
+}
+
+/* قاعدة/أرضية واحدة تمتد أفقياً خلف مجموعة الأيقونات الأربعة كلها معاً (وليس
+   خطاً منفصلاً تحت كل أيقونة) — أساسها أسود/معدني داكن جداً، بحافة سماوية
+   خافتة أعلاها فقط. رُفعت لتقع خلف الجزء السفلي من جسم الأيقونة نفسها (لا
+   خلف انعكاسها أسفلها) — راجع .dqt-icon-wrap img (-webkit-box-reflect)
+   الذي عُدِّل ليقتصر على شريط قصير تحت هذا الخط مباشرة، فيصبح الترتيب
+   البصري: الأيقونة ← المنصة ← انعكاس قصير، لا العكس. القيمة (bottom:78px،
+   ارتفاع 10px) تحقّقتُ منها عبر قياس فعلي بالمتصفح (getBoundingClientRect)
+   لموضع .dqt-icon-wrap فعلياً، وليست تخميناً. */
+[data-theme="dark"] .dqt-row::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 78px;
+  height: 10px;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent 0%, rgba(2,7,10,0.9) 8%, #010508 20%, #02070b 50%, #010508 80%, rgba(2,7,10,0.9) 92%, transparent 100%);
+  box-shadow:
+    0 -1px 0 rgba(105,220,255,0.25),
+    0 5px 9px rgba(0,0,0,0.65),
+    0 12px 20px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+
+[data-theme="dark"] .dqt-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  /* Room above the icon for the overlapping number (see .dqt-num) so it
+     doesn't get clipped by the row's own top edge. */
+  padding-top: 18px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="dark"] .dqt-tile:hover { transform: translateY(-6px) scale(1.03); }
+
+/* Rises from / overlaps the tile's top edge, per the reference — not a
+   plain text line sitting in its own row above the icon. */
+[data-theme="dark"] .dqt-num {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: clamp(27px, 2vw, 34px);
+  font-weight: 800;
+  background: linear-gradient(180deg, #ffffff 0%, #cfe4ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.7);
+  pointer-events: none;
+}
+
+[data-theme="dark"] .dqt-icon-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
+  /* Base ambient glow behind the glass object itself (the PNG already
+     carries its own baked bevel/highlight/inset-shadow render — this adds
+     the *environmental* glow around it, echoing the reference's localized
+     light pooling around each object) + a grounding drop shadow. */
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 14px rgba(var(--glow-accent-rgb), 0.22));
+  transition: filter 0.3s ease;
+}
+
+[data-theme="dark"] .dqt-tile:hover .dqt-icon-wrap {
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)) drop-shadow(0 0 24px rgba(var(--glow-accent-rgb), 0.6));
+}
+
+[data-theme="dark"] .dqt-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  /* انعكاس خفيف جداً أسفل كل أيقونة، مُنزَل ومختصر عمداً كي يقع تحت منصة
+     الإحصائيات (.dqt-row::after) لا فوقها — الترتيب البصري المطلوب: أيقونة
+     ← منصة ← انعكاس قصير، وليس أيقونة ← انعكاس ← منصة. Chrome/WebKit فقط
+     (-webkit-box-reflect)؛ يتدهور بأمان (تختفي الخاصية فقط) على متصفحات
+     أخرى. */
+  -webkit-box-reflect: below 8px linear-gradient(to bottom, transparent, rgba(255,255,255,0.12) 10%, transparent 40%);
+}
+
+/* Floor reflection puddle beneath each glass object — same device used
+   under the hero caduceus, so every glowing object in the page reads as
+   sitting on the same lit surface instead of floating independently. */
+[data-theme="dark"] .dqt-icon-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 12%;
+  width: 76%;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(var(--glow-accent-rgb), 0.55), transparent 75%);
+  filter: blur(2px);
+  transition: opacity 0.3s ease;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .dqt-tile:hover .dqt-icon-wrap::after {
+  opacity: 1;
+}
+
+[data-theme="dark"] .dqt-label {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #aebdc7;
+  letter-spacing: 0.3px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Holographic click pulse — FuturisticCursor's sibling effect. A single
+   document-level pointerdown listener (see useRippleEffect.js) injects a
+   .ripple-effect span into whichever of RIPPLE_SELECTOR was pressed, so
+   every button/card/sidebar-item/tile across all 32 modules gets it for
+   free without per-page wiring. Redesigned from a filled Material-style
+   disc into a thin hollow scan ring (no fill) per the master click
+   language extracted from the Documents/Projects tiles + the explicit
+   "holographic pulse, not Material ripple" requirement — border + glow
+   only, fast fade (~320ms, not the previous 600ms).
+   ══════════════════════════════════════════════════════════════════════ */
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--glow-accent-rgb), 0.85);
+  background: transparent;
+  box-shadow: 0 0 8px rgba(var(--glow-accent-rgb), 0.5);
+  transform: scale(0.4);
+  opacity: 1;
+  pointer-events: none;
+  animation: rippleAnim 0.32s ease-out forwards;
+  z-index: 5;
+}
+
+@keyframes rippleAnim {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Unified UI Interaction System — master motion language extracted
+   verbatim from the Documents/Projects stat tiles (.dqt-tile hover:
+   translateY(-6px) scale(1.03), overshoot easing) and their (previously
+   missing) click feedback, now shared via utility classes instead of
+   being redefined per component. Each modifier scales the SAME motion to
+   its own element size — icons get the full lift, cards/links get a
+   lighter touch — rather than forcing one fixed size everywhere.
+   Respects prefers-reduced-motion (see the block at the end of this
+   section) and is skipped entirely for disabled/aria-disabled elements.
+   ══════════════════════════════════════════════════════════════════════ */
+.ui-interactive,
+.ui-interactive-icon,
+.ui-interactive-card,
+.ui-interactive-link,
+.ui-interactive-nav {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Icon-scale motion — literally the .dqt-tile hover values, reused. */
+.ui-interactive-icon:hover {
+  transform: translateY(-6px) scale(1.03);
+}
+
+/* Card-scale motion — same language, smaller amplitude for bigger surfaces. */
+.ui-interactive-card:hover {
+  transform: translateY(-3px) scale(1.015);
+}
+
+/* Link-scale motion — no lift on inline text (would misalign the baseline);
+   brightness stands in for "glow" on plain text links. */
+.ui-interactive-link:hover {
+  filter: brightness(1.18);
+}
+
+/* Press feedback — the master click language: a quick compress, shared by
+   every interactive element (paired with the .ripple-effect scan pulse
+   above for the "energy" half of the feel). */
+.ui-interactive:active,
+.ui-interactive-icon:active,
+.ui-interactive-card:active,
+.ui-interactive-nav:active,
+button:not(:disabled):not([aria-disabled="true"]):active,
+a:not([aria-disabled="true"]):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.96);
+  transition: transform 0.1s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-interactive, .ui-interactive-icon, .ui-interactive-card, .ui-interactive-link, .ui-interactive-nav,
+  .ui-interactive:hover, .ui-interactive-icon:hover, .ui-interactive-card:hover,
+  .ui-interactive:active, .ui-interactive-icon:active, .ui-interactive-card:active, .ui-interactive-nav:active {
+    transform: none !important;
+    transition: color 0.15s ease, filter 0.15s ease !important;
+  }
+  .ripple-effect { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Holographic medical scanner cursor (FuturisticCursor.js) — precise core
+   dot (exact hotspot) + a scan ring that only appears over interactive
+   elements + a one-shot release pulse on click-up. Colored per-theme via
+   --cursor-core / --cursor-ring-rgb. Centering is done with negative
+   margins (not transform: translate(-50%,-50%)) because the component sets
+   `transform` inline every frame to move the dot, which would otherwise
+   overwrite/undo a CSS-based centering transform.
+   ══════════════════════════════════════════════════════════════════════ */
+.futuristic-cursor-core,
+.futuristic-cursor-ring,
+.futuristic-cursor-pulse {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  will-change: transform;
+}
+
+/* النواة — Hotspot دقيق لا يتأثر بالتوهج (glow عبر box-shadow منفصل تماماً
+   عن أبعاد العنصر نفسه، 5px فقط)، أبيض-سماوي ساطع في المركز. */
+.futuristic-cursor-core {
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  background: #eafcff;
+  box-shadow: 0 0 4px rgba(var(--cursor-ring-rgb), 0.9), 0 0 10px rgba(var(--cursor-ring-rgb), 0.45);
+  transition: box-shadow 0.18s ease;
+  z-index: 9999;
+}
+
+.futuristic-cursor-core.cursor-core-hover {
+  box-shadow: 0 0 6px rgba(var(--cursor-ring-rgb), 1), 0 0 14px rgba(var(--cursor-ring-rgb), 0.6);
+}
+
+/* الحلقة — حافة داكنة خارجية (dark edge) ثم سماوية إلى الداخل (radial
+   بدل حدّ لوني واحد مسطّح)، شبه شفافة تماماً في الحالة العادية (منخفضة
+   الحضور جداً كما طُلب)، تكبر وتضيء فقط فوق عنصر تفاعلي فعلي. transform:
+   scale بدل width/height — أنعم وأقرب لِـ0.75→1 المطلوبة تحديداً. */
+.futuristic-cursor-ring {
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 1px solid rgba(6, 20, 30, 0.5);
+  background: radial-gradient(circle, transparent 55%, rgba(var(--cursor-ring-rgb), 0.12) 80%, rgba(6, 20, 30, 0.35) 100%);
+  box-shadow: inset 0 0 5px rgba(var(--cursor-ring-rgb), 0.15);
+  opacity: 0.4;
+  transform: scale(0.75);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Hover — "Scan Ring" تظهر فعلياً: scale 0.75→1، opacity →0.65، حدّ سماوي
+   أوضح، بلا تجاوز 26px (ضمن مدى 30-36px الأقصى المطلوب). */
+.futuristic-cursor-ring.cursor-ring-hover {
+  opacity: 0.65;
+  transform: scale(1);
+  border-color: rgba(var(--glow-accent-rgb), 0.75);
+  box-shadow: inset 0 0 8px rgba(var(--cursor-ring-rgb), 0.3), 0 0 6px rgba(var(--cursor-ring-rgb), 0.35);
+}
+
+/* Mouse-down — الحلقة تنكمش بسرعة (scale ~0.72) بدل مجرد تصغير الأبعاد. */
+.futuristic-cursor-ring.cursor-ring-active {
+  transform: scale(0.72);
+  transition: transform 0.1s ease-out;
+}
+
+/* نبضة الإفراج الهولوغرافية — حلقة رفيعة جوفاء (بلا تعبئة، ليست Material
+   ripple) تتوسع وتتلاشى بسرعة عند نقطة النقر بالضبط. عنصر واحد ثابت يُعاد
+   تشغيل حركته عبر إعادة إضافة الصنف (راجع FuturisticCursor.js) بدل إنشاء
+   عنصر DOM جديد بكل نقرة. */
+.futuristic-cursor-pulse {
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 1.5px solid rgba(var(--glow-accent-rgb), 0.9);
+  background: transparent;
+  opacity: 0;
+  transform: scale(0.7);
+  z-index: 9997;
+}
+
+.futuristic-cursor-pulse.cursor-pulse-firing {
+  animation: cursorPulseFire 0.3s ease-out;
+}
+
+@keyframes cursorPulseFire {
+  0%   { transform: scale(0.7); opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Hide the native cursor only while the custom one is active (mounted +
+   fine-pointer device) so touch/coarse-pointer users keep the normal one —
+   EXCEPT over text-entry fields, which keep (and need) the native I-beam;
+   the component also hides the custom dot/ring there itself (see
+   .futuristic-cursor-over-text below) so nothing is left ambiguous. */
+body.futuristic-cursor-active,
+body.futuristic-cursor-active *:not(input):not(textarea) {
+  cursor: none !important;
+}
+
+body.futuristic-cursor-over-text .futuristic-cursor-core,
+body.futuristic-cursor-over-text .futuristic-cursor-ring {
+  opacity: 0 !important;
+}
+
+@media (pointer: coarse), (hover: none) {
+  .futuristic-cursor-core, .futuristic-cursor-ring, .futuristic-cursor-pulse { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .futuristic-cursor-core, .futuristic-cursor-ring, .futuristic-cursor-pulse { display: none; }
+  body.futuristic-cursor-active, body.futuristic-cursor-active * { cursor: auto !important; }
 }

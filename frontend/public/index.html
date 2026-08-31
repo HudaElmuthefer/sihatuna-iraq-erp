@@ -6,6 +6,18 @@
   <meta name="theme-color" content="#1a6bab" />
   <meta name="description" content="SIHATUNA IRAQ - نظام إدارة المعلومات الصحية" />
   <title>صحتنا عراق | SIHATUNA IRAQ</title>
+  <script>
+    // يُنفَّذ فوراً (قبل تحميل React وقبل أول رسم للصفحة) لتفادي ومضة
+    // الوضع الفاتح ثم القفز للداكن — نفس منطق القيمة الافتراضية الموجود في
+    // AppContext.js (localStorage.getItem('theme') || 'light') لكن هنا
+    // مباشرة على <html> قبل أي CSS يُرسَم.
+    (function () {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">

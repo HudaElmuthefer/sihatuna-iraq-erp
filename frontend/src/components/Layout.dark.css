@@ -1,0 +1,123 @@
+/*
+ * Dark-mode-only rules for Layout.js. The header search field used to pull
+ * a stretched search-bar-pill.png background here — dropped after sizing
+ * it up (see index.css .header-search-inner) revealed the same problem the
+ * hero banner had: a fixed-aspect baked "pill with an icon painted at one
+ * end" image distorts/misaligns once the container's width becomes
+ * responsive instead of fixed. Pure CSS glass (blur + glow border) gives
+ * the same Glassmorphism look at any width with no distortion risk.
+ */
+.header-search-dark {
+  /* Recessed dark inner surface (reference: a "sunken" metallic slot, not
+     a raised glass pill) — darker fill + an inset shadow along the top so
+     it reads as carved INTO the header rather than sitting on top of it. */
+  background: linear-gradient(180deg, rgba(15,22,30,0.7) 0%, rgba(30,42,54,0.55) 100%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.4) !important;
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,0.5),
+    inset 0 -1px 0 rgba(255,255,255,0.06),
+    0 0 12px rgba(var(--glow-accent-rgb), 0.1);
+}
+
+.header-search-dark:focus-within {
+  border-color: rgba(var(--glow-accent-rgb), 0.75) !important;
+  box-shadow: 0 0 22px rgba(var(--glow-accent-rgb), 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.header-search-dark .header-search-icon {
+  color: rgb(var(--glow-accent-rgb));
+}
+
+.header-search-dark .header-search-input {
+  color: #eaf2f6;
+}
+
+.header-search-dark .header-search-input::placeholder {
+  color: rgba(220, 232, 238, 0.55);
+}
+
+/*
+ * Header icon controls (back/home/theme/notifications/print) — reference
+ * screenshot shows these as small glass-metal scalloped-octagon plates
+ * with a cyan glow, not plain flat circles. clip-path draws the octagon;
+ * the border/background/shadow underneath then reads as a faceted glass
+ * bezel instead of a generic round button. Compared live against the
+ * reference via an actual browser screenshot (not just code inspection).
+ */
+/* الخلفية شبه السوداء السابقة (radial-gradient تنتهي عند rgba(12,16,22,0.9)،
+   شبه معتمة تماماً فوق --bg-primary الغامقة أصلاً #0a0f1a) أُزيلت بالكامل —
+   الحاوية أصبحت شفافة تماماً (transparent)، ولا يبقى ظاهراً سوى الأيقونة
+   نفسها مع توهجها. الحدّ والتوهج السماوي محتفَظ بهما (وليس لوحة معدنية
+   خلفها). */
+.header-icon-btn-dark {
+  position: relative;
+  background: transparent !important;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.45) !important;
+  box-shadow:
+    inset 0 0 10px rgba(var(--glow-accent-rgb), 0.1),
+    0 0 8px rgba(var(--glow-accent-rgb), 0.18);
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.header-icon-btn-dark svg {
+  filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.5));
+}
+
+.header-icon-btn-dark:hover {
+  box-shadow:
+    inset 0 0 14px rgba(var(--glow-accent-rgb), 0.18),
+    0 0 16px rgba(var(--glow-accent-rgb), 0.5);
+  filter: brightness(1.12);
+}
+
+/* Language toggle stays pill-shaped (it's a 2-letter label, an octagon
+   clip would crop the text) — same transparent treatment as the icon
+   buttons above. */
+.header-pill-btn-dark {
+  background: transparent !important;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.4) !important;
+  box-shadow: inset 0 0 8px rgba(var(--glow-accent-rgb), 0.1), 0 0 10px rgba(var(--glow-accent-rgb), 0.18);
+  border-radius: 10px !important;
+}
+
+.header-pill-btn-dark:hover {
+  box-shadow: 0 0 14px rgba(var(--glow-accent-rgb), 0.4);
+}
+
+/* Sidebar brand logo frame — same transparent treatment: a thin glowing
+   edge around the logo, no solid plate behind it. */
+.sidebar-logo-frame {
+  padding: 3px;
+  background: transparent;
+  border: 1px solid rgba(var(--glow-accent-rgb), 0.5);
+  box-shadow: inset 0 0 8px rgba(var(--glow-accent-rgb), 0.12), 0 0 8px rgba(var(--glow-accent-rgb), 0.25);
+}
+
+/* شارة عدد الإشعارات — الآن ابن مباشر لِـwrapper الجرس (position:relative،
+   بلا clip-path)، وليست ابناً لزر .header-icon-btn-dark نفسه (الذي يقصّها
+   عبر clip-path المثمّن أعلاه — راجع الملاحظة بـLayout.js). حجم كافٍ لرقمين
+   بدون أن يختفي الرقم، ومركزية تامة للنص داخلها. */
+.header-notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 5;
+  min-width: 19px;
+  height: 18px;
+  padding-inline: 4px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff5b67, #e52d3d);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 6px rgba(255, 65, 80, 0.35);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}

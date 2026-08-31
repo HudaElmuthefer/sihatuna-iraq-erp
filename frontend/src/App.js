@@ -45,6 +45,8 @@ import DocumentsPage from './pages/DocumentsPage';
 import ToastContainer from './components/ToastContainer';
 import ConfirmDialog from './components/ConfirmDialog';
 import ForceChangePasswordScreen from './pages/ForceChangePasswordScreen';
+import FuturisticCursor from './components/FuturisticCursor';
+import useRippleEffect from './hooks/useRippleEffect';
 
 function ProtectedRoute({ children, pageKey }) {
   const { user, hasPermission } = useApp();
@@ -55,6 +57,9 @@ function ProtectedRoute({ children, pageKey }) {
 
 function AppRoutes() {
   const { user } = useApp();
+  // مؤشر مخصص + تأثير النبضة الضوئية عند النقر: يُفعَّلان مرة واحدة هنا
+  // فيعملان تلقائياً في كل صفحات النظام الـ32 بلا أي ربط إضافي لكل صفحة.
+  useRippleEffect();
 
   // حجب كامل التطبيق بشاشة إجبارية لو الحساب عليه علامة "يجب تغيير كلمة
   // المرور" (تُضبَط تلقائياً بعد إعادة ضبط كلمة مرور مؤقتة من الإدمن) — لا
@@ -62,6 +67,7 @@ function AppRoutes() {
   if (user?.mustChangePassword) {
     return (
       <>
+        <FuturisticCursor />
         <ToastContainer />
         <ConfirmDialog />
         <ForceChangePasswordScreen />
@@ -71,6 +77,7 @@ function AppRoutes() {
 
   return (
     <>
+      <FuturisticCursor />
       <ToastContainer />
       <ConfirmDialog />
       <Routes>

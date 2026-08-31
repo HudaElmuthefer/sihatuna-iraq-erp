@@ -6,6 +6,7 @@
 // header block — never a broken <img>, since onError below drops back to
 // the icon if the file 404s.
 import React, { useState, useEffect } from 'react';
+import { FaHospitalSymbol } from 'react-icons/fa';
 import { useApp } from '../contexts/AppContext';
 
 export default function AppLogo({ size = 38, radius = 10, fontSize }) {
@@ -27,6 +28,8 @@ export default function AppLogo({ size = 38, radius = 10, fontSize }) {
   }
 
   return (
-    <div style={{ width: size, height: size, borderRadius: radius, background: 'linear-gradient(135deg,#1a6bab,#0d3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fontSize || Math.round(size * 0.53), flexShrink: 0 }}>🏥</div>
+    <div style={{ width: size, height: size, borderRadius: radius, background: 'linear-gradient(135deg,#1a6bab,#0d3460)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fontSize || Math.round(size * 0.53), color: '#fff', flexShrink: 0 }}>
+      <FaHospitalSymbol />
+    </div>
   );
 }

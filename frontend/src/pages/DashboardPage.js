@@ -4,7 +4,9 @@ import { useT } from '../translations';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp, DEFAULT_DASHBOARD_WIDGETS } from '../contexts/AppContext';
 import HealthBanner from '../components/HealthBanner';
+import DashboardQuickTiles from '../components/DashboardQuickTiles';
 import AppLogo from '../components/AppLogo';
+import './DashboardPage.dark.css';
 
 import {
   FaUsers, FaUserMd, FaCalendarAlt, FaBuilding,
@@ -237,15 +239,38 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* ─── HEALTH BRANDING BANNER ─────────────────────────── */}
-      <HealthBanner hero />
+      {/* ─── CUSTOMIZE DASHBOARD BUTTON (light mode only) ─────
+          بالمرجع الزر مثبَّت فعلياً على الحافة السفلى اليسرى للبانر نفسه
+          (عنصر ابن للبانر بموضع مطلق) — وليس صفاً منفصلاً فوقه. بالوضع
+          الداكن يُعرَض الآن من داخل HealthBanner.js نفسه (راجع onCustomize
+          أدناه)؛ هذا الصف القديم يبقى فقط للوضع الفاتح غير المُعاد تصميمه. */}
+      {theme !== 'dark' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button
+            onClick={openCustomize}
+            className="btn btn-outline btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FaCog /> {tr('dash_customize_btn')}
+          </button>
+        </div>
+      )}
 
-      {/* ─── CUSTOMIZE DASHBOARD BUTTON ─────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-        <button onClick={openCustomize} className="btn btn-outline btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <FaCog /> {tr('dash_customize_btn')}
-        </button>
-      </div>
+      {/* ─── HEALTH BRANDING BANNER ─────────────────────────── */}
+      <HealthBanner hero onCustomize={openCustomize} customizeLabel={tr('dash_customize_btn')} />
+
+      {/* ─── DARK-MODE QUICK-ACCESS TILES (Documents/Projects/Calendar/
+          Warehouse — matches components/dark reference image; real counts,
+          real links, dark mode only) ─────────────────────────────────── */}
+      {theme === 'dark' && (
+        <DashboardQuickTiles
+          documentsCount={documents.length}
+          projectsCount={projects.length}
+          todayApptsCount={todayApts.length}
+          inventoryCount={inventory.length}
+          lang={lang}
+        />
+      )}
 
       {/* ─── ERP INDICATORS ─────────────────────────────────── */}
       {showWidget('erp') && (

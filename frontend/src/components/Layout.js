@@ -7,15 +7,63 @@ import AppLogo from './AppLogo';
 import { useApp, ALL_PAGES } from '../contexts/AppContext';
 import { useT } from '../translations';
 import NotificationPanel from './NotificationPanel';
+import HeaderSelectDropdown from './HeaderSelectDropdown';
+import HeaderFloatingPanel from './HeaderFloatingPanel';
 import { isPrintButtonHidden } from '../config/printConfig';
+import './Layout.dark.css';
+// ملاحظة: صورة القائمة الجانبية المرجعية (كانت مستوردة هنا سابقاً باسم
+// sidebarDarkV3، من components/dark/ChatGPT Image Aug 30, 2026, 05_36_27 PM
+// (3).png) أُزيلت من الرندر نهائياً. السبب: الصورة بأكملها عبارة عن عناصر
+// واجهة مرسومة (باج الشعار، 9 شارات أيقونات ثابتة، مربع الحساب بالأسفل) لا
+// يمكن فصل "الإضاءة/الجو البصري" عنها دون معالجة صور شبه مستحيلة (inpainting
+// يدوي لكل شارة على حدة) — وأي عتامة مرئية لها، مهما انخفضت، كانت تُقرأ
+// بصرياً كـ"سايدبار شبح" خلف القائمة الحقيقية (شارات بمواضع لا تطابق مواضع
+// العناصر الفعلية). الإضاءة الفعلية (توهج سماوي أعلى-يسار متلاشٍ نحو الأسفل)
+// لم تكن أصلاً جزءاً من هذه الصورة — هي CSS خالص مبني في .desktop-sidebar/
+// .mobile-sidebar (index.css)، فبقيت كما هي تماماً بعد حذف الصورة. الملف
+// نفسه لم يُحذف من القرص (frontend/src/assets/sidebar/) تحسباً لحاجة لاحقة.
 import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
+import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell } from 'react-icons/fa';
+import {
+  FaUsers, FaTags, FaUserMd, FaCalendarAlt, FaBuilding, FaSyringe, FaBed, FaBaby,
+  FaRunning, FaTicketAlt, FaPills, FaBalanceScale, FaBan, FaHospital, FaBrain,
+  FaAddressBook, FaMoneyBillWave, FaShoppingCart, FaSearchDollar, FaBoxes,
+  FaChartLine, FaFileInvoiceDollar, FaCreditCard, FaUserTie, FaBullseye,
+  FaProjectDiagram, FaFileAlt, FaAward, FaFlask, FaXRay, FaFileMedicalAlt,
+  FaPrescriptionBottleAlt, FaAmbulance, FaTools, FaChartBar, FaCog,
+} from 'react-icons/fa';
 
-const NAV_ICONS = {
-  'dashboard': '🏠', 'services': '🎯', 'patients': '👥', 'doctors': '🩺',
-  'appointments': '📅', 'departments': '🏢', 'ai-diagnosis': '🧠',
-  'vaccinations': '💉', 'drug-interactions': '💊', 'dosage-check': '⚖️', 'allergy-check': '🚫', 'medical-leave': '🏥',
-  'smart-reports': '📊', 'hr': '👔', 'accounts': '💰', 'settings': '⚙️',
-  'inventory': '📦', 'procurement': '🛒', 'projects': '📐', 'documents': '📁', 'crm': '📇', 'payment-settings': '💳', 'billing': '🧾', 'results': '📄', 'barcode': '🏷️' };
+// أيقونات SVG احترافية (react-icons) بدل الإيموجي — تغطي كل مفاتيح ALL_PAGES
+// (AppContext.js). لا تغيّر أي منطق/صلاحيات/توجيه، مجرد استبدال بصري لما
+// كان يُعرَض سابقاً كإيموجي (🏠 👥 ...). راجع renderNavIcon() أدناه.
+const NAV_ICON_COMPONENTS = {
+  dashboard: FaHome, patients: FaUsers, 'medical-codes': FaTags, doctors: FaUserMd,
+  appointments: FaCalendarAlt, departments: FaBuilding, vaccinations: FaSyringe,
+  wards: FaBed, delivery: FaBaby, physiotherapy: FaRunning, queue: FaTicketAlt,
+  'drug-interactions': FaPills, 'dosage-check': FaBalanceScale, 'allergy-check': FaBan,
+  'medical-leave': FaHospital, 'ai-diagnosis': FaBrain, crm: FaAddressBook,
+  accounts: FaMoneyBillWave, procurement: FaShoppingCart, 'billing-anomaly': FaSearchDollar,
+  inventory: FaBoxes, 'inventory-prediction': FaChartLine, billing: FaFileInvoiceDollar,
+  'payment-settings': FaCreditCard, hr: FaUserTie, services: FaBullseye,
+  projects: FaProjectDiagram, documents: FaFileAlt, quality: FaAward, laboratory: FaFlask,
+  radiology: FaXRay, results: FaFileMedicalAlt, pharmacy: FaPrescriptionBottleAlt,
+  ambulance: FaAmbulance, assets: FaTools, 'smart-reports': FaChartBar, settings: FaCog,
+};
+
+function renderNavIcon(pageKey, style) {
+  const IconComp = NAV_ICON_COMPONENTS[pageKey] || FaFileAlt;
+  return <IconComp style={style} />;
+}
+
+// شدّة توهج الأيقونة حسب موضعها بالقائمة — مصدر الضوء بأعلى السايدبار
+// (راجع .desktop-sidebar بـindex.css)، فالعناصر الأعلى يجب أن تبدو أكثر
+// إضاءة قليلاً وتتلاشى تدريجياً كلما نزلنا، بفارق بسيط غير مبالغ فيه (حدّ
+// أدنى 0.55 من الشدّة الأصلية، لا صفر).
+function navGlowFilter(index) {
+  const factor = Math.max(0.55, 1 - index * 0.045);
+  return `drop-shadow(0 0 ${(3 * factor).toFixed(1)}px rgba(79, 195, 247, ${(0.45 * factor).toFixed(2)}))`;
+}
+
 
 const GROUP_LABELS = {
   core:      { ar: '', en: '' },
@@ -38,6 +86,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = React.useRef(null);
+  const searchWrapRef = React.useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -100,6 +149,12 @@ export default function Layout() {
   React.useEffect(() => {
     if (!showNotif) return;
     const handleClickOutside = (e) => {
+      // النقر داخل اللوحة نفسها لم يعد يُحتسب "داخل notifRef" — اللوحة تُعرَض
+      // الآن عبر Portal إلى document.body (خارج .glass-header المقصوصة
+      // overflow:hidden، راجع NotificationPanel.js/HeaderFloatingPanel.js)،
+      // فلم تعد ابناً فعلياً لِـnotifRef في شجرة الـDOM. .closest بصنف
+      // اللوحة المميّز يغطي هذه الحالة دون كسر إغلاقها عند الضغط خارجها فعلاً.
+      if (e.target.closest && e.target.closest('.notification-panel-portal')) return;
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -128,12 +183,17 @@ export default function Layout() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
       <div style={{ padding: sidebarCollapsed ? '20px 10px' : '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <AppLogo size={38} radius={10} fontSize={20} />
+        {/* اتجاه صريح بدل الاعتماد على انعكاس flex التلقائي مع direction:rtl —
+           بقية هذا الملف يعتمد نفس الأسلوب (موضع زر الطيّ، textAlign عناصر
+           القائمة...) بدل ترك أي تموضع RTL ضمنياً. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: lang === 'ar' ? 'row-reverse' : 'row' }}>
+          <div className={theme === 'dark' ? 'sidebar-logo-frame' : ''} style={{ borderRadius: 10, flexShrink: 0 }}>
+            <AppLogo size={38} radius={10} fontSize={20} />
+          </div>
           {!sidebarCollapsed && (
-            <div>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>{appName} ERP</div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>{tr("app_subtitle")}</div>
+            <div style={{ textAlign: lang === 'ar' ? 'right' : 'left' }}>
+              <div style={{ color: 'rgba(235, 248, 255, 0.95)', fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{appName} ERP</div>
+              <div style={{ color: 'rgba(235, 248, 255, 0.6)', fontSize: 12 }}>{tr("app_subtitle")}</div>
             </div>
           )}
         </div>
@@ -162,6 +222,7 @@ export default function Layout() {
             const g = page.group || 'core';
             if (!seen.has(g)) { seen.add(g); groups.push(g); }
           });
+          let navIndex = 0;
           return groups.map(group => {
             const pages = visiblePages.filter(p => (p.group || 'core') === group);
             const gLabel = GROUP_LABELS[group] || { ar: group, en: group };
@@ -184,49 +245,37 @@ export default function Layout() {
                   const isExpanded = expandedNavKeys.has(page.key);
                   const isOnThisPage = location.pathname === page.path;
                   const activeSubTabKey = isOnThisPage ? (searchParams.get('tab') || subTabs[0]?.key) : null;
-                  // إصلاح: العنصر الرئيسي لصفحة بها تبويبات فرعية ليس له فعلياً أي
-                  // محتوى "مستقل" خاص به — زيارة المسار وحده (بلا ?tab=) تعرض بالضبط
-                  // نفس محتوى أول تبويب فرعي (كل من HRPage/AccountsPage/... يبدأ
-                  // بنفس القيمة الافتراضية). فبدل NavLink ينقّل فوراً، الصف كاملاً
-                  // (أيقونة+نص+سهم) صار زر توسيع/طيّ واحد موحَّد بلا أي تنقّل — التنقّل
-                  // الفعلي يحدث فقط عند اختيار تبويب فرعي محدَّد بالقائمة الممتدة.
                   const commonLabel = lang === 'ar' ? page.label : (page.labelEn || tr(page.navKey));
                   const arrow = (
                     <span style={{ display: 'inline-block', flexShrink: 0, transform: `rotate(${isExpanded ? 90 : 0}deg) scaleX(${lang === 'ar' ? -1 : 1})`, transition: 'transform 0.2s', fontSize: 10, color: isOnThisPage ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)' }}>▶</span>
                   );
+                  const iconGlow = navGlowFilter(navIndex++);
                   return (
                     <div key={page.key}>
                       {hasSubTabs ? (
                         <button
                           type="button"
+                          className={`sidebar-nav-item ${isOnThisPage ? 'sidebar-nav-item-active' : ''}`}
                           onClick={() => {
                             setMobileOpen(false);
                             toggleNavExpanded(page.key);
-                            // النقر على العنصر الرئيسي ينتقل أيضاً لصفحته
-                            // بتبويبها الافتراضي (بلا ?tab=) — لكن فقط لو لم
-                            // تكن الصفحة النشطة أصلاً، وإلا فالنقر المتكرر
-                            // وأنت بالفعل داخل أحد تبويباتها كان سيُعيدك
-                            // للتبويب الافتراضي بدل الإبقاء على تبويبك
-                            // الحالي، وهذا تنقّل غير مرغوب (فقط تبديل
-                            // الفتح/الإغلاق مطلوب بهذه الحالة).
                             if (!isOnThisPage) navigate(page.path);
                           }}
                           aria-expanded={isExpanded}
                           aria-label={isExpanded ? (lang === 'ar' ? `طيّ القائمة الفرعية: ${commonLabel}` : `Collapse submenu: ${commonLabel}`) : (lang === 'ar' ? `توسيع القائمة الفرعية: ${commonLabel}` : `Expand submenu: ${commonLabel}`)}
                           title={sidebarCollapsed ? page.label : ''}
                           style={{
-                            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                            width: '100%',
                             padding: sidebarCollapsed ? '11px 0' : '9px 14px',
                             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                            borderRadius: 8, marginBottom: 2, border: 'none', cursor: 'pointer',
-                            background: isOnThisPage ? 'linear-gradient(90deg,#1a6bab,#1557a0)' : 'transparent',
-                            color: isOnThisPage ? '#fff' : 'rgba(255,255,255,0.65)',
-                            transition: 'all 0.2s', fontSize: 13, fontFamily: 'inherit',
+                            border: 'none', cursor: 'pointer',
+                            color: isOnThisPage ? 'var(--text-active)' : 'rgba(255,255,255,0.7)',
+                            fontFamily: 'inherit',
                             textAlign: lang === 'ar' ? 'right' : 'left',
                           }}
                         >
-                          <span style={{ fontSize: 16, flexShrink: 0 }}>{NAV_ICONS[page.key] || page.icon}</span>
-                          {!sidebarCollapsed && <span style={{ flex: 1, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
+                          <span style={{ fontSize: 17, flexShrink: 0 }}>{renderNavIcon(page.key, { filter: iconGlow })}</span>
+                          {!sidebarCollapsed && <span style={{ flex: 1, fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
                           {!sidebarCollapsed && arrow}
                         </button>
                       ) : (
@@ -234,19 +283,19 @@ export default function Layout() {
                           to={page.path}
                           end={page.path === '/'}
                           onClick={() => setMobileOpen(false)}
-                          style={({ isActive }) => ({
+                          className={({ isActive }) => `sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
+                          style={{
                             display: 'flex', alignItems: 'center', gap: 10,
                             padding: sidebarCollapsed ? '11px 0' : '9px 14px',
                             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                            borderRadius: 8, marginBottom: 2, textDecoration: 'none',
-                            background: isActive ? 'linear-gradient(90deg,#1a6bab,#1557a0)' : 'transparent',
-                            color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
-                            transition: 'all 0.2s',
-                            fontSize: 13 })}
+                            textDecoration: 'none',
+                            fontSize: 14,
+                            fontWeight: 500,
+                          }}
                           title={sidebarCollapsed ? page.label : ''}
                         >
-                          <span style={{ fontSize: 16, flexShrink: 0 }}>{NAV_ICONS[page.key] || page.icon}</span>
-                          {!sidebarCollapsed && <span style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
+                          <span style={{ fontSize: 17, flexShrink: 0 }}>{renderNavIcon(page.key, { filter: iconGlow })}</span>
+                          {!sidebarCollapsed && <span style={{ fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{commonLabel}</span>}
                         </NavLink>
                       )}
                       {hasSubTabs && isExpanded && (
@@ -308,8 +357,8 @@ export default function Layout() {
               {user?.avatar || 'م'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#fff', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
+              <div style={{ color: 'rgba(235, 248, 255, 0.95)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ color: 'rgba(235, 248, 255, 0.55)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
             </div>
             <button onClick={handleLogout} title={tr('btn_logout')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, padding: 4 }}>🚪</button>
           </div>
@@ -324,59 +373,85 @@ export default function Layout() {
   );
 
   return (
-    <div className="app-shell" style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
-      {/* Desktop Sidebar */}
-      <aside style={{
-        width: sidebarCollapsed ? 70 : 260,
-        background: 'linear-gradient(180deg,#0f1923 0%,#0d1e2e 100%)',
-        display: 'flex', flexDirection: 'column',
-        transition: 'width 0.3s ease',
-        position: 'relative', flexShrink: 0,
-        zIndex: 100 }} className="desktop-sidebar no-print">
-        {/* Collapse toggle */}
-        <button onClick={toggleSidebar} style={{
-          position: 'absolute', left: -14, top: 72, width: 28, height: 28,
-          borderRadius: '50%', background: '#1a6bab', border: '2px solid var(--bg-primary)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: 12, zIndex: 10, transition: 'all 0.3s' }}>
-          {sidebarCollapsed ? '◁' : '▷'}
-        </button>
-        {SidebarContent()}
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} className="no-print" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
+    <>
+      <div className="app-bg-blur" />
+      {/* زخارف Sci-Fi HUD خفيفة الحضور (خطوط/أقواس CSS متجاوبة، لا صور ثابتة)
+          خلف كل المحتوى — الوضع الداكن فقط، راجع .sci-fi-arc بـindex.css */}
+      {theme === 'dark' && (
+        <>
+          <div className="sci-fi-arc sci-fi-arc-1" aria-hidden="true" />
+          <div className="sci-fi-arc sci-fi-arc-2" aria-hidden="true" />
+        </>
       )}
-      {/* Mobile sidebar */}
-      <aside style={{
-        position: 'fixed', right: mobileOpen ? 0 : -280, top: 0, bottom: 0, width: 260,
-        background: 'linear-gradient(180deg,#0f1923 0%,#0d1e2e 100%)',
-        zIndex: 200, transition: 'right 0.3s ease' }} className="mobile-sidebar no-print">
-        {SidebarContent()}
-      </aside>
+      <div className="app-shell" style={{ display: 'flex', height: '100vh', background: 'transparent', direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+        {/* Desktop Sidebar — position:fixed مثبَّت على حافة الشاشة (يمين
+           بالعربية/يسار بالإنجليزية)، بعرض من متغيّر CSS موحّد (--sidebar-width/
+           --sidebar-collapsed بـindex.css) — لا أرقام مكررة هنا وبالنسخة
+           المتنقلة أدناه ولا بـ.main-column (margin يطابق نفس القيمة). */}
+        <aside style={{
+          position: 'fixed', top: 0, bottom: 0,
+          [lang === 'ar' ? 'right' : 'left']: 0,
+          width: sidebarCollapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)',
+          boxSizing: 'border-box',
+          display: 'flex', flexDirection: 'column',
+          transition: 'width 0.3s ease',
+          overflow: 'hidden',
+          zIndex: 100 }} className={`desktop-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : ''}`}>
+          {/* Collapse toggle */}
+          <button onClick={toggleSidebar} style={{
+            position: 'absolute', [lang === 'ar' ? 'left' : 'right']: -14, top: 72, width: 28, height: 28,
+            borderRadius: '50%', background: 'var(--primary)', border: '2px solid var(--border-glass)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 12, zIndex: 10, transition: 'all 0.3s' }}>
+            {sidebarCollapsed ? (lang === 'ar' ? '▷' : '◁') : (lang === 'ar' ? '◁' : '▷')}
+          </button>
+          <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>
+            {SidebarContent()}
+          </div>
+        </aside>
 
-      {/* Main */}
-      <div className="main-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        {/* Top header */}
-        <header className="no-print" style={{
-          height: 60, background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 20px', flexShrink: 0, zIndex: 50 }}>
+        {/* Mobile overlay */}
+        {mobileOpen && (
+          <div onClick={() => setMobileOpen(false)} className="no-print" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
+        )}
+        {/* Mobile sidebar */}
+        <aside style={{
+          position: 'fixed', [lang === 'ar' ? 'right' : 'left']: mobileOpen ? 0 : -280, top: 0, bottom: 0,
+          width: 'var(--sidebar-width)', boxSizing: 'border-box',
+          zIndex: 200, transition: 'all 0.3s ease', overflow: 'hidden' }} className={`mobile-sidebar no-print ${theme === 'dark' ? 'sidebar-glow-frame' : ''}`}>
+          <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>
+            {SidebarContent()}
+          </div>
+        </aside>
+
+        {/* Main — الآن أن السايدبار position:fixed (خارج تدفق الفليكس)،
+           يحتاج المحتوى الرئيسي هامشاً صريحاً بنفس عرض السايدبار الفعلي
+           (نفس حالة sidebarCollapsed بالضبط، لا رقم منفصل) كي لا يدخل خلفه. */}
+        <div className="main-column" style={{
+          flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden',
+          [lang === 'ar' ? 'marginRight' : 'marginLeft']: sidebarCollapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)',
+          transition: 'margin 0.3s ease',
+        }}>
+          {/* Top header */}
+          <header className="no-print glass-header" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 20px', flexShrink: 0, zIndex: 50 }}>
           {/* Left: back button + hamburger + search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
             <button onClick={() => setMobileOpen(true)} className="mobile-menu-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-primary)', display: 'none' }}>☰</button>
             {/* Back button */}
-            <button onClick={() => navigate(-1)} title={tr('btn_back')} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
-              ←
+            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+              {/* أيقونة بدل الرمز النصي "←" الأصلي — نفس الاتجاه بالضبط بغض
+                 النظر عن اللغة، لا تغيير سلوكي، فقط استبدال بصري. */}
+              <FaArrowLeft />
             </button>
             {/* Home button */}
-            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
-              🏠
+            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+              <FaHome />
             </button>
-            <div style={{ position:'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-primary)', borderRadius: 10, padding: '7px 14px', border: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>🔍</span>
+            <div ref={searchWrapRef} style={{ position:'relative', flex: '1 1 auto', minWidth: 0, maxWidth: 420 }} className="header-search-wrap">
+              <div className={`header-search-inner ${theme === 'dark' ? 'header-search-dark' : ''}`}>
+                <span className="header-search-icon">🔍</span>
                 <input
                   value={globalSearch}
                   onChange={e => { setGlobalSearch(e.target.value); setShowSearchResults(e.target.value.length > 0); }}
@@ -396,12 +471,14 @@ export default function Layout() {
                   }}
                   onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                   placeholder={tr('auto_pair_1')}
-                  style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, width: 180 }}
+                  className="header-search-input"
                 />
-                {globalSearch && <span onClick={() => { setGlobalSearch(''); setShowSearchResults(false); }} style={{ cursor:'pointer', color:'var(--text-secondary)', fontSize:16 }}>×</span>}
+                {globalSearch && <span onClick={() => { setGlobalSearch(''); setShowSearchResults(false); }} style={{ cursor:'pointer', color:'var(--text-secondary)', fontSize:20, flexShrink:0 }}>×</span>}
               </div>
               {showSearchResults && globalSearch.trim() && (
-                <div style={{ position:'absolute', top:'calc(100% + 6px)', right:0, background:'var(--bg-secondary)', border:'1px solid var(--border)', borderRadius:10, padding:8, minWidth:240, zIndex:1000, boxShadow:'0 8px 24px rgba(0,0,0,0.15)' }}>
+                // Portal — نفس سبب لوحة الإشعارات بالضبط: .glass-header
+                // overflow:hidden كانت تقصّ هذه القائمة (ابن عادي داخلها سابقاً).
+                <HeaderFloatingPanel anchorRef={searchWrapRef} open align="end" style={{ minWidth: 240, background:'var(--bg-secondary)', border:'1px solid var(--border)', borderRadius:10, padding:8, boxShadow:'0 8px 24px rgba(0,0,0,0.15)' }}>
                   {[
                     {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
                     {label:tr('nav_patients'), path:'/patients', icon:'👥'},
@@ -433,7 +510,7 @@ export default function Layout() {
                       {tr('layout_press_enter_search')}
                     </div>
                   )}
-                </div>
+                </HeaderFloatingPanel>
               )}
             </div>
           </div>
@@ -450,8 +527,23 @@ export default function Layout() {
                 }}>
                   🏥 {hospitals.find(h => h.id === user.hospitalId)?.name_ar || '—'}
                 </div>
+              ) : theme === 'dark' ? (
+                // الوضع الداكن: بديل مُصمَّم بالكامل بدل <select> الأصلي — قائمة
+                // <select> المفتوحة يرسمها المتصفح/نظام التشغيل نفسه ولا يمكن
+                // تنسيقها بـCSS إطلاقاً، وهذا بالضبط سبب "عدم الوضوح" (وليس
+                // مجرد تباين ألوان). راجع HeaderSelectDropdown.js.
+                <HeaderSelectDropdown
+                  value={viewingHospitalId}
+                  onChange={setViewingHospitalId}
+                  title={lang === 'ar' ? 'أشوف الآن بيانات:' : 'Currently viewing:'}
+                  dark
+                  options={[
+                    { value: 'all', label: lang === 'ar' ? 'كل المنشآت' : 'All facilities', icon: '🏥' },
+                    ...hospitals.map(h => ({ value: h.id, label: h.name_ar, icon: '🏥' })),
+                  ]}
+                />
               ) : (
-                // حساب مستوى الوزارة (بلا منشأة مُعيَّنة): قائمة اختيار فعلية للتركيز على منشأة معينة
+                // الوضع الفاتح: <select> الأصلي كما كان تماماً، بلا أي تغيير.
                 <select
                   value={viewingHospitalId}
                   onChange={e => setViewingHospitalId(e.target.value)}
@@ -464,24 +556,29 @@ export default function Layout() {
               )
             )}
             {/* Theme */}
-            <button onClick={toggleTheme} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 16 }}>
-              {theme === 'dark' ? '☀️' : '🌙'}
+            <button onClick={toggleTheme} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+              {theme === 'dark' ? <FaSun /> : <FaMoon />}
             </button>
             {/* Lang */}
-            <button onClick={toggleLang} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
+            <button onClick={toggleLang} className={theme === 'dark' ? 'header-pill-btn-dark' : ''} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
               {lang === 'ar' ? 'EN' : 'AR'}
             </button>
             {/* Universal print-to-PDF (hidden on pages with their own custom print/export flow — see printConfig.js) */}
             <PrintButton hidden={printButtonHidden} onPrint={handlePrint} />
-            {/* Notifications */}
+            {/* Notifications — الشارة الآن ابن مباشر لهذا الـwrapper، وليست
+               ابناً للزر نفسه: .header-icon-btn-dark يحمل clip-path (شكل
+               مثمن الأضلاع، راجع Layout.dark.css) يقصّ كل أبناء الزر بما
+               فيها أي عنصر مطلق التموضع في زاويته — وهذا كان السبب الحقيقي
+               لقصّ الشارة، وليس أي overflow أو z-index. الـwrapper نفسه بلا
+               clip-path فتظهر الشارة كاملة فوق حافة الزر تماماً كالتصميم. */}
             <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowNotif(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 16, position: 'relative' }}>
-                🔔
-                {unread > 0 && (
-                  <span style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: '50%', background: '#ef4444', color: '#fff', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{unread}</span>
-                )}
+              <button onClick={() => setShowNotif(p => !p)} className={theme === 'dark' ? 'header-icon-btn-dark' : ''} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+                <FaBell />
               </button>
-              {showNotif && <NotificationPanel onClose={() => setShowNotif(false)} />}
+              {unread > 0 && (
+                <span className="header-notification-badge">{unread > 99 ? '99+' : unread}</span>
+              )}
+              {showNotif && <NotificationPanel onClose={() => setShowNotif(false)} anchorRef={notifRef} />}
             </div>
             {/* User */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -545,7 +642,7 @@ export default function Layout() {
         <nav className="bottom-nav no-print" style={{ display: 'none', background: '#1565c0', padding: '8px 0', flexShrink: 0 }}>
           {visiblePages.slice(0, 4).map(p => (
             <NavLink key={p.key} to={p.path} end={p.path === '/'} style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textDecoration: 'none', color: isActive ? '#fff' : 'rgba(255,255,255,0.6)', padding: '4px 0' })}>
-              <span style={{ fontSize: 20 }}>{NAV_ICONS[p.key]}</span>
+              <span style={{ fontSize: 20 }}>{renderNavIcon(p.key)}</span>
               <span style={{ fontSize: 9 }}>{tr(p.navKey).split(' ')[0]}</span>
             </NavLink>
           ))}
@@ -556,6 +653,11 @@ export default function Layout() {
         .page-content { max-width: 1400px; }
         @media (max-width: 768px) {
           .desktop-sidebar { display: none !important; }
+          /* السايدبار المكتبي بات position:fixed خارج تدفّق الفليكس، والهامش
+             المقابل بـ.main-column قيمة JS ثابتة (marginRight/marginLeft) —
+             على الجوال حيث يختفي السايدبار المكتبي بالكامل، يجب إلغاء ذلك
+             الهامش صراحةً وإلا بقي فراغ فارغ بحجمه رغم اختفاء العنصر نفسه. */
+          .main-column { margin-right: 0 !important; margin-left: 0 !important; }
           .mobile-menu-btn { display: flex !important; }
           .bottom-nav { display: flex !important; }
         }
@@ -574,6 +676,7 @@ export default function Layout() {
           .print-only-block { display: block !important; }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }

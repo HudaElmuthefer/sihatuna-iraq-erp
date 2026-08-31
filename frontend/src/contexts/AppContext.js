@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { api, checkBackendReachable, LOGO_IMAGE_URL } from '../api';
 import { calcPromotionDue, calcAllowanceDue } from '../pages/hr/promotionCalc';
 
@@ -840,7 +840,11 @@ export function AppProvider({ children }) {
   // وsavePaymentCredentials أعلاه.
   useEffect(() => { localStorage.setItem('erp_service_prices', JSON.stringify(servicePrices)); }, [servicePrices]);
   useEffect(() => { localStorage.setItem('erp_invoices', JSON.stringify(invoices)); }, [invoices]);
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }, [theme]);
+  // useLayoutEffect (لا useEffect) — يُطبَّق قبل رسم المتصفح للتغيير التالي،
+  // بدل بعده. الومضة الأولى عند فتح الصفحة أصلاً محلولة بسكربت مباشر في
+  // public/index.html (ينفَّذ قبل تحميل React كاملاً)؛ هذا فقط يمنع أي ومضة
+  // مشابهة أصغر عند إعادة تصيير لاحقة (مثل mount جديد لمكوّن أثناء التنقّل).
+  useLayoutEffect(() => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }, [theme]);
   useEffect(() => { document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'; localStorage.setItem('lang', lang); }, [lang]);
   useEffect(() => { localStorage.setItem('print_settings', JSON.stringify(printSettings)); }, [printSettings]);
   useEffect(() => { localStorage.setItem('system_users', JSON.stringify(systemUsers)); }, [systemUsers]);

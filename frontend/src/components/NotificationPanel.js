@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import { FaBell, FaCalendarAlt, FaUser, FaChartBar, FaExclamationTriangle, FaCheckDouble, FaShoppingCart, FaFileAlt } from 'react-icons/fa';
+import HeaderFloatingPanel from './HeaderFloatingPanel';
 
 const icons = {
   appointment: <FaCalendarAlt />,
@@ -21,7 +22,7 @@ const colors = {
   procurement: '#06b6d4',
   document: '#6366f1' };
 
-export default function NotificationPanel({ onClose }) {
+export default function NotificationPanel({ onClose, anchorRef }) {
   const { notifications, markNotifRead, markAllNotifRead, lang } = useApp();
   const tr = useT(lang);
   const navigate = useNavigate();
@@ -34,17 +35,18 @@ export default function NotificationPanel({ onClose }) {
     if (onClose) onClose();
   };
 
+  // يُعرَض عبر Portal (HeaderFloatingPanel) بدل ابن عادي داخل .glass-header —
+  // ذاك العنصر يحمل overflow:hidden (لزوايا مستديرة + خط توهج علوي)، وكان
+  // يقصّ معظم جسم هذه اللوحة (أي شيء أسفل ارتفاع الهيدر 64px) بصمت. لم يكن
+  // ذلك مشكلة تباين/شفافية كما بدا، بل قصّاً فعلياً بسبب الأصل الأب.
   return (
+    <HeaderFloatingPanel anchorRef={anchorRef} open align={lang === 'ar' ? 'start' : 'end'} style={{ width: 340 }} className="notification-panel-portal">
     <div style={{
-      position: 'absolute',
-      top: 'calc(100% + 10px)',
-      [lang === 'ar' ? 'left' : 'right']: 0,
       width: 340,
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: 'var(--radius)',
       boxShadow: 'var(--shadow-lg)',
-      zIndex: 999,
       overflow: 'hidden',
       animation: 'dropDown 0.2s ease' }}>
       <div style={{
@@ -123,5 +125,6 @@ export default function NotificationPanel({ onClose }) {
         )}
       </div>
     </div>
+    </HeaderFloatingPanel>
   );
 }

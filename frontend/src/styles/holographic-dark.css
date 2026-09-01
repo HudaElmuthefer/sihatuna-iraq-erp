@@ -213,47 +213,10 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   منطقة الإفلات المغناطيسية بالمركز
-   ══════════════════════════════════════════════════════════════════════ */
-.hcd-zone {
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  z-index: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.5;
-  transition: opacity 0.25s ease;
-}
-.hcd-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px dashed rgba(var(--glow-accent-rgb), 0.3);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
-}
-.hcd-ring-1 { inset: 0; }
-.hcd-ring-2 { inset: 22px; }
-.hcd-label {
-  position: absolute;
-  bottom: -26px;
-  font-size: 10px;
-  color: var(--dash-text-secondary);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.hcd-zone.hcd-armed { opacity: 1; }
-.hcd-zone.hcd-armed .hcd-ring {
-  border-color: rgba(var(--gold-accent-rgb), 0.9);
-  border-style: solid;
-  box-shadow: 0 0 24px rgba(var(--gold-accent-rgb), 0.4);
-}
-.hcd-zone.hcd-armed .hcd-ring-1 { transform: scale(1.08); }
-.hcd-zone.hcd-armed .hcd-label { opacity: 1; color: rgb(var(--gold-accent-rgb)); }
-
-/* ══════════════════════════════════════════════════════════════════════
    HolographicPageRing — المسرح والمشهد ثلاثي الأبعاد
+   (منطقة الإفلات المغناطيسية بالمركز — .hcd-* — أُعيد تصميمها بالكامل
+   كـ"مستقبِل هولوغرافي"، راجع الكتلة الموسَّعة أسفل هذا الملف قرب
+   HolographicInteractionOverlay.)
    ══════════════════════════════════════════════════════════════════════ */
 .hpr-stage {
   position: relative;
@@ -368,11 +331,55 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
    يُضبَطان الآن Inline من JS (تتفاوت حسب البُعد عن المختارة) — لا margin
    سلبي ثابت هنا (كان يُضاعِف الإزاحة مع translate(-50%,-50%) بالـtransform
    نفسه)؛ التوسيط بالكامل عبر transform وحده، صالح لأي عرض متغيّر. */
+/* ══════════════════════════════════════════════════════════════════════
+   معمارية ثلاثية الطبقات المتداخلة (بند صريح — Part B/7/57: "Do NOT use one
+   transform for everything... Base slot transform / Drag transform / Surface
+   hover transform must be separated"):
+     .hpp            OUTER  — هندسة الفتحة على الحلقة فقط (JS، راجع
+                              HolographicPagePanel.js/holographicSlots.js).
+     .hpp-drag-layer MIDDLE — إزاحة السحب المؤقتة فقط.
+     .hpp-surface    INNER  — الزجاج المنحني/الإضاءة/الحوم — كل الخواص
+                              البصرية (خلفية/حد/ظل/انحناء) انتقلت هنا من
+                              .hpp القديمة، فلا يوجد تعارض transform إطلاقاً.
+   ══════════════════════════════════════════════════════════════════════ */
 .hpr-scene .hpp {
   position: absolute;
   top: 50%;
   left: 50%;
-  border-radius: 20px;
+  pointer-events: auto; /* راجع التعليق التاريخي بأسفل الملف حول وراثة pointer-events */
+  user-select: none;
+  touch-action: none;
+  will-change: transform;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, filter 0.25s ease;
+}
+/* أثناء تدوير الحلقة بالسحب المباشر: لا transition على الهندسة الأساسية
+   إطلاقاً (بند 11 صراحةً: "No transition during direct drag") — بلا هذا
+   كانت اللوحات "تتخلّف" (springy lag) عن المؤشر بمقدار مدة الانتقال بدل
+   تتبّعه مباشرة، وهو بالضبط إحساس "الانفصال عن المؤشر" المشتكى منه. تعود
+   الحركة السينمائية تلقائياً بمجرد إزالة hpr-dragging عند الإفلات. */
+.hpr-stage.hpr-dragging .hpp { transition: none; }
+
+.hpp-drag-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* بند 11/9 صراحةً: بينما تُسحَب اللوحة الأمامية فعلياً نحو المركز — بلا
+   transition (تتبّع فوري 1:1 للمؤشر، مُعوَّض perspective — راجع
+   PERSP_FACTOR بـHolographicPagePanel.js)، تعود سينمائية عند الإفلات. */
+.hpp-drag-layer.hpp-drag-active { transition: none; }
+
+.hpp-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* انحناء "عدسة" حقيقي — نصف قطر أفقي/رأسي مختلفَين (لا border-radius
+     منتظم) بدل مستطيل حواف قائمة (بند Part C/13/14 صراحةً: "more than
+     border-radius... not a normal rectangle"). */
+  border-radius: 26px / 42px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -380,20 +387,12 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   justify-content: center;
   gap: 6px;
   text-align: center;
-  /* بند حرج جداً — الأصل الفعلي لكل مشكلة النقر: pointer-events خاصية
-     موروثة (inherited) فعلياً بالـCSS (عكس افتراض خاطئ سابق أنها ترجع auto
-     تلقائياً لكل ابن دون تصريح). .hpr-scene و.hpr-stage كلاهما
-     pointer-events:none (لحل مشكلة مختلفة، حجب الحاويات الزخرفية نفسها عن
-     اختبار الإصابة) — فكانت كل لوحة هنا تَرِث none هي الأخرى دون أي تصريح
-     خاص بها، فتخرج كلياً من اختبار الإصابة (مؤكَّد فعلياً:
-     getComputedStyle(panel).pointerEvents === 'none'، و.hpp غائبة تماماً
-     عن document.elementsFromPoint() عند نقطة مركزها بالضبط). هذا السطر
-     وحده هو الإصلاح الحقيقي — كل محاولات ضبط z-index/translateZ لاحقاً
-     كانت تُطارِد أعراضاً وهمية لنفس السبب الجذري. */
-  pointer-events: auto;
-  /* إضاءة داخلية أعلى (بند صريح: "لا تجعل Panels سوداء") — انعكاس أزرق
-     أفتح بالأعلى، زجاج كحلي مُدخَّن بالمنتصف، غرافيت أزرق عميق بالأسفل. */
-  background: linear-gradient(180deg, rgba(78,132,168,0.42) 0%, rgba(32,64,92,0.5) 45%, rgba(10,20,34,0.72) 100%);
+  /* إضاءة داخلية أعلى + تظليل مركز-نحو-حافة (بند Part C/17: "Center-to-edge
+     shading... slightly brighter in central viewing area, darker toward
+     lateral edges" — التدرّج الشعاعي الإضافي هنا بالضبط لهذا). */
+  background:
+    radial-gradient(ellipse 70% 100% at 50% 40%, rgba(150,200,235,0.14), transparent 72%),
+    linear-gradient(180deg, rgba(78,132,168,0.42) 0%, rgba(32,64,92,0.5) 45%, rgba(10,20,34,0.72) 100%);
   border: 1px solid rgba(var(--glow-accent-rgb), 0.3);
   box-shadow:
     inset 0 1px 0 rgba(200,235,255,0.22),
@@ -403,16 +402,15 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   color: #eaf6ff;
-  user-select: none;
-  touch-action: none;
-  will-change: transform;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), width 0.25s ease, height 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.25s ease, filter 0.25s ease;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
-.hpp-front {
+.hpp-front .hpp-surface {
   border-width: 1.5px;
   border-color: rgba(var(--glow-accent-rgb), 1);
-  background: linear-gradient(180deg, rgba(90,150,190,0.48) 0%, rgba(34,72,104,0.55) 45%, rgba(8,18,32,0.76) 100%);
+  background:
+    radial-gradient(ellipse 72% 100% at 50% 38%, rgba(170,215,245,0.2), transparent 74%),
+    linear-gradient(180deg, rgba(90,150,190,0.48) 0%, rgba(34,72,104,0.55) 45%, rgba(8,18,32,0.76) 100%);
   box-shadow:
     inset 0 1px 0 rgba(210,240,255,0.3),
     inset 0 -18px 34px rgba(0,0,0,0.22),
@@ -422,10 +420,36 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
     0 0 34px rgba(var(--glow-accent-rgb), 0.55),
     0 0 80px rgba(var(--glow-accent-rgb), 0.3);
 }
+
+/* أجنحة انكسار جانبية (بند Part C/16 صراحةً: "Side edge refraction — darker
+   outer side + cyan glass refraction line + slight inward shadow — makes the
+   surface feel curved"). عرض ثابت صغير عند كل حافة أفقية. */
+.hpp-wing {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+.hpp-wing-left {
+  inset-inline-start: 0;
+  background: linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(var(--glow-accent-rgb), 0.4) 55%, transparent 100%);
+  border-inline-start: 1px solid rgba(var(--glow-accent-rgb), 0.55);
+  border-radius: 26px 0 0 26px / 42px 0 0 42px;
+}
+.hpp-wing-right {
+  inset-inline-end: 0;
+  background: linear-gradient(270deg, rgba(0,0,0,0.4) 0%, rgba(var(--glow-accent-rgb), 0.4) 55%, transparent 100%);
+  border-inline-end: 1px solid rgba(var(--glow-accent-rgb), 0.55);
+  border-radius: 0 26px 42px 0 / 0 42px 42px 0;
+}
+
 /* زاوية ذهبية-شمبانيا هيكلية صغيرة للّوحة المختارة — أعلى-يمين، ومقابلها
    أسفل-يسار أصغر (تفاصيل تقنية غير متماثلة، بند صريح: لا تجعل كل الزوايا
-   متطابقة). */
-.hpp-front::before {
+   متطابقة — بند Part C/19: "structural corners, not a normal border around
+   the whole card"). */
+.hpp-front .hpp-surface::before {
   content: '';
   position: absolute;
   top: 10px;
@@ -438,8 +462,9 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   filter: drop-shadow(0 0 6px rgba(var(--gold-accent-rgb), 0.7));
   opacity: 0.95;
   pointer-events: none;
+  z-index: 3;
 }
-.hpp-front::after {
+.hpp-front .hpp-surface::after {
   content: '';
   position: absolute;
   bottom: 10px;
@@ -450,10 +475,11 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   border-bottom: 1.5px solid rgba(var(--glow-accent-rgb), 0.6);
   border-radius: 0 0 0 4px;
   pointer-events: none;
+  z-index: 3;
 }
 /* زوايا سماوية رفيعة صغيرة للّوحات القريبة (غير المختارة) — تفاصيل هيكلية
    أخف، لا ذهبية (اللون الذهبي محفوظ للمختارة فقط). */
-.hpr-scene .hpp:not(.hpp-front)::before {
+.hpr-scene .hpp:not(.hpp-front) .hpp-surface::before {
   content: '';
   position: absolute;
   top: 8px;
@@ -463,10 +489,11 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   border-inline-end: 1.5px solid rgba(var(--glow-accent-rgb), 0.4);
   border-top: 1.5px solid rgba(var(--glow-accent-rgb), 0.4);
   pointer-events: none;
+  z-index: 3;
 }
 
 /* تفاعل مرور المؤشر — إضاءة إضافية بلا أي إزاحة تخطيط (بند صريح). */
-.hpr-scene .hpp:hover {
+.hpr-scene .hpp:hover .hpp-surface {
   border-color: rgba(var(--glow-accent-rgb), 0.55);
   box-shadow:
     inset 0 1px 0 rgba(200,235,255,0.24),
@@ -492,9 +519,32 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 }
 .hpr-scene .hpp:hover .hpp-pointer-glow { opacity: 1; }
 
+/* عقدة أيقونة/طاقة صغيرة أعلى-يسار اللوحة — نقطة إمساك حبل الطاقة (بند
+   Part E/33 صراحةً: "small glow node activates while dragging... makes the
+   panel look physically connected to the pointer"). خامدة تماماً حتى بدء
+   السحب الفعلي للوحة الأمامية نحو المركز. */
+.hpp-icon-node {
+  position: absolute;
+  top: 22px;
+  inset-inline-start: 26px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(var(--glow-accent-rgb), 0.25);
+  box-shadow: none;
+  pointer-events: none;
+  z-index: 4;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.hpp-drag-layer.hpp-drag-active .hpp-icon-node {
+  background: rgb(var(--glow-accent-rgb));
+  box-shadow: 0 0 8px rgba(var(--glow-accent-rgb), 0.95), 0 0 18px rgba(var(--glow-accent-rgb), 0.6);
+  transform: scale(1.4);
+}
+
 /* اللوحة الأمامية أثناء سحب الحلقة نفسها (وليس سحبها هي للمركز) — طاقة
    إضافية مرئية بلا أي حركة loop مستمرة (بند صريح). */
-.hpr-stage.hpr-dragging .hpp-front {
+.hpr-stage.hpr-dragging .hpp-front .hpp-surface {
   border-color: rgba(var(--glow-accent-rgb), 1);
   box-shadow:
     inset 0 1px 0 rgba(220,245,255,0.4),
@@ -509,17 +559,19 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   0% { box-shadow: inset 0 1px 0 rgba(220,245,255,0.3), 0 0 0 1px rgba(var(--gold-accent-rgb), 0.3), 0 26px 55px rgba(0,0,0,0.5), 0 0 90px rgba(var(--glow-accent-rgb), 0.85); }
   100% { box-shadow: inset 0 1px 0 rgba(210,240,255,0.3), inset 0 -18px 34px rgba(0,0,0,0.22), 0 0 0 1px rgba(var(--gold-accent-rgb), 0.3), 0 26px 55px rgba(0,0,0,0.5), 0 0 50px rgba(var(--glow-accent-rgb), 0.4); }
 }
-.hpp-front.hpp-snap-flash { animation: hppSnapPulse 0.32s ease-out; }
-@media (prefers-reduced-motion: reduce) { .hpp-front.hpp-snap-flash { animation: none; } }
+.hpp-front.hpp-snap-flash .hpp-surface { animation: hppSnapPulse 0.32s ease-out; }
+@media (prefers-reduced-motion: reduce) { .hpp-front.hpp-snap-flash .hpp-surface { animation: none; } }
 
 .hpp-draggable { cursor: grab; }
 .hpp-draggable:active { cursor: grabbing; }
-.hpp.hpp-magnet { border-color: rgba(var(--gold-accent-rgb), 0.9); box-shadow: 0 0 50px rgba(var(--gold-accent-rgb), 0.5); }
+.hpp-drag-layer.hpp-drag-magnet .hpp-surface { border-color: rgba(var(--gold-accent-rgb), 0.9); box-shadow: 0 0 50px rgba(var(--gold-accent-rgb), 0.5); }
 
 .hpp-opening {
   transform: translate(-50%, -50%) translateZ(300px) scale(1.7) !important;
   opacity: 1 !important;
   z-index: 3000 !important;
+}
+.hpp-opening .hpp-surface {
   border-color: rgb(var(--glow-accent-rgb));
   box-shadow: 0 0 90px rgba(var(--glow-accent-rgb), 0.6);
 }
@@ -530,6 +582,7 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   inset-inline: 10px;
   height: 1px;
   pointer-events: none;
+  z-index: 2;
 }
 .hpp-edge-top { top: 0; background: linear-gradient(90deg, transparent, rgba(var(--glow-accent-rgb), 0.9), transparent); }
 .hpp-edge-bottom { bottom: 0; background: linear-gradient(90deg, transparent, rgba(var(--gold-accent-rgb), 0.55), transparent); }
@@ -543,6 +596,151 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 
 @media (prefers-reduced-motion: reduce) {
   .hpr-scene .hpp { transition: opacity 0.2s ease, filter 0.2s ease; }
+  .hpp-drag-layer { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   HolographicInteractionOverlay — حبل الطاقة (Energy Tether، بند Part E
+   صراحةً). SVG واحد يغطي المسرح بالكامل، position:absolute نسبةً لـ
+   .hpr-stage (position:relative) — إحداثيات كل نقطة تُحسَب نسبةً لصندوق
+   المسرح نفسه بـHolographicPagePanel.js/HolographicPageRing.js، لا
+   viewport مباشرة. pointer-events:none على كل شيء هنا (بند 26/36 صراحةً:
+   "must never interfere with input").
+   ══════════════════════════════════════════════════════════════════════ */
+.hio-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1500;
+}
+.hio-tether-group {
+  opacity: 0;
+  /* ظهور 60-100ms، اختفاء 100-180ms (بند 34 صراحةً) — نفس المدة تُستخدَم
+     بالاتجاهين عبر transition واحدة متوسطة (80ms) تكفي كلا الحدّين. */
+  transition: opacity 0.09s ease-out;
+}
+.hio-tether-glow {
+  fill: none;
+  stroke: rgba(var(--glow-accent-rgb), 0.55);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.hio-tether-core {
+  fill: none;
+  stroke: rgba(var(--glow-accent-rgb), 0.95);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(var(--glow-accent-rgb), 0.8));
+}
+.hio-tether-ice {
+  fill: none;
+  stroke: #eafcff;
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+.hio-start-node-ring {
+  fill: none;
+  stroke: rgba(var(--glow-accent-rgb), 0.8);
+  stroke-width: 1.2;
+}
+.hio-start-node-core {
+  fill: #eafcff;
+  filter: drop-shadow(0 0 5px rgba(var(--glow-accent-rgb), 0.9));
+}
+.hio-reticle-ring {
+  fill: none;
+  stroke: rgba(var(--glow-accent-rgb), 0.85);
+  stroke-width: 1.2;
+}
+.hio-reticle-tick {
+  stroke: rgba(var(--glow-accent-rgb), 0.85);
+  stroke-width: 1.2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hio-tether-group { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CenterDropZone — إعادة تصميم "مستقبِل هولوغرافي" (بند Part F صراحةً: ليس
+   دائرة منقّطة بسيطة). ثلاث حالات: خامل (خافت جداً، أقواس مكسورة)، أثناء
+   سحب لوحة (يظهر بوضوح)، اقتراب/تسليح (سطوع + نقطة بيضاء مركزية + علامات
+   قفل ذهبية صغيرة).
+   ══════════════════════════════════════════════════════════════════════ */
+.hcd-zone {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.22;
+  transition: opacity 0.25s ease;
+  /* عنصر زخرفي بحت — بند حرج: بلا هذا كان z-index:5 (أعلى من .hpr-stage
+     z-index:2) "يبتلع" pointerdown/up الواصلة للوحة الأمامية الجالسة في
+     نفس نقطة المركز تماماً (مؤكَّد فعلياً عبر elementFromPoint: hcd-core
+     كانت الهدف الحقيقي بدل .hpp، فتُفقَد بداية السحب بصمت). راجع نفس مبدأ
+     .hio-overlay أدناه. */
+  pointer-events: none;
+}
+.hcd-zone.hcd-visible { opacity: 0.6; }
+.hcd-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(var(--glow-accent-rgb), 0.32);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+.hcd-ring-1 { inset: 0; }
+.hcd-ring-2 { inset: 24px; animation: hcdSlowSpin 18s linear infinite; }
+@keyframes hcdSlowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.hcd-core {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(var(--glow-accent-rgb), 0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.hcd-lock {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: rgb(var(--gold-accent-rgb));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.hcd-lock-tl { top: 14px; inset-inline-start: 14px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.hcd-lock-tr { top: 14px; inset-inline-end: 14px; clip-path: polygon(100% 0, 100% 100%, 0 0); }
+.hcd-lock-bl { bottom: 14px; inset-inline-start: 14px; clip-path: polygon(0 100%, 0 0, 100% 100%); }
+.hcd-lock-br { bottom: 14px; inset-inline-end: 14px; clip-path: polygon(100% 100%, 0 100%, 100% 0); }
+.hcd-label {
+  position: absolute;
+  bottom: -26px;
+  font-size: 10px;
+  color: var(--dash-text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.hcd-zone.hcd-visible .hcd-ring-2 { animation-duration: 6s; }
+.hcd-zone.hcd-visible .hcd-core { opacity: 0.5; }
+.hcd-zone.hcd-armed { opacity: 1; }
+.hcd-zone.hcd-armed .hcd-ring {
+  border-color: rgba(var(--gold-accent-rgb), 0.9);
+  border-style: solid;
+  box-shadow: 0 0 24px rgba(var(--gold-accent-rgb), 0.4);
+}
+.hcd-zone.hcd-armed .hcd-ring-1 { transform: scale(1.08); }
+.hcd-zone.hcd-armed .hcd-core { opacity: 1; background: #eafcff; box-shadow: 0 0 10px rgba(255,255,255,0.9); }
+.hcd-zone.hcd-armed .hcd-lock { opacity: 1; box-shadow: 0 0 6px rgba(var(--gold-accent-rgb), 0.8); }
+.hcd-zone.hcd-armed .hcd-label { opacity: 1; color: rgb(var(--gold-accent-rgb)); }
+@media (prefers-reduced-motion: reduce) {
+  .hcd-ring-2 { animation: none; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════

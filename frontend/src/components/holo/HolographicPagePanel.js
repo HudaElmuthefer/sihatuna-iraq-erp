@@ -1,75 +1,58 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { lerpSlot, slotToPixels, STAGE_PERSPECTIVE, FORWARD_BASE } from '../../utils/holographicSlots';
+import { createVelocityTracker } from '../../utils/interactionVelocity';
+import { startDragSound, updateDragSound, stopDragSound, playSnap } from '../../utils/holographicSound';
 
 const CLICK_MOVE_THRESHOLD = 6; // px — أقل من هذا يُحتسب نقراً، أكثر يُحتسب سحباً
-
-// هندسة صريحة (لا تعتمد على rotateY وحدها لدفع الموضع الأفقي، كما كانت
-// سابقاً) — بند صريح بالمواصفة: x/zDepth محسوبان من angle بصيغة قطع ناقص
-// حقيقية، ودوران وجه اللوحة (rotateY) منفصل عنهما بخطوة أخف بكثير، حتى لا
-// تصل اللوحات المرئية إلى زوايا حادة (60-80°) تجعلها تبدو شبه جانبية.
-// ANGLE_STEP أكبر بكثير من محاولة أولى (13° ثم 26°) — قياس فعلي عبر
-// getBoundingClientRect (لا تخمين) أظهر أن 26° ينتج تراكباً حقيقياً بنسبة
-// ~40-65% بين اللوحات المتجاورة على 1366px. 35° مع radiusX أكبر يقارب
-// الحد الأقصى المسموح بالمواصفة (5-12% تراكب) عند هذا العرض تحديداً.
-const ANGLE_STEP = 38; // درجة — يُستخدم فقط لحساب x/zDepth (الانتشار الأفقي/العمق)
-const ROTATION_STEP = 6; // درجة — دوران وجه اللوحة نفسه (قريب = خفيف جداً، بعيد = معتدل)
-const MAX_ROTATION = 20;
-// بند حرج جداً: أي translateZ سالب (لوحة "متراجعة خلف" مستوى z=0 الضمني
-// لأسلاف preserve-3d/perspective غير المُحوَّلين) يكسر اختبار الإصابة
-// (hit-testing) الفعلي بالمتصفح لتلك اللوحة تماماً — مؤكَّد فعلياً عبر
-// elementFromPoint()، وليس نظرياً: أي سلف غير مُستثنى صراحةً بـ
-// pointer-events:none "يفوز" باختبار الإصابة بدل اللوحة، وهذا يتصاعد عبر
-// كل سلف تباعاً (استثناء واحد لا يكفي، والاستثناء الشامل لكل الأسلاف حتى
-// body غير عملي). الحل الجذري: لا تسمح لأي لوحة بالتراجع خلف z=0 إطلاقاً —
-// FORWARD_BASE يدفع الجميع لمقدمة موجبة دائماً، وMAX_RECEDE يحدّ من أقصى
-// تراجع نسبي (بدل قيمة radiusY الأصلية غير المحدودة) فيبقى الهامش الآمن
-// فوق الصفر مضموناً حتى عند أبعد لوحة مرئية.
-const MAX_RECEDE = 90; // px — أقصى "تراجع" نسبي مسموح، بصرف النظر عن radiusY
-const FORWARD_BASE = 130; // px — يضمن translateZ > 0 دائماً حتى عند MAX_RECEDE الكامل
-
-// عرض/ارتفاع كل لوحة يُشتقّان صراحةً من بُعدها عن المختارة (t = |rel|/range)
-// بدل الاعتماد على transform:scale لتغيير الحجم — عرض صريح لكل مستوى يمنح
-// تحكماً مباشراً بالتباعد الفعلي بين اللوحات المتجاورة (تفادي التراكب).
-// بند صريح بالمواصفة: أولوية القراءة تفوق أولوية العدد — الشاشة المركزية
-// كبيرة وغنيّة فعلياً (520-640px)، الجانبية القريبة 300-380px، ولا مستوى
-// "بعيد" مصغَّر جداً بعد الآن (كان يبدو كبطاقة تصف الصفحة، لا تطبيقاً
-// مصغَّراً حقيقياً) — القريبتان فقط تُعرَضان بوضوح تام (بند 49: قلّل العدد
-// قبل قراءة). VISIBLE_RANGE بالأسفل (HolographicPageRing.js) مضبوط الآن
-// على 1 افتراضياً (3 لوحات: مركزية + قريبة كل جانب) تحديداً لهذا السبب.
-function sizeForTier(absRel) {
-  if (absRel <= 0.5) return { w: 'clamp(460px, 42vw, 620px)', h: 'clamp(300px, 26vw, 390px)' };
-  return { w: 'clamp(280px, 26vw, 360px)', h: 'clamp(210px, 19vw, 260px)' };
-}
+const FRONT_SCALE = 1.03;
 
 /*
- * لوحة واحدة على الحلقة — موضعها ثلاثي الأبعاد مُشتقّ بالكامل من `rel`
- * (الفهرس النسبي عن اللوحة المختارة حالياً) ونصفي القطر المُستجيبين
- * (radiusX الانتشار الأفقي، radiusY العمق) المُمرَّرين من الأب. اللوحة
- * الأمامية (isFront) فقط قابلة للسحب نحو منطقة الإفلات المركزية
- * (drag-to-center)؛ أي لوحة أخرى تُحرِّك الحلقة إليها عند النقر (select)
- * بدل فتحها مباشرة.
+ * معمارية ثلاثية الطبقات المتداخلة (بند صريح بالمواصفة — Part B/7: "Use
+ * nested wrappers"، لا transform واحد يخدم غرضين متعارضين):
+ *
+ *   .hpp            (OUTER)  — هندسة الفتحة على الحلقة فقط (slotToPixels:
+ *                               translateX/Y/Z + rotateY + scale). تبقى
+ *                               ثابتة تماماً أثناء سحب اللوحة نحو المركز —
+ *                               لا تُعاد حسابها من selectedIndex أثناء ذلك
+ *                               (بند 9/10 صراحةً).
+ *   .hpp-drag-layer  (MIDDLE) — إزاحة السحب المؤقتة فقط (identity حين لا
+ *                               يوجد سحب). transition:none أثناء السحب
+ *                               المباشر (بند 11)، تعود cinematic عند الإفلات.
+ *   .hpp-surface     (INNER)  — الزجاج المنحني/الإضاءة/الحوم — لا صلة لها
+ *                               بالموضع أو السحب إطلاقاً.
+ *
+ * لماذا كانت اللوحة "تهرب من المؤشر" سابقاً: طبقة السحب القديمة كانت تستبدل
+ * transform الفتحة بالكامل (تُسقِط translateZ/rotateY فجأة) بينما OUTER
+ * متداخلة داخل .hpr-stage ذات perspective — إزاحة px خام محلياً عند عمق Z
+ * غير صفري تحت perspective تتضخّم بصرياً (foreshortening) بمعامل ثابت
+ * (perspective/(perspective-z))، فتتحرك اللوحة أسرع من المؤشر الفعلي تراكمياً.
+ * الحل: عمق Z الأمامية ثابت معروف مسبقاً (FORWARD_BASE+34)، فنُعوِّض عنه
+ * حسابياً مرة واحدة (perspFactor أدناه) بدل تفكيك/فقدان عمق الفتحة أصلاً.
  */
+const FRONT_Z_PX = FORWARD_BASE + 34; // isFront bump — راجع holographicSlots.js/slotToPixels
+const PERSP_FACTOR = (STAGE_PERSPECTIVE - FRONT_Z_PX) / STAGE_PERSPECTIVE;
+
 export default function HolographicPagePanel({
-  page, rel, radiusX, radiusY, isFront, isOpening, isDragCandidate,
-  onSelect, onOpen, dropZoneRef, lang,
+  page, rel, geometry, isFront, isOpening, isDragCandidate,
+  onSelect, onOpen, dropZoneRef, lang, tetherApi, stageRef,
 }) {
   const panelRef = useRef(null);
+  const surfaceRef = useRef(null);
   const pointerStart = useRef(null);
-  const [centerDrag, setCenterDrag] = useState(null); // {x,y} أثناء سحب اللوحة الأمامية نحو المركز
+  const velocityTracker = useRef(null);
+  const [centerDrag, setCenterDrag] = useState(null); // {x,y} إزاحة خام (شاشة px) أثناء سحب اللوحة الأمامية نحو المركز
   const [magnetActive, setMagnetActive] = useState(false);
   const [snapFlash, setSnapFlash] = useState(false);
   const rafPending = useRef(false);
   const wasFrontRef = useRef(isFront);
 
-  // انعكاس زجاجي يتبع المؤشر (بند صريح: لا React re-render لكل بكسل) —
-  // كتابة مباشرة على متغيّري CSS بعقدة DOM نفسها، مُهذَّبة بـ
-  // requestAnimationFrame بدل تحديث فوري لكل حدث mousemove.
   const handleMouseMove = (e) => {
-    if (rafPending.current || !panelRef.current) return;
+    if (rafPending.current || !surfaceRef.current) return;
     rafPending.current = true;
     const clientX = e.clientX, clientY = e.clientY;
     requestAnimationFrame(() => {
       rafPending.current = false;
-      const el = panelRef.current;
+      const el = surfaceRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
       const px = ((clientX - r.left) / r.width) * 100;
@@ -79,8 +62,6 @@ export default function HolographicPagePanel({
     });
   };
 
-  // ومضة استقرار قصيرة (Snap Visual) — فقط عند تحوّل هذه اللوحة تحديداً إلى
-  // "أمامية" حديثاً (لا عند كل إعادة رسم)، ثم تُزال الصنف تلقائياً.
   useEffect(() => {
     if (isFront && !wasFrontRef.current) {
       setSnapFlash(true);
@@ -92,16 +73,10 @@ export default function HolographicPagePanel({
     return undefined;
   }, [isFront]);
 
+  const slot = lerpSlot(rel);
+  const px = slotToPixels(slot, geometry, isFront);
   const absRel = Math.abs(rel);
-  const angleRad = (rel * ANGLE_STEP) * Math.PI / 180;
-  const x = radiusX * Math.sin(angleRad);
-  const zDepth = Math.min(MAX_RECEDE, radiusY * (1 - Math.cos(angleRad))); // >=0، محدود بـMAX_RECEDE — يزداد كلما ابتعدنا
-  const rotY = Math.max(-MAX_ROTATION, Math.min(MAX_ROTATION, rel * ROTATION_STEP));
 
-  const { w, h } = sizeForTier(absRel);
-
-  // شفافية مقروءة دائماً (بند صريح: لا opacity منخفضة جداً للّوحات
-  // المرئية) — 1 / 0.85-0.95 / 0.6-0.78 حسب البُعد، لا تدرّج نحو الصفر.
   const opacity = absRel < 0.5 ? 1 : Math.max(0.6, 0.95 - absRel * 0.13);
   const zIndex = 1000 - Math.round(absRel * 10);
   const brightness = isFront ? 1.08 : Math.max(0.75, 1 - absRel * 0.1);
@@ -109,16 +84,20 @@ export default function HolographicPagePanel({
   const label = lang === 'ar' ? page.label : (page.labelEn || page.label);
   const PreviewComponent = page.PreviewComponent;
 
-  const translateZ = FORWARD_BASE - zDepth + (isFront ? 34 : 0); // يبقى موجباً دائماً — راجع تعليق MAX_RECEDE/FORWARD_BASE أعلاه
-  const baseTransform = `translate(-50%, -50%) translateX(${x}px) translateZ(${translateZ}px) rotateY(${rotY}deg) scale(${isFront ? 1.03 : 1})`;
+  const outerScale = px.scale * (isFront ? FRONT_SCALE : 1);
+  const outerTransform = `translate(-50%, -50%) translateX(${px.xPx}px) translateY(${px.yPx}px) translateZ(${px.zPx}px) rotateY(${px.rotY}deg) scale(${outerScale})`;
+
+  // نقطة إمساك الحبل — أقرب لأيقونة/عقدة الطاقة أعلى-يسار اللوحة (بند 27:
+  // "Prefer the page icon / energy node"؛ استعلام DOM دقيق عن الأيقونة غير
+  // ضروري — موضعها ثابت هيكلياً داخل PreviewHeader).
+  const iconAnchorRef = useRef({ x: 34, y: 30 });
+
+  const clearTether = () => tetherApi?.current?.hideTether();
 
   const handlePointerDown = (e) => {
-    // اللوحة الأمامية فقط توقف انتشار الحدث — سحبها يعني سحبها هي نحو
-    // المركز حصراً، لا تدوير الحلقة بالتوازي. أي لوحة أخرى تترك الحدث يصعد
-    // لمعالج تدوير الحلقة بالمسرح (بند: يمكن بدء تدوير الحلقة من فوق أي
-    // لوحة، لا حافة فارغة فقط).
     if (isFront) e.stopPropagation();
     pointerStart.current = { x: e.clientX, y: e.clientY, moved: false, dragging: false };
+    velocityTracker.current = createVelocityTracker();
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
   };
 
@@ -129,19 +108,37 @@ export default function HolographicPagePanel({
     const dx = e.clientX - st.x;
     const dy = e.clientY - st.y;
     if (!st.moved && Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD) st.moved = true;
-    // فقط اللوحة الأمامية قابلة للسحب الفعلي نحو المركز (بند "المسحوبة
-    // فعلياً نحو مساحة العمل" صراحةً بالمواصفة).
     if (isFront && st.moved) {
-      st.dragging = true;
+      if (!st.dragging) {
+        st.dragging = true;
+        startDragSound();
+        document.documentElement.classList.add('holo-cursor-grab');
+        dropZoneRef.current?.classList.add('hcd-visible');
+      }
       setCenterDrag({ x: dx, y: dy });
       const zoneRect = dropZoneRef.current?.getBoundingClientRect();
       const panelRect = panelRef.current?.getBoundingClientRect();
       if (zoneRect && panelRect) {
-        const px = panelRect.left + panelRect.width / 2;
-        const py = panelRect.top + panelRect.height / 2;
-        const inside = px >= zoneRect.left && px <= zoneRect.right && py >= zoneRect.top && py <= zoneRect.bottom;
+        const cx = panelRect.left + panelRect.width / 2;
+        const cy = panelRect.top + panelRect.height / 2;
+        const inside = cx >= zoneRect.left && cx <= zoneRect.right && cy >= zoneRect.top && cy <= zoneRect.bottom;
         setMagnetActive(inside);
         dropZoneRef.current?.classList.toggle('hcd-armed', inside);
+      }
+      // سرعة مُطبَّعة واحدة تُغذّي الصوت والحبل معاً (بند 52 صراحةً).
+      const v = velocityTracker.current.update(e.clientX, e.clientY);
+      updateDragSound(v, e.clientX, stageRef.current?.clientWidth || window.innerWidth);
+      const anchorRect = panelRef.current?.getBoundingClientRect();
+      const stageRect = stageRef?.current?.getBoundingClientRect();
+      if (anchorRect && stageRect && tetherApi?.current) {
+        // إحداثيات نسبية لصندوق المسرح نفسه (لا viewport مباشرة) — الوشاح
+        // SVG مموضَع position:absolute داخل .hpr-stage بلا viewBox، فوحدة
+        // المستخدم = px نسبية لصندوقه هو، لا لكامل الصفحة.
+        const ax = anchorRect.left + iconAnchorRef.current.x - stageRect.left;
+        const ay = anchorRect.top + iconAnchorRef.current.y - stageRect.top;
+        const px2 = e.clientX - stageRect.left;
+        const py2 = e.clientY - stageRect.top;
+        tetherApi.current.showTether(ax, ay, px2, py2, v);
       }
     }
   };
@@ -152,31 +149,39 @@ export default function HolographicPagePanel({
     pointerStart.current = null;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     if (!st) return;
-    dropZoneRef.current?.classList.remove('hcd-armed');
+    dropZoneRef.current?.classList.remove('hcd-armed', 'hcd-visible');
     if (st.dragging) {
+      document.documentElement.classList.remove('holo-cursor-grab');
+      stopDragSound();
+      clearTether();
       const wasMagnet = magnetActive;
       setCenterDrag(null);
       setMagnetActive(false);
-      if (wasMagnet) { onOpen(); return; }
+      if (wasMagnet) { playSnap(); onOpen(); return; }
       return; // سحب بلا وصول للمنطقة المركزية → يرتد للحلقة (transform الأصلي يعود تلقائياً)
     }
     if (!st.moved) {
-      // نقرة عادية (بلا حركة فعلية) — نتولّى فتح/تحريك الحلقة بأنفسنا هنا،
-      // ويجب إيقاف انتشار الحدث: بلا هذا، معالج سحب الحلقة بالمسرح (bubbled
-      // من نفس حدث pointerup) كان يُنفَّذ بعدنا مباشرة ويُعيد "الالتقاط"
-      // (snap) للموضع الحالي القديم — يُلغي فعلياً حركة onSelect/onOpen
-      // التي بدأناها للتو بسباق تعارض حقيقي (لوحة غير أمامية تُنقَر فلا
-      // يحدث شيء لأن الحلقة "ترتد" لموضعها فوراً).
       e.stopPropagation();
       if (isFront) onOpen(); else onSelect();
     }
-    // سحب حقيقي (st.moved) على لوحة غير أمامية: نترك الحدث يصعد عمداً كي
-    // يُنجز معالج تدوير الحلقة بالمسرح الالتقاط الطبيعي لأقرب لوحة.
   };
 
-  const dragTransform = centerDrag
-    ? `translate(-50%, -50%) translate(${centerDrag.x}px, ${centerDrag.y}px) scale(${magnetActive ? 1.18 : 1.04})`
-    : null;
+  const handlePointerCancel = (e) => {
+    if (pointerStart.current?.dragging) {
+      document.documentElement.classList.remove('holo-cursor-grab');
+      stopDragSound();
+      clearTether();
+    }
+    handlePointerUp(e);
+  };
+
+  // MIDDLE — إزاحة السحب المُعوَّضة (بند 9 صراحةً: dragX/dragY خام من
+  // الفرق بالمؤشر)، مُصحَّحة بمعامل perspective ثابت (PERSP_FACTOR) حتى
+  // تبقى اللوحة تحت المؤشر تماماً رغم عمقها Z غير الصفري ضمن سلسلة
+  // preserve-3d — راجع الشرح أعلى الملف.
+  const dragLayerTransform = centerDrag
+    ? `translate(${centerDrag.x * PERSP_FACTOR / FRONT_SCALE}px, ${centerDrag.y * PERSP_FACTOR / FRONT_SCALE}px) scale(${magnetActive ? 1.16 : 1.05})`
+    : undefined;
 
   return (
     <div
@@ -185,19 +190,16 @@ export default function HolographicPagePanel({
         'hpp',
         isFront ? 'hpp-front' : '',
         isOpening ? 'hpp-opening' : '',
-        magnetActive ? 'hpp-magnet' : '',
         isDragCandidate ? 'hpp-draggable' : '',
         snapFlash ? 'hpp-snap-flash' : '',
       ].filter(Boolean).join(' ')}
-      onMouseMove={handleMouseMove}
       style={{
-        width: w,
-        height: h,
-        transform: dragTransform || baseTransform,
+        width: px.w,
+        height: px.h,
+        transform: outerTransform,
         opacity: isOpening ? 1 : opacity,
         zIndex: centerDrag ? 2000 : (isFront ? 999 : zIndex),
         filter: `brightness(${brightness})`,
-        transition: centerDrag ? 'none' : undefined,
         cursor: isFront ? 'grab' : 'pointer',
       }}
       role="button"
@@ -206,13 +208,23 @@ export default function HolographicPagePanel({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
-      <span className="hpp-edge-top" aria-hidden="true" />
-      <span className="hpp-edge-bottom" aria-hidden="true" />
-      <span className="hpp-reflection" aria-hidden="true" />
-      <span className="hpp-pointer-glow" aria-hidden="true" />
-      <PreviewComponent page={page} lang={lang} />
+      <div
+        className={`hpp-drag-layer ${centerDrag ? 'hpp-drag-active' : ''} ${magnetActive ? 'hpp-drag-magnet' : ''}`}
+        style={{ transform: dragLayerTransform }}
+      >
+        <div ref={surfaceRef} className="hpp-surface" onMouseMove={handleMouseMove}>
+          <span className="hpp-wing hpp-wing-left" aria-hidden="true" />
+          <span className="hpp-wing hpp-wing-right" aria-hidden="true" />
+          <span className="hpp-edge-top" aria-hidden="true" />
+          <span className="hpp-edge-bottom" aria-hidden="true" />
+          <span className="hpp-reflection" aria-hidden="true" />
+          <span className="hpp-pointer-glow" aria-hidden="true" />
+          <span className="hpp-icon-node" aria-hidden="true" />
+          <PreviewComponent page={page} lang={lang} />
+        </div>
+      </div>
     </div>
   );
 }

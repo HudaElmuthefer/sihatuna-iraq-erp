@@ -2948,10 +2948,10 @@ a:not([aria-disabled="true"]):active,
   width: 26px;
   height: 26px;
   margin: -13px 0 0 -13px;
-  border: 1px solid rgba(6, 20, 30, 0.5);
-  background: radial-gradient(circle, transparent 55%, rgba(var(--cursor-ring-rgb), 0.12) 80%, rgba(6, 20, 30, 0.35) 100%);
-  box-shadow: inset 0 0 5px rgba(var(--cursor-ring-rgb), 0.15);
-  opacity: 0.4;
+  border: 1px solid rgba(var(--cursor-ring-rgb), 0.4);
+  background: radial-gradient(circle, transparent 55%, rgba(var(--cursor-ring-rgb), 0.14) 80%, rgba(6, 20, 30, 0.35) 100%);
+  box-shadow: inset 0 0 5px rgba(var(--cursor-ring-rgb), 0.2), 0 0 5px rgba(var(--cursor-ring-rgb), 0.18);
+  opacity: 0.55;
   transform: scale(0.75);
   /* opacity مضبوطة على 140ms تحديداً (لا 180ms) كي تقع العودة من منطقة
      شريط التمرير ضمن مدى 120-160ms المطلوب (بند 46) — باقي الخصائص تبقى
@@ -2996,6 +2996,26 @@ a:not([aria-disabled="true"]):active,
 @keyframes cursorPulseFire {
   0%   { transform: scale(0.7); opacity: 0.9; }
   100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   عقدة تحكّم هولوغرافية أثناء السحب — بند صريح (Part D/23): "cursor should
+   NOT revert to a plain OS arrow" أثناء سحب لوحة/حلقة. html.holo-cursor-grab
+   يُضاف/يُزال مباشرة من HolographicPagePanel.js وHolographicPageRing.js عند
+   بدء/انتهاء أي سحب هولوغرافي فعلي (لا حاجة لتعديل حلقة rAF بـ
+   FuturisticCursor.js نفسها). حلقة قبض سماوية منقّطة + نواة أسطع، بلا
+   عناصر DOM إضافية.
+   ══════════════════════════════════════════════════════════════════════ */
+html.holo-cursor-grab .futuristic-cursor-ring {
+  opacity: 0.9;
+  transform: scale(1.2);
+  border: 2px dashed rgba(var(--glow-accent-rgb), 0.95);
+  background: radial-gradient(circle, transparent 50%, rgba(var(--cursor-ring-rgb), 0.16) 78%, rgba(6, 20, 30, 0.4) 100%);
+  box-shadow: inset 0 0 12px rgba(var(--cursor-ring-rgb), 0.4), 0 0 18px rgba(var(--cursor-ring-rgb), 0.55);
+  transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+html.holo-cursor-grab .futuristic-cursor-core {
+  box-shadow: 0 0 8px rgba(var(--cursor-ring-rgb), 1), 0 0 20px rgba(var(--cursor-ring-rgb), 0.75);
 }
 
 /* Hide the native cursor only while the custom one is active (mounted +

@@ -24,6 +24,7 @@ const HOVER_SELECTOR = [
   '.btn', '.card', '.sidebar-nav-item', '.page-btn', '.dqt-tile',
   '.health-hero-customize', '.dropdown-item', '.tab',
   '.header-dropdown-option', '[role="option"]',
+  '.hpp', '.hpr-nav-btn',
   '[data-cursor-hover]',
   // .stat-card intentionally excluded — cursor:default in CSS, not
   // clickable, so the scanner ring shouldn't claim it's interactive either.

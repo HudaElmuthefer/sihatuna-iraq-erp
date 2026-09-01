@@ -1,14 +1,16 @@
 // نظام الأصوات الهولوغرافية — Web Audio API خالص (بلا أي ملفات صوتية
-// خارجية أو محتوى محمي بحقوق نشر)، نغمات قصيرة زجاجية رقمية أصلية مُركَّبة
-// عبر OscillatorNode/GainNode بسياق واحد مُعاد استخدامه (لا AudioContext
-// جديد لكل تشغيل). موديول عادي (لا React) — مصدر الحقيقة الوحيد لحالة
-// الكتم أيضاً، حتى يبقى متسقاً بين أي مكوّن يقرأه (راجع useHolographicSound.js).
+// خارجية أو محتوى محمي بحقوق نشر). طبقات صوتية قصيرة مُركَّبة (نغمات +
+// ضجيج مفلتر) بسياق واحد مُعاد استخدامه (لا AudioContext جديد لكل تشغيل).
+// موديول عادي (لا React) — مصدر الحقيقة الوحيد لحالة الكتم أيضاً، حتى يبقى
+// متسقاً بين أي مكوّن يقرأه (راجع useHolographicRing.js).
+//
+// إعادة تصميم صريحة (بند Part G بالمواصفة): لا نغمات oscillator واحدة
+// مجرّدة ("beep")، بل تركيب طبقي دائماً — ضجيج مفلتر (BiquadFilterNode
+// bandpass/lowpass/highpass) + رنين sine/triangle + شظايا shimmer عالية
+// خافتة جداً — يمنح طابعاً "زجاجياً/كهرومغناطيسياً" سينمائياً بدل "قديم/آركيد".
 const MUTE_KEY = 'sihatuna-holographic-sound-muted';
-const MASTER_VOLUME = 0.16; // بند صريح: 0.12-0.22
+const MASTER_VOLUME = 0.15; // بند صريح: 0.10-0.18
 
-// تشخيص تطوير فقط (نفس نمط FuturisticCursor.js's cursorDebug تحديداً) —
-// مُطفأ دائماً بأي production build؛ للتفعيل يدوياً أثناء التطوير:
-// window.__HOLO_AUDIO_DEBUG__ = true بالـConsole.
 function soundDebug(...args) {
   if (process.env.NODE_ENV === 'production') return;
   if (typeof window !== 'undefined' && window.__HOLO_AUDIO_DEBUG__) {
@@ -19,6 +21,7 @@ function soundDebug(...args) {
 
 let audioCtx = null;
 let masterGain = null;
+let noiseBufferCache = null;
 let muted = (() => {
   try { return localStorage.getItem(MUTE_KEY) === 'true'; } catch { return false; }
 })();
@@ -37,7 +40,6 @@ export function setMuted(next) {
   muted = next;
   try { localStorage.setItem(MUTE_KEY, String(next)); } catch { /* تخزين تقديري فقط */ }
   if (masterGain) masterGain.gain.setTargetAtTime(next ? 0 : MASTER_VOLUME, ctxNow(), 0.05);
-  // بند صريح: الكتم يوقف أي صوت سحب مستمر جارٍ فوراً، لا ينتظر رفع المؤشر.
   if (next) stopDragSound();
   soundDebug('muted', next);
   notify();
@@ -45,9 +47,6 @@ export function setMuted(next) {
 
 function ctxNow() { return audioCtx ? audioCtx.currentTime : 0; }
 
-// لا يُنشِئ AudioContext إلا عند أول استدعاء فعلي لتشغيل صوت — ويجب أن يقع
-// هذا الاستدعاء الأول ضمن معالج تفاعل مستخدم حقيقي (pointerdown/click/
-// keydown) احتراماً لسياسة المتصفحات ضد التشغيل التلقائي بلا تفاعل.
 function ensureContext() {
   if (audioCtx) {
     if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
@@ -63,16 +62,26 @@ function ensureContext() {
   return audioCtx;
 }
 
-// نغمة واحدة قصيرة (envelope هجوم/تلاشٍ سريع) — لبنة البناء الأساسية لكل
-// الأصوات أدناه. sine/triangle فقط (لا square/sawtooth حادّة) — طابع
-// "زجاجي دقيق" لا "لعبة فيديو".
-function tone(ctx, { freq, delay = 0, duration = 0.12, type = 'sine', peak = 1, detune = 0 }) {
+// مخزن ضجيج أبيض قصير (2 ثانية، قابل للتكرار loop) — يُبنى مرة واحدة فقط
+// ويُعاد استخدامه لكل عقدة BufferSource جديدة (بند صريح: لا ملفات خارجية،
+// توليد إجرائي محلي).
+function getNoiseBuffer(ctx) {
+  if (noiseBufferCache) return noiseBufferCache;
+  const len = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  noiseBufferCache = buffer;
+  return buffer;
+}
+
+function tone(ctx, { freq, delay = 0, duration = 0.12, type = 'sine', peak = 1, freqEnd = null }) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;
-  osc.frequency.value = freq;
-  if (detune) osc.detune.value = detune;
   const t0 = ctx.currentTime + delay;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + duration * 0.85);
   gain.gain.setValueAtTime(0, t0);
   gain.gain.linearRampToValueAtTime(peak, t0 + 0.012);
   gain.gain.exponentialRampToValueAtTime(0.0008, t0 + duration);
@@ -82,6 +91,28 @@ function tone(ctx, { freq, delay = 0, duration = 0.12, type = 'sine', peak = 1, 
   osc.stop(t0 + duration + 0.02);
 }
 
+// شظية ضجيج مفلتر قصيرة — لبنة "زجاجية" تُستخدَم بالنقرات/الفتح/الإغلاق
+// بدل نغمة oscillator مجرَّدة وحدها.
+function noiseBurst(ctx, { type = 'bandpass', freq, freqEnd = null, Q = 1, delay = 0, duration = 0.06, peak = 0.1 }) {
+  const src = ctx.createBufferSource();
+  src.buffer = getNoiseBuffer(ctx);
+  const filt = ctx.createBiquadFilter();
+  filt.type = type;
+  const t0 = ctx.currentTime + delay;
+  filt.frequency.setValueAtTime(freq, t0);
+  if (freqEnd) filt.frequency.linearRampToValueAtTime(freqEnd, t0 + duration * 0.9);
+  filt.Q.value = Q;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(peak, t0 + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0006, t0 + duration);
+  src.connect(filt);
+  filt.connect(gain);
+  gain.connect(masterGain);
+  src.start(t0);
+  src.stop(t0 + duration + 0.02);
+}
+
 function play(build) {
   if (muted) return;
   const ctx = ensureContext();
@@ -89,120 +120,166 @@ function play(build) {
   try { build(ctx); } catch { /* الصوت زخرفي بحت — أي فشل هنا لا يجب أن يكسر التفاعل نفسه */ }
 }
 
-// ── الأحداث المُعرَّفة (بند 48 بالمواصفة) ───────────────────────────────────
+// ── الأحداث المُعرَّفة ────────────────────────────────────────────────────
 export function playSelect() {
-  // نغمة تأكيد زجاجية رقمية قصيرة — لحظة اختيار لوحة على الحلقة.
   play(ctx => {
     tone(ctx, { freq: 880, duration: 0.09, type: 'sine', peak: 0.5 });
     tone(ctx, { freq: 1320, duration: 0.07, type: 'sine', peak: 0.22, delay: 0.01 });
   });
 }
 
+// نقرة "detent" زجاجية-ميكانيكية — عبور فهرس أثناء السحب (حد أقصى نقرة
+// واحدة لكل تغيّر فهرس، لا لكل إطار). طبقتان: شظية ضجيج مفلتر قصيرة جداً +
+// شظية سينية عالية خافتة جداً — لا نغمة beep مفردة (بند 46 صراحةً).
 export function playTick() {
-  // نقرة زجاجية دقيقة جداً — عبور فهرس أثناء السحب المستمر (بند صريح: حد
-  // أقصى نقرة واحدة لكل تغيّر فهرس، لا لكل إطار حركة). أخفت وأقصر بكثير
-  // من playSnap (تلك للاستقرار النهائي بعد رفع المؤشر).
-  play(ctx => { tone(ctx, { freq: 1040, duration: 0.035, type: 'sine', peak: 0.14 }); });
+  play(ctx => {
+    noiseBurst(ctx, { type: 'bandpass', freq: 2100, Q: 2.5, duration: 0.045, peak: 0.09 });
+    tone(ctx, { freq: 1700, duration: 0.03, type: 'sine', peak: 0.05, delay: 0.002 });
+  });
 }
 
+// نقرة مغناطيسية ناعمة — جسم منخفض-متوسط قصير + بريق زجاجي عالٍ خافت جداً
+// (بند 47: "no loud click").
 export function playSnap() {
-  // نقرة مغناطيسية ناعمة — الحلقة استقرّت على أقرب لوحة بعد سحب/عجلة.
   soundDebug('snap');
   play(ctx => {
-    tone(ctx, { freq: 520, duration: 0.08, type: 'triangle', peak: 0.4 });
+    tone(ctx, { freq: 340, duration: 0.11, type: 'sine', peak: 0.3 });
+    tone(ctx, { freq: 175, duration: 0.09, type: 'triangle', peak: 0.16, delay: 0.004 });
+    tone(ctx, { freq: 2500, duration: 0.05, type: 'sine', peak: 0.06, delay: 0.02 });
   });
 }
 
+// مسحة صاعدة رنّانة هادئة + بريق هوائي (ضجيج مفلتر صاعد التردد) — بند 48:
+// 250-450ms.
 export function playOpen() {
-  // نغمة صاعدة قصيرة — لوحة تنفصل وتتوسّع لمساحة العمل.
   soundDebug('page open');
   play(ctx => {
-    tone(ctx, { freq: 440, duration: 0.05, type: 'sine', peak: 0.35 });
-    tone(ctx, { freq: 660, duration: 0.09, type: 'sine', peak: 0.4, delay: 0.05 });
-    tone(ctx, { freq: 990, duration: 0.14, type: 'sine', peak: 0.3, delay: 0.1 });
+    tone(ctx, { freq: 300, freqEnd: 880, duration: 0.36, type: 'sine', peak: 0.26 });
+    noiseBurst(ctx, { type: 'highpass', freq: 1800, freqEnd: 5200, Q: 0.7, duration: 0.34, peak: 0.045, delay: 0.04 });
   });
 }
 
+// إحساس عكسي هادئ متحكَّم به — مسحة هابطة التردد (بند 49).
 export function playClose() {
-  // نغمة عكسية هادئة — العودة من صفحة مفتوحة نحو الحلقة.
   play(ctx => {
-    tone(ctx, { freq: 700, duration: 0.08, type: 'sine', peak: 0.3 });
-    tone(ctx, { freq: 460, duration: 0.1, type: 'sine', peak: 0.28, delay: 0.05 });
+    tone(ctx, { freq: 700, freqEnd: 280, duration: 0.28, type: 'sine', peak: 0.22 });
   });
 }
 
 export function playConfirm() {
-  play(ctx => { tone(ctx, { freq: 760, duration: 0.1, type: 'sine', peak: 0.35 }); });
+  play(ctx => { tone(ctx, { freq: 760, duration: 0.1, type: 'sine', peak: 0.32 }); });
 }
 
 export function playError() {
   play(ctx => {
-    tone(ctx, { freq: 220, duration: 0.16, type: 'triangle', peak: 0.3 });
-    tone(ctx, { freq: 180, duration: 0.18, type: 'triangle', peak: 0.24, delay: 0.06 });
+    tone(ctx, { freq: 220, duration: 0.16, type: 'triangle', peak: 0.28 });
+    tone(ctx, { freq: 180, duration: 0.18, type: 'triangle', peak: 0.22, delay: 0.06 });
   });
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// صوت سحب الحلقة المستمر — "زجاج/سيرفو هولوغرافي ناعم" يتفاعل مع سرعة
-// السحب (بند صريح بالمواصفة: ليس صوتاً واحداً لكل حركة، بل عقدة صوت واحدة
-// تبقى حيّة طوال إيماءة السحب وتتغيّر معاييرها تدريجياً). لا يُنشِئ عقداً
-// جديدة كل إطار — osc/filter/gain واحدة تُنشَأ مرة عند بدء السحب فقط.
+// صوت سحب مستمر — "قضيب زجاجي كهرومغناطيسي" ثلاثي الطبقات (بند 42 صراحةً):
+//   طبقة A: ضجيج مفلتر خافت جداً (bandpass) — نسيج هوائي للحركة.
+//   طبقة B: رنين sine/triangle ناعم — جسم الصوت.
+//   طبقة C: بريق علوي خافت جداً جداً (sine عالي التردد) — لمعان زجاجي.
+// جميعها تُنشَأ مرة واحدة فقط عند بدء السحب (لا عقد جديدة كل إطار)، وتُدار
+// عبر gain واحد مشترك (dragMasterGain) لضبط سطوع/كتم موحَّد. StereoPannerNode
+// اختياري (بند 45) يربط موضع X للمؤشر بانحراف صوتي طفيف جداً (±0.25 كحد أقصى).
 // ══════════════════════════════════════════════════════════════════════
-let dragOsc = null;
-let dragOsc2 = null; // طبقة ثانية خفيفة مُزاحة قليلاً (detune) — نسيج هوائي، لا محرك
-let dragFilter = null;
-let dragGain = null;
+let dragMasterGain = null;
+let dragPanner = null;
+let dragNoiseSrc = null, dragNoiseFilter = null, dragNoiseGain = null;
+let dragOsc = null, dragOscFilter = null, dragOscGain = null;
+let dragShimmerOsc = null, dragShimmerGain = null;
 let dragActive = false;
 
-const DRAG_BASE_FREQ = 95;
-const DRAG_FREQ_RANGE = 70; // 95-165Hz حسب السرعة
-const DRAG_BASE_CUTOFF = 380;
-const DRAG_CUTOFF_RANGE = 1300;
-const DRAG_MIN_GAIN = 0.015;
-const DRAG_MAX_GAIN = 0.045; // بند صريح: 0.015-0.05
+const DRAG_OSC_BASE_FREQ = 92;
+const DRAG_OSC_FREQ_RANGE = 55;
+const DRAG_OSC_BASE_CUTOFF = 360;
+const DRAG_OSC_CUTOFF_RANGE = 1200;
+const DRAG_NOISE_BASE_CUTOFF = 620;
+const DRAG_NOISE_CUTOFF_RANGE = 2100;
+const DRAG_MASTER_MIN = 0.012;
+const DRAG_MASTER_MAX = 0.032; // بند صريح: 0.01-0.035
 
 export function startDragSound() {
   if (muted || dragActive) return;
   const ctx = ensureContext();
   if (!ctx || !masterGain) return;
   dragActive = true;
-  dragGain = ctx.createGain();
-  dragGain.gain.value = 0;
-  dragFilter = ctx.createBiquadFilter();
-  dragFilter.type = 'lowpass';
-  dragFilter.frequency.value = DRAG_BASE_CUTOFF;
-  dragFilter.Q.value = 0.7;
+
+  dragMasterGain = ctx.createGain();
+  dragMasterGain.gain.value = 0;
+  if (ctx.createStereoPanner) {
+    dragPanner = ctx.createStereoPanner();
+    dragMasterGain.connect(dragPanner);
+    dragPanner.connect(masterGain);
+  } else {
+    dragPanner = null;
+    dragMasterGain.connect(masterGain);
+  }
+
+  // طبقة A — ضجيج مفلتر (نسيج هوائي)
+  dragNoiseSrc = ctx.createBufferSource();
+  dragNoiseSrc.buffer = getNoiseBuffer(ctx);
+  dragNoiseSrc.loop = true;
+  dragNoiseFilter = ctx.createBiquadFilter();
+  dragNoiseFilter.type = 'bandpass';
+  dragNoiseFilter.frequency.value = DRAG_NOISE_BASE_CUTOFF;
+  dragNoiseFilter.Q.value = 0.8;
+  dragNoiseGain = ctx.createGain();
+  dragNoiseGain.gain.value = 0.55;
+  dragNoiseSrc.connect(dragNoiseFilter);
+  dragNoiseFilter.connect(dragNoiseGain);
+  dragNoiseGain.connect(dragMasterGain);
+  dragNoiseSrc.start();
+
+  // طبقة B — رنين ناعم (جسم الصوت)
   dragOsc = ctx.createOscillator();
   dragOsc.type = 'triangle';
-  dragOsc.frequency.value = DRAG_BASE_FREQ;
-  dragOsc2 = ctx.createOscillator();
-  dragOsc2.type = 'sine';
-  dragOsc2.frequency.value = DRAG_BASE_FREQ * 1.5;
-  dragOsc2.detune.value = 6;
-  const osc2Gain = ctx.createGain();
-  osc2Gain.gain.value = 0.35; // أخفت من الطبقة الأساسية — نسيج فقط
-  dragOsc.connect(dragFilter);
-  dragOsc2.connect(osc2Gain);
-  osc2Gain.connect(dragFilter);
-  dragFilter.connect(dragGain);
-  dragGain.connect(masterGain);
+  dragOsc.frequency.value = DRAG_OSC_BASE_FREQ;
+  dragOscFilter = ctx.createBiquadFilter();
+  dragOscFilter.type = 'lowpass';
+  dragOscFilter.frequency.value = DRAG_OSC_BASE_CUTOFF;
+  dragOscFilter.Q.value = 0.7;
+  dragOscGain = ctx.createGain();
+  dragOscGain.gain.value = 0.4;
+  dragOsc.connect(dragOscFilter);
+  dragOscFilter.connect(dragOscGain);
+  dragOscGain.connect(dragMasterGain);
   dragOsc.start();
-  dragOsc2.start();
-  dragGain.gain.setTargetAtTime(DRAG_MIN_GAIN, ctx.currentTime, 0.05);
+
+  // طبقة C — بريق علوي خافت جداً (لا يجب أن يهيمن — بند 42)
+  dragShimmerOsc = ctx.createOscillator();
+  dragShimmerOsc.type = 'sine';
+  dragShimmerOsc.frequency.value = 2500;
+  dragShimmerGain = ctx.createGain();
+  dragShimmerGain.gain.value = 0.045;
+  dragShimmerOsc.connect(dragShimmerGain);
+  dragShimmerGain.connect(dragMasterGain);
+  dragShimmerOsc.start();
+
+  dragMasterGain.gain.setTargetAtTime(DRAG_MASTER_MIN, ctx.currentTime, 0.05);
   soundDebug('drag start');
 }
 
-// velocity01: سرعة مُطبَّعة 0..1 (مقصوصة من المستدعي) — كلما زادت، ارتفعت
-// حدّة/سطوع الصوت قليلاً، بلا أي قفزة حادة (setTargetAtTime دائماً، لا
-// setValueAtTime فوري، بند صريح بالمواصفة).
-export function updateDragSound(velocity01) {
-  if (!dragActive || !dragOsc || !dragFilter || !dragGain || !audioCtx) return;
+// velocity01: سرعة مُطبَّعة 0..1. pointerX/stageWidth (اختياريان): لموضع
+// الانحراف الصوتي الطفيف (بند 45) — بلا قفزات أبداً (setTargetAtTime دائماً).
+export function updateDragSound(velocity01, pointerX, stageWidth) {
+  if (!dragActive || !audioCtx) return;
   const v = Math.max(0, Math.min(1, velocity01));
   const now = audioCtx.currentTime;
-  dragOsc.frequency.setTargetAtTime(DRAG_BASE_FREQ + v * DRAG_FREQ_RANGE, now, 0.08);
-  dragOsc2.frequency.setTargetAtTime((DRAG_BASE_FREQ + v * DRAG_FREQ_RANGE) * 1.5, now, 0.08);
-  dragFilter.frequency.setTargetAtTime(DRAG_BASE_CUTOFF + v * DRAG_CUTOFF_RANGE, now, 0.1);
-  if (!muted) dragGain.gain.setTargetAtTime(DRAG_MIN_GAIN + v * (DRAG_MAX_GAIN - DRAG_MIN_GAIN), now, 0.1);
+  if (dragOsc) dragOsc.frequency.setTargetAtTime(DRAG_OSC_BASE_FREQ + v * DRAG_OSC_FREQ_RANGE, now, 0.08);
+  if (dragOscFilter) dragOscFilter.frequency.setTargetAtTime(DRAG_OSC_BASE_CUTOFF + v * DRAG_OSC_CUTOFF_RANGE, now, 0.1);
+  if (dragNoiseFilter) dragNoiseFilter.frequency.setTargetAtTime(DRAG_NOISE_BASE_CUTOFF + v * DRAG_NOISE_CUTOFF_RANGE, now, 0.1);
+  if (dragShimmerGain) dragShimmerGain.gain.setTargetAtTime(0.03 + v * 0.08, now, 0.1);
+  if (dragMasterGain && !muted) {
+    dragMasterGain.gain.setTargetAtTime(DRAG_MASTER_MIN + v * (DRAG_MASTER_MAX - DRAG_MASTER_MIN), now, 0.1);
+  }
+  if (dragPanner && typeof pointerX === 'number' && stageWidth) {
+    const pan = Math.max(-0.25, Math.min(0.25, (pointerX / stageWidth - 0.5) * 0.5));
+    dragPanner.pan.setTargetAtTime(pan, now, 0.15);
+  }
   soundDebug('drag velocity:', v.toFixed(2));
 }
 
@@ -211,12 +288,23 @@ export function stopDragSound() {
   dragActive = false;
   soundDebug('drag stop');
   const ctx = audioCtx;
-  const osc = dragOsc, osc2 = dragOsc2, gain = dragGain;
-  gain.gain.setTargetAtTime(0, ctx.currentTime, 0.04); // يتلاشى خلال ~80-180ms (بند صريح)
+  const gain = dragMasterGain;
+  const nodes = { src: dragNoiseSrc, osc: dragOsc, shimmer: dragShimmerOsc };
+  const cleanupRefs = { dragNoiseFilter, dragNoiseGain, dragOscFilter, dragOscGain, dragShimmerGain, dragPanner };
+  if (gain) gain.gain.setTargetAtTime(0, ctx.currentTime, 0.035); // يتلاشى خلال ~80-180ms
   window.setTimeout(() => {
-    try { osc.stop(); osc2.stop(); osc.disconnect(); osc2.disconnect(); gain.disconnect(); } catch { /* عقد قد تكون أُوقفت أصلاً */ }
+    try {
+      nodes.src?.stop(); nodes.osc?.stop(); nodes.shimmer?.stop();
+      nodes.src?.disconnect(); nodes.osc?.disconnect(); nodes.shimmer?.disconnect();
+      Object.values(cleanupRefs).forEach(n => { try { n?.disconnect(); } catch { /* already gone */ } });
+      gain?.disconnect();
+    } catch { /* عقد قد تكون أُوقفت أصلاً */ }
   }, 200);
-  dragOsc = null; dragOsc2 = null; dragFilter = null; dragGain = null;
+  dragNoiseSrc = dragNoiseFilter = dragNoiseGain = null;
+  dragOsc = dragOscFilter = dragOscGain = null;
+  dragShimmerOsc = dragShimmerGain = null;
+  dragMasterGain = null;
+  dragPanner = null;
 }
 
 export function isDragSoundActive() { return dragActive; }

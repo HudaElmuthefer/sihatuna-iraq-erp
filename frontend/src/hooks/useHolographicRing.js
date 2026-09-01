@@ -141,7 +141,7 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
       const dt = Math.max(1, now - lastMoveRef.current.t);
       const dx = Math.abs(e.clientX - lastMoveRef.current.x);
       const speed = dx / dt; // px/ms
-      updateDragSound(Math.min(1, speed / 2.2)); // ~2.2px/ms يُعتبَر سريعاً جداً — تطبيع مقصوص
+      updateDragSound(Math.min(1, speed / 2.2), e.clientX, stageWidth); // ~2.2px/ms سريع جداً — تطبيع مقصوص
     }
     lastMoveRef.current = { x: e.clientX, t: now };
   }, [clampIndex, setPos]);
@@ -157,6 +157,9 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
   const wheelAccumRef = useRef(0);
   const onWheel = useCallback((e) => {
     e.preventDefault();
+    // بند 55/56 صراحةً: تجميد تدوير الحلقة أثناء حركة "فتح" لوحة جارية —
+    // الفهرس المختار لا يجب أن يتغيّر قبل اكتمال الانتقال البصري.
+    if (openingIndex !== null) return;
     wheelAccumRef.current += e.deltaY;
     const threshold = 40;
     if (Math.abs(wheelAccumRef.current) >= threshold) {
@@ -164,7 +167,7 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
       wheelAccumRef.current = 0;
       goTo(clampIndex(Math.round(posRef.current) + dir));
     }
-  }, [clampIndex, goTo]);
+  }, [clampIndex, goTo, openingIndex]);
 
   // ── لوحة المفاتيح ────────────────────────────────────────────────────────
   const onKeyDown = useCallback((e) => {

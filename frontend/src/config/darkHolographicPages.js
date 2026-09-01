@@ -9,6 +9,7 @@ import {
   DocumentsPreview, ReportsPreview, VaccinationsPreview, LaboratoryPreview,
   HRPreview, AccountsPreview, GenericPreview,
 } from '../components/holo/HolographicPagePreview';
+import { CURVED_PAGE_IMAGES } from '../assets/darkPages';
 
 const PREVIEW_BY_KEY = {
   dashboard: DashboardPreview,
@@ -45,6 +46,10 @@ const reordered = dashboardEntry
 export const DARK_HOLOGRAPHIC_PAGES = reordered.map(p => ({
   ...p,
   PreviewComponent: PREVIEW_BY_KEY[p.key] || GenericPreview,
+  // بند صريح — Part 8: الصورة المقعّرة (إن وُجدت) هي مصدر الحقيقة الوحيد
+  // للمصغرة، لا تصميم CSS إضافي فوقها (راجع HolographicPagePanel.js).
+  curvedImage: CURVED_PAGE_IMAGES[p.key] || null,
+  hasCurvedAsset: !!CURVED_PAGE_IMAGES[p.key],
 }));
 
 export function getDarkPage(key) {

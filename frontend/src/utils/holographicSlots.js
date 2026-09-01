@@ -51,7 +51,7 @@ export function computeStageGeometry(stageWidth, stageHeight) {
   const innerW = Math.max(340, stageWidth - SAFE_INSET * 2);
   const innerH = Math.max(240, stageHeight - SAFE_INSET * 2);
 
-  const centerW = Math.min(620, Math.max(460, innerW * 0.42));
+  const centerW = Math.min(620, Math.max(480, innerW * 0.42));
   const centerH = Math.min(390, Math.max(280, Math.min(centerW * 0.62, innerH * 0.86)));
   const farScale = SLOT_TABLE[0].scale; // 0.64
   const farW = centerW * farScale;

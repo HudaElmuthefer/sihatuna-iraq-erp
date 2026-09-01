@@ -29,6 +29,18 @@ const LOCKED_DISTANCE = 90;
 const FRONT_Z_PX = FORWARD_BASE + 34;
 const PERSP_FACTOR = (STAGE_PERSPECTIVE - FRONT_Z_PX) / STAGE_PERSPECTIVE;
 
+// عرض الصورة المقعّرة حسب البُعد عن المختارة — بند صريح (Part 13/14): ثلاث
+// حزم مستهدَفة على 1366×768 (مركزية 480-620، قريبة 300-390، بعيدة
+// 220-300)، مُعايَرة كنِسَب من centerW المستجيب أصلاً (geometry.centerW —
+// نفس الحساب المسؤول عن حدود المسرح الآمنة) بدل قيم px ثابتة، حتى تبقى
+// ضمن المدى المطلوب على 1440×900/1920×1080 أيضاً. استيفاء مستمر (لا قفزة
+// بين الحزم) عبر absRel نفسه — يضمن حركة سلسة أثناء دوران الحلقة.
+function curvedImageWidth(absRel, centerW) {
+  const t = Math.min(2, absRel);
+  const factor = t <= 1 ? 1 + (0.62 - 1) * t : 0.62 + (0.44 - 0.62) * (t - 1);
+  return Math.round(centerW * factor);
+}
+
 export default function HolographicPagePanel({
   page, rel, geometry, isFront, isOpening, isDragCandidate,
   onSelect, onOpen, dropZoneRef, lang, tetherApi, stageRef, interactionModeRef, cancelPageDragRef,
@@ -80,9 +92,15 @@ export default function HolographicPagePanel({
 
   const label = lang === 'ar' ? page.label : (page.labelEn || page.label);
   const PreviewComponent = page.PreviewComponent;
+  const usingImage = !!page.curvedImage;
 
-  const outerScale = px.scale * (isFront ? FRONT_SCALE : 1);
+  // بند صريح (Part 15/16): فقط translate/scale/rotateY/opacity على كامل
+  // الـasset — لا تشويه. بوضع الصورة، الحجم تُحدِّده curvedImageWidth (عرض
+  // مباشر) لا px.scale (كان سيُضاعِف التصغير مرتين لو استُخدما معاً)؛
+  // FRONT_SCALE (نبضة 3% بسيطة) يبقى مشتركاً بين الوضعين.
+  const outerScale = usingImage ? (isFront ? FRONT_SCALE : 1) : px.scale * (isFront ? FRONT_SCALE : 1);
   const outerTransform = `translate(-50%, -50%) translateX(${px.xPx}px) translateY(${px.yPx}px) translateZ(${px.zPx}px) rotateY(${px.rotY}deg) scale(${outerScale})`;
+  const curvedW = usingImage ? curvedImageWidth(absRel, geometry.centerW) : null;
 
   // نقطة إمساك الحبل — أقرب لأيقونة/عقدة الطاقة أعلى-يسار اللوحة (بند 22:
   // "if pointerdown happened on panel: laser starts from the exact visual
@@ -212,14 +230,15 @@ export default function HolographicPagePanel({
       ref={panelRef}
       className={[
         'hpp',
+        usingImage ? 'hpp-image-mode' : '',
         isFront ? 'hpp-front' : '',
         isOpening ? 'hpp-opening' : '',
         isDragCandidate ? 'hpp-draggable' : '',
         snapFlash ? 'hpp-snap-flash' : '',
       ].filter(Boolean).join(' ')}
       style={{
-        width: px.w,
-        height: px.h,
+        width: usingImage ? curvedW : px.w,
+        height: usingImage ? 'auto' : px.h,
         transform: outerTransform,
         opacity: isOpening ? 1 : opacity,
         zIndex: centerDrag ? 2000 : (isFront ? 999 : zIndex),
@@ -238,22 +257,45 @@ export default function HolographicPagePanel({
       <div
         className={[
           'hpp-drag-layer',
+          usingImage ? 'hpp-drag-layer-image' : '',
           centerDrag ? 'hpp-drag-active' : '',
           centerDrag && proximity === 'near' ? 'hpp-drag-near' : '',
           centerDrag && proximity === 'locked' ? 'hpp-drag-locked' : '',
         ].filter(Boolean).join(' ')}
         style={{ transform: dragLayerTransform }}
       >
-        <div ref={surfaceRef} className="hpp-surface" onMouseMove={handleMouseMove}>
-          <span className="hpp-wing hpp-wing-left" aria-hidden="true" />
-          <span className="hpp-wing hpp-wing-right" aria-hidden="true" />
-          <span className="hpp-edge-top" aria-hidden="true" />
-          <span className="hpp-edge-bottom" aria-hidden="true" />
-          <span className="hpp-reflection" aria-hidden="true" />
-          <span className="hpp-pointer-glow" aria-hidden="true" />
-          <span className="hpp-icon-node" aria-hidden="true" />
-          <PreviewComponent page={page} lang={lang} />
-        </div>
+        {usingImage ? (
+          // بند صريح — Part 9/10/11/25: الصورة نفسها هي التصميم الكامل. لا
+          // بطاقة خلفية، لا حد، لا ظل صندوق، لا محتوى قديم خلفها — عنصر
+          // <img> وحيد بخلفية الحاوية شفافة تماماً، توهّج خارجي فقط عبر
+          // drop-shadow (لا يُغيّر ألوان الصورة نفسها، بند 15).
+          <img
+            ref={surfaceRef}
+            src={page.curvedImage}
+            alt={label}
+            className="hpp-curved-img"
+            draggable={false}
+          />
+        ) : process.env.NODE_ENV !== 'production' ? (
+          // بند صريح (Part 22) — بديل تطوير بسيط جداً فقط: لا التصميم القديم.
+          // غائب تماماً بأي production build (يُستبدَل بالفرع التالي).
+          <div ref={surfaceRef} className="hpp-dev-missing-surface">
+            <span className="hpp-dev-missing-icon">{page.icon}</span>
+            <span className="hpp-dev-missing-label">{label}</span>
+            <span className="hpp-dev-missing-tag">CURVED ASSET NEEDED</span>
+          </div>
+        ) : (
+          <div ref={surfaceRef} className="hpp-surface" onMouseMove={handleMouseMove}>
+            <span className="hpp-wing hpp-wing-left" aria-hidden="true" />
+            <span className="hpp-wing hpp-wing-right" aria-hidden="true" />
+            <span className="hpp-edge-top" aria-hidden="true" />
+            <span className="hpp-edge-bottom" aria-hidden="true" />
+            <span className="hpp-reflection" aria-hidden="true" />
+            <span className="hpp-pointer-glow" aria-hidden="true" />
+            <span className="hpp-icon-node" aria-hidden="true" />
+            <PreviewComponent page={page} lang={lang} />
+          </div>
+        )}
       </div>
     </div>
   );

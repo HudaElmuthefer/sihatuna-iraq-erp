@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { playSnap, playOpen } from '../utils/holographicSound';
+import { playSnap, playOpen, playTick, startDragSound, updateDragSound, stopDragSound } from '../utils/holographicSound';
 
 // هندسة الحلقة الفعلية (x/zDepth/rotateY لكل لوحة) محسوبة بالكامل بـ
 // HolographicPageRing.js/HolographicPagePanel.js من `continuousPosition` هنا
@@ -39,13 +39,14 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
     setContinuousPosition(v);
   }, []);
 
-  const animateTo = useCallback((target, { onDone } = {}) => {
+  const animateTo = useCallback((target, { onDone, forceSnapSound = false } = {}) => {
     cancelTween();
     const from = posRef.current;
     const clamped = clampIndex(target);
     if (prefersReducedMotion()) {
       setPos(clamped);
       setSelectedIndex(Math.round(clamped));
+      if (forceSnapSound || Math.round(clamped) !== Math.round(from)) playSnap();
       onDone?.();
       return;
     }
@@ -59,11 +60,13 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
       } else {
         tweenRef.current = null;
         const settled = Math.round(clamped);
-        // نغمة نقرة مغناطيسية ناعمة — فقط عند استقرار حقيقي على فهرس مختلف
-        // (بند صريح: صوت واحد عند الالتقاط، لا عند كل حركة/إطار). مقارنة مع
-        // posRef.current (القيمة قبل هذا التحديث) لا مع selectedIndex نفسه،
-        // لأن الأخير قد لا يزال يحمل القيمة القديمة بنفس اللحظة.
-        if (settled !== Math.round(from)) playSnap();
+        // نغمة نقرة مغناطيسية ناعمة عند الاستقرار. forceSnapSound (سحب
+        // الحلقة تحديداً — بند صريح: صوت التقاط واحد دائماً بعد رفع
+        // المؤشر، بصرف النظر عمّا إذا كان نفس الفهرس المُعبَر أثناء السحب
+        // نفسه عبر نقرات playTick المنفصلة) يتجاوز شرط "فهرس مختلف" العادي
+        // المستخدَم لباقي طرق التنقّل (عجلة/لوحة مفاتيح/نقر) كي لا تتكرر
+        // النغمة بلا داعٍ لموضع لم يتغيّر فعلياً هناك.
+        if (forceSnapSound || settled !== Math.round(from)) playSnap();
         setSelectedIndex(settled);
         onDone?.();
       }
@@ -102,21 +105,52 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
     if (e.button !== undefined && e.button !== 0) return;
     cancelTween();
     dragStartRef.current = { x: e.clientX, pos: posRef.current };
+    lastMoveRef.current = null;
+    lastCrossedRef.current = Math.round(posRef.current);
   }, []);
+
+  // سرعة لحظية (px/ms) بين آخر إطارين — لا من بداية السحب كاملة (ذاك متوسط،
+  // لا سرعة "حالية") — تُغذّي صوت السحب المستمر (بند صريح: السرعة تتحكّم
+  // بالحدّة/السطوع، لا الصوت نفسه ثنائي التشغيل).
+  const lastMoveRef = useRef(null);
+  // آخر فهرس صحيح "عُبِر" أثناء السحب — نقرة واحدة فقط لكل تغيّر (بند صريح).
+  const lastCrossedRef = useRef(initialIndex);
 
   const onPointerMoveDrag = useCallback((e, stageWidth, visibleRange = 3) => {
     setIsDragging(true);
+    // startDragSound() مُؤمَّنة داخلياً (لا تُعيد التشغيل لو نشطة أصلاً) —
+    // استدعاؤها هنا (لا بـonPointerDown) يضمن بدء الصوت فقط عند حركة سحب
+    // حقيقية مؤكَّدة (HolographicPageRing.js لا يستدعي هذه الدالة أصلاً إلا
+    // بعد تجاوز عتبة 6px)، لا عند كل نقرة بسيطة.
+    startDragSound();
     // px إلى "وحدات فهرس": عرض مرجعي — سحب كامل عرض المسرح يساوي تقريباً
     // نصف عدد اللوحات المرئية (إحساس طبيعي، لا سريع جداً ولا بطيء جداً).
     const pxPerIndex = Math.max(40, stageWidth / (visibleRange * 0.9));
     const deltaPx = e.clientX - dragStartRef.current.x;
     const deltaIndex = -deltaPx / pxPerIndex; // سحب لليسار (deltaPx سالب) يقدّم للفهرس التالي
-    setPos(clampIndex(dragStartRef.current.pos + deltaIndex));
+    const nextPos = clampIndex(dragStartRef.current.pos + deltaIndex);
+    setPos(nextPos);
+    const roundedNow = Math.round(nextPos);
+    if (roundedNow !== lastCrossedRef.current) {
+      lastCrossedRef.current = roundedNow;
+      playTick();
+    }
+
+    const now = performance.now();
+    if (lastMoveRef.current) {
+      const dt = Math.max(1, now - lastMoveRef.current.t);
+      const dx = Math.abs(e.clientX - lastMoveRef.current.x);
+      const speed = dx / dt; // px/ms
+      updateDragSound(Math.min(1, speed / 2.2)); // ~2.2px/ms يُعتبَر سريعاً جداً — تطبيع مقصوص
+    }
+    lastMoveRef.current = { x: e.clientX, t: now };
   }, [clampIndex, setPos]);
 
   const onPointerUpDrag = useCallback(() => {
     setIsDragging(false);
-    animateTo(Math.round(posRef.current));
+    stopDragSound();
+    lastMoveRef.current = null;
+    animateTo(Math.round(posRef.current), { forceSnapSound: true });
   }, [animateTo]);
 
   // ── عجلة الفأرة ──────────────────────────────────────────────────────────

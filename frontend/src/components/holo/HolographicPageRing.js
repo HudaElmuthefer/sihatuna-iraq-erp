@@ -4,16 +4,18 @@ import useHolographicRing from '../../hooks/useHolographicRing';
 import HolographicPagePanel from './HolographicPagePanel';
 
 function useResponsiveGeometry(stageRef) {
-  const [geo, setGeo] = useState({ radiusX: 420, radiusY: 160, visibleRange: 2 });
+  const [geo, setGeo] = useState({ radiusX: 480, radiusY: 160, visibleRange: 1 });
   useEffect(() => {
     const compute = () => {
       const w = stageRef.current?.clientWidth || window.innerWidth;
-      // بند صريح بالمواصفة: نطاقات radiusX/radiusY تقريبية، تُضبَط فعلياً
-      // حسب المساحة المتاحة — لا أرقام نهائية. عدد اللوحات المرئية أيضاً
-      // يزداد مع اتساع الشاشة (5 على شاشات ضيقة، حتى 7 على شاشات كبيرة).
-      const radiusX = Math.min(680, Math.max(400, w * 0.46));
-      const radiusY = Math.min(210, Math.max(130, w * 0.13));
-      const visibleRange = w >= 1600 ? 3 : 2;
+      // بند صريح بالمواصفة (أولوية القراءة > أولوية العدد): اللوحات أكبر
+      // بكثير الآن (520-640px مركزية)، فنصف القطر الأفقي يحتاج مساحة أوسع
+      // نسبياً لتفادي التراكب. 3 لوحات فقط ظاهرة بوضوح تام على معظم
+      // الشاشات (مركزية + قريبة كل جانب) — لوحة رابعة/خامسة أصغر وأخفت فقط
+      // على شاشات واسعة جداً (تلميح "يوجد المزيد"، لا للقراءة الكاملة).
+      const radiusX = Math.min(820, Math.max(500, w * 0.62));
+      const radiusY = Math.min(220, Math.max(140, w * 0.14));
+      const visibleRange = w >= 1850 ? 2 : 1;
       setGeo({ radiusX, radiusY, visibleRange });
     };
     compute();

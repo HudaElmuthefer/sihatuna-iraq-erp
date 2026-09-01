@@ -6,7 +6,8 @@ import { ALL_PAGES } from '../contexts/AppContext';
 import {
   DashboardPreview, PatientsPreview, DoctorsPreview, AppointmentsPreview,
   DepartmentsPreview, InventoryPreview, ProcurementPreview, ProjectsPreview,
-  DocumentsPreview, ReportsPreview, GenericPreview,
+  DocumentsPreview, ReportsPreview, VaccinationsPreview, LaboratoryPreview,
+  HRPreview, AccountsPreview, GenericPreview,
 } from '../components/holo/HolographicPagePreview';
 
 const PREVIEW_BY_KEY = {
@@ -20,6 +21,11 @@ const PREVIEW_BY_KEY = {
   projects: ProjectsPreview,
   documents: DocumentsPreview,
   'smart-reports': ReportsPreview,
+  vaccinations: VaccinationsPreview,
+  laboratory: LaboratoryPreview,
+  results: LaboratoryPreview,
+  hr: HRPreview,
+  accounts: AccountsPreview,
 };
 
 // كل عنصر بـALL_PAGES (AppContext.js) يقابله هنا نفس key/label/icon/path —

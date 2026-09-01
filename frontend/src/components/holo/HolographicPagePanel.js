@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 const CLICK_MOVE_THRESHOLD = 6; // px — أقل من هذا يُحتسب نقراً، أكثر يُحتسب سحباً
 
@@ -10,7 +10,7 @@ const CLICK_MOVE_THRESHOLD = 6; // px — أقل من هذا يُحتسب نقر
 // getBoundingClientRect (لا تخمين) أظهر أن 26° ينتج تراكباً حقيقياً بنسبة
 // ~40-65% بين اللوحات المتجاورة على 1366px. 35° مع radiusX أكبر يقارب
 // الحد الأقصى المسموح بالمواصفة (5-12% تراكب) عند هذا العرض تحديداً.
-const ANGLE_STEP = 35; // درجة — يُستخدم فقط لحساب x/zDepth (الانتشار الأفقي/العمق)
+const ANGLE_STEP = 38; // درجة — يُستخدم فقط لحساب x/zDepth (الانتشار الأفقي/العمق)
 const ROTATION_STEP = 6; // درجة — دوران وجه اللوحة نفسه (قريب = خفيف جداً، بعيد = معتدل)
 const MAX_ROTATION = 20;
 // بند حرج جداً: أي translateZ سالب (لوحة "متراجعة خلف" مستوى z=0 الضمني
@@ -29,10 +29,15 @@ const FORWARD_BASE = 130; // px — يضمن translateZ > 0 دائماً حتى 
 // عرض/ارتفاع كل لوحة يُشتقّان صراحةً من بُعدها عن المختارة (t = |rel|/range)
 // بدل الاعتماد على transform:scale لتغيير الحجم — عرض صريح لكل مستوى يمنح
 // تحكماً مباشراً بالتباعد الفعلي بين اللوحات المتجاورة (تفادي التراكب).
+// بند صريح بالمواصفة: أولوية القراءة تفوق أولوية العدد — الشاشة المركزية
+// كبيرة وغنيّة فعلياً (520-640px)، الجانبية القريبة 300-380px، ولا مستوى
+// "بعيد" مصغَّر جداً بعد الآن (كان يبدو كبطاقة تصف الصفحة، لا تطبيقاً
+// مصغَّراً حقيقياً) — القريبتان فقط تُعرَضان بوضوح تام (بند 49: قلّل العدد
+// قبل قراءة). VISIBLE_RANGE بالأسفل (HolographicPageRing.js) مضبوط الآن
+// على 1 افتراضياً (3 لوحات: مركزية + قريبة كل جانب) تحديداً لهذا السبب.
 function sizeForTier(absRel) {
-  if (absRel <= 0.5) return { w: 'clamp(320px, 28vw, 420px)', h: 'clamp(210px, 18vw, 270px)' };
-  if (absRel <= 1.5) return { w: 'clamp(190px, 17vw, 235px)', h: 'clamp(170px, 14vw, 210px)' };
-  return { w: 'clamp(150px, 12vw, 185px)', h: 'clamp(140px, 11vw, 170px)' };
+  if (absRel <= 0.5) return { w: 'clamp(460px, 42vw, 620px)', h: 'clamp(300px, 26vw, 390px)' };
+  return { w: 'clamp(280px, 26vw, 360px)', h: 'clamp(210px, 19vw, 260px)' };
 }
 
 /*
@@ -51,6 +56,41 @@ export default function HolographicPagePanel({
   const pointerStart = useRef(null);
   const [centerDrag, setCenterDrag] = useState(null); // {x,y} أثناء سحب اللوحة الأمامية نحو المركز
   const [magnetActive, setMagnetActive] = useState(false);
+  const [snapFlash, setSnapFlash] = useState(false);
+  const rafPending = useRef(false);
+  const wasFrontRef = useRef(isFront);
+
+  // انعكاس زجاجي يتبع المؤشر (بند صريح: لا React re-render لكل بكسل) —
+  // كتابة مباشرة على متغيّري CSS بعقدة DOM نفسها، مُهذَّبة بـ
+  // requestAnimationFrame بدل تحديث فوري لكل حدث mousemove.
+  const handleMouseMove = (e) => {
+    if (rafPending.current || !panelRef.current) return;
+    rafPending.current = true;
+    const clientX = e.clientX, clientY = e.clientY;
+    requestAnimationFrame(() => {
+      rafPending.current = false;
+      const el = panelRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const px = ((clientX - r.left) / r.width) * 100;
+      const py = ((clientY - r.top) / r.height) * 100;
+      el.style.setProperty('--pointer-x', `${px}%`);
+      el.style.setProperty('--pointer-y', `${py}%`);
+    });
+  };
+
+  // ومضة استقرار قصيرة (Snap Visual) — فقط عند تحوّل هذه اللوحة تحديداً إلى
+  // "أمامية" حديثاً (لا عند كل إعادة رسم)، ثم تُزال الصنف تلقائياً.
+  useEffect(() => {
+    if (isFront && !wasFrontRef.current) {
+      setSnapFlash(true);
+      const t = window.setTimeout(() => setSnapFlash(false), 340);
+      wasFrontRef.current = true;
+      return () => window.clearTimeout(t);
+    }
+    wasFrontRef.current = isFront;
+    return undefined;
+  }, [isFront]);
 
   const absRel = Math.abs(rel);
   const angleRad = (rel * ANGLE_STEP) * Math.PI / 180;
@@ -147,7 +187,9 @@ export default function HolographicPagePanel({
         isOpening ? 'hpp-opening' : '',
         magnetActive ? 'hpp-magnet' : '',
         isDragCandidate ? 'hpp-draggable' : '',
+        snapFlash ? 'hpp-snap-flash' : '',
       ].filter(Boolean).join(' ')}
+      onMouseMove={handleMouseMove}
       style={{
         width: w,
         height: h,
@@ -169,6 +211,7 @@ export default function HolographicPagePanel({
       <span className="hpp-edge-top" aria-hidden="true" />
       <span className="hpp-edge-bottom" aria-hidden="true" />
       <span className="hpp-reflection" aria-hidden="true" />
+      <span className="hpp-pointer-glow" aria-hidden="true" />
       <PreviewComponent page={page} lang={lang} />
     </div>
   );

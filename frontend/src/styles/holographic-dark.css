@@ -115,12 +115,13 @@
    العناصر !important) عبر تخصيص أعلى: سلسلة صنفين معاً بدل صنف واحد. */
 [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
   background:
-    linear-gradient(120deg, rgba(var(--gold-accent-rgb), 0.16) 0%, transparent 55%),
+    linear-gradient(120deg, rgba(var(--gold-accent-rgb), 0.34) 0%, rgba(var(--gold-accent-rgb), 0.08) 60%) ,
     linear-gradient(150deg, rgba(28,60,86,0.55) 0%, rgba(8,18,30,0.68) 100%) !important;
-  border: 1px solid rgba(var(--glow-accent-rgb), 0.75) !important;
+  border: 1.5px solid rgb(var(--gold-accent-rgb)) !important;
   box-shadow:
-    inset 0 0 14px rgba(var(--gold-accent-rgb), 0.18),
-    0 0 16px rgba(var(--glow-accent-rgb), 0.35),
+    inset 0 0 18px rgba(var(--gold-accent-rgb), 0.32),
+    0 0 20px rgba(var(--gold-accent-rgb), 0.45),
+    0 0 14px rgba(var(--glow-accent-rgb), 0.3),
     0 6px 18px rgba(0,0,0,0.35) !important;
   transform: translateX(-3px) !important;
 }
@@ -409,29 +410,107 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 }
 
 .hpp-front {
-  border-color: rgba(var(--glow-accent-rgb), 0.85);
+  border-width: 1.5px;
+  border-color: rgba(var(--glow-accent-rgb), 1);
   background: linear-gradient(180deg, rgba(90,150,190,0.48) 0%, rgba(34,72,104,0.55) 45%, rgba(8,18,32,0.76) 100%);
   box-shadow:
     inset 0 1px 0 rgba(210,240,255,0.3),
     inset 0 -18px 34px rgba(0,0,0,0.22),
-    0 0 0 1px rgba(var(--gold-accent-rgb), 0.3),
+    inset 0 0 22px rgba(var(--glow-accent-rgb), 0.16),
+    0 0 0 1px rgba(var(--gold-accent-rgb), 0.4),
     0 26px 55px rgba(0,0,0,0.5),
-    0 0 50px rgba(var(--glow-accent-rgb), 0.4);
+    0 0 34px rgba(var(--glow-accent-rgb), 0.55),
+    0 0 80px rgba(var(--glow-accent-rgb), 0.3);
 }
-/* زاوية ذهبية-شمبانيا هيكلية صغيرة للّوحة المختارة فقط — لمسة، لا امتلاء. */
+/* زاوية ذهبية-شمبانيا هيكلية صغيرة للّوحة المختارة — أعلى-يمين، ومقابلها
+   أسفل-يسار أصغر (تفاصيل تقنية غير متماثلة، بند صريح: لا تجعل كل الزوايا
+   متطابقة). */
 .hpp-front::before {
   content: '';
   position: absolute;
   top: 10px;
   inset-inline-end: 10px;
-  width: 16px;
-  height: 16px;
-  border-inline-end: 2px solid rgb(var(--gold-accent-rgb));
-  border-top: 2px solid rgb(var(--gold-accent-rgb));
-  border-radius: 0 6px 0 0;
-  opacity: 0.85;
+  width: 24px;
+  height: 24px;
+  border-inline-end: 2.5px solid rgb(var(--gold-accent-rgb));
+  border-top: 2.5px solid rgb(var(--gold-accent-rgb));
+  border-radius: 0 8px 0 0;
+  filter: drop-shadow(0 0 6px rgba(var(--gold-accent-rgb), 0.7));
+  opacity: 0.95;
   pointer-events: none;
 }
+.hpp-front::after {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  inset-inline-start: 10px;
+  width: 10px;
+  height: 10px;
+  border-inline-start: 1.5px solid rgba(var(--glow-accent-rgb), 0.6);
+  border-bottom: 1.5px solid rgba(var(--glow-accent-rgb), 0.6);
+  border-radius: 0 0 0 4px;
+  pointer-events: none;
+}
+/* زوايا سماوية رفيعة صغيرة للّوحات القريبة (غير المختارة) — تفاصيل هيكلية
+   أخف، لا ذهبية (اللون الذهبي محفوظ للمختارة فقط). */
+.hpr-scene .hpp:not(.hpp-front)::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  width: 10px;
+  height: 10px;
+  border-inline-end: 1.5px solid rgba(var(--glow-accent-rgb), 0.4);
+  border-top: 1.5px solid rgba(var(--glow-accent-rgb), 0.4);
+  pointer-events: none;
+}
+
+/* تفاعل مرور المؤشر — إضاءة إضافية بلا أي إزاحة تخطيط (بند صريح). */
+.hpr-scene .hpp:hover {
+  border-color: rgba(var(--glow-accent-rgb), 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(200,235,255,0.24),
+    0 16px 34px rgba(0,0,0,0.4),
+    0 0 26px rgba(var(--glow-accent-rgb), 0.24);
+}
+
+/* انعكاس زجاجي يتبع المؤشر — --pointer-x/--pointer-y تُحدَّث عبر
+   requestAnimationFrame من HolographicPagePanel.js (لا React re-render لكل
+   بكسل، راجع التعليق هناك). قيمتان افتراضيتان (50%) قبل أي حركة فعلية. */
+.hpp-pointer-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+    rgba(255,255,255,0.16),
+    transparent 42%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.hpr-scene .hpp:hover .hpp-pointer-glow { opacity: 1; }
+
+/* اللوحة الأمامية أثناء سحب الحلقة نفسها (وليس سحبها هي للمركز) — طاقة
+   إضافية مرئية بلا أي حركة loop مستمرة (بند صريح). */
+.hpr-stage.hpr-dragging .hpp-front {
+  border-color: rgba(var(--glow-accent-rgb), 1);
+  box-shadow:
+    inset 0 1px 0 rgba(220,245,255,0.4),
+    0 0 0 1px rgba(var(--gold-accent-rgb), 0.4),
+    0 30px 60px rgba(0,0,0,0.5),
+    0 0 70px rgba(var(--glow-accent-rgb), 0.55);
+}
+
+/* ومضة استقرار قصيرة — تُضاف/تُزال لحظياً عبر JS عندما تصبح لوحة أمامية
+   حديثاً (بند "Snap Visual": نبضة حافة + انعكاس مركزي، ثم استقرار فوري). */
+@keyframes hppSnapPulse {
+  0% { box-shadow: inset 0 1px 0 rgba(220,245,255,0.3), 0 0 0 1px rgba(var(--gold-accent-rgb), 0.3), 0 26px 55px rgba(0,0,0,0.5), 0 0 90px rgba(var(--glow-accent-rgb), 0.85); }
+  100% { box-shadow: inset 0 1px 0 rgba(210,240,255,0.3), inset 0 -18px 34px rgba(0,0,0,0.22), 0 0 0 1px rgba(var(--gold-accent-rgb), 0.3), 0 26px 55px rgba(0,0,0,0.5), 0 0 50px rgba(var(--glow-accent-rgb), 0.4); }
+}
+.hpp-front.hpp-snap-flash { animation: hppSnapPulse 0.32s ease-out; }
+@media (prefers-reduced-motion: reduce) { .hpp-front.hpp-snap-flash { animation: none; } }
 
 .hpp-draggable { cursor: grab; }
 .hpp-draggable:active { cursor: grabbing; }
@@ -469,47 +548,109 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 /* ══════════════════════════════════════════════════════════════════════
    HolographicPagePreview — وحدات المعاينة المشتركة داخل كل لوحة
    ══════════════════════════════════════════════════════════════════════ */
-.hpv-header { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 2px; }
-.hpv-icon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 6px rgba(var(--glow-accent-rgb), 0.5)); flex-shrink: 0; }
-.hpv-title { font-size: 13px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hpv-header { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 6px; padding-bottom: 9px; border-bottom: 1px solid rgba(var(--glow-accent-rgb), 0.16); }
+.hpv-icon { font-size: 23px; line-height: 1; filter: drop-shadow(0 0 6px rgba(var(--glow-accent-rgb), 0.5)); flex-shrink: 0; }
+.hpv-title { font-size: 15.5px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.01em; }
 
-.hpv-body { width: 100%; flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
-.hpv-footer { width: 100%; font-size: 10px; color: var(--dash-text-secondary); }
+.hpv-body { width: 100%; flex: 1; display: flex; flex-direction: column; gap: 11px; min-height: 0; overflow: hidden; justify-content: center; }
 
 .hpv-metric { text-align: center; }
-.hpv-metric-value { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.1; text-shadow: 0 0 12px rgba(var(--glow-accent-rgb), 0.55); }
-.hpv-metric-label { font-size: 10px; color: rgba(220, 240, 255, 0.7); margin-top: 1px; }
+.hpv-metric-value { font-size: 27px; font-weight: 800; color: #fff; line-height: 1.1; text-shadow: 0 0 12px rgba(var(--glow-accent-rgb), 0.55); }
+.hpv-metric-label { font-size: 10.5px; color: rgba(220, 240, 255, 0.65); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
 
-.hpv-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; align-content: center; }
+.hpv-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; align-content: center; }
 
-.hpv-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 11px; overflow: hidden; }
-.hpv-row-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: start; }
-.hpv-row-sub { font-size: 9px; color: var(--dash-text-secondary); flex-shrink: 0; }
-.hpv-row-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.hpv-row-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: 700; }
+/* ── تركيبة عامة لصف عناصر مختلطة (مقياس + قيمة + حالة) — تُستخدَم بمعظم
+   المعاينات بدل تكرار flex يدوياً بكل مكان. ─────────────────────────────── */
+.hpv-dash-row { display: flex; align-items: center; justify-content: space-around; gap: 14px; width: 100%; }
+.hpv-dash-alert-text { font-size: 11.5px; color: rgba(220, 240, 255, 0.75); }
+.hpv-now-badge { font-size: 10px; font-weight: 700; color: rgb(var(--gold-accent-rgb)); padding: 2px 8px; border: 1px solid rgba(var(--gold-accent-rgb), 0.4); border-radius: 10px; }
 
-.hpv-tl-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11px; }
-.hpv-tl-time { color: rgb(var(--gold-accent-rgb)); flex-shrink: 0; width: 34px; font-weight: 600; }
-.hpv-tl-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* لوحة التحكم */
+.hpv-dashboard { gap: 14px; }
+.hpv-dash-core { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hpv-dash-core-label { font-size: 9.5px; color: var(--dash-text-secondary); text-transform: uppercase; }
+.hpv-dash-trend { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hpv-dash-trend-label { font-size: 10px; color: var(--dash-text-secondary); }
 
-.hpv-chip-grid { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-content: center; }
-.hpv-chip { width: 26px; height: 26px; border-radius: 7px; border: 1px solid; display: flex; align-items: center; justify-content: center; font-size: 13px; background: rgba(255,255,255,0.05); }
+/* المواعيد */
+.hpv-appt-list { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.hpv-appt-item { display: flex; align-items: center; gap: 8px; font-size: 10.5px; }
+.hpv-appt-time { color: rgb(var(--gold-accent-rgb)); font-weight: 700; width: 34px; flex-shrink: 0; }
+.hpv-appt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.hpv-alert-badge { align-self: center; font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(248,113,113,0.16); color: #fca5a5; }
+/* الأقسام / الموارد البشرية — شبكة عُقد متصلة */
+.hpv-dept-network, .hpv-hr-network { flex-direction: row !important; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; }
+.hpv-dept-node {
+  width: 30px; height: 30px; border-radius: 9px; border: 1px solid;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  background: rgba(255,255,255,0.05); flex-shrink: 0;
+}
+.hpv-hr-node { border-color: rgba(var(--glow-accent-rgb), 0.4); }
 
-.hpv-progress-track { width: 100%; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
-.hpv-progress-fill { height: 100%; background: linear-gradient(90deg, rgb(var(--glow-accent-rgb)), rgb(var(--gold-accent-rgb))); }
-.hpv-progress-label { font-size: 10px; color: var(--dash-text-secondary); text-align: center; margin-top: 2px; }
+/* الأطباء */
+.hpv-profile-row { display: flex; gap: 8px; justify-content: center; width: 100%; }
 
-.hpv-chart { flex-direction: row !important; align-items: flex-end; justify-content: center; gap: 6px; padding: 4px 0; }
-.hpv-chart-col { width: 14px; height: 100%; display: flex; align-items: flex-end; }
-.hpv-chart-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 6px; }
+/* التطعيمات */
+.hpv-dose-row { display: flex; gap: 6px; justify-content: center; }
+.hpv-dose-label { font-size: 9px; color: var(--dash-text-secondary); text-align: center; }
 
-.hpv-generic { align-items: center; justify-content: center; gap: 8px; }
-.hpv-generic-bar { display: block; height: 3px; border-radius: 2px; background: rgba(var(--glow-accent-rgb), 0.28); }
-.hpv-generic-bar-1 { width: 75%; }
-.hpv-generic-bar-2 { width: 55%; }
-.hpv-generic-bar-3 { width: 40%; }
+/* المعاينة الهيكلية العامة (بلا بيانات) */
+.hpv-generic { align-items: center; justify-content: center; gap: 6px; position: relative; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   HoloHud — مكتبة عناصر HUD المشتركة (HoloHud.js)
+   ══════════════════════════════════════════════════════════════════════ */
+.holo-waveform path { filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.5)); }
+@keyframes holoWaveScroll { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -140; } }
+.holo-waveform-live path { stroke-dasharray: 4 2; animation: holoWaveScroll 2.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .holo-waveform-live path { animation: none; } }
+
+.holo-gauge { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.holo-gauge-label { position: absolute; font-size: 9px; font-weight: 700; color: #fff; }
+.holo-gauge svg circle:last-child { transition: stroke-dashoffset 0.5s ease; filter: drop-shadow(0 0 3px currentColor); }
+
+.holo-status-ring {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1.5px solid; flex-shrink: 0;
+}
+.holo-status-dot { width: 45%; height: 45%; border-radius: 50%; }
+
+.holo-node { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 0; }
+.holo-node-avatar { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; font-weight: 700; }
+.holo-node-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.holo-node-title { font-size: 10.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.holo-node-sub { font-size: 9px; color: var(--dash-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.holo-timeline { position: relative; width: 100%; height: 22px; margin: 2px 0; }
+.holo-timeline-rail { position: absolute; top: 4px; inset-inline: 4px; height: 1px; background: rgba(var(--glow-accent-rgb), 0.3); }
+.holo-timeline-node { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.holo-timeline-dot { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--gold-accent-rgb)); box-shadow: 0 0 5px rgba(var(--gold-accent-rgb), 0.7); }
+.holo-timeline-time { font-size: 8px; color: var(--dash-text-secondary); white-space: nowrap; }
+
+.holo-profile { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 60px; position: relative; }
+.holo-profile-avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; border: 1px solid rgba(255,255,255,0.25); }
+.holo-profile-name { font-size: 9.5px; font-weight: 600; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.holo-profile-role { font-size: 8px; color: var(--dash-text-secondary); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.holo-profile-duty { position: absolute; top: 0; inset-inline-end: 14px; width: 7px; height: 7px; border-radius: 50%; background: #64748b; }
+.holo-profile-duty-on { background: #4ade80; box-shadow: 0 0 5px #4ade80; }
+
+.holo-chart { flex-direction: row !important; align-items: flex-end; justify-content: center; gap: 5px; height: 34px; width: 100%; }
+.holo-chart-col { width: 10px; height: 100%; display: flex; align-items: flex-end; }
+.holo-chart-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 6px; filter: drop-shadow(0 0 3px rgba(var(--glow-accent-rgb), 0.4)); }
+
+.holo-connector { display: inline-block; width: 12px; height: 1px; background: linear-gradient(90deg, rgba(var(--glow-accent-rgb), 0.5), rgba(var(--glow-accent-rgb), 0.15)); flex-shrink: 0; }
+.holo-connector-v { width: 1px; height: 12px; }
+
+.holo-scanner {
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(var(--glow-accent-rgb), 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--glow-accent-rgb), 0.05) 1px, transparent 1px);
+  background-size: 10px 10px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent 80%);
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    CentralHolographicWorkspace — إطار الصفحات الأخرى (غير '/')

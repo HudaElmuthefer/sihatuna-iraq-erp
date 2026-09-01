@@ -26,7 +26,8 @@ import '../styles/holographic-dark.css';
 // .mobile-sidebar (index.css)، فبقيت كما هي تماماً بعد حذف الصورة. الملف
 // نفسه لم يُحذف من القرص (frontend/src/assets/sidebar/) تحسباً لحاجة لاحقة.
 import { SIDEBAR_SUB_TABS } from '../config/sidebarSubTabs';
-import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell } from 'react-icons/fa';
+import { FaHome, FaArrowLeft, FaSun, FaMoon, FaBell, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
+import useHolographicSound from '../hooks/useHolographicSound';
 import {
   FaUsers, FaTags, FaUserMd, FaCalendarAlt, FaBuilding, FaSyringe, FaBed, FaBaby,
   FaRunning, FaTicketAlt, FaPills, FaBalanceScale, FaBan, FaHospital, FaBrain,
@@ -86,6 +87,7 @@ const GROUP_LABELS = {
 export default function Layout() {
   const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
   const isDark = theme === 'dark';
+  const { muted: soundMuted, toggleMute: toggleSound } = useHolographicSound();
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -598,6 +600,20 @@ export default function Layout() {
                 <FaMoon />
               </button>
             </div>
+            {/* كتم/تشغيل الأصوات الهولوغرافية — الوضع الداكن فقط (بند صريح
+               بالمواصفة: هذه الأصوات مخصَّصة لواجهة الحلقة الداكنة). */}
+            {isDark && (
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="header-icon-btn-dark"
+                style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}
+                title={soundMuted ? (lang === 'ar' ? 'تشغيل الأصوات' : 'Unmute sounds') : (lang === 'ar' ? 'كتم الأصوات' : 'Mute sounds')}
+                aria-pressed={soundMuted}
+              >
+                {soundMuted ? <FaVolumeMute /> : <FaVolumeUp />}
+              </button>
+            )}
             {/* Lang */}
             <button onClick={toggleLang} className={isDark ? 'header-pill-btn-dark' : 'header-pill-btn-light'} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>
               {lang === 'ar' ? 'EN' : 'AR'}

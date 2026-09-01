@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { playSnap, playOpen } from '../utils/holographicSound';
 
-// هندسة الحلقة: كل صفحة i تقع عند الزاوية (i - continuousPosition) * ANGLE_STEP
-// حول محور Y المشترك (rotateY + translateZ من نفس نقطة الأصل) — نفس تقنية
-// carousel القياسية ثلاثية الأبعاد: rotateY(angle) تُنشئ ضمنياً كِلا مركّبتي
-// الموضع الأفقي والعمق حول نقطة ارتكاز واحدة، فتُنتج قوساً/قطعاً ناقصاً
-// حقيقياً في الفضاء ثلاثي الأبعاد بلا حاجة لحساب x=cos/y=sin يدوياً — وهي
-// بالضبط ما يُنتج "الميل نحو المركز" التلقائي للوحات اليسار/اليمين المطلوب
-// بالمواصفة (كل لوحة تدور حول نفس المحور، فتُواجه المركز بطبيعتها).
-export const ANGLE_STEP = 13; // درجة بين كل لوحتين متجاورتين
-export const VISIBLE_RANGE = 10; // لا يُصيَّر أي عنصر أبعد من هذا (أداء + يطابق قوس 240-300° تقريباً)
+// هندسة الحلقة الفعلية (x/zDepth/rotateY لكل لوحة) محسوبة بالكامل بـ
+// HolographicPageRing.js/HolographicPagePanel.js من `continuousPosition` هنا
+// — هذا الملف مسؤول فقط عن حالة الدوران/السحب/الالتقاط، لا عن الهندسة
+// البصرية نفسها.
 const SNAP_MS = 260;
 const OPEN_MS = 420;
 
@@ -62,7 +58,13 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
         tweenRef.current = requestAnimationFrame(step);
       } else {
         tweenRef.current = null;
-        setSelectedIndex(Math.round(clamped));
+        const settled = Math.round(clamped);
+        // نغمة نقرة مغناطيسية ناعمة — فقط عند استقرار حقيقي على فهرس مختلف
+        // (بند صريح: صوت واحد عند الالتقاط، لا عند كل حركة/إطار). مقارنة مع
+        // posRef.current (القيمة قبل هذا التحديث) لا مع selectedIndex نفسه،
+        // لأن الأخير قد لا يزال يحمل القيمة القديمة بنفس اللحظة.
+        if (settled !== Math.round(from)) playSnap();
+        setSelectedIndex(settled);
         onDone?.();
       }
     };
@@ -72,6 +74,7 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
   const goTo = useCallback((index) => animateTo(index), [animateTo]);
 
   const triggerOpen = useCallback((index) => {
+    playOpen();
     setOpeningIndex(index);
     const ms = prefersReducedMotion() ? 0 : OPEN_MS;
     window.setTimeout(() => { onOpen?.(index); }, ms);
@@ -89,19 +92,23 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
     }
   }, [animateTo, triggerOpen]);
 
-  // ── سحب الحلقة (Pointer Events + setPointerCapture) ─────────────────────
+  // ── سحب الحلقة (Pointer Events) ──────────────────────────────────────────
+  // ملاحظة معمارية: setPointerCapture لا يُستدعى هنا إطلاقاً — HolographicPageRing.js
+  // هو المسؤول الوحيد عن توقيته (يؤجّله حتى تأكيد حركة سحب فعلية تتجاوز
+  // عتبة صغيرة). استدعاؤه هنا فوراً عند pointerdown كان يخطف كل pointerup
+  // من أي نقرة بسيطة على لوحة غير أمامية بعيداً عن معالجها الخاص — راجع
+  // التعليق المفصَّل بذاك الملف.
   const onPointerDown = useCallback((e) => {
     if (e.button !== undefined && e.button !== 0) return;
     cancelTween();
-    setIsDragging(true);
     dragStartRef.current = { x: e.clientX, pos: posRef.current };
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
   }, []);
 
-  const onPointerMoveDrag = useCallback((e, stageWidth) => {
+  const onPointerMoveDrag = useCallback((e, stageWidth, visibleRange = 3) => {
+    setIsDragging(true);
     // px إلى "وحدات فهرس": عرض مرجعي — سحب كامل عرض المسرح يساوي تقريباً
     // نصف عدد اللوحات المرئية (إحساس طبيعي، لا سريع جداً ولا بطيء جداً).
-    const pxPerIndex = Math.max(40, stageWidth / (VISIBLE_RANGE * 0.9));
+    const pxPerIndex = Math.max(40, stageWidth / (visibleRange * 0.9));
     const deltaPx = e.clientX - dragStartRef.current.x;
     const deltaIndex = -deltaPx / pxPerIndex; // سحب لليسار (deltaPx سالب) يقدّم للفهرس التالي
     setPos(clampIndex(dragStartRef.current.pos + deltaIndex));

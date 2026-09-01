@@ -41,6 +41,14 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
   const tetherApi = useRef(null);
   const stageVelocity = useRef(null);
   const geometry = useResponsiveStageGeometry(stageRef);
+  // آلة حالة تفاعل صريحة مشتركة (بند Part 1/4/8 صراحةً) — 'idle' |
+  // 'ring-rotate' | 'page-drag'. ref لا state: تُقرأ/تُكتَب من معالجات
+  // مؤشر عالية التردد بلا أي إعادة تصيير. الاستبعاد المتبادل بين تدوير
+  // الحلقة والسحب المباشر للوحة مضمون أصلاً بنيوياً (stopPropagation
+  // بـHolographicPagePanel.js عند isFront)؛ هذا المرجع يضيف تحققاً صريحاً
+  // إضافياً + يتيح إلغاء آمن بمفتاح Escape (بند 55) من مستوى المسرح.
+  const interactionModeRef = useRef('idle');
+  const cancelPageDragRef = useRef(null);
 
   const handleOpenByIndex = useCallback((index) => {
     onOpenPage(pages[index]);
@@ -65,6 +73,22 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
     return () => el.removeEventListener('wheel', ring.onWheel);
   }, [ring.onWheel]);
 
+  // بند 55 صراحةً: Escape يجب أن يُلغي سحب صفحة نشطاً بصرف النظر عن تركيز
+  // لوحة المفاتيح — mousedown على لوحة (tabIndex=-1 عمداً) لا يُحرِّك تركيز
+  // المستند فعلياً، فمعالج onKeyDown على .hpr-stage وحده (يعتمد على أن
+  // العنصر يحمل التركيز) قد لا يستقبل الحدث إطلاقاً أثناء سحب بالماوس فقط.
+  // مستمع عالمي على window يضمن عمل Escape بصرف النظر عن التركيز الفعلي.
+  useEffect(() => {
+    const onWindowKeyDown = (e) => {
+      if (e.key === 'Escape' && interactionModeRef.current === 'page-drag' && cancelPageDragRef.current) {
+        e.preventDefault();
+        cancelPageDragRef.current();
+      }
+    };
+    window.addEventListener('keydown', onWindowKeyDown);
+    return () => window.removeEventListener('keydown', onWindowKeyDown);
+  }, []);
+
   // بند 55/56 صراحةً: أثناء "فتح" لوحة (بعد الالتقاط، قبل التنقّل الفعلي)
   // تُجمَّد كل مدخلات تدوير الحلقة (سحب/عجلة/لوحة مفاتيح) — الفهرس المختار
   // لا يجب أن يتغيّر أثناء حركة الانفصال/التكبير البصرية.
@@ -76,6 +100,10 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
   const stageCaptured = useRef(false);
   const handleStagePointerDown = (e) => {
     if (isOpeningRef.current) return;
+    // بند 4 صراحةً: pointerdown الذي يصل هنا لم يُوقَف انتشاره من أي لوحة
+    // أمامية (تلك تتولّى نفسها) — إذاً هذا سطح/حلقة فارغة تحديداً، ولا
+    // يجوز الدخول إن كان وضع سحب صفحة مباشر نشطاً فعلاً بالفعل (دفاعي).
+    if (interactionModeRef.current === 'page-drag') return;
     stageDragState.current = true;
     stageCaptured.current = false;
     stageDownPos.current = { x: e.clientX, y: e.clientY };
@@ -83,11 +111,13 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
   };
   const handleStagePointerMove = (e) => {
     if (!stageDragState.current || isOpeningRef.current) return;
+    if (interactionModeRef.current === 'page-drag') return;
     if (!stageCaptured.current) {
       const dx = e.clientX - stageDownPos.current.x;
       const dy = e.clientY - stageDownPos.current.y;
       if (Math.hypot(dx, dy) <= 6) return;
       stageCaptured.current = true;
+      interactionModeRef.current = 'ring-rotate';
       try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
       document.documentElement.classList.add('holo-cursor-grab');
       stageVelocity.current = null;
@@ -116,9 +146,19 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
       ring.dragHandlers.onPointerUpDrag();
       try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     }
+    // بند 5: يعود الوضع idle فقط عند pointerup/cancel/lostpointercapture —
+    // لا مكان آخر يُعيد تعيينه وسط الإيماءة.
+    interactionModeRef.current = 'idle';
   };
 
   const handleKeyDown = (e) => {
+    // بند 55 صراحةً: Escape أثناء سحب صفحة مباشر يُلغي السحب بأمان (يعيدها
+    // لفتحتها، يوقف الصوت، يخفي الحبل/المستقبِل) — لا فتح، لا بقاء عالق.
+    if (e.key === 'Escape' && interactionModeRef.current === 'page-drag' && cancelPageDragRef.current) {
+      e.preventDefault();
+      cancelPageDragRef.current();
+      return;
+    }
     if (isOpeningRef.current) return;
     ring.onKeyDown(e);
   };
@@ -168,6 +208,8 @@ const HolographicPageRing = forwardRef(function HolographicPageRing(
               lang={lang}
               tetherApi={tetherApi}
               stageRef={stageRef}
+              interactionModeRef={interactionModeRef}
+              cancelPageDragRef={cancelPageDragRef}
             />
           );
         })}

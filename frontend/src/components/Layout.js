@@ -87,7 +87,7 @@ const GROUP_LABELS = {
 export default function Layout() {
   const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
   const isDark = theme === 'dark';
-  const { muted: soundMuted, toggleMute: toggleSound } = useHolographicSound();
+  const { muted: soundMuted, toggleMute: toggleSound, audioStatus } = useHolographicSound();
   const tr = useT(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -613,6 +613,21 @@ export default function Layout() {
               >
                 {soundMuted ? <FaVolumeMute /> : <FaVolumeUp />}
               </button>
+            )}
+            {/* شارة تطوير فقط (بند Part 6/35 صراحةً) — حالة AudioContext
+               الحقيقية مرئية مباشرة بدل افتراض النجاح؛ غائبة تماماً بأي
+               production build (لا تُصدَّر داخل الشيفرة المُبنية أصلاً). */}
+            {isDark && process.env.NODE_ENV !== 'production' && (
+              <span
+                title="AudioContext state"
+                style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                  border: '1px solid currentColor', letterSpacing: '0.02em', whiteSpace: 'nowrap',
+                  color: audioStatus.label === 'READY' ? '#3ddc84' : audioStatus.label === 'MUTED' ? '#9aa7b5' : '#ffb347',
+                }}
+              >
+                AUDIO: {audioStatus.label}
+              </span>
             )}
             {/* Lang */}
             <button onClick={toggleLang} className={isDark ? 'header-pill-btn-dark' : 'header-pill-btn-light'} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 11, color: 'var(--text-primary)', fontWeight: 600 }}>

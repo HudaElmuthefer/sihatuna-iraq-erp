@@ -9,7 +9,7 @@
 // bandpass/lowpass/highpass) + رنين sine/triangle + شظايا shimmer عالية
 // خافتة جداً — يمنح طابعاً "زجاجياً/كهرومغناطيسياً" سينمائياً بدل "قديم/آركيد".
 const MUTE_KEY = 'sihatuna-holographic-sound-muted';
-const MASTER_VOLUME = 0.15; // بند صريح: 0.10-0.18
+const MASTER_VOLUME = 0.17; // بند صريح: 0.14-0.20
 
 function soundDebug(...args) {
   if (process.env.NODE_ENV === 'production') return;
@@ -22,10 +22,18 @@ function soundDebug(...args) {
 let audioCtx = null;
 let masterGain = null;
 let noiseBufferCache = null;
+// تحقّق من قيمة localStorage قبل الوثوق بها (بند صريح: "old invalid stored
+// values are not forcing permanent mute") — أي قيمة غير 'true'/'false'
+// حرفياً (تلف، تعديل يدوي، نسخة قديمة من مفتاح مختلف) تُعامَل كأنها غير
+// موجودة، فيُطبَّق الافتراضي (غير مكتوم) بدل قفل صامت دائم بالخطأ.
 let muted = (() => {
-  try { return localStorage.getItem(MUTE_KEY) === 'true'; } catch { return false; }
+  try {
+    const raw = localStorage.getItem(MUTE_KEY);
+    return raw === 'true' ? true : false; // أي قيمة أخرى (بما فيها null) → false
+  } catch { return false; }
 })();
 const listeners = new Set();
+const statusListeners = new Set();
 
 function notify() { listeners.forEach(fn => fn(muted)); }
 
@@ -36,20 +44,73 @@ export function subscribeMute(fn) {
 
 export function isMuted() { return muted; }
 
+// ══════════════════════════════════════════════════════════════════════
+// تشخيص حالة الصوت الفعلية — بند Part 6/30-36 صراحةً: وجود ملف/دالة لا يعني
+// أن الصوت مسموع فعلياً؛ الحالة الحقيقية الوحيدة الموثوقة هي
+// AudioContext.state. getAudioStatus() تُستخدَم من شارة تطوير مرئية
+// (Layout.js) حتى يمكن التحقق البصري المباشر بدل افتراض النجاح من مجرد
+// عدم وجود استثناء بـconsole.
+// ══════════════════════════════════════════════════════════════════════
+// بند حرج: useSyncExternalStore (useHolographicSound.js) يقارن اللقطات
+// بـObject.is — إرجاع كائن جديد بكل استدعاء لـgetAudioStatus() (كما كان)
+// يجعلها "تتغيّر" دائماً حتى بلا أي تغيّر فعلي، ما يُسبِّب حلقة إعادة تصيير
+// لا نهائية فعلية (مؤكَّد: "Maximum update depth exceeded" بالتشغيل
+// الحقيقي). الإصلاح: كائن واحد مُخبَّأ يُعاد بناؤه فقط داخل computeStatus
+// عند تغيّر حقيقي (notifyStatus)، وgetAudioStatus() تُعيد نفس المرجع دوماً
+// بينهما.
+let cachedStatus = computeStatus();
+
+function computeStatus() {
+  const supported = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
+  if (!supported) return { supported: false, ctxState: null, muted, label: 'UNSUPPORTED' };
+  if (!audioCtx) return { supported: true, ctxState: null, muted, label: muted ? 'MUTED' : 'NOT_STARTED' };
+  const ctxState = audioCtx.state;
+  let label;
+  if (muted) label = 'MUTED';
+  else if (ctxState === 'running') label = 'READY';
+  else if (ctxState === 'suspended') label = 'SUSPENDED';
+  else label = ctxState.toUpperCase();
+  return { supported: true, ctxState, muted, label };
+}
+
+function notifyStatus() {
+  cachedStatus = computeStatus();
+  statusListeners.forEach(fn => fn(cachedStatus));
+}
+
+export function subscribeAudioStatus(fn) {
+  statusListeners.add(fn);
+  return () => statusListeners.delete(fn);
+}
+
+export function getAudioStatus() { return cachedStatus; }
+
 export function setMuted(next) {
   muted = next;
   try { localStorage.setItem(MUTE_KEY, String(next)); } catch { /* تخزين تقديري فقط */ }
   if (masterGain) masterGain.gain.setTargetAtTime(next ? 0 : MASTER_VOLUME, ctxNow(), 0.05);
   if (next) stopDragSound();
-  soundDebug('muted', next);
+  // بند صريح (Part 33/34): زر السماعة نفسه إيماءة مستخدم حقيقية صالحة —
+  // إلغاء الكتم يُسخِّن/يستأنف AudioContext فوراً بدل الانتظار حتى أول سحب.
+  else ensureContext();
+  soundDebug('muted', next, '| ctxState:', audioCtx?.state);
   notify();
+  notifyStatus();
 }
 
 function ctxNow() { return audioCtx ? audioCtx.currentTime : 0; }
 
 function ensureContext() {
   if (audioCtx) {
-    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    if (audioCtx.state === 'suspended') {
+      // بند Part 32 صراحةً: تتبّع اكتمال resume() فعلياً (لا استدعاء بلا
+      // تحقّق) — يُحدِّث الحالة المرئية (الشارة) فور وصول السياق لـ'running'
+      // فعلياً، لا فور استدعاء resume نفسه.
+      audioCtx.resume().then(() => {
+        soundDebug('context resumed →', audioCtx.state);
+        notifyStatus();
+      }).catch(() => {});
+    }
     return audioCtx;
   }
   const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -58,8 +119,31 @@ function ensureContext() {
   masterGain = audioCtx.createGain();
   masterGain.gain.value = muted ? 0 : MASTER_VOLUME;
   masterGain.connect(audioCtx.destination);
-  soundDebug('context unlocked');
+  audioCtx.onstatechange = () => {
+    soundDebug('context state change →', audioCtx.state);
+    notifyStatus();
+  };
+  // الحالة الحقيقية فور الإنشاء — لا افتراض نجاح؛ إن بقيت 'suspended' هنا
+  // (بعض المتصفحات/السياقات تُنشِئ السياق مُعلَّقاً حتى مع إيماءة مستخدم
+  // حقيقية) نحاول استئنافها فوراً أيضاً.
+  soundDebug('context created, state:', audioCtx.state);
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => soundDebug('context resumed →', audioCtx.state)).catch(() => {});
+  }
+  notifyStatus();
   return audioCtx;
+}
+
+// أداة تطوير فقط (بند Part 35/36 صراحةً) — تشغّل نغمة تأكيد قصيرة وآمنة عبر
+// console مباشرة، للتحقق اليدوي من خروج صوت فعلي من المتصفح بمعزل عن أي
+// تفاعل سحب. مُطفأة تماماً بأي production build.
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  window.__testHoloSound = () => {
+    ensureContext();
+    playConfirm();
+    // eslint-disable-next-line no-console
+    console.log('[HoloAudio] __testHoloSound → ctxState:', audioCtx?.state, '| muted:', muted);
+  };
 }
 
 // مخزن ضجيج أبيض قصير (2 ثانية، قابل للتكرار loop) — يُبنى مرة واحدة فقط
@@ -166,6 +250,14 @@ export function playClose() {
   });
 }
 
+// إفلات خارج المستقبِل — إشارة عودة هادئة جداً جداً، لا نغمة خطأ (بند 46
+// صراحةً: "Do NOT play error beep").
+export function playReturn() {
+  play(ctx => {
+    tone(ctx, { freq: 260, freqEnd: 195, duration: 0.14, type: 'sine', peak: 0.1 });
+  });
+}
+
 export function playConfirm() {
   play(ctx => { tone(ctx, { freq: 760, duration: 0.1, type: 'sine', peak: 0.32 }); });
 }
@@ -193,20 +285,35 @@ let dragOsc = null, dragOscFilter = null, dragOscGain = null;
 let dragShimmerOsc = null, dragShimmerGain = null;
 let dragActive = false;
 
-const DRAG_OSC_BASE_FREQ = 92;
-const DRAG_OSC_FREQ_RANGE = 55;
+// بند Part 38 صراحةً: "differentiate subtly" بين تدوير الحلقة (أفقي، هوائي
+// أخفّ) وسحب الصفحة المباشر نحو المركز (أكثر تركيزاً/مغناطيسية) — تردد
+// أساسي وخليط طبقات مختلف قليلاً حسب mode، لا نظامان منفصلان بالكامل.
+const DRAG_MODES = {
+  ring: { baseFreq: 92, freqRange: 55, noiseCutoff: 620, noiseGain: 0.55, shimmerBase: 2500 },
+  page: { baseFreq: 118, freqRange: 65, noiseCutoff: 520, noiseGain: 0.4, shimmerBase: 3100 },
+};
 const DRAG_OSC_BASE_CUTOFF = 360;
 const DRAG_OSC_CUTOFF_RANGE = 1200;
-const DRAG_NOISE_BASE_CUTOFF = 620;
 const DRAG_NOISE_CUTOFF_RANGE = 2100;
-const DRAG_MASTER_MIN = 0.012;
-const DRAG_MASTER_MAX = 0.032; // بند صريح: 0.01-0.035
+// بند صريح Part 39: سطوع فعلي مسموع أثناء حركة متوسطة تقريباً 0.025-0.05.
+const DRAG_MASTER_MIN = 0.018;
+const DRAG_MASTER_MAX = 0.052;
+let dragMode = 'ring';
+let dragProximityBoost = 0; // 0=FAR, 0.5=NEAR, 1=LOCKED — بند 44: بريق/توتر إضافي طفيف قرب المستقبِل
 
-export function startDragSound() {
+export function setDragProximity(tier) {
+  dragProximityBoost = tier === 'locked' ? 1 : tier === 'near' ? 0.5 : 0;
+}
+
+// mode: 'ring' (تدوير الحلقة) أو 'page' (سحب اللوحة المختارة مباشرة نحو
+// المركز) — بند 38 صراحةً.
+export function startDragSound(mode = 'ring') {
   if (muted || dragActive) return;
   const ctx = ensureContext();
   if (!ctx || !masterGain) return;
   dragActive = true;
+  dragMode = DRAG_MODES[mode] ? mode : 'ring';
+  const cfg = DRAG_MODES[dragMode];
 
   dragMasterGain = ctx.createGain();
   dragMasterGain.gain.value = 0;
@@ -225,10 +332,10 @@ export function startDragSound() {
   dragNoiseSrc.loop = true;
   dragNoiseFilter = ctx.createBiquadFilter();
   dragNoiseFilter.type = 'bandpass';
-  dragNoiseFilter.frequency.value = DRAG_NOISE_BASE_CUTOFF;
+  dragNoiseFilter.frequency.value = cfg.noiseCutoff;
   dragNoiseFilter.Q.value = 0.8;
   dragNoiseGain = ctx.createGain();
-  dragNoiseGain.gain.value = 0.55;
+  dragNoiseGain.gain.value = cfg.noiseGain;
   dragNoiseSrc.connect(dragNoiseFilter);
   dragNoiseFilter.connect(dragNoiseGain);
   dragNoiseGain.connect(dragMasterGain);
@@ -237,7 +344,7 @@ export function startDragSound() {
   // طبقة B — رنين ناعم (جسم الصوت)
   dragOsc = ctx.createOscillator();
   dragOsc.type = 'triangle';
-  dragOsc.frequency.value = DRAG_OSC_BASE_FREQ;
+  dragOsc.frequency.value = cfg.baseFreq;
   dragOscFilter = ctx.createBiquadFilter();
   dragOscFilter.type = 'lowpass';
   dragOscFilter.frequency.value = DRAG_OSC_BASE_CUTOFF;
@@ -252,38 +359,44 @@ export function startDragSound() {
   // طبقة C — بريق علوي خافت جداً (لا يجب أن يهيمن — بند 42)
   dragShimmerOsc = ctx.createOscillator();
   dragShimmerOsc.type = 'sine';
-  dragShimmerOsc.frequency.value = 2500;
+  dragShimmerOsc.frequency.value = cfg.shimmerBase;
   dragShimmerGain = ctx.createGain();
   dragShimmerGain.gain.value = 0.045;
   dragShimmerOsc.connect(dragShimmerGain);
   dragShimmerGain.connect(dragMasterGain);
   dragShimmerOsc.start();
 
+  dragProximityBoost = 0;
   dragMasterGain.gain.setTargetAtTime(DRAG_MASTER_MIN, ctx.currentTime, 0.05);
-  soundDebug('drag start');
+  soundDebug('drag start (' + dragMode + ') ctxState:', ctx.state);
 }
 
 // velocity01: سرعة مُطبَّعة 0..1. pointerX/stageWidth (اختياريان): لموضع
 // الانحراف الصوتي الطفيف (بند 45) — بلا قفزات أبداً (setTargetAtTime دائماً).
+// بريق/توتر إضافي طفيف حسب القرب من المستقبِل (dragProximityBoost، بند 44)
+// — يُضبَط عبر setDragProximity() من طبقة السحب المباشر فقط.
 export function updateDragSound(velocity01, pointerX, stageWidth) {
   if (!dragActive || !audioCtx) return;
   const v = Math.max(0, Math.min(1, velocity01));
+  const cfg = DRAG_MODES[dragMode];
   const now = audioCtx.currentTime;
-  if (dragOsc) dragOsc.frequency.setTargetAtTime(DRAG_OSC_BASE_FREQ + v * DRAG_OSC_FREQ_RANGE, now, 0.08);
+  if (dragOsc) dragOsc.frequency.setTargetAtTime(cfg.baseFreq + v * cfg.freqRange, now, 0.08);
   if (dragOscFilter) dragOscFilter.frequency.setTargetAtTime(DRAG_OSC_BASE_CUTOFF + v * DRAG_OSC_CUTOFF_RANGE, now, 0.1);
-  if (dragNoiseFilter) dragNoiseFilter.frequency.setTargetAtTime(DRAG_NOISE_BASE_CUTOFF + v * DRAG_NOISE_CUTOFF_RANGE, now, 0.1);
-  if (dragShimmerGain) dragShimmerGain.gain.setTargetAtTime(0.03 + v * 0.08, now, 0.1);
+  if (dragNoiseFilter) dragNoiseFilter.frequency.setTargetAtTime(cfg.noiseCutoff + v * DRAG_NOISE_CUTOFF_RANGE, now, 0.1);
+  if (dragShimmerGain) dragShimmerGain.gain.setTargetAtTime(0.03 + v * 0.07 + dragProximityBoost * 0.05, now, 0.1);
   if (dragMasterGain && !muted) {
-    dragMasterGain.gain.setTargetAtTime(DRAG_MASTER_MIN + v * (DRAG_MASTER_MAX - DRAG_MASTER_MIN), now, 0.1);
+    const target = DRAG_MASTER_MIN + v * (DRAG_MASTER_MAX - DRAG_MASTER_MIN) + dragProximityBoost * 0.006;
+    dragMasterGain.gain.setTargetAtTime(target, now, 0.1);
   }
   if (dragPanner && typeof pointerX === 'number' && stageWidth) {
-    const pan = Math.max(-0.25, Math.min(0.25, (pointerX / stageWidth - 0.5) * 0.5));
+    const pan = Math.max(-0.2, Math.min(0.2, (pointerX / stageWidth - 0.5) * 0.4));
     dragPanner.pan.setTargetAtTime(pan, now, 0.15);
   }
-  soundDebug('drag velocity:', v.toFixed(2));
+  soundDebug('drag velocity:', v.toFixed(2), '| proximity:', dragProximityBoost);
 }
 
 export function stopDragSound() {
+  dragProximityBoost = 0;
   if (!dragActive || !audioCtx) { dragActive = false; return; }
   dragActive = false;
   soundDebug('drag stop');

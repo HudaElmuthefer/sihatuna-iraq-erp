@@ -1,47 +1,44 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { lerpSlot, slotToPixels, STAGE_PERSPECTIVE, FORWARD_BASE } from '../../utils/holographicSlots';
 import { createVelocityTracker } from '../../utils/interactionVelocity';
-import { startDragSound, updateDragSound, stopDragSound, playSnap } from '../../utils/holographicSound';
+import { startDragSound, updateDragSound, stopDragSound, setDragProximity, playSnap, playReturn } from '../../utils/holographicSound';
 
 const CLICK_MOVE_THRESHOLD = 6; // px — أقل من هذا يُحتسب نقراً، أكثر يُحتسب سحباً
 const FRONT_SCALE = 1.03;
+// عتبات القرب من المستقبِل — بند صريح (Part 3/14): FAR / NEAR / LOCKED، لا
+// حالة ثنائية (inside/outside) بعد الآن. المسافة تُقاس بين مركز اللوحة
+// المسحوبة ومركز منطقة الإفلات.
+const NEAR_DISTANCE = 180;
+const LOCKED_DISTANCE = 90;
 
 /*
- * معمارية ثلاثية الطبقات المتداخلة (بند صريح بالمواصفة — Part B/7: "Use
- * nested wrappers"، لا transform واحد يخدم غرضين متعارضين):
+ * معمارية ثلاثية الطبقات المتداخلة (بند صريح — Part 8: "Use nested
+ * wrappers"، لا transform واحد يخدم غرضين متعارضين):
  *
- *   .hpp            (OUTER)  — هندسة الفتحة على الحلقة فقط (slotToPixels:
- *                               translateX/Y/Z + rotateY + scale). تبقى
- *                               ثابتة تماماً أثناء سحب اللوحة نحو المركز —
- *                               لا تُعاد حسابها من selectedIndex أثناء ذلك
- *                               (بند 9/10 صراحةً).
- *   .hpp-drag-layer  (MIDDLE) — إزاحة السحب المؤقتة فقط (identity حين لا
- *                               يوجد سحب). transition:none أثناء السحب
- *                               المباشر (بند 11)، تعود cinematic عند الإفلات.
- *   .hpp-surface     (INNER)  — الزجاج المنحني/الإضاءة/الحوم — لا صلة لها
- *                               بالموضع أو السحب إطلاقاً.
- *
- * لماذا كانت اللوحة "تهرب من المؤشر" سابقاً: طبقة السحب القديمة كانت تستبدل
- * transform الفتحة بالكامل (تُسقِط translateZ/rotateY فجأة) بينما OUTER
- * متداخلة داخل .hpr-stage ذات perspective — إزاحة px خام محلياً عند عمق Z
- * غير صفري تحت perspective تتضخّم بصرياً (foreshortening) بمعامل ثابت
- * (perspective/(perspective-z))، فتتحرك اللوحة أسرع من المؤشر الفعلي تراكمياً.
- * الحل: عمق Z الأمامية ثابت معروف مسبقاً (FORWARD_BASE+34)، فنُعوِّض عنه
- * حسابياً مرة واحدة (perspFactor أدناه) بدل تفكيك/فقدان عمق الفتحة أصلاً.
+ *   .hpp            (OUTER)  — هندسة الفتحة على الحلقة فقط. ثابتة تماماً
+ *                               أثناء سحب اللوحة نحو المركز.
+ *   .hpp-drag-layer  (MIDDLE) — إزاحة السحب المؤقتة فقط (ترجمة صرفة بمقدار
+ *                               فرق المؤشر منذ pointerdown — بند 6/7: نقطة
+ *                               الإمساك تبقى بالضبط تحت المؤشر، لا "تصحيح"
+ *                               نحو المركز؛ ولا scale أثناء السحب الحر بعد
+ *                               الآن — bند 2 صراحةً: أي scale مركزي كان
+ *                               يُزيح أي نقطة إمساك غير مركزية بمقدار نسبة
+ *                               التكبير). transition:none أثناء السحب.
+ *   .hpp-surface     (INNER)  — الزجاج المنحني/الإضاءة/الحوم فقط.
  */
-const FRONT_Z_PX = FORWARD_BASE + 34; // isFront bump — راجع holographicSlots.js/slotToPixels
+const FRONT_Z_PX = FORWARD_BASE + 34;
 const PERSP_FACTOR = (STAGE_PERSPECTIVE - FRONT_Z_PX) / STAGE_PERSPECTIVE;
 
 export default function HolographicPagePanel({
   page, rel, geometry, isFront, isOpening, isDragCandidate,
-  onSelect, onOpen, dropZoneRef, lang, tetherApi, stageRef,
+  onSelect, onOpen, dropZoneRef, lang, tetherApi, stageRef, interactionModeRef, cancelPageDragRef,
 }) {
   const panelRef = useRef(null);
   const surfaceRef = useRef(null);
   const pointerStart = useRef(null);
   const velocityTracker = useRef(null);
   const [centerDrag, setCenterDrag] = useState(null); // {x,y} إزاحة خام (شاشة px) أثناء سحب اللوحة الأمامية نحو المركز
-  const [magnetActive, setMagnetActive] = useState(false);
+  const [proximity, setProximity] = useState('far'); // 'far' | 'near' | 'locked'
   const [snapFlash, setSnapFlash] = useState(false);
   const rafPending = useRef(false);
   const wasFrontRef = useRef(isFront);
@@ -87,15 +84,33 @@ export default function HolographicPagePanel({
   const outerScale = px.scale * (isFront ? FRONT_SCALE : 1);
   const outerTransform = `translate(-50%, -50%) translateX(${px.xPx}px) translateY(${px.yPx}px) translateZ(${px.zPx}px) rotateY(${px.rotY}deg) scale(${outerScale})`;
 
-  // نقطة إمساك الحبل — أقرب لأيقونة/عقدة الطاقة أعلى-يسار اللوحة (بند 27:
-  // "Prefer the page icon / energy node"؛ استعلام DOM دقيق عن الأيقونة غير
-  // ضروري — موضعها ثابت هيكلياً داخل PreviewHeader).
+  // نقطة إمساك الحبل — أقرب لأيقونة/عقدة الطاقة أعلى-يسار اللوحة (بند 22:
+  // "if pointerdown happened on panel: laser starts from the exact visual
+  // grab point"؛ نستخدم نقطة الإمساك الفعلية إن كانت داخل حدود اللوحة، وإلا
+  // (نادراً) نرجع لعقدة الأيقونة الثابتة كحل احتياطي).
   const iconAnchorRef = useRef({ x: 34, y: 30 });
+  const grabPointRef = useRef(null); // {x,y} نسبةً لأعلى-يسار اللوحة، عند pointerdown
 
   const clearTether = () => tetherApi?.current?.hideTether();
 
+  const finishDrag = ({ dock }) => {
+    document.documentElement.classList.remove('holo-cursor-grab');
+    stopDragSound();
+    clearTether();
+    setDragProximity('far');
+    dropZoneRef.current?.classList.remove('hcd-near', 'hcd-locked', 'hcd-visible');
+    if (interactionModeRef) interactionModeRef.current = 'idle';
+    cancelPageDragRef && (cancelPageDragRef.current = null);
+    setCenterDrag(null);
+    setProximity('far');
+    if (dock) { playSnap(); onOpen(); } else { playReturn(); }
+  };
+
   const handlePointerDown = (e) => {
     if (isFront) e.stopPropagation();
+    if (interactionModeRef && interactionModeRef.current !== 'idle') return; // بند 4/5: قفل الوضع حتى pointerup
+    const rect = panelRef.current?.getBoundingClientRect();
+    grabPointRef.current = rect ? { x: e.clientX - rect.left, y: e.clientY - rect.top } : { x: 0, y: 0 };
     pointerStart.current = { x: e.clientX, y: e.clientY, moved: false, dragging: false };
     velocityTracker.current = createVelocityTracker();
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
@@ -111,34 +126,50 @@ export default function HolographicPagePanel({
     if (isFront && st.moved) {
       if (!st.dragging) {
         st.dragging = true;
-        startDragSound();
+        if (interactionModeRef) interactionModeRef.current = 'page-drag';
+        if (cancelPageDragRef) cancelPageDragRef.current = () => finishDrag({ dock: false });
+        startDragSound('page');
         document.documentElement.classList.add('holo-cursor-grab');
         dropZoneRef.current?.classList.add('hcd-visible');
       }
       setCenterDrag({ x: dx, y: dy });
+      // بند حرج: panelRef يشير للطبقة OUTER (هندسة الفتحة الثابتة — لا
+      // تتحرك أثناء السحب بتصميم العمارة نفسها، بند 9/10). قياس القرب من
+      // المستقبِل يجب أن يُبنى على الموضع البصري الفعلي المتحرّك فعلاً —
+      // surfaceRef (INNER)، الذي يتضمّن كل تحويلات الأسلاف بما فيها إزاحة
+      // .hpp-drag-layer. استخدام panelRef هنا كان يُنتِج LOCKED زائفاً دائماً
+      // (يقيس مسافة الفتحة الساكنة القريبة أصلاً من المركز، لا اللوحة
+      // المسحوبة فعلياً) — خلل حقيقي مكتشَف بالتحقق المباشر.
       const zoneRect = dropZoneRef.current?.getBoundingClientRect();
-      const panelRect = panelRef.current?.getBoundingClientRect();
-      if (zoneRect && panelRect) {
-        const cx = panelRect.left + panelRect.width / 2;
-        const cy = panelRect.top + panelRect.height / 2;
-        const inside = cx >= zoneRect.left && cx <= zoneRect.right && cy >= zoneRect.top && cy <= zoneRect.bottom;
-        setMagnetActive(inside);
-        dropZoneRef.current?.classList.toggle('hcd-armed', inside);
+      const surfaceRect = surfaceRef.current?.getBoundingClientRect();
+      let tier = 'far';
+      if (zoneRect && surfaceRect) {
+        const cx = surfaceRect.left + surfaceRect.width / 2;
+        const cy = surfaceRect.top + surfaceRect.height / 2;
+        const zx = zoneRect.left + zoneRect.width / 2;
+        const zy = zoneRect.top + zoneRect.height / 2;
+        const dist = Math.hypot(cx - zx, cy - zy);
+        tier = dist <= LOCKED_DISTANCE ? 'locked' : dist <= NEAR_DISTANCE ? 'near' : 'far';
+        setProximity(tier);
+        setDragProximity(tier);
+        dropZoneRef.current?.classList.toggle('hcd-near', tier === 'near');
+        dropZoneRef.current?.classList.toggle('hcd-locked', tier === 'locked');
       }
-      // سرعة مُطبَّعة واحدة تُغذّي الصوت والحبل معاً (بند 52 صراحةً).
+      // سرعة مُطبَّعة واحدة تُغذّي الصوت والحبل معاً (بند 41 صراحةً).
       const v = velocityTracker.current.update(e.clientX, e.clientY);
       updateDragSound(v, e.clientX, stageRef.current?.clientWidth || window.innerWidth);
-      const anchorRect = panelRef.current?.getBoundingClientRect();
+      const anchorRect = surfaceRect;
       const stageRect = stageRef?.current?.getBoundingClientRect();
       if (anchorRect && stageRect && tetherApi?.current) {
-        // إحداثيات نسبية لصندوق المسرح نفسه (لا viewport مباشرة) — الوشاح
-        // SVG مموضَع position:absolute داخل .hpr-stage بلا viewBox، فوحدة
-        // المستخدم = px نسبية لصندوقه هو، لا لكامل الصفحة.
-        const ax = anchorRect.left + iconAnchorRef.current.x - stageRect.left;
-        const ay = anchorRect.top + iconAnchorRef.current.y - stageRect.top;
+        // إحداثيات نسبية لصندوق المسرح نفسه — الوشاح SVG مموضَع
+        // position:absolute داخل .hpr-stage بلا viewBox.
+        const grab = grabPointRef.current || iconAnchorRef.current;
+        const ax = anchorRect.left + grab.x - stageRect.left;
+        const ay = anchorRect.top + grab.y - stageRect.top;
         const px2 = e.clientX - stageRect.left;
         const py2 = e.clientY - stageRect.top;
-        tetherApi.current.showTether(ax, ay, px2, py2, v);
+        const tierBoost = tier === 'locked' ? 1 : tier === 'near' ? 0.5 : 0;
+        tetherApi.current.showTether(ax, ay, px2, py2, Math.max(v, tierBoost));
       }
     }
   };
@@ -149,16 +180,11 @@ export default function HolographicPagePanel({
     pointerStart.current = null;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     if (!st) return;
-    dropZoneRef.current?.classList.remove('hcd-armed', 'hcd-visible');
     if (st.dragging) {
-      document.documentElement.classList.remove('holo-cursor-grab');
-      stopDragSound();
-      clearTether();
-      const wasMagnet = magnetActive;
-      setCenterDrag(null);
-      setMagnetActive(false);
-      if (wasMagnet) { playSnap(); onOpen(); return; }
-      return; // سحب بلا وصول للمنطقة المركزية → يرتد للحلقة (transform الأصلي يعود تلقائياً)
+      // بند 18/21 صراحةً: الفتح مشروط فقط بـ"مُقفَل فعلياً عند الإفلات" —
+      // لا فتح لمجرد وقوع pointerup بعد سحب، ولا فتح مبكر عن بُعد.
+      finishDrag({ dock: proximity === 'locked' });
+      return;
     }
     if (!st.moved) {
       e.stopPropagation();
@@ -167,20 +193,18 @@ export default function HolographicPagePanel({
   };
 
   const handlePointerCancel = (e) => {
-    if (pointerStart.current?.dragging) {
-      document.documentElement.classList.remove('holo-cursor-grab');
-      stopDragSound();
-      clearTether();
-    }
-    handlePointerUp(e);
+    if (pointerStart.current?.dragging) finishDrag({ dock: false });
+    pointerStart.current = null;
+    try { e.currentTarget?.releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
   };
 
-  // MIDDLE — إزاحة السحب المُعوَّضة (بند 9 صراحةً: dragX/dragY خام من
-  // الفرق بالمؤشر)، مُصحَّحة بمعامل perspective ثابت (PERSP_FACTOR) حتى
-  // تبقى اللوحة تحت المؤشر تماماً رغم عمقها Z غير الصفري ضمن سلسلة
+  // MIDDLE — إزاحة السحب الخام (بند 6/7 صراحةً: ترجمة صرفة بمقدار فرق
+  // المؤشر منذ pointerdown، بلا أي scale أثناء السحب الحر — نقطة الإمساك
+  // تبقى بالضبط تحت المؤشر). مُصحَّحة بمعامل perspective ثابت (PERSP_FACTOR)
+  // حتى تبقى اللوحة تحت المؤشر تماماً رغم عمقها Z غير الصفري ضمن سلسلة
   // preserve-3d — راجع الشرح أعلى الملف.
   const dragLayerTransform = centerDrag
-    ? `translate(${centerDrag.x * PERSP_FACTOR / FRONT_SCALE}px, ${centerDrag.y * PERSP_FACTOR / FRONT_SCALE}px) scale(${magnetActive ? 1.16 : 1.05})`
+    ? `translate(${centerDrag.x * PERSP_FACTOR / FRONT_SCALE}px, ${centerDrag.y * PERSP_FACTOR / FRONT_SCALE}px)`
     : undefined;
 
   return (
@@ -209,9 +233,15 @@ export default function HolographicPagePanel({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handlePointerCancel}
     >
       <div
-        className={`hpp-drag-layer ${centerDrag ? 'hpp-drag-active' : ''} ${magnetActive ? 'hpp-drag-magnet' : ''}`}
+        className={[
+          'hpp-drag-layer',
+          centerDrag ? 'hpp-drag-active' : '',
+          centerDrag && proximity === 'near' ? 'hpp-drag-near' : '',
+          centerDrag && proximity === 'locked' ? 'hpp-drag-locked' : '',
+        ].filter(Boolean).join(' ')}
         style={{ transform: dragLayerTransform }}
       >
         <div ref={surfaceRef} className="hpp-surface" onMouseMove={handleMouseMove}>

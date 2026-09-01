@@ -122,7 +122,7 @@ export default function useHolographicRing(count, onOpen, initialIndex = 0) {
     // استدعاؤها هنا (لا بـonPointerDown) يضمن بدء الصوت فقط عند حركة سحب
     // حقيقية مؤكَّدة (HolographicPageRing.js لا يستدعي هذه الدالة أصلاً إلا
     // بعد تجاوز عتبة 6px)، لا عند كل نقرة بسيطة.
-    startDragSound();
+    startDragSound('ring');
     // px إلى "وحدات فهرس": عرض مرجعي — سحب كامل عرض المسرح يساوي تقريباً
     // نصف عدد اللوحات المرئية (إحساس طبيعي، لا سريع جداً ولا بطيء جداً).
     const pxPerIndex = Math.max(40, stageWidth / (visibleRange * 0.9));

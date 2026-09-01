@@ -564,7 +564,10 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 
 .hpp-draggable { cursor: grab; }
 .hpp-draggable:active { cursor: grabbing; }
-.hpp-drag-layer.hpp-drag-magnet .hpp-surface { border-color: rgba(var(--gold-accent-rgb), 0.9); box-shadow: 0 0 50px rgba(var(--gold-accent-rgb), 0.5); }
+/* بند 16: NEAR — توهّج أقوى قليلاً، لا ذهبي بعد. */
+.hpp-drag-layer.hpp-drag-near .hpp-surface { border-color: rgba(var(--glow-accent-rgb), 0.95); box-shadow: 0 0 34px rgba(var(--glow-accent-rgb), 0.4); }
+/* بند 17: LOCKED — حافة ذهبية واضحة "الإفلات سيفتح الصفحة". */
+.hpp-drag-layer.hpp-drag-locked .hpp-surface { border-color: rgba(var(--gold-accent-rgb), 0.9); box-shadow: 0 0 50px rgba(var(--gold-accent-rgb), 0.5); }
 
 .hpp-opening {
   transform: translate(-50%, -50%) translateZ(300px) scale(1.7) !important;
@@ -672,6 +675,15 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
    ══════════════════════════════════════════════════════════════════════ */
 .hcd-zone {
   position: absolute;
+  /* بند حرج (Part 13 صراحةً: "Receiver must be exactly in the center of the
+     usable holographic stage... use stage-local coordinates") — بلا top/left
+     صريحين، عنصر position:absolute بلا إزاحة يستقرّ على "الموضع الساكن"
+     (static position fallback)، وهو غامض/غير موثوق داخل حاوية flex (أصل
+     خلل حقيقي مكتشَف بالتحقق: سحب اللوحة 300px بعيداً عن المركز الحقيقي
+     كان يُصنَّف LOCKED خطأً). توسيط صريح دائماً بصرف النظر عن ترتيب/نوع الأب. */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 160px;
   height: 160px;
   z-index: 5;
@@ -729,16 +741,27 @@ html[dir="ltr"] [data-theme="dark"] .sidebar-nav-item.sidebar-nav-item-active {
 }
 .hcd-zone.hcd-visible .hcd-ring-2 { animation-duration: 6s; }
 .hcd-zone.hcd-visible .hcd-core { opacity: 0.5; }
-.hcd-zone.hcd-armed { opacity: 1; }
-.hcd-zone.hcd-armed .hcd-ring {
-  border-color: rgba(var(--gold-accent-rgb), 0.9);
-  border-style: solid;
-  box-shadow: 0 0 24px rgba(var(--gold-accent-rgb), 0.4);
+/* NEAR — بند 16 صراحةً: أسطع، بلا ذهبي بعد (الذهبي محفوظ لـLOCKED فقط). */
+.hcd-zone.hcd-near {
+  opacity: 0.85;
 }
-.hcd-zone.hcd-armed .hcd-ring-1 { transform: scale(1.08); }
-.hcd-zone.hcd-armed .hcd-core { opacity: 1; background: #eafcff; box-shadow: 0 0 10px rgba(255,255,255,0.9); }
-.hcd-zone.hcd-armed .hcd-lock { opacity: 1; box-shadow: 0 0 6px rgba(var(--gold-accent-rgb), 0.8); }
-.hcd-zone.hcd-armed .hcd-label { opacity: 1; color: rgb(var(--gold-accent-rgb)); }
+.hcd-zone.hcd-near .hcd-ring {
+  border-color: rgba(var(--glow-accent-rgb), 0.85);
+  box-shadow: 0 0 18px rgba(var(--glow-accent-rgb), 0.35);
+}
+.hcd-zone.hcd-near .hcd-core { opacity: 0.85; box-shadow: 0 0 6px rgba(var(--glow-accent-rgb), 0.6); }
+/* LOCKED — بند 17 صراحةً: حلقة سماوية ساطعة + لبّ أبيض-جليدي + 4 علامات
+   قفل ذهبية — "أفلت الآن للفتح" واضح بصرياً بلا لبس. */
+.hcd-zone.hcd-locked { opacity: 1; }
+.hcd-zone.hcd-locked .hcd-ring {
+  border-color: rgba(var(--gold-accent-rgb), 0.95);
+  border-style: solid;
+  box-shadow: 0 0 26px rgba(var(--gold-accent-rgb), 0.5);
+}
+.hcd-zone.hcd-locked .hcd-ring-1 { transform: scale(1.08); }
+.hcd-zone.hcd-locked .hcd-core { opacity: 1; background: #eafcff; box-shadow: 0 0 12px rgba(255,255,255,0.95); }
+.hcd-zone.hcd-locked .hcd-lock { opacity: 1; box-shadow: 0 0 6px rgba(var(--gold-accent-rgb), 0.8); }
+.hcd-zone.hcd-locked .hcd-label { opacity: 1; color: rgb(var(--gold-accent-rgb)); }
 @media (prefers-reduced-motion: reduce) {
   .hcd-ring-2 { animation: none; }
 }

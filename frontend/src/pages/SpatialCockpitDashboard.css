@@ -1,0 +1,2826 @@
+/* ==========================================================================
+   SIHATUNA IRAQ ERP - SPATIAL COCKPIT DASHBOARD HUD STYLES
+   ========================================================================== */
+
+:root {
+  --cockpit-bg-deep: #070d1a;
+  --cockpit-bg-card: rgba(13, 23, 42, 0.78);
+  --cockpit-cyan: #00f0ff;
+  --cockpit-blue: #0072ff;
+  --cockpit-emerald: #10b981;
+  --cockpit-purple: #a855f7;
+  --cockpit-amber: #f59e0b;
+  --cockpit-rose: #f43f5e;
+  --cockpit-border: rgba(0, 240, 255, 0.22);
+}
+
+.cockpit-wrapper {
+  position: relative;
+  min-height: calc(100vh - 70px);
+  background: radial-gradient(circle at 50% 20%, #0c1a36 0%, #070d1a 60%, #030710 100%);
+  color: #e2e8f0;
+  perspective: 1400px;
+  overflow-x: hidden;
+  padding: 16px 20px 40px;
+  border-radius: 16px;
+  box-shadow: inset 0 0 60px rgba(0, 240, 255, 0.05);
+  font-family: 'Tajawal', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Scanlines overlay */
+.cockpit-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0, 240, 255, 0.025) 50%,
+    rgba(0, 240, 255, 0.025)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 16px;
+}
+
+/* Ambient glow orbs */
+.cockpit-orb-center {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 650px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.12) 0%, rgba(0, 114, 255, 0.05) 50%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cockpit-orb-left {
+  position: absolute;
+  top: 15%;
+  left: 5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cockpit-orb-right {
+  position: absolute;
+  bottom: 10%;
+  right: 5%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.09) 0%, transparent 70%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 3D Spatial Stage */
+.cockpit-stage {
+  position: relative;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease, opacity 0.4s ease;
+}
+
+.cockpit-dimmed {
+  opacity: 0.2 !important;
+  filter: blur(4px) !important;
+  pointer-events: none !important;
+}
+
+/* Glassmorphic Cyber Card */
+.cockpit-card {
+  background: var(--cockpit-bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--cockpit-border);
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.06), inset 0 0 15px rgba(0, 240, 255, 0.03);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cockpit-card:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.18), inset 0 0 20px rgba(0, 240, 255, 0.06);
+}
+
+/* Header HUD */
+.cockpit-header-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.cockpit-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cockpit-logo-node {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 114, 255, 0.3));
+  border: 1px solid var(--cockpit-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
+  position: relative;
+}
+
+.cockpit-logo-node::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0, 240, 255, 0.5);
+  animation: cockpitSpin 20s linear infinite;
+}
+
+.cockpit-brand-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #00f0ff, #38bdf8, #ffffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cockpit-brand-sub {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cockpit-network-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cockpit-network-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: cockpitPulse 2s infinite;
+}
+
+/* Facility Selector */
+.cockpit-facility-select {
+  background: rgba(15, 23, 42, 0.85);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.cockpit-facility-select:hover,
+.cockpit-facility-select:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+}
+
+/* User Profile HUD */
+.cockpit-user-hud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 4px 12px 4px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cockpit-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+.cockpit-user-info {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.cockpit-user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.cockpit-user-tier {
+  font-size: 9.5px;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Zero-G KPI Belt */
+.cockpit-kpi-belt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+  animation: cockpitZeroGBelt 10s ease-in-out infinite;
+  transform: translateZ(20px);
+}
+
+.cockpit-kpi-card {
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.cockpit-kpi-card:active {
+  cursor: grabbing;
+}
+
+.cockpit-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--kpi-accent, #00f0ff);
+  box-shadow: 0 0 10px var(--kpi-accent, #00f0ff);
+}
+
+.cockpit-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.cockpit-kpi-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.cockpit-kpi-unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.cockpit-kpi-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.cockpit-kpi-fill {
+  height: 100%;
+  background: var(--kpi-accent, #00f0ff);
+  border-radius: 4px;
+  box-shadow: 0 0 8px var(--kpi-accent, #00f0ff);
+}
+
+/* Main Grid Layout */
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: 3.2fr 5.6fr 3.2fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .cockpit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Wings Animation & Magnetic Kinetics */
+.cockpit-wing-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: translateZ(10px) rotateY(2deg);
+  animation: cockpitZeroGLeft 12s ease-in-out infinite;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cockpit-wing-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: translateZ(10px) rotateY(-2deg);
+  animation: cockpitZeroGRight 12s ease-in-out infinite;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cockpit-magnetic-pull .cockpit-wing-left {
+  transform: translate3d(35px, 0, 30px) rotateY(16deg) scale(0.98) !important;
+  border-color: rgba(0, 240, 255, 0.6) !important;
+}
+
+.cockpit-magnetic-pull .cockpit-wing-right {
+  transform: translate3d(-35px, 0, 30px) rotateY(-16deg) scale(0.98) !important;
+  border-color: rgba(0, 240, 255, 0.6) !important;
+}
+
+/* Central Digital Twin Core */
+.cockpit-core-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transform: translateZ(40px);
+  z-index: 20;
+  animation: cockpitZeroGCore 14s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOLOGRAM AVATAR WIDGET STYLES (المجسم الهولوغرافي ثلاثي الأبعاد)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.holo-avatar-stage {
+  position: relative;
+  width: 100%;
+  height: 470px;
+  max-width: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+}
+
+/* 1. Vertical Uplight Beam (إشعاع ضوئي رأسي) */
+.holo-uplight-beam {
+  position: absolute;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 420px;
+  background: linear-gradient(to top, rgba(0, 210, 255, 0.28) 0%, rgba(0, 85, 255, 0.08) 50%, transparent 95%);
+  clip-path: polygon(25% 100%, 75% 100%, 95% 0%, 5% 0%);
+  filter: blur(14px);
+  pointer-events: none;
+  z-index: 2;
+  animation: holoUplightPulse 4s ease-in-out infinite;
+}
+
+.holo-uplight-conical {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 180px;
+  background: radial-gradient(ellipse at bottom, rgba(0, 240, 255, 0.35) 0%, rgba(0, 85, 255, 0.12) 60%, transparent 80%);
+  filter: blur(22px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 2. Glowing Holographic Pedestal (القاعدة الهولوغرافية المتوهجة) */
+.holo-pedestal-container {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  perspective: 600px;
+  z-index: 3;
+}
+
+.holo-pedestal-outer {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.55);
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.35), inset 0 0 25px rgba(0, 240, 255, 0.2);
+  transform: rotateX(75deg);
+  animation: cockpitPedestalSpin 22s linear infinite;
+}
+
+.holo-pedestal-inner {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 114, 255, 0.65);
+  box-shadow: 0 0 25px rgba(0, 114, 255, 0.45), inset 0 0 20px rgba(0, 240, 255, 0.3);
+  transform: rotateX(75deg);
+  animation: cockpitPedestalSpin 12s linear infinite reverse;
+}
+
+.holo-pedestal-core {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #00f0ff 0%, rgba(0, 114, 255, 0.5) 45%, transparent 75%);
+  box-shadow: 0 0 45px #00f0ff;
+  transform: rotateX(75deg);
+  animation: cockpitPulseCore 3s ease-in-out infinite;
+}
+
+.holo-pedestal-grid {
+  position: absolute;
+  width: 290px;
+  height: 290px;
+  border-radius: 50%;
+  border: 1px dotted rgba(0, 240, 255, 0.35);
+  transform: rotateX(75deg);
+}
+
+/* 3. 3D Orbital Neon Rings (الحلقات المدارية ثلاثية الأبعاد) */
+.holo-orbit-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  z-index: 8;
+}
+
+.holo-orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.holo-orbit-1 {
+  width: 330px;
+  height: 330px;
+  border: 1.5px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35), inset 0 0 10px rgba(0, 240, 255, 0.2);
+  transform: rotateX(68deg) rotateY(24deg);
+  animation: cockpitOrbitRing1 18s linear infinite;
+}
+
+.holo-orbit-2 {
+  width: 300px;
+  height: 300px;
+  border: 1.5px solid rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.35), inset 0 0 10px rgba(168, 85, 247, 0.2);
+  transform: rotateX(72deg) rotateY(-32deg);
+  animation: cockpitOrbitRing2 14s linear infinite reverse;
+}
+
+.holo-orbit-3 {
+  width: 250px;
+  height: 250px;
+  border: 1px dashed rgba(0, 210, 255, 0.4);
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.25);
+  transform: rotateX(78deg);
+  animation: cockpitOrbitRing3 10s linear infinite;
+}
+
+.holo-orbit-photon {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 20px #00f0ff;
+}
+
+.holo-photon-1 { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.holo-photon-2 { top: 50%; right: 0; transform: translate(50%, -50%); background: #e9d5ff; box-shadow: 0 0 12px #a855f7; }
+.holo-photon-3 { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+
+/* 4. Hologram Avatar Figure & Body Dynamics (المجسم ثلاثي الأبعاد) */
+.holo-avatar-figure-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: holoAvatarFloat 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+  z-index: 12;
+}
+
+.holo-avatar-img {
+  max-height: 420px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.65)) drop-shadow(0 0 35px rgba(0, 114, 255, 0.45));
+  mix-blend-mode: screen;
+  user-select: none;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.holo-scanner-beam {
+  position: absolute;
+  width: 240px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.85), #ffffff, rgba(0, 240, 255, 0.85), transparent);
+  box-shadow: 0 0 16px #00f0ff;
+  animation: holoScannerMove 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 14;
+}
+
+/* Hotspots for Digital Twin */
+.cockpit-hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 30;
+  transition: transform 0.3s;
+}
+
+.cockpit-hotspot:hover,
+.cockpit-hotspot.active-organ {
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+.cockpit-hotspot-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--node-color, #00f0ff);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 0 15px var(--node-color, #00f0ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: cockpitPulseGlow 2.5s infinite;
+}
+
+.cockpit-hotspot-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px #ffffff;
+}
+
+/* Central Active Drop Zone Target Indicator */
+.cockpit-center-dropzone-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.3);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 15;
+  transition: all 0.4s ease;
+  animation: cockpitOrbitRotate 20s linear infinite;
+}
+
+.cockpit-center-dropzone-indicator.armed {
+  border-color: #00f0ff;
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.4), inset 0 0 25px rgba(0, 240, 255, 0.2);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.2) 0%, transparent 80%);
+}
+
+/* Base Platform Orbital Quick Actions */
+.cockpit-orbit-base {
+  width: 100%;
+  max-width: 520px;
+  margin-top: -15px;
+  position: relative;
+  z-index: 25;
+}
+
+.cockpit-laser-disc {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%) rotateX(75deg);
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.15);
+  animation: cockpitOrbitRotate 25s linear infinite;
+  pointer-events: none;
+}
+
+.cockpit-actions-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cockpit-action-btn {
+  background: rgba(13, 23, 42, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 10px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.cockpit-action-btn:hover {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.15);
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+}
+
+.cockpit-action-icon {
+  font-size: 20px;
+}
+
+.cockpit-action-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Telemetry Pod */
+.cockpit-telemetry-pod {
+  width: 100%;
+  max-width: 440px;
+  padding: 14px 16px;
+  margin-top: 8px;
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+}
+
+/* Filters & Badges */
+.cockpit-filter-pill {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.cockpit-filter-pill.active {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.cockpit-alert-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.cockpit-alert-item:hover {
+  transform: translateX(-3px);
+}
+
+.cockpit-alert-red {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.cockpit-alert-yellow {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.cockpit-alert-cyan {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+/* ─── MAGNIFIED FLOATING HUD MODAL (DRAG & DROP PREVIEW) ─── */
+.cockpit-magnified-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 9, 20, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cockpitFadeIn 0.3s ease-out;
+}
+
+.cockpit-magnified-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: rgba(10, 20, 42, 0.95);
+  border: 2px solid #00f0ff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 0 60px rgba(0, 240, 255, 0.35), inset 0 0 35px rgba(0, 240, 255, 0.12);
+  animation: cockpitZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 101;
+}
+
+.cockpit-magnified-close {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.cockpit-magnified-close:hover {
+  background: rgba(244, 63, 94, 0.25);
+  border-color: #f43f5e;
+  color: #f43f5e;
+  transform: scale(1.1);
+}
+
+.cockpit-magnified-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.28), rgba(0, 114, 255, 0.38));
+  border: 1px solid #00f0ff;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+  transition: all 0.3s;
+}
+
+.cockpit-magnified-open-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.5), rgba(0, 114, 255, 0.6));
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.draggable-widget {
+  cursor: grab;
+  touch-action: none;
+}
+
+.draggable-widget:active {
+  cursor: grabbing;
+}
+
+/* Animations */
+@keyframes cockpitSpin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cockpitOrbitRotate {
+  100% { transform: translateX(-50%) rotateX(75deg) rotateZ(360deg); }
+}
+
+@keyframes cockpitPedestalSpin {
+  100% { transform: rotateX(75deg) rotateZ(360deg); }
+}
+
+@keyframes cockpitOrbitRing1 {
+  100% { transform: rotateX(68deg) rotateY(24deg) rotateZ(360deg); }
+}
+
+@keyframes cockpitOrbitRing2 {
+  100% { transform: rotateX(72deg) rotateY(-32deg) rotateZ(360deg); }
+}
+
+@keyframes cockpitOrbitRing3 {
+  100% { transform: rotateX(78deg) rotateZ(360deg); }
+}
+
+@keyframes holoAvatarFloat {
+  0%, 100% {
+    transform: translateY(0px) rotateY(0deg) rotateX(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotateY(4deg) rotateX(1deg);
+  }
+  50% {
+    transform: translateY(-14px) rotateY(0deg) rotateX(-1deg);
+  }
+  75% {
+    transform: translateY(-6px) rotateY(-4deg) rotateX(1deg);
+  }
+}
+
+@keyframes holoScannerMove {
+  0%, 100% {
+    top: 15%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 85%;
+    opacity: 0.5;
+  }
+}
+
+@keyframes holoUplightPulse {
+  0%, 100% { opacity: 0.7; transform: translateX(-50%) scaleX(1); }
+  50% { opacity: 1; transform: translateX(-50%) scaleX(1.08); }
+}
+
+@keyframes cockpitPulseCore {
+  0%, 100% { transform: rotateX(75deg) scale(0.95); opacity: 0.7; }
+  50% { transform: rotateX(75deg) scale(1.1); opacity: 1; box-shadow: 0 0 60px #00f0ff; }
+}
+
+@keyframes cockpitPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes cockpitPulseGlow {
+  0%, 100% { box-shadow: 0 0 10px var(--node-color, #00f0ff); }
+  50% { box-shadow: 0 0 25px var(--node-color, #00f0ff), 0 0 40px var(--node-color, #00f0ff); }
+}
+
+@keyframes cockpitZeroGCore {
+  0%, 100% { transform: translate3d(0, 0, 40px) rotateX(0deg); }
+  50% { transform: translate3d(0, -8px, 50px) rotateX(1deg); }
+}
+
+@keyframes cockpitZeroGBelt {
+  0%, 100% { transform: translate3d(0, 0, 20px); }
+  50% { transform: translate3d(0, -5px, 28px); }
+}
+
+@keyframes cockpitZeroGLeft {
+  0%, 100% { transform: translate3d(0, 0, 10px) rotateY(2deg); }
+  50% { transform: translate3d(-3px, -5px, 16px) rotateY(3.5deg); }
+}
+
+@keyframes cockpitZeroGRight {
+  0%, 100% { transform: translate3d(0, 0, 10px) rotateY(-2deg); }
+  50% { transform: translate3d(3px, -5px, 16px) rotateY(-3.5deg); }
+}
+
+@keyframes cockpitFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cockpitZoomIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+
+/* ─── 3D 360 ROTATION ENHANCEMENTS FOR HOLOGRAM AVATAR ─── */
+.holo-avatar-3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 11;
+}
+
+.holo-avatar-mesh-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  z-index: 12;
+}
+
+.holo-avatar-front {
+  position: absolute;
+  transform: translateZ(12px);
+}
+
+.holo-avatar-back {
+  position: absolute;
+  transform: rotateY(180deg) translateZ(12px);
+  opacity: 0.9;
+}
+
+.holo-rotating-3d.speed-normal {
+  animation: holoAvatarFullRotate3D 10s linear infinite !important;
+}
+
+.holo-rotating-3d.speed-slow {
+  animation: holoAvatarFullRotate3D 18s linear infinite !important;
+}
+
+.holo-rotating-3d.speed-fast {
+  animation: holoAvatarFullRotate3D 5s linear infinite !important;
+}
+
+@keyframes holoAvatarFullRotate3D {
+  0% {
+    transform: translateY(0px) rotateY(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotateY(90deg);
+  }
+  50% {
+    transform: translateY(-14px) rotateY(180deg);
+  }
+  75% {
+    transform: translateY(-6px) rotateY(270deg);
+  }
+  100% {
+    transform: translateY(0px) rotateY(360deg);
+  }
+}
+
+/* Floating Rotation Toolbar */
+.holo-rotation-toolbar {
+  position: absolute;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 20, 42, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  padding: 4px 10px;
+  border-radius: 100px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+  z-index: 40;
+}
+
+.holo-rot-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #00f0ff;
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.holo-rot-btn.active {
+  background: rgba(0, 240, 255, 0.3);
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+.holo-spd-btn {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.holo-spd-btn.active {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: #00f0ff;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+
+/* ─── VOLUMETRIC 3D CANVAS STYLES ─── */
+.holo-3d-volumetric-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 12;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.5)) drop-shadow(0 0 35px rgba(0, 114, 255, 0.3));
+}
+
+.holo-3d-hotspot-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CINEMATIC SCI-FI VOLUMETRIC HOLOGRAM POD (أفلام الخيال العلمي والمختبرات)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.scifi-holo-chamber {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  max-width: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  cursor: grab;
+  user-select: none;
+}
+
+.scifi-holo-chamber:active {
+  cursor: grabbing;
+}
+
+/* 1. Stasis Containment Cylinder (أنبوبة الاحتواء الزجاجية الليزرية) */
+.scifi-stasis-cylinder {
+  position: absolute;
+  top: 18px;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  border-radius: 140px / 40px;
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.06) 0%, rgba(0, 85, 255, 0.02) 60%, transparent 85%);
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.12), inset 0 0 30px rgba(0, 240, 255, 0.08);
+  pointer-events: none;
+  z-index: 2;
+  animation: scifiStasisPulse 4s ease-in-out infinite;
+}
+
+.scifi-laser-beam-left {
+  position: absolute;
+  top: 25px;
+  bottom: 35px;
+  left: calc(50% - 140px);
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, #00f0ff, #0072ff, #00f0ff, transparent);
+  box-shadow: 0 0 12px #00f0ff;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.scifi-laser-beam-right {
+  position: absolute;
+  top: 25px;
+  bottom: 35px;
+  right: calc(50% - 140px);
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, #00f0ff, #0072ff, #00f0ff, transparent);
+  box-shadow: 0 0 12px #00f0ff;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* 2. Holographic Energy Pedestal */
+.scifi-pedestal-platform {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  perspective: 600px;
+  z-index: 3;
+}
+
+.scifi-pedestal-disc-outer {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.55);
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.35), inset 0 0 25px rgba(0, 240, 255, 0.2);
+  transform: rotateX(75deg);
+  animation: cockpitPedestalSpin 22s linear infinite;
+}
+
+.scifi-pedestal-disc-inner {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 114, 255, 0.65);
+  box-shadow: 0 0 25px rgba(0, 114, 255, 0.45), inset 0 0 20px rgba(0, 240, 255, 0.3);
+  transform: rotateX(75deg);
+  animation: cockpitPedestalSpin 12s linear infinite reverse;
+}
+
+.scifi-pedestal-core-glow {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #00f0ff 0%, rgba(0, 114, 255, 0.5) 45%, transparent 75%);
+  box-shadow: 0 0 45px #00f0ff;
+  transform: rotateX(75deg);
+  animation: cockpitPulseCore 3s ease-in-out infinite;
+}
+
+.scifi-pedestal-uplight {
+  position: absolute;
+  bottom: 25px;
+  width: 260px;
+  height: 400px;
+  background: linear-gradient(to top, rgba(0, 210, 255, 0.28) 0%, rgba(0, 85, 255, 0.08) 50%, transparent 95%);
+  clip-path: polygon(20% 100%, 80% 100%, 95% 0%, 5% 0%);
+  filter: blur(14px);
+  pointer-events: none;
+}
+
+/* 3. 3D Planetary Laser Orbit Rings */
+.scifi-orbit-system {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  z-index: 8;
+}
+
+.scifi-orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.scifi-orbit-ring-1 {
+  width: 330px;
+  height: 330px;
+  border: 1.5px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+  transform: rotateX(68deg) rotateY(24deg);
+  animation: cockpitOrbitRing1 18s linear infinite;
+}
+
+.scifi-orbit-ring-2 {
+  width: 300px;
+  height: 300px;
+  border: 1.5px solid rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.35);
+  transform: rotateX(72deg) rotateY(-32deg);
+  animation: cockpitOrbitRing2 14s linear infinite reverse;
+}
+
+.scifi-orbit-ring-3 {
+  width: 250px;
+  height: 250px;
+  border: 1px dashed rgba(0, 210, 255, 0.4);
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.25);
+  transform: rotateX(78deg);
+  animation: cockpitOrbitRing3 10s linear infinite;
+}
+
+.scifi-photon-bead {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 20px #00f0ff;
+}
+
+.scifi-photon-1 { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.scifi-photon-2 { top: 50%; right: 0; transform: translate(50%, -50%); background: #e9d5ff; box-shadow: 0 0 12px #a855f7; }
+.scifi-photon-3 { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+
+/* 4. TRUE 3D MULTI-PLANAR VOLUMETRIC HOLOGRAM ROTATOR */
+.scifi-holo-rotator {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  z-index: 12;
+  transition: transform 0.05s linear;
+}
+
+.scifi-holo-plane {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+/* Front & Back Primary Depth Planes */
+.scifi-plane-front {
+  transform: translateZ(16px);
+}
+
+.scifi-plane-back {
+  transform: rotateY(180deg) translateZ(16px);
+}
+
+/* 45° Cross Diagonal Volumetric Depth Planes */
+.scifi-plane-diag1 {
+  transform: rotateY(45deg) scale(0.96);
+}
+
+.scifi-plane-diag2 {
+  transform: rotateY(-45deg) scale(0.96);
+}
+
+/* 90° Lateral Depth Slice (ensures solid glow when viewed from side edge) */
+.scifi-plane-side1 {
+  transform: rotateY(90deg) scale(0.94);
+}
+
+/* Center High-Density Quantum Core */
+.scifi-plane-core {
+  transform: translateZ(0px) scale(0.98);
+}
+
+/* Hologram Images with Pure Screen Blend & Sci-Fi Neon Glow */
+.scifi-holo-img {
+  max-height: 420px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.75)) drop-shadow(0 0 28px rgba(0, 114, 255, 0.5));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  user-select: none;
+}
+
+.scifi-holo-img-translucent {
+  opacity: 0.65;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.5)) drop-shadow(0 0 20px rgba(168, 85, 247, 0.4));
+}
+
+.scifi-holo-img-side {
+  opacity: 0.55;
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.6));
+}
+
+.scifi-holo-img-core {
+  opacity: 0.4;
+  filter: brightness(1.3) blur(2px);
+}
+
+/* Laser Scanline Sweep */
+.scifi-scanline-laser {
+  position: absolute;
+  width: 250px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.9), #ffffff, rgba(0, 240, 255, 0.9), transparent);
+  box-shadow: 0 0 16px #00f0ff, 0 0 30px #00f0ff;
+  animation: holoScannerMove 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* 5. Sci-Fi Floating Toolbar */
+.scifi-toolbar-dock {
+  position: absolute;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 20, 42, 0.88);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  padding: 4px 12px;
+  border-radius: 100px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.25);
+  z-index: 40;
+}
+
+.scifi-hud-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 240, 255, 0.18);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.scifi-hud-btn.active {
+  background: rgba(0, 240, 255, 0.35);
+  border-color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.scifi-spd-btn {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scifi-spd-btn.active {
+  background: rgba(0, 240, 255, 0.28);
+  border-color: #00f0ff;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+@keyframes scifiStasisPulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 25px rgba(0, 240, 255, 0.1); }
+  50% { opacity: 1; box-shadow: 0 0 45px rgba(0, 240, 255, 0.25), inset 0 0 35px rgba(0, 240, 255, 0.15); }
+}
+
+
+/* ─── CLEAN COMPACT LIFTED COCKPIT LAYOUT ─── */
+.cockpit-wrapper {
+  padding: 6px 14px 24px !important;
+}
+
+.cockpit-kpi-belt {
+  margin-top: 0px !important;
+  margin-bottom: 12px !important;
+}
+
+.cockpit-core-anchor {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ─── ULTRA-CLEAN NO-SCROLL SINGLE-SCREEN LAYOUT ─── */
+.no-scroll-cockpit {
+  min-height: calc(100vh - 110px) !important;
+  min-height: calc(100vh - 120px) !important;
+  overflow: visible !important;
+  padding: 4px 14px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+.no-scroll-stage {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  justify-content: space-between !important;
+}
+
+.cockpit-kpi-belt {
+  margin-top: 0px !important;
+  margin-bottom: 8px !important;
+  gap: 10px !important;
+}
+
+.cockpit-kpi-card {
+  padding: 8px 12px !important;
+}
+
+.cockpit-kpi-value {
+  font-size: 18px !important;
+}
+
+.scifi-holo-chamber {
+  height: 360px !important;
+  max-width: 380px !important;
+}
+
+.scifi-holo-img {
+  max-height: 300px !important;
+}
+
+.scifi-stasis-cylinder {
+  top: 10px !important;
+  bottom: 20px !important;
+  width: 240px !important;
+}
+
+.scifi-laser-beam-left {
+  left: calc(50% - 120px) !important;
+}
+
+.scifi-laser-beam-right {
+  right: calc(50% - 120px) !important;
+}
+
+.scifi-pedestal-platform {
+  bottom: 0px !important;
+  height: 100px !important;
+}
+
+.scifi-pedestal-disc-outer {
+  width: 270px !important;
+  height: 270px !important;
+}
+
+.scifi-pedestal-disc-inner {
+  width: 190px !important;
+  height: 190px !important;
+}
+
+.scifi-pedestal-core-glow {
+  width: 90px !important;
+  height: 90px !important;
+}
+
+.scifi-pedestal-uplight {
+  bottom: 15px !important;
+  width: 200px !important;
+  height: 320px !important;
+}
+
+.scifi-orbit-ring-1 {
+  width: 270px !important;
+  height: 270px !important;
+}
+
+.scifi-orbit-ring-2 {
+  width: 240px !important;
+  height: 240px !important;
+}
+
+.scifi-orbit-ring-3 {
+  width: 200px !important;
+  height: 200px !important;
+}
+
+.scifi-toolbar-dock {
+  bottom: 2px !important;
+  padding: 2px 8px !important;
+  gap: 6px !important;
+}
+
+.scifi-hud-btn {
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+}
+
+.scifi-spd-btn {
+  font-size: 9.5px !important;
+  padding: 1px 5px !important;
+}
+
+.no-scroll-anchor {
+  width: 100% !important;
+  max-width: 600px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.no-scroll-base {
+  margin-top: 4px !important;
+  max-width: 540px !important;
+}
+
+.cockpit-actions-row {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  margin-top: 4px !important;
+}
+
+.cockpit-action-btn {
+  padding: 7px 10px !important;
+  border-radius: 8px !important;
+  gap: 4px !important;
+}
+
+.cockpit-action-icon {
+  font-size: 16px !important;
+}
+
+.cockpit-action-label {
+  font-size: 10.5px !important;
+}
+
+
+/* ─── RESTORED SMOOTH SCROLLING ─── */
+.cockpit-wrapper {
+  min-height: calc(100vh - 120px) !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  padding: 12px 18px 50px !important;
+}
+
+.cockpit-stage {
+  height: auto !important;
+  min-height: 100% !important;
+  display: block !important;
+}
+
+.cockpit-core-anchor {
+  margin: 10px auto 30px !important;
+  padding-bottom: 20px !important;
+}
+
+.cockpit-orbit-base {
+  margin-top: 15px !important;
+  margin-bottom: 25px !important;
+  position: relative !important;
+  z-index: 25 !important;
+}
+
+.scifi-holo-chamber {
+  height: 420px !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+}
+
+.scifi-holo-img {
+  max-height: 360px !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CURVED HOLOGRAPHIC THUMBNAIL WINGS & DRAG-TO-CENTER MAGNIFICATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-orbit-triptych {
+  display: grid;
+  grid-template-columns: 260px 1fr 260px;
+  gap: 16px;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 25px;
+}
+
+@media (max-width: 1280px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 220px 1fr 220px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cockpit-holo-wing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.cockpit-wing-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  padding: 4px 8px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.cockpit-thumbnails-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cockpit-curved-thumbnail-card {
+  position: relative;
+  background: rgba(10, 20, 42, 0.85);
+  border: 1.5px solid rgba(0, 240, 255, 0.35);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.12), inset 0 0 10px rgba(0, 240, 255, 0.05);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.cockpit-curved-thumbnail-card:active {
+  cursor: grabbing;
+}
+
+.cockpit-curved-thumbnail-card:hover {
+  border-color: #00f0ff;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.35), inset 0 0 15px rgba(0, 240, 255, 0.15);
+}
+
+.cockpit-thumb-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 12, 28, 0.9);
+}
+
+.cockpit-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  filter: brightness(1.05) contrast(1.1);
+  transition: transform 0.4s ease;
+}
+
+.cockpit-curved-thumbnail-card:hover .cockpit-thumb-img {
+  transform: scale(1.08);
+}
+
+.cockpit-thumb-badge {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  background: linear-gradient(to top, rgba(7, 13, 26, 0.95) 0%, rgba(7, 13, 26, 0.75) 70%, transparent 100%);
+  padding: 4px 6px 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #e2e8f0;
+}
+
+/* Center Drop Target Armed Indicator */
+.cockpit-center-dropzone-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 290px;
+  height: 290px;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.35);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 15;
+  transition: all 0.35s ease;
+  animation: cockpitOrbitRotate 20s linear infinite;
+}
+
+.cockpit-center-dropzone-indicator.armed {
+  border-color: #00f0ff;
+  box-shadow: 0 0 45px rgba(0, 240, 255, 0.5), inset 0 0 35px rgba(0, 240, 255, 0.25);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.25) 0%, transparent 80%);
+}
+
+/* Magnified Overlay & Large Hologram Display */
+.cockpit-magnified-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 9, 20, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cockpitFadeIn 0.3s ease-out;
+}
+
+.cockpit-magnified-card {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  background: rgba(10, 20, 42, 0.96);
+  border: 2px solid #00f0ff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 0 70px rgba(0, 240, 255, 0.4), inset 0 0 40px rgba(0, 240, 255, 0.15);
+  animation: cockpitZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 101;
+}
+
+.cockpit-magnified-close {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.cockpit-magnified-close:hover {
+  background: rgba(244, 63, 94, 0.3);
+  border-color: #f43f5e;
+  color: #f43f5e;
+  transform: scale(1.1);
+}
+
+.cockpit-magnified-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.35), rgba(0, 114, 255, 0.45));
+  border: 1px solid #00f0ff;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+  transition: all 0.3s;
+}
+
+.cockpit-magnified-open-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.55), rgba(0, 114, 255, 0.65));
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LARGE FULL-VIEW THUMBNAILS & AVATAR-HEIGHT MAGNIFICATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-orbit-triptych {
+  display: grid !important;
+  grid-template-columns: 310px 1fr 310px !important;
+  gap: 20px !important;
+  align-items: start !important;
+  margin-top: 10px !important;
+  margin-bottom: 30px !important;
+}
+
+@media (max-width: 1366px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 280px 1fr 280px !important;
+    gap: 14px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.cockpit-thumbnails-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.cockpit-curved-thumbnail-card {
+  background: rgba(10, 20, 42, 0.9) !important;
+  border: 1.5px solid rgba(0, 240, 255, 0.4) !important;
+  border-radius: 14px !important;
+  padding: 8px !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.15), inset 0 0 12px rgba(0, 240, 255, 0.08) !important;
+  cursor: grab !important;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s !important;
+  overflow: hidden !important;
+}
+
+.cockpit-curved-thumbnail-card:active {
+  cursor: grabbing !important;
+}
+
+.cockpit-curved-thumbnail-card:hover {
+  border-color: #00f0ff !important;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.4), inset 0 0 20px rgba(0, 240, 255, 0.15) !important;
+}
+
+.cockpit-thumb-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 4px 6px !important;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2) !important;
+  margin-bottom: 6px !important;
+}
+
+.cockpit-thumb-title {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #38bdf8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cockpit-thumb-img-wrap {
+  width: 100% !important;
+  height: 145px !important; /* LARGE AND CLEAR! */
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(circle, rgba(15, 28, 55, 0.95) 0%, rgba(5, 12, 28, 0.98) 100%) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+}
+
+.cockpit-thumb-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important; /* SHOW FULL UNCLIPPED IMAGE! */
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.25)) brightness(1.05) contrast(1.08) !important;
+  transition: transform 0.3s ease !important;
+}
+
+.cockpit-curved-thumbnail-card:hover .cockpit-thumb-img {
+  transform: scale(1.04) !important;
+}
+
+/* AVATAR-HEIGHT MODAL & HIGH-RES DISPLAY */
+.avatar-height-modal {
+  max-width: 820px !important;
+  width: 92% !important;
+  padding: 18px 22px !important;
+  background: rgba(8, 16, 36, 0.98) !important;
+  border: 2px solid #00f0ff !important;
+  border-radius: 22px !important;
+  box-shadow: 0 0 80px rgba(0, 240, 255, 0.45), inset 0 0 50px rgba(0, 240, 255, 0.2) !important;
+}
+
+.cockpit-magnified-screen-stage {
+  width: 100% !important;
+  height: 420px !important; /* EXACT MATCH TO HUMAN AVATAR HEIGHT! */
+  max-height: 440px !important;
+  background: radial-gradient(circle, rgba(12, 25, 52, 0.9) 0%, rgba(4, 10, 22, 0.98) 100%) !important;
+  border: 1.5px solid rgba(0, 240, 255, 0.4) !important;
+  border-radius: 16px !important;
+  padding: 10px !important;
+  margin: 10px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.15) !important;
+  transition: border-color 0.3s, box-shadow 0.3s !important;
+}
+
+.cockpit-magnified-screen-stage:hover {
+  border-color: #00f0ff !important;
+  box-shadow: inset 0 0 40px rgba(0, 240, 255, 0.3), 0 0 30px rgba(0, 240, 255, 0.25) !important;
+}
+
+.cockpit-magnified-img {
+  max-height: 100% !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  border-radius: 12px !important;
+  filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.4)) !important;
+  transition: transform 0.3s ease !important;
+}
+
+.cockpit-magnified-screen-stage:hover .cockpit-magnified-img {
+  transform: scale(1.02) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PURE ZERO-G FREE-FLOATING HOLOGRAPHIC SCREENS (NO BOX CONTAINER)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-orbit-triptych {
+  display: grid !important;
+  grid-template-columns: 350px 1fr 350px !important;
+  gap: 24px !important;
+  align-items: center !important;
+  margin-top: 10px !important;
+  margin-bottom: 35px !important;
+}
+
+@media (max-width: 1400px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 310px 1fr 310px !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cockpit-orbit-triptych {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.cockpit-holo-wing {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  z-index: 10 !important;
+}
+
+.cockpit-thumbnails-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  align-items: center !important;
+}
+
+/* Free floating pure hologram container without outer boxes */
+.cockpit-floating-holo-container {
+  position: relative !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: grab !important;
+  user-select: none !important;
+  touch-action: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: 350px !important;
+  transition: filter 0.3s ease !important;
+}
+
+.cockpit-floating-holo-container:active {
+  cursor: grabbing !important;
+}
+
+/* Enlarged Curved Hologram Screen with glowing aura and readable typography */
+.cockpit-floating-holo-screen {
+  width: 100% !important;
+  height: 185px !important; /* ENLARGED SO TEXT IS CRISP & READABLE */
+  object-fit: contain !important;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.5)) drop-shadow(0 0 35px rgba(0, 114, 255, 0.3)) brightness(1.08) contrast(1.1) !important;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  pointer-events: auto !important;
+}
+
+.cockpit-floating-holo-container:hover .cockpit-floating-holo-screen {
+  filter: drop-shadow(0 0 30px rgba(0, 240, 255, 0.85)) drop-shadow(0 0 55px rgba(0, 114, 255, 0.55)) brightness(1.18) contrast(1.15) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OPEN HORSESHOE ORBITAL RING (MULTI-RADIUS CONCENTRIC ARCH OPEN AT BOTTOM)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-horseshoe-orbit-stage {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 520px !important;
+  max-width: 1100px !important;
+  margin: 10px auto 35px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cockpit-horseshoe-center-anchor {
+  position: relative !important;
+  z-index: 15 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Horseshoe Ring Absolute Overlay Container */
+.cockpit-horseshoe-ring-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 20 !important;
+}
+
+/* Individual Floating Screen Node along the Arch */
+.cockpit-horseshoe-holo-node {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px))) rotate(var(--rot-deg, 0deg)) !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
+  user-select: none !important;
+  touch-action: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: filter 0.3s ease !important;
+}
+
+.cockpit-horseshoe-holo-node:active {
+  cursor: grabbing !important;
+}
+
+/* Screen Image inside Horseshoe Node */
+.cockpit-horseshoe-screen-img {
+  width: 185px !important;
+  height: 108px !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.6)) drop-shadow(0 0 28px rgba(0, 114, 255, 0.35)) brightness(1.08) contrast(1.1) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.cockpit-horseshoe-holo-node:hover .cockpit-horseshoe-screen-img {
+  filter: drop-shadow(0 0 28px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 50px rgba(0, 114, 255, 0.65)) brightness(1.22) contrast(1.18) !important;
+  transform: scale(1.08) !important;
+}
+
+/* Responsive Fallback for smaller screens */
+@media (max-width: 1100px) {
+  .cockpit-horseshoe-orbit-stage {
+    min-height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .cockpit-horseshoe-ring-overlay {
+    position: relative !important;
+    inset: auto !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    justify-content: center !important;
+    margin-top: 20px !important;
+  }
+
+  .cockpit-horseshoe-holo-node {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OPEN HORSESHOE ORBITAL RING (CALIBRATED CLEARANCE & ENLARGED READABLE SIZE)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-kpi-belt {
+  margin-top: 4px !important;
+  margin-bottom: 20px !important;
+}
+
+.cockpit-horseshoe-orbit-stage {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 560px !important;
+  max-width: 1280px !important;
+  margin: 35px auto 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cockpit-horseshoe-center-anchor {
+  position: relative !important;
+  z-index: 15 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Horseshoe Ring Absolute Overlay Container */
+.cockpit-horseshoe-ring-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 20 !important;
+}
+
+/* Individual Floating Screen Node along the Arch */
+.cockpit-horseshoe-holo-node {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px))) rotate(var(--rot-deg, 0deg)) !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
+  user-select: none !important;
+  touch-action: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: filter 0.3s ease !important;
+}
+
+.cockpit-horseshoe-holo-node:active {
+  cursor: grabbing !important;
+}
+
+/* Screen Image inside Horseshoe Node - Enlarged & Crisp */
+.cockpit-horseshoe-screen-img {
+  width: var(--node-w, 225px) !important;
+  height: var(--node-h, 130px) !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.65)) drop-shadow(0 0 32px rgba(0, 114, 255, 0.4)) brightness(1.1) contrast(1.12) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.cockpit-horseshoe-holo-node:hover .cockpit-horseshoe-screen-img {
+  filter: drop-shadow(0 0 30px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 55px rgba(0, 114, 255, 0.7)) brightness(1.22) contrast(1.18) !important;
+  transform: scale(1.08) !important;
+}
+
+
+.cockpit-horseshoe-orbit-stage {
+  margin: 45px auto 35px !important;
+  min-height: 600px !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVING COCKPIT ANIMATIONS & NEON BIOSIGNAL PULSE (RIGHT TO LEFT)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Remove old laser disc */
+.cockpit-laser-disc {
+  display: none !important;
+}
+
+/* Neon Pulse Stream Container at Avatar Lower Section */
+.cockpit-living-pulse-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 62%;
+  height: 40px;
+  pointer-events: none;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* ECG SVG Wave across center */
+.cockpit-neon-ecg-wave {
+  position: absolute;
+  width: 100%;
+  height: 40px;
+  top: 0;
+  left: 0;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.8)) drop-shadow(0 0 16px rgba(0, 114, 255, 0.5));
+}
+
+.cockpit-ecg-path {
+  stroke-dasharray: 8 4;
+  animation: ecgTrackMove 20s linear infinite;
+}
+
+.cockpit-ecg-glow-path {
+  stroke-dasharray: 200 1000;
+  stroke-dashoffset: 1200;
+  animation: ecgGlowTravel 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  filter: drop-shadow(0 0 10px #00f0ff) drop-shadow(0 0 20px #a855f7);
+}
+
+/* Traveling Neon Head from Right to Left */
+.cockpit-neon-pulse-head {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 10%, #00f0ff 40%, #a855f7 75%, transparent 100%);
+  box-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff, 0 0 60px #a855f7;
+  top: 50%;
+  transform: translateY(-50%);
+  right: -50px;
+  animation: neonRightToLeft 3.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* Traveling Neon Energy Trail */
+.cockpit-neon-pulse-trail {
+  position: absolute;
+  height: 4px;
+  width: 240px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(270deg, #00f0ff 0%, #38bdf8 50%, rgba(168, 85, 247, 0.6) 80%, transparent 100%);
+  box-shadow: 0 0 14px #00f0ff, 0 0 28px rgba(0, 240, 255, 0.8);
+  border-radius: 4px;
+  right: -250px;
+  animation: neonTrailRightToLeft 3.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes neonRightToLeft {
+  0% {
+    right: -50px;
+    opacity: 0;
+    transform: translateY(-50%) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.2);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.4);
+    box-shadow: 0 0 30px #00f0ff, 0 0 60px #00f0ff, 0 0 90px #a855f7;
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+  }
+  100% {
+    right: calc(100% + 50px);
+    opacity: 0;
+    transform: translateY(-50%) scale(0.6);
+  }
+}
+
+@keyframes neonTrailRightToLeft {
+  0% {
+    right: -250px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    right: calc(100% + 50px);
+    opacity: 0;
+  }
+}
+
+@keyframes ecgGlowTravel {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1200;
+  }
+}
+
+@keyframes ecgTrackMove {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1200;
+  }
+}
+
+/* ── LIVING BIO PARTICLES ── */
+.cockpit-living-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.bio-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #00f0ff 20%, rgba(0, 240, 255, 0.4) 60%, transparent 100%);
+  box-shadow: 0 0 12px #00f0ff;
+  opacity: 0;
+  animation: bioParticleDrift 7s ease-in-out infinite;
+}
+
+.bio-particle.p1 { width: 6px; height: 6px; left: 20%; bottom: 15%; animation-delay: 0s; }
+.bio-particle.p2 { width: 8px; height: 8px; left: 35%; bottom: 25%; animation-delay: 2.2s; }
+.bio-particle.p3 { width: 5px; height: 5px; left: 50%; bottom: 20%; animation-delay: 1.1s; }
+.bio-particle.p4 { width: 7px; height: 7px; left: 65%; bottom: 18%; animation-delay: 3.5s; }
+.bio-particle.p5 { width: 9px; height: 9px; left: 80%; bottom: 28%; animation-delay: 4.8s; }
+.bio-particle.p6 { width: 6px; height: 6px; left: 45%; bottom: 12%; animation-delay: 5.5s; }
+
+@keyframes bioParticleDrift {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+    transform: translateY(-40px) scale(1.2);
+  }
+  70% {
+    opacity: 0.85;
+    transform: translateY(-90px) scale(1);
+  }
+  100% {
+    transform: translateY(-140px) scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* ── LIVING BACKGROUND BREATHING PULSE ── */
+.cockpit-orb-center {
+  animation: livingOrbPulse 6s ease-in-out infinite alternate !important;
+}
+
+@keyframes livingOrbPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0.75;
+    filter: blur(80px);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.0);
+    opacity: 0.55;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVE ECG OSCILLOSCOPE MONITOR (HOSPITAL-GRADE 60 FPS SWEEP)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-living-ecg-container {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 60% !important;
+  height: 55px !important;
+  pointer-events: none !important;
+  z-index: 18 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+}
+
+.cockpit-ecg-grid-backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.03) 15%, rgba(0, 240, 255, 0.06) 50%, rgba(0, 240, 255, 0.03) 85%, transparent 100%);
+  border-top: 1px dashed rgba(0, 240, 255, 0.15);
+  border-bottom: 1px dashed rgba(0, 240, 255, 0.15);
+  pointer-events: none;
+}
+
+.cockpit-ecg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TURBO PERFORMANCE & GPU HARDWARE ACCELERATION STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Isolate cockpit stage rendering */
+.cockpit-stage {
+  contain: layout style;
+  transform: translateZ(0);
+}
+
+/* GPU Accelerated ECG Canvas */
+.cockpit-ecg-canvas {
+  filter: drop-shadow(0 0 10px #00f0ff);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Floating Screen Node with Pure CSS GPU Animation */
+.cockpit-horseshoe-holo-node {
+  will-change: transform;
+  transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px)), 0) rotate(var(--rot-deg, 0deg)) !important;
+  animation: holoGpuFloat 3.8s ease-in-out infinite alternate !important;
+  animation-delay: var(--anim-delay, 0s) !important;
+  backface-visibility: hidden;
+}
+
+@keyframes holoGpuFloat {
+  0% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px)), 0) rotate(var(--rot-deg, 0deg));
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) - 4px), 0) rotate(var(--rot-deg, 0deg));
+  }
+}
+
+/* Fast Single-Pass Drop Shadow on Images */
+.cockpit-horseshoe-screen-img {
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.75)) !important;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.cockpit-horseshoe-holo-node:hover .cockpit-horseshoe-screen-img {
+  filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.95)) !important;
+}
+
+/* Hardware accelerated backdrop elements */
+.cockpit-orb-center,
+.cockpit-orb-left,
+.cockpit-orb-right {
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLEAN COMPONENT POSITIONING & LAYER ALIGNMENT FIXES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Stasis pod container clean sizing */
+.scifi-stasis-pod-wrapper {
+  position: relative !important;
+  width: 290px !important;
+  height: 380px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Dropzone Indicator ONLY when actively dragging */
+.cockpit-center-dropzone-indicator {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 260px !important;
+  height: 260px !important;
+  border-radius: 50% !important;
+  border: 2px dashed #00f0ff !important;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.25) 0%, transparent 75%) !important;
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.6), inset 0 0 25px rgba(0, 240, 255, 0.3) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 30 !important;
+  pointer-events: none !important;
+  animation: cockpitOrbitRotate 12s linear infinite !important;
+}
+
+/* Compact Control Pill at Avatar Pedestal */
+.scifi-compact-control-pill {
+  position: absolute !important;
+  bottom: 8px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 6px !important;
+  border-radius: 20px !important;
+  background: rgba(10, 20, 42, 0.85) !important;
+  border: 1px solid rgba(0, 240, 255, 0.35) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 25 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 240, 255, 0.15) !important;
+}
+
+.scifi-speed-pill-btn {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.scifi-speed-pill-btn:hover {
+  color: #00f0ff !important;
+  background: rgba(0, 240, 255, 0.1) !important;
+}
+
+.scifi-speed-pill-btn.active {
+  color: #00f0ff !important;
+  background: rgba(0, 240, 255, 0.2) !important;
+  border-color: rgba(0, 240, 255, 0.5) !important;
+  font-weight: bold !important;
+}
+
+.scifi-pill-dot {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  background: #00f0ff !important;
+  box-shadow: 0 0 6px #00f0ff !important;
+}
+
+/* Quick Action Cards directly below pedestal */
+.cockpit-orbit-base {
+  width: 100% !important;
+  max-width: 560px !important;
+  margin-top: 16px !important;
+  position: relative !important;
+  z-index: 26 !important;
+}
+
+.cockpit-actions-row {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.cockpit-action-btn {
+  background: rgba(13, 23, 42, 0.9) !important;
+  border: 1px solid rgba(0, 240, 255, 0.35) !important;
+  border-radius: 12px !important;
+  padding: 10px 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  color: #e2e8f0 !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 240, 255, 0.1) !important;
+}
+
+.cockpit-action-btn:hover {
+  border-color: #00f0ff !important;
+  background: rgba(0, 240, 255, 0.15) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.3) !important;
+}
+
+.cockpit-action-icon {
+  font-size: 18px !important;
+}
+
+.cockpit-action-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CYBER DIGITAL NEON LASER RAIN & ZERO-G ORGANIC FLOATING
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Digital Neon Laser Rain Container */
+.cockpit-cyber-neon-rain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* Individual Neon Laser Data Beam falling downwards */
+.cyber-laser-beam {
+  position: absolute;
+  left: var(--pos-left, 50%);
+  top: -260px;
+  width: 2px;
+  height: var(--beam-len, 150px);
+  background: linear-gradient(180deg, transparent 0%, var(--beam-color, #00f0ff) 75%, #ffffff 100%);
+  box-shadow: 0 0 10px var(--beam-color, #00f0ff), 0 0 20px rgba(0, 240, 255, 0.4);
+  border-radius: 2px;
+  opacity: 0;
+  animation: cyberLaserFall var(--beam-dur, 3.5s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: var(--beam-delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* Glowing Leading Data Packet at the head of the beam */
+.cyber-laser-beam::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 8px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffffff, 0 0 16px var(--beam-color, #00f0ff);
+}
+
+@keyframes cyberLaserFall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.75;
+  }
+  80% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateY(calc(100vh + 300px));
+    opacity: 0;
+  }
+}
+
+/* ── ORGANIC ZERO-G FLOATING ANIMATION FOR HOLOGRAPHIC SCREENS ── */
+.cockpit-horseshoe-holo-node {
+  will-change: transform !important;
+  transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px)), 0) rotate(var(--rot-deg, 0deg)) !important;
+  animation: holoZeroGFloat var(--anim-dur, 3.6s) ease-in-out infinite alternate !important;
+  animation-delay: var(--anim-delay, 0s) !important;
+  backface-visibility: hidden !important;
+}
+
+@keyframes holoZeroGFloat {
+  0% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px)), 0) rotate(var(--rot-deg, 0deg));
+  }
+  50% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) + var(--float-shift, -6px)), 0) rotate(calc(var(--rot-deg, 0deg) + 0.6deg));
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) - var(--float-shift, -6px)), 0) rotate(calc(var(--rot-deg, 0deg) - 0.6deg));
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VIVID EXPRESSIVE ZERO-G FLOATING ANIMATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cockpit-horseshoe-holo-node {
+  will-change: transform !important;
+  transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px)), 0) rotate(var(--rot-deg, 0deg)) !important;
+  animation: holoVividZeroGFloat var(--anim-dur, 3.8s) ease-in-out infinite alternate !important;
+  animation-delay: var(--anim-delay, 0s) !important;
+  backface-visibility: hidden !important;
+}
+
+@keyframes holoVividZeroGFloat {
+  0% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) - 9px), 0) rotate(calc(var(--rot-deg, 0deg) - 0.8deg));
+  }
+  50% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) + 2px), 0) rotate(var(--rot-deg, 0deg));
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--pos-x, 0px)), calc(-50% + var(--pos-y, 0px) + 10px), 0) rotate(calc(var(--rot-deg, 0deg) + 0.8deg));
+  }
+}
+
+/* Enhancing floating aura and responsiveness */
+.cockpit-horseshoe-screen-img {
+  transition: transform 0.3s ease, filter 0.3s ease !important;
+}
+
+.cockpit-horseshoe-holo-node:hover {
+  animation-play-state: paused !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE DASHBOARD BACKGROUND (PINK & BLUE THEME GRADIENT)
+   - Scoped strictly to [data-theme="light"] only.
+   - Dark Mode is 100% preserved and untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] .cockpit-wrapper {
+  background:
+    radial-gradient(ellipse 75% 55% at 15% 15%, rgba(244, 114, 182, 0.28) 0%, transparent 65%),
+    radial-gradient(ellipse 75% 55% at 85% 75%, rgba(56, 189, 248, 0.32) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 45% at 50% 40%, rgba(253, 242, 248, 0.7) 0%, transparent 75%),
+    linear-gradient(145deg, #fdf2f7 0%, #f6f8fc 45%, #eff6ff 100%) !important;
+  border: 1px solid rgba(220, 130, 190, 0.28) !important;
+  box-shadow: 0 10px 40px rgba(150, 130, 170, 0.12), inset 0 0 50px rgba(244, 114, 182, 0.08) !important;
+}
+
+[data-theme="light"] .cockpit-scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(220, 130, 190, 0.025) 50%,
+    rgba(56, 189, 248, 0.025)
+  ) !important;
+  background-size: 100% 4px !important;
+}
+
+[data-theme="light"] .cockpit-orb-center {
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.22) 0%, rgba(56, 189, 248, 0.18) 50%, transparent 70%) !important;
+}
+
+[data-theme="light"] .cockpit-orb-left {
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.25) 0%, transparent 70%) !important;
+}
+
+[data-theme="light"] .cockpit-orb-right {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 70%) !important;
+}

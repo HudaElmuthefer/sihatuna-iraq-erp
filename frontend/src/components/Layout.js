@@ -664,7 +664,7 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="page-main" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <main className="page-main" style={{ flex: 1, overflowY: 'auto', padding: isDark ? '14px 18px 32px' : '24px' }}>
           {/* الوضع الداكن: الصفحة الرئيسية (/) تعرض DarkHolographicHome بدلاً
              من HealthBanner+المحتوى العادي (يُبنى داخل DashboardPage.js
              نفسه)، وبقية الصفحات لا تعرض HealthBanner (CentralHolographicWorkspace

@@ -1,7 +1,8 @@
 // سجل واحد موثوق (Single Source of Truth) لصفحات الوضع الداكن الهولوغرافي —
-// تستهلكه الحلقة (HolographicPageRing) والسايدبار (Layout.js) وحساب الصفحة
-// المختارة وحركة الفتح، كلّها من نفس المصفوفة — لا مصفوفات منفصلة قد
-// تتعارض. الترتيب هنا = ترتيب ظهور الصفحات على الحلقة (لوحة التحكم أولاً).
+// يستهلكه المدار الهولوغرافي (HolographicOrbitDeck)، السايدبار (Layout.js)،
+// السحب/الإفلات، اختيار الصفحة، وفتحها، كلّها من نفس المصفوفة.
+// الترتيب هنا = ترتيب الأولوية البصرية: الصفحات المعتمدة ذات الشاشات
+// المقعرة والقواعد الهولوغرافية أولاً لتشغل الفتحات الأبرز في المدارات.
 import { ALL_PAGES } from '../contexts/AppContext';
 import {
   DashboardPreview, PatientsPreview, DoctorsPreview, AppointmentsPreview,
@@ -10,6 +11,7 @@ import {
   HRPreview, AccountsPreview, GenericPreview,
 } from '../components/holo/HolographicPagePreview';
 import { CURVED_PAGE_IMAGES } from '../assets/darkPages';
+import { ORBIT_SLOTS, ORBIT_SLOT_COUNT } from '../utils/holographicOrbit';
 
 const PREVIEW_BY_KEY = {
   dashboard: DashboardPreview,
@@ -29,28 +31,44 @@ const PREVIEW_BY_KEY = {
   accounts: AccountsPreview,
 };
 
-// كل عنصر بـALL_PAGES (AppContext.js) يقابله هنا نفس key/label/icon/path —
-// فقط نُضيف PreviewComponent فوقها، دون تكرار البيانات الأساسية. الترتيب
-// هنا مُعاد ترتيبه عمداً (لوحة التحكم تُنقَل لمنتصف القائمة تقريباً، لا
-// أول عنصر كما بـALL_PAGES/السايدبار) — حتى تظهر الحلقة متناظرة (لوحات
-// على الجانبين) منذ اللحظة الأولى بدل تكديس أحادي الجانب لو بقيت لوحة
-// التحكم أول عنصر مطلقاً على الحلقة (لا فهرس قبل 0). لا يؤثر هذا على ترتيب
-// السايدبار (يعتمد ALL_PAGES مباشرة، غير هذه المصفوفة).
-const nonDashboard = ALL_PAGES.filter(p => p.key !== 'dashboard');
-const dashboardEntry = ALL_PAGES.find(p => p.key === 'dashboard');
-const midPoint = Math.floor(nonDashboard.length / 2);
-const reordered = dashboardEntry
-  ? [...nonDashboard.slice(0, midPoint), dashboardEntry, ...nonDashboard.slice(midPoint)]
-  : nonDashboard;
+// الصفحات العشر المعتمدة ذات الشاشة المقعرة والقاعدة الهولوغرافية
+const PRIORITY_KEYS = [
+  'dashboard',
+  'patients',
+  'doctors',
+  'appointments',
+  'departments',
+  'vaccinations',
+  'medical-codes',
+  'ambulance',
+  'medical-leave',
+  'ai-diagnosis',
+];
 
-export const DARK_HOLOGRAPHIC_PAGES = reordered.map(p => ({
-  ...p,
-  PreviewComponent: PREVIEW_BY_KEY[p.key] || GenericPreview,
-  // بند صريح — Part 8: الصورة المقعّرة (إن وُجدت) هي مصدر الحقيقة الوحيد
-  // للمصغرة، لا تصميم CSS إضافي فوقها (راجع HolographicPagePanel.js).
-  curvedImage: CURVED_PAGE_IMAGES[p.key] || null,
-  hasCurvedAsset: !!CURVED_PAGE_IMAGES[p.key],
-}));
+function priorityOf(page, fallbackIndex) {
+  const i = PRIORITY_KEYS.indexOf(page.key);
+  return i >= 0 ? i : PRIORITY_KEYS.length + fallbackIndex;
+}
+
+const sortedByPriority = ALL_PAGES
+  .map((p, i) => ({ p, priority: priorityOf(p, i) }))
+  .sort((a, b) => a.priority - b.priority)
+  .map(({ p }) => p);
+
+export const DARK_HOLOGRAPHIC_PAGES = sortedByPriority.map((p, i) => {
+  const slot = ORBIT_SLOTS[i % ORBIT_SLOT_COUNT];
+  return {
+    ...p,
+    id: p.key,
+    route: p.path,
+    PreviewComponent: PREVIEW_BY_KEY[p.key] || GenericPreview,
+    curvedImage: CURVED_PAGE_IMAGES[p.key] || null,
+    hasCurvedPlatformAsset: !!CURVED_PAGE_IMAGES[p.key],
+    visualPriority: i,
+    orbitGroup: slot.orbit,
+    orbitAngle: slot.angle,
+  };
+});
 
 export function getDarkPage(key) {
   return DARK_HOLOGRAPHIC_PAGES.find(p => p.key === key);

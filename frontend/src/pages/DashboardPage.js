@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
@@ -15,6 +15,30 @@ import {
   FaUsers, FaUserMd, FaCalendarAlt, FaBed, FaFlask,
   FaCapsules, FaTimes, FaExternalLinkAlt
 } from 'react-icons/fa';
+
+// إصلاح أداء: App.js يحمّل كل صفحة (ما عدا تسجيل الدخول واللوحة الرئيسية)
+// كـchunk منفصل عبر React.lazy — ضروري لتقليل حزمة JS الرئيسية (راجع ملخص
+// مهمة الأداء السابقة)، لكن أثره الجانبي: أول زيارة لأي صفحة بجلسة المستخدم
+// تنتظر تحميل الـchunk فعلياً عبر الشبكة قبل ظهورها — أثناء هذا الانتظار
+// (اختبرتُه حياً: نحو نصف ثانية على خادم التطوير) تبقى الشاشة السابقة
+// ظاهرة كما هي (سلوك React الطبيعي، وليس تكراراً لخلل "ومضة اللوحة غير
+// المعتّمة" الذي أُصلح أعلاه — لا تغيير حالة خاطئ هنا، فقط بطء تحميل شبكة).
+// بما أن المستخدم يرى بالضبط أي صفحة سيفتح لحظة ظهور النافذة المكبّرة (قبل
+// الضغط على "فتح الصفحة" بلحظات)، نبدأ تحميل ملف الـchunk حينها مسبقاً
+// (import() بنفس مسار الوحدة المُستخدَم بـApp.js — Webpack يوحّد الطلبين
+// لنفس الـchunk تلقائياً، فهذا لا يُنشئ تحميلاً مضاعفاً)، فيكون غالباً جاهزاً
+// أو شبه جاهز بحلول لحظة الضغط الفعلي على الزر.
+const ROUTE_CHUNK_PREFETCH = {
+  '/patients': () => import('./PatientsPage'),
+  '/doctors': () => import('./DoctorsPage'),
+  '/appointments': () => import('./AppointmentsPage'),
+  '/departments': () => import('./DepartmentsPage'),
+  '/ai-diagnosis': () => import('./AIDiagnosisPage'),
+  '/medical-codes': () => import('./MedicalCodesPage'),
+  '/vaccinations': () => import('./VaccinationsPage'),
+  '/ambulance': () => import('./AmbulancePage'),
+  '/medical-leave': () => import('./MedicalLeavePage'),
+};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -36,6 +60,11 @@ export default function DashboardPage() {
   const [isDraggingOverCenter, setIsDraggingOverCenter] = useState(false);
   const dropZoneRef = useRef(null);
   const lastDragTimeRef = useRef(0);
+
+  useEffect(() => {
+    const prefetch = magnifiedItem && ROUTE_CHUNK_PREFETCH[magnifiedItem.route];
+    if (prefetch) prefetch().catch(() => {}); // فشل التحميل المسبق ليس حرجاً — النقر الفعلي سيعيد المحاولة أصلاً
+  }, [magnifiedItem]);
 
   // ── ERP Real Data Aggregations ────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];

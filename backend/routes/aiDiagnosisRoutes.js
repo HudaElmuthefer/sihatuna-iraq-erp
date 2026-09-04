@@ -29,6 +29,7 @@ const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../config/redisRateLimitStore');
+const { skipInTest } = require('../config/rateLimiters');
 const { logAudit } = require('../utils/auditLog');
 const { getFeatureStatus, routeTextCall } = require('../utils/aiProviderRouter');
 
@@ -59,6 +60,7 @@ router.get('/ai-diagnosis/referral-doctors', auth, requirePermission('ai-diagnos
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: skipInTest,
   message: { message: 'عدد كبير جداً من طلبات التشخيص، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,

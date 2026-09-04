@@ -11,6 +11,7 @@ const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
 const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../config/redisRateLimitStore');
+const { skipInTest } = require('../config/rateLimiters');
 const { logAudit } = require('../utils/auditLog');
 const { getFeatureStatus } = require('../utils/aiProviderRouter');
 const { detectAnomalies, explainAnomaly } = require('../agents/billingAnomalyAgent');
@@ -23,6 +24,7 @@ const router = express.Router();
 const analyzeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: skipInTest,
   message: { message: 'عدد كبير جداً من طلبات تحليل الفوترة، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -31,6 +33,7 @@ const analyzeLimiter = rateLimit({
 const explainLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: skipInTest,
   message: { message: 'عدد كبير جداً من طلبات الشرح، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,

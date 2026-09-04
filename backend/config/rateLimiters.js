@@ -10,6 +10,20 @@ const { JWT_SECRET } = require('./jwtConfig');
 // نسخة Store منفصلة (prefix مختلف)، حتى لو تشابهت إعداداتهم.
 const RedisRateLimitStore = require('./redisRateLimitStore');
 
+// ── تعطيل تحديد المعدل أثناء الاختبارات (skipInTest) ────────────────────────
+// كل limiter بهذا الملف وبملفات routes/*.js (dosageRoutes وغيرها — كل من يبني
+// RedisRateLimitStore خاصة به) يشارك عدّاداً واحداً بـRedis مفتاحه IP أو معرّف
+// المستخدم الوهمي الثابت (1) الذي تزرعه tests/testUtils.js — بعكس db.json/
+// PostgreSQL/سجل التدقيق، هذا العدّاد غير معزول فعلياً بين ملفات الاختبار
+// (يتراكم عبر كل الملفات بنفس نافذة الدقائق الـ15)، فتشغيل مجموعة الاختبارات
+// الكاملة (٢٨+ ملفاً يسجّلون الدخول، وملفات أخرى بعشرات الطلبات لنفس المسار)
+// يتجاوز الحد الحقيقي بسرعة ويُفشِل اختبارات لا علاقة لها بصحة الكود
+// المُختبَر فعلياً بـ429 عشوائية. لذا: `skip` (خاصية express-rate-limit
+// الرسمية) تُعطِّل تحديد المعدل بالكامل تحت NODE_ENV=test، بدل تعديل قيم
+// الحد أو لمس RedisRateLimitStore نفسها (المُختبَرة مباشرة ومُتعمَّداً
+// بـtests/redisRateLimitStore.test.js — تعطيلها هناك سيُبطل ذلك الاختبار).
+const skipInTest = () => process.env.NODE_ENV === 'test';
+
 // ── دالة مشتركة: تستخرج هوية المستخدم من التوكن لو موجود وصالح، وإلا IP ────
 // نقرأ التوكن يدويًا هنا (نفس طريقة middleware/auth.js بالضبط: كوكي أولاً ثم
 // Authorization header) لأن generalLimiter يشتغل *قبل* middleware auth بترتيب
@@ -37,6 +51,7 @@ const keyByUserOrIP = (req) => {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skip: skipInTest,
   message: { message: 'محاولات دخول كثيرة جداً، حاول مرة أخرى بعد 15 دقيقة' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,6 +66,7 @@ const generalLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 300,
   keyGenerator: keyByUserOrIP,
+  skip: skipInTest,
   message: { message: 'طلبات كثيرة جداً، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -61,10 +77,11 @@ const importLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   keyGenerator: keyByUserOrIP,
+  skip: skipInTest,
   message: { message: 'عمليات استيراد كثيرة جداً، حاول مرة أخرى بعد قليل' },
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('import'),
 });
 
-module.exports = { loginLimiter, generalLimiter, importLimiter };
+module.exports = { loginLimiter, generalLimiter, importLimiter, skipInTest };

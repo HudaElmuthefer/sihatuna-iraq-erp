@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../config/database');
-const { upload } = require('../config/uploadConfig');
+const { upload, deleteUploadedFile } = require('../config/uploadConfig');
 
 router.use(auth);
 
@@ -70,12 +70,15 @@ router.delete('/employees/:id/dossier/:docId', async (req, res) => {
     // نتأكد إن الوثيقة فعلاً تخص هذا الموظف قبل الحذف — يمنع حذف وثيقة موظف
     // آخر بمجرد تخمين رقم docId.
     const result = await pool.query(
-      `DELETE FROM dossiers WHERE id = $1 AND data->>'employeeId' = $2 RETURNING id`,
+      `DELETE FROM dossiers WHERE id = $1 AND data->>'employeeId' = $2 RETURNING id, data`,
       [docId, String(id)]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'الوثيقة غير موجودة' });
     }
+    // حذف نهائي هنا (لا سلة محذوفات، بعكس DELETE /api/dossiers/:id العام) —
+    // الملف المرفق يجب أن يُحذف من القرص أيضاً، وإلا يبقى يتيماً للأبد.
+    await deleteUploadedFile(result.rows[0].data?.filePath);
     res.status(200).json({ success: true });
   } catch (err) {
     console.error('❌ [DELETE /api/employees/:id/dossier/:docId]', err.message);

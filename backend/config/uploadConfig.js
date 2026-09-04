@@ -58,4 +58,31 @@ const uploadFileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter: uploadFileFilter, limits: { fileSize: 20 * 1024 * 1024 } });
 
-module.exports = { upload, UPLOADS_DIR, ALLOWED_UPLOAD_TYPES };
+// ── حذف ملف مرفوع فعلياً من القرص ──────────────────────────────────────────
+// إصلاح: حذف سجل يحمل مرفقاً (وثيقة إضبارة موظف/متقاعد) كان يحذف السطر من
+// قاعدة البيانات فقط، ويترك الملف الفعلي بـUPLOADS_DIR يتيماً للأبد — راجع
+// نقاط الاستدعاء بـemployeeDossierRoutes.js وrecycleBinRoutes.js (الحذف
+// النهائي من سلة المحذوفات تحديداً، وليس النقل لسلة المحذوفات نفسه — يجب أن
+// يبقى الملف موجوداً طالما السجل قابلاً للاسترجاع).
+// path.basename هنا مقصود كحماية من تلاعب بمسار الملف المخزَّن (Path
+// Traversal) — نتجاهل أي مجلدات بالمسار المخزَّن ونستخدم اسم الملف فقط ضمن
+// UPLOADS_DIR، حتى لو كان filePath قيمة غير متوقعة قادمة من data قاعدة البيانات.
+async function deleteUploadedFile(filePath) {
+  if (!filePath || typeof filePath !== 'string') return;
+  const filename = path.basename(filePath);
+  if (!filename) return;
+  try {
+    await fs.promises.unlink(path.join(UPLOADS_DIR, filename));
+  } catch (err) {
+    // ENOENT (الملف أصلاً غير موجود) ليس خطأً يستحق تحذيراً — أي خطأ آخر
+    // (صلاحيات، قرص، إلخ) يُسجَّل فقط ولا يُفشِل الطلب (نفس فلسفة fail-open
+    // المتّبعة بباقي النظام — حذف السجل أهم من نجاح تنظيف الملف). مُنتظَرة
+    // (async/await) لا "أطلق ولا تنتظر" — حتى تنتهي فعلياً قبل رد الطلب،
+    // ويصير التحقق منها باختبار حتمياً بلا حاجة لانتظار عشوائي.
+    if (err.code !== 'ENOENT') {
+      console.warn(`⚠️  [uploadConfig] تعذّر حذف الملف المرفق من القرص (${filename}):`, err.message);
+    }
+  }
+}
+
+module.exports = { upload, UPLOADS_DIR, ALLOWED_UPLOAD_TYPES, deleteUploadedFile };

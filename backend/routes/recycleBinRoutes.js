@@ -15,6 +15,7 @@ const { pool } = require('../config/database');
 const auth = require('../middleware/auth');
 const { moduleRegistry } = require('./pgCrud');
 const { logAudit } = require('../utils/auditLog');
+const { deleteUploadedFile } = require('../config/uploadConfig');
 
 // كل عمليات سلة المحذوفات بصلاحية إدمن فقط (استرجاع أو حذف نهائي قرار حسّاس)
 const adminOnly = (req, res, next) => {
@@ -131,6 +132,14 @@ router.delete('/:id', auth, adminOnly, async (req, res, next) => {
       return res.status(404).json({ message: 'غير موجود' });
     }
     await pool.query('DELETE FROM recycle_bin WHERE id = $1', [req.params.id]);
+    // إصلاح: حذف نهائي من سلة المحذوفات لوثيقة إضبارة (موظف/متقاعد) كان يحذف
+    // سطر recycle_bin فقط، ويترك الملف المرفق الفعلي يتيماً بمجلد uploads للأبد
+    // — هذا هو المسار الذي تستخدمه الواجهة فعلياً (DossiersTab.js يستدعي
+    // DELETE /api/dossiers/:id العام، الذي ينقل لسلة المحذوفات أولاً، ثم
+    // الحذف الفعلي يصير هنا لاحقاً من صفحة الإعدادات).
+    if (binRes.rows[0].module_key === 'dossiers') {
+      await deleteUploadedFile(binRes.rows[0].data?.filePath);
+    }
     logAudit({ action: 'PURGE', table: 'recycle_bin', recordId: req.params.id, note: 'حذف نهائي — لا رجعة', userId: req.user?.id, username: req.user?.username });
     res.json({ success: true });
   } catch (err) { next(err); }

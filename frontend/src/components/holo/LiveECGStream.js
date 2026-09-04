@@ -4,8 +4,13 @@ import React, { useRef, useEffect } from 'react';
  * High-Performance LiveECGStream (60 FPS Turbo Optimized)
  * Pure batch canvas rendering with GPU-accelerated glow - 0% CPU shadowBlur bottleneck
  */
-export default function LiveECGStream({ height = 55 }) {
+export default function LiveECGStream({ height = 55, paused = false }) {
   const canvasRef = useRef(null);
+  // مرجع (لا state) لتفادي إعادة تشغيل الـ effect (وبالتالي فقدان currentX/
+  // points وقفزة بصرية بالخط) عند كل تبديل paused — راجع سبب التوقف بالتعليق
+  // أسفل render().
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -45,6 +50,15 @@ export default function LiveECGStream({ height = 55 }) {
     };
 
     const render = () => {
+      // إصلاح أداء: نافذة المعاينة المكبّرة (DashboardPage.js) تفرض
+      // backdrop-filter: blur() على كامل الشاشة + filter: blur() إضافي على
+      // .cockpit-dimmed فوق نفس هذا الرسم بالضبط — رسم Canvas مستمر بمعدل
+      // 60fps تحته يتنافس على نفس ميزانية الإطار مع تركيب الـblur المكلف
+      // أصلاً، بينما الرسم أصلاً غير مرئي عملياً خلف الطبقتين. إيقاف عمل
+      // الرسم فقط (canvas يبقى بآخر حالة له، بلا مسح/إعادة توليد) أثناء
+      // فتح النافذة يزيل هذا التنافس بلا أي فرق بصري ملحوظ، ويستأنف Instantly
+      // من نفس النقطة (currentX/points لم يُصفَّرا) عند الإغلاق.
+      if (!pausedRef.current) {
       ctx.clearRect(0, 0, width, h);
 
       currentX -= speed;
@@ -109,6 +123,7 @@ export default function LiveECGStream({ height = 55 }) {
       ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
+      } // !pausedRef.current
 
       animationFrameId = requestAnimationFrame(render);
     };

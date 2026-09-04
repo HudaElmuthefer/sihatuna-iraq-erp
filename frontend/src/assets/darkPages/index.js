@@ -3,16 +3,20 @@
 // هنا فُحصت بصرياً وحقّقت الشرطين الإلزاميين معاً (بند صريح بالمواصفة):
 //   1. شاشة مقعّرة/Concave فعلية بمحتوى صفحة حقيقي.
 //   2. قاعدة/منصة هولوغرافية واضحة أسفل الشاشة (لا مجرد عنصر زخرفي داخلي).
-import dashboard from './page-dashboard.png';
-import patients from './page-patients.png';
-import medicalCodes from './page-medical-codes.png';
-import doctors from './page-doctors.png';
-import appointments from './page-appointments.png';
-import departments from './page-departments.png';
-import vaccinations from './page-vaccinations.png';
-import ambulance from './page-ambulance.png';
-import medicalLeave from './page-medical-leave.png';
-import aiDiagnosis from './page-ai-diagnosis.png';
+// WebP بدل PNG الأصلي (نفس المحتوى البصري بالضبط، تحقّقتُ بصرياً) — إصلاح
+// أداء نافذة المعاينة المكبّرة بـDashboardPage.js: هذه نفس الملفات المعروضة
+// بالمصغّرات المدارية العشر وبالنافذة المكبّرة معاً، وكانت ~470-530 كيلوبايت
+// لكل PNG غير مضغوط لمحتوى 640×480 فقط. راجع ملخص المهمة للأرقام الكاملة.
+import dashboard from './page-dashboard.webp';
+import patients from './page-patients.webp';
+import medicalCodes from './page-medical-codes.webp';
+import doctors from './page-doctors.webp';
+import appointments from './page-appointments.webp';
+import departments from './page-departments.webp';
+import vaccinations from './page-vaccinations.webp';
+import ambulance from './page-ambulance.webp';
+import medicalLeave from './page-medical-leave.webp';
+import aiDiagnosis from './page-ai-diagnosis.webp';
 
 export const CURVED_PAGE_IMAGES = {
   dashboard,

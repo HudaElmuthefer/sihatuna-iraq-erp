@@ -96,6 +96,21 @@
   pointer-events: none !important;
 }
 
+/* إصلاح أداء: نافذة المعاينة المكبّرة (.cockpit-magnified-overlay) تفرض
+   backdrop-filter:blur() على كامل الشاشة فوق نفس هذا المشهد بالضبط، بينما
+   عشرات الرسوم المتحركة اللانهائية تحته (المصغّرات المدارية العشر،
+   أشعة الليزر، الجسيمات الحيوية) تستمر بالعمل رغم إخفائها فعلياً خلف
+   الشفافية 0.2 والـblur المزدوج — تنافس مباشر على نفس ميزانية الإطار
+   (frame budget) مع تركيب الـblur المكلف أصلاً، بلا أي فائدة بصرية (لا
+   يمكن تمييز حركة مصغّرة مموَّهة بهذا القدر أصلاً). تجميدها فقط أثناء
+   العرض يزيل هذا التنافس بلا أي فرق بصري ملحوظ.
+   (راجع أيضاً LiveECGStream.js — رسم Canvas منفصل تماماً عن CSS، يحتاج
+   إيقافاً صريحاً بجافاسكربت عبر prop paused، غير مشمول بهذه القاعدة.) */
+.cockpit-dimmed,
+.cockpit-dimmed * {
+  animation-play-state: paused !important;
+}
+
 /* Glassmorphic Cyber Card */
 .cockpit-card {
   background: var(--cockpit-bg-card);

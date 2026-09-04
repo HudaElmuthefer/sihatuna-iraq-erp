@@ -423,7 +423,7 @@ export default function DashboardPage() {
         <div className="cockpit-horseshoe-orbit-stage">
 
           {/* ── REAL-TIME 60 FPS ECG OSCILLOSCOPE SWEEP (RIGHT TO LEFT THROUGH LOWER AVATAR) ── */}
-          <LiveECGStream height={55} />
+          <LiveECGStream height={55} paused={!!magnifiedItem} />
 
           {/* ── LIVING AMBIENT BIO PARTICLES ── */}
           <div className="cockpit-living-particles">

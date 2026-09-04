@@ -15,12 +15,12 @@ import AppLogo from './AppLogo';
 // الكوكب، القاعدة المستقبلية) — لذلك لا حاجة لأي رسم CSS/SVG إضافي فوقها؛
 // أُزيلت كل الطبقات الزخرفية اليدوية السابقة (HudRings/HudCoil/particles)
 // لتفادي ازدواجية العناصر.
-import sihatunaExactFutureHologram from '../assets/hero/sihatuna-exact-future-hologram.png';
+import sihatunaExactFutureHologram from '../assets/hero/sihatuna-exact-future-hologram.webp';
 // نظير الوضع الفاتح — من components/light، شفافية حقيقية موجودة أصلاً في
 // الملف المزوَّد (تحقّق: زوايا alpha=0، القاعدة/الشاشات alpha 190-251، لا
 // حاجة لأي معالجة إضافية). نفس تركيبة الوضع الداكن (كوكب/صولجان/DNA/دماغ/
 // تشريح/حلقات مدارية/قاعدة) لكن بلوحة ألوان وردية-سماوية-لافندر.
-import sihatunaLightFutureHologram from '../assets/hero/sihatuna-light-future-hologram.png';
+import sihatunaLightFutureHologram from '../assets/hero/sihatuna-light-future-hologram.webp';
 
 // ملاحظة تعمّد عدم استخدام banner-glass-frame.png هنا (رغم كونها من الأصول
 // المعتمدة): تلك الصورة ترسم إطاراً مزدوجاً بالفعل (بروَاز معدني خارجي +

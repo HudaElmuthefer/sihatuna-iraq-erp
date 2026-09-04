@@ -1,52 +1,71 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import PatientsPage from './pages/PatientsPage';
-import MedicalCodesPage from './pages/MedicalCodesPage';
-import DoctorsPage from './pages/DoctorsPage';
-import AppointmentsPage from './pages/AppointmentsPage';
-import DepartmentsPage from './pages/DepartmentsPage';
-import PersonalServicesPage from './pages/PersonalServicesPage';
-import AIDiagnosisPage from './pages/AIDiagnosisPage';
-import CRMPage from './pages/CRMPage';
-import PaymentSettingsPage from './pages/PaymentSettingsPage';
-import BillingPage from './pages/BillingPage';
-import VaccinationsPage from './pages/VaccinationsPage';
-import WardsPage from './pages/WardsPage';
-import DeliveryRoomPage from './pages/DeliveryRoomPage';
-import PhysicalTherapyPage from './pages/PhysicalTherapyPage';
-import QueuePage from './pages/QueuePage';
-import QueueDisplayPage from './pages/QueueDisplayPage';
-import DrugInteractionsPage from './pages/DrugInteractionsPage';
-import DosageCheckPage from './pages/DosageCheckPage';
-import AllergyCheckPage from './pages/AllergyCheckPage';
-import MedicalLeavePage from './pages/MedicalLeavePage';
-import SmartReportsPage from './pages/SmartReportsPage';
-import HRPage from './pages/HRPage';
-import AccountsPage from './pages/AccountsPage';
-import SettingsPage from './pages/SettingsPage';
-// ERP New Modules
-import InventoryPage from './pages/InventoryPage';
-import ProcurementPage from './pages/ProcurementPage';
-import BillingAnomalyPage from './pages/BillingAnomalyPage';
-import InventoryPredictionPage from './pages/InventoryPredictionPage';
-import ProjectsPage from './pages/ProjectsPage';
-import QualityPage from './pages/QualityPage';
-import LaboratoryPage from './pages/LaboratoryPage';
-import ResultsPage from './pages/ResultsPage';
-import RadiologyPage from './pages/RadiologyPage';
-import PharmacyPage from './pages/PharmacyPage';
-import AmbulancePage from './pages/AmbulancePage';
-import AssetsPage from './pages/AssetsPage';
-import DocumentsPage from './pages/DocumentsPage';
 import ToastContainer from './components/ToastContainer';
 import ConfirmDialog from './components/ConfirmDialog';
 import ForceChangePasswordScreen from './pages/ForceChangePasswordScreen';
 import FuturisticCursor from './components/FuturisticCursor';
 import useRippleEffect from './hooks/useRippleEffect';
+// LoginPage وDashboardPage فقط يبقيان استيراداً عادياً (بلا lazy) — هما أول
+// شاشتين يراهما أي مستخدم فعلياً (قبل الدخول، وبعده مباشرة)، فتحميلهما ضمن
+// الحزمة الرئيسية يمنع أي وميض تحميل إضافي على المسار الأكثر شيوعاً. باقي
+// الصفحات الـ30 (كل موديولات ERP) كانت جميعها تُستورَد فورياً بلا استثناء —
+// يعني حزمة main.js واحدة تحمّل كل النظام دفعة واحدة حتى لمستخدم يريد فقط
+// تسجيل الدخول ورؤية اللوحة الرئيسية. React.lazy() + Suspense يقسّم كل صفحة
+// إلى ملف JS منفصل يُحمَّل فقط عند زيارتها فعلياً — قياس فعلي قبل/بعد هذا
+// التعديل موثَّق بملخص المهمة.
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+const PatientsPage = lazy(() => import('./pages/PatientsPage'));
+const MedicalCodesPage = lazy(() => import('./pages/MedicalCodesPage'));
+const DoctorsPage = lazy(() => import('./pages/DoctorsPage'));
+const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
+const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'));
+const PersonalServicesPage = lazy(() => import('./pages/PersonalServicesPage'));
+const AIDiagnosisPage = lazy(() => import('./pages/AIDiagnosisPage'));
+const CRMPage = lazy(() => import('./pages/CRMPage'));
+const PaymentSettingsPage = lazy(() => import('./pages/PaymentSettingsPage'));
+const BillingPage = lazy(() => import('./pages/BillingPage'));
+const VaccinationsPage = lazy(() => import('./pages/VaccinationsPage'));
+const WardsPage = lazy(() => import('./pages/WardsPage'));
+const DeliveryRoomPage = lazy(() => import('./pages/DeliveryRoomPage'));
+const PhysicalTherapyPage = lazy(() => import('./pages/PhysicalTherapyPage'));
+const QueuePage = lazy(() => import('./pages/QueuePage'));
+const QueueDisplayPage = lazy(() => import('./pages/QueueDisplayPage'));
+const DrugInteractionsPage = lazy(() => import('./pages/DrugInteractionsPage'));
+const DosageCheckPage = lazy(() => import('./pages/DosageCheckPage'));
+const AllergyCheckPage = lazy(() => import('./pages/AllergyCheckPage'));
+const MedicalLeavePage = lazy(() => import('./pages/MedicalLeavePage'));
+const SmartReportsPage = lazy(() => import('./pages/SmartReportsPage'));
+const HRPage = lazy(() => import('./pages/HRPage'));
+const AccountsPage = lazy(() => import('./pages/AccountsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+// ERP New Modules
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const ProcurementPage = lazy(() => import('./pages/ProcurementPage'));
+const BillingAnomalyPage = lazy(() => import('./pages/BillingAnomalyPage'));
+const InventoryPredictionPage = lazy(() => import('./pages/InventoryPredictionPage'));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const QualityPage = lazy(() => import('./pages/QualityPage'));
+const LaboratoryPage = lazy(() => import('./pages/LaboratoryPage'));
+const ResultsPage = lazy(() => import('./pages/ResultsPage'));
+const RadiologyPage = lazy(() => import('./pages/RadiologyPage'));
+const PharmacyPage = lazy(() => import('./pages/PharmacyPage'));
+const AmbulancePage = lazy(() => import('./pages/AmbulancePage'));
+const AssetsPage = lazy(() => import('./pages/AssetsPage'));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
+
+// بديل مؤقت بسيط أثناء تحميل حزمة الصفحة (شبكة بطيئة أو أول زيارة لصفحة لم
+// تُحمَّل بعد) — يعيد استخدام .spinner الموجودة أصلاً بـindex.css (نفس
+// المستخدَمة بزر الدخول بـLoginPage.js) بدل تصميم عنصر جديد.
+function RouteLoadingFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div className="spinner" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, pageKey }) {
   const { user, hasPermission } = useApp();
@@ -80,6 +99,7 @@ function AppRoutes() {
       <FuturisticCursor />
       <ToastContainer />
       <ConfirmDialog />
+      <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
         {/* Public, no login required — meant for a TV/monitor in a waiting area */}
@@ -134,6 +154,7 @@ function AppRoutes() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

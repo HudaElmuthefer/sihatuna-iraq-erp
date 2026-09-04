@@ -3,8 +3,8 @@ import { useT } from '../translations';
 import { useApp } from '../contexts/AppContext';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
 import AppLogo from '../components/AppLogo';
-import heroDark from '../assets/hero/sihatuna-exact-future-hologram.png';
-import heroLight from '../assets/hero/sihatuna-light-future-hologram.png';
+import heroDark from '../assets/hero/sihatuna-exact-future-hologram.webp';
+import heroLight from '../assets/hero/sihatuna-light-future-hologram.webp';
 
 /*
  * إعادة بناء كاملة (لا ترقيع فوق التصميم السابق — طلب صريح): الصفحة

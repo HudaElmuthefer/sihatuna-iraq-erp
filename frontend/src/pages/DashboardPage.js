@@ -207,7 +207,10 @@ export default function DashboardPage() {
 
   return (
     <div className="cockpit-wrapper">
-      
+
+      {/* خارطة العراق الزخرفية — خلفية CSS بشفافية منخفضة جداً خلف كل المحتوى */}
+      <div className="cockpit-iraq-map-bg" aria-hidden="true" />
+
       {/* Scanlines, Cyber Neon Laser Rain & Ambient Glow Backgrounds */}
       <div className="cockpit-scanlines" />
       <div className="cockpit-orb-center" />

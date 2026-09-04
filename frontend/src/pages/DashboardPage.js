@@ -200,8 +200,15 @@ export default function DashboardPage() {
   };
 
   const handleOpenPage = (route) => {
+    // إصلاح: setMagnifiedItem(null) هنا كان يُعيد رندر DashboardPage فوراً
+    // بدون الوضع المكبَّر ("cockpit-dimmed" يزول بنفس اللحظة، بلا أي رسم
+    // متحرك — راجع className أدناه بـcockpit-stage) — فيظهر مشهد اللوحة
+    // الرئيسية كاملاً غير معتّم للحظة (إطار واحد على الأقل) قبل أن يبدّل
+    // React Router المسار فعلياً، أي "ومضة" لوحة تحكم قبل الانتقال الحقيقي.
+    // لا حاجة لتصفير magnifiedItem أصلاً هنا: DashboardPage كامل سيُفكَّك
+    // (unmount) بمجرد تغيّر المسار، فتُهمَل حالته تلقائياً بلا أي أثر —
+    // navigate() مباشرة كافٍ ولا يمر بأي محطة وسيطة.
     playConfirm();
-    setMagnifiedItem(null);
     navigate(route);
   };
 
@@ -254,12 +261,12 @@ export default function DashboardPage() {
                 <FaTimes />
               </button>
 
-              <div className="flex items-center justify-between border-b border-cyan-500/30 pb-2.5 mb-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{magnifiedItem.icon}</span>
-                  <div className="flex flex-col text-right">
-                    <span className="text-base font-bold text-cyan-300">{magnifiedItem.title}</span>
-                    <span className="text-xs font-normal text-slate-300 mt-1">{magnifiedItem.desc}</span>
+              <div className="cockpit-magnified-header">
+                <div className="cockpit-magnified-header-left">
+                  <span className="cockpit-magnified-header-icon">{magnifiedItem.icon}</span>
+                  <div className="cockpit-magnified-title-col">
+                    <span className="cockpit-magnified-title">{magnifiedItem.title}</span>
+                    <span className="cockpit-magnified-desc">{magnifiedItem.desc}</span>
                   </div>
                 </div>
                 <button
@@ -284,9 +291,9 @@ export default function DashboardPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-cyan-500/25 text-[11px] text-cyan-400 font-mono">
+              <div className="cockpit-magnified-footer">
                 <span>HUD LOCK: OPTIMAL • CLICK SCREEN TO ENTER</span>
-                <span className="text-slate-400">{magnifiedItem.route}</span>
+                <span className="cockpit-magnified-footer-route">{magnifiedItem.route}</span>
               </div>
             </motion.div>
           </motion.div>
@@ -441,6 +448,7 @@ export default function DashboardPage() {
               isDraggingOverCenter={isDraggingOverCenter}
               dropZoneRef={dropZoneRef}
               lang={lang}
+              paused={!!magnifiedItem}
             />
 
             {/* Base Platform: Floating Quick Actions */}

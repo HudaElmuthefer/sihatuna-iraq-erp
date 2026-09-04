@@ -7,23 +7,35 @@ export default function HologramAvatarWidget({
   selectedOrgan,
   isDraggingOverCenter,
   dropZoneRef,
-  lang = 'ar'
+  lang = 'ar',
+  paused = false
 }) {
   const [isAutoRotating, setIsAutoRotating] = useState(true);
   const [rotationSpeed, setRotationSpeed] = useState('normal');
   const [chamberGlow, setChamberGlow] = useState('cyan');
-  
+
   const stageRef = useRef(null);
   const rotationAngleRef = useRef(0);
   const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  // إصلاح أداء: هذا الدوران يُحرَّك مباشرة بـstyle.transform عبر
+  // requestAnimationFrame، وليس بـCSS @keyframes — أي قاعدة CSS من نوع
+  // animation-play-state:paused (المُطبَّقة على .cockpit-dimmed بملف CSS
+  // الصفحة) لا تؤثر عليه إطلاقاً. كان هذا الدوار (طبقات صور 3D متعددة +
+  // will-change:transform) يستمر بالعمل كامل الوقت خلف نافذة المعاينة
+  // المكبّرة رغم عدم رؤيته أصلاً (معتَّم ومموَّه بالكامل) — ينافس على نفس
+  // ميزانية الإطار مع backdrop-filter المكلفة أصلاً، تماماً كمشكلة
+  // LiveECGStream.js التي أُصلحت سابقاً (نفس النمط بالضبط، فاتني بالجولة
+  // الأولى لأنه بمكوّن مختلف).
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   useEffect(() => {
     let animId;
     const speedVal = rotationSpeed === 'fast' ? 1.2 : rotationSpeed === 'slow' ? 0.35 : 0.65;
 
     const loop = () => {
-      if (isAutoRotating && !isMouseDownRef.current && stageRef.current) {
+      if (!pausedRef.current && isAutoRotating && !isMouseDownRef.current && stageRef.current) {
         rotationAngleRef.current = (rotationAngleRef.current + speedVal) % 360;
         stageRef.current.style.transform = `rotateY(${rotationAngleRef.current}deg)`;
       }

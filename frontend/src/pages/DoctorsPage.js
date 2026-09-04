@@ -32,7 +32,9 @@ export default function DoctorsPage() {
   const navigate = useNavigate();
   const { lang, addToast, doctors, setDoctors, departments, setDepartments, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital } = useApp();
   const tr = useT(lang);
-  const [search, setSearch] = useState('');
+  // إصلاح: يقرأ ?q=... لو وصل من نتيجة بحث الـheader العام (Layout.js) — بدل
+  // أن يهبط المستخدم على قائمة كاملة غير مفلترة بعد نقر نتيجة بحث فعلية.
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [filter, setFilter] = useState('all');
   const [view, setView] = useState('cards'); // 'cards' | 'table'
   const [modal, setModal] = useState(null);
@@ -40,7 +42,9 @@ export default function DoctorsPage() {
   const [selected, setSelected] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showImport, setShowImport] = useState(false);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // نفس قيمة search الابتدائية (لا فارغة) — يمنع ومضة قائمة كاملة غير مفلترة
+  // للحظة قبل تفعيل التأخير (350ms) أدناه عند الوصول عبر ?q= تحديداً.
+  const [debouncedSearch, setDebouncedSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   // ── تحديد متعدد للحذف الجماعي ────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);

@@ -85,7 +85,7 @@ const GROUP_LABELS = {
 };
 
 export default function Layout() {
-  const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay } = useApp();
+  const { user, logout, theme, setTheme, lang, toggleLang, sidebarCollapsed, toggleSidebar, notifications, hasPermission, multiHospitalEnabled, hospitals, viewingHospitalId, setViewingHospitalId, printSettings, appName, appNameEn, printOverlay, setPrintOverlay, patients, doctors, appointments } = useApp();
   const isDark = theme === 'dark';
   const { muted: soundMuted, toggleMute: toggleSound, audioStatus } = useHolographicSound();
   const tr = useT(lang);
@@ -100,6 +100,58 @@ export default function Layout() {
   const [searchParams] = useSearchParams();
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // إصلاح: البحث بالـheader كان يطابق فقط 7 أسماء صفحات تنقّل ثابتة (لا
+  // يفحص أي بيانات حقيقية إطلاقاً) — أي بحث باسم مريض/طبيب فعلي كان يرجع
+  // بلا نتائج دائماً، رغم ظهور اللوحة نفسها بشكل صحيح (مشكلة منفصلة تماماً
+  // كانت بموضع اللوحة، أُصلحت سابقاً). الآن يفحص فعلياً بيانات المرضى
+  // (بالاسم/الهاتف/رقم الملف)، الأطباء (بالاسم/التخصص/الهاتف)، والمواعيد
+  // (باسم المريض/الطبيب/القسم) — كلها محمَّلة أصلاً بالذاكرة عبر AppContext
+  // (بلا أي طلب شبكة إضافي هنا). 5 نتائج كحد أقصى لكل فئة تفادياً للوحة
+  // طويلة جداً. كل نتيجة تنقل لصفحتها المصدر مع ?q=... — الصفحات الثلاث
+  // تقرأ هذا المعامل لملء مربع بحثها المحلي الخاص فوراً (راجع PatientsPage.js/
+  // DoctorsPage.js/AppointmentsPage.js)، فيصل المستخدم مباشرة للنتيجة
+  // مفلترة، لا لقائمة كاملة غير مفلترة.
+  const searchDataResults = React.useMemo(() => {
+    const q = globalSearch.trim().toLowerCase();
+    if (!q) return [];
+    const results = [];
+    (patients || []).forEach(p => {
+      if (!p || results.filter(r => r.type === 'patient').length >= 5) return;
+      const hay = `${p.name || ''} ${p.phone || ''} ${p.patientId || ''}`.toLowerCase();
+      if (hay.includes(q)) {
+        results.push({
+          type: 'patient', key: `p-${p.id}`, icon: '👥', label: p.name,
+          sub: p.phone || '', path: `/patients?q=${encodeURIComponent(p.name || '')}`,
+        });
+      }
+    });
+    (doctors || []).forEach(d => {
+      if (!d || results.filter(r => r.type === 'doctor').length >= 5) return;
+      const hay = `${d.name || ''} ${d.nameEn || ''} ${d.specialization || ''} ${d.specializationEn || ''} ${d.phone || ''}`.toLowerCase();
+      if (hay.includes(q)) {
+        const label = lang === 'ar' ? d.name : (d.nameEn || d.name);
+        results.push({
+          type: 'doctor', key: `d-${d.id}`, icon: '👨‍⚕️', label,
+          sub: (lang === 'ar' ? d.specialization : (d.specializationEn || d.specialization)) || '',
+          path: `/doctors?q=${encodeURIComponent(label || '')}`,
+        });
+      }
+    });
+    (appointments || []).forEach(a => {
+      if (!a || results.filter(r => r.type === 'appointment').length >= 5) return;
+      const doctorLabel = lang === 'ar' ? a.doctor : (a.doctorEn || a.doctor);
+      const hay = `${a.patient || ''} ${a.doctor || ''} ${a.doctorEn || ''} ${a.department || ''} ${a.departmentEn || ''}`.toLowerCase();
+      if (hay.includes(q)) {
+        results.push({
+          type: 'appointment', key: `a-${a.id}`, icon: '📅', label: a.patient,
+          sub: [doctorLabel, a.date].filter(Boolean).join(' · '),
+          path: `/appointments?q=${encodeURIComponent(a.patient || '')}`,
+        });
+      }
+    });
+    return results;
+  }, [globalSearch, patients, doctors, appointments, lang]);
 
   // جسر تنقّل بسيط بين السايدبار وحلقة الصفحات الهولوغرافية (DarkHolographicHome
   // — تُركَّب فقط على '/' بالوضع الداكن، عبر Outlet context أدناه). لو كانت
@@ -495,14 +547,22 @@ export default function Layout() {
                   onChange={e => { setGlobalSearch(e.target.value); setShowSearchResults(e.target.value.length > 0); }}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && globalSearch.trim()) {
-                      const q = globalSearch.toLowerCase();
-                      if (['طبيب','دكتور','doctor'].some(k=>q.includes(k))) navigate('/doctors');
-                      else if (['مريض','patient'].some(k=>q.includes(k))) navigate('/patients');
-                      else if (['موعد','appointment'].some(k=>q.includes(k))) navigate('/appointments');
-                      else if (['قسم','dept'].some(k=>q.includes(k))) navigate('/departments');
-                      else if (['تشخيص','ذكاء','diagnosis'].some(k=>q.includes(k))) navigate('/ai-diagnosis');
-                      else if (['حساب','راتب','account'].some(k=>q.includes(k))) navigate('/accounts');
-                      else if (['hr','موارد','موظف'].some(k=>q.includes(k))) navigate('/hr');
+                      // نتيجة بيانات حقيقية مطابقة أولاً (الأكثر فائدة) — إلا
+                      // فالتنقّل السريع القديم بالكلمات المفتاحية كخط احتياط
+                      // (لا يزال مفيداً لأسماء صفحات لا تُبحَث كبيانات، مثل
+                      // "حساب"/"قسم").
+                      if (searchDataResults.length > 0) {
+                        navigate(searchDataResults[0].path);
+                      } else {
+                        const q = globalSearch.toLowerCase();
+                        if (['طبيب','دكتور','doctor'].some(k=>q.includes(k))) navigate('/doctors');
+                        else if (['مريض','patient'].some(k=>q.includes(k))) navigate('/patients');
+                        else if (['موعد','appointment'].some(k=>q.includes(k))) navigate('/appointments');
+                        else if (['قسم','dept'].some(k=>q.includes(k))) navigate('/departments');
+                        else if (['تشخيص','ذكاء','diagnosis'].some(k=>q.includes(k))) navigate('/ai-diagnosis');
+                        else if (['حساب','راتب','account'].some(k=>q.includes(k))) navigate('/accounts');
+                        else if (['hr','موارد','موظف'].some(k=>q.includes(k))) navigate('/hr');
+                      }
                       setGlobalSearch(''); setShowSearchResults(false);
                     }
                     if (e.key === 'Escape') { setGlobalSearch(''); setShowSearchResults(false); }
@@ -523,36 +583,57 @@ export default function Layout() {
                   className="hsh-hide-native-scrollbar"
                   style={{ maxHeight: 320, overflowY: 'auto' }}
                 >
-                  {[
-                    {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
-                    {label:tr('nav_patients'), path:'/patients', icon:'👥'},
-                    {label:tr('nav_appointments'), path:'/appointments', icon:'📅'},
-                    {label:tr('nav_ai_diagnosis'), path:'/ai-diagnosis', icon:'🧠'},
-                    {label:tr('nav_departments'), path:'/departments', icon:'🏢'},
-                    {label:tr('nav_hr'), path:'/hr', icon:'👔'},
-                    {label:tr('nav_accounts'), path:'/accounts', icon:'💰'},
-                  ].filter(item => item.label.includes(globalSearch) || item.path.includes(globalSearch.toLowerCase()))
-                   .slice(0, 5)
-                   .map(item => (
-                    <div key={item.path} onMouseDown={() => { navigate(item.path); setGlobalSearch(''); setShowSearchResults(false); }}
-                      style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, cursor:'pointer', fontSize:13 }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <span>{item.icon}</span><span>{item.label}</span>
-                    </div>
-                  ))}
-                  {[
-                    {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
-                    {label:tr('nav_patients'), path:'/patients', icon:'👥'},
-                    {label:tr('nav_appointments'), path:'/appointments', icon:'📅'},
-                    {label:tr('nav_ai_diagnosis'), path:'/ai-diagnosis', icon:'🧠'},
-                    {label:tr('nav_departments'), path:'/departments', icon:'🏢'},
-                    {label:tr('nav_hr'), path:'/hr', icon:'👔'},
-                    {label:tr('nav_accounts'), path:'/accounts', icon:'💰'},
-                  ].filter(item => !item.label.includes(globalSearch) && !item.path.includes(globalSearch.toLowerCase())).length === 7 && (
-                    <div style={{ padding:'8px 12px', fontSize:12, color:'var(--text-secondary)', textAlign:'center' }}>
-                      {tr('layout_press_enter_search')}
-                    </div>
+                  {searchDataResults.length > 0 ? (
+                    // نتائج بيانات حقيقية (مرضى/أطباء/مواعيد مطابقون فعلياً)
+                    // — راجع تعليق searchDataResults أعلاه لسبب هذا التغيير.
+                    searchDataResults.map(item => (
+                      <div key={item.key} onMouseDown={() => { navigate(item.path); setGlobalSearch(''); setShowSearchResults(false); }}
+                        style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, cursor:'pointer', fontSize:13 }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <span>{item.icon}</span>
+                        <div style={{ minWidth:0, flex:1 }}>
+                          <div style={{ fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.label}</div>
+                          {item.sub && <div style={{ fontSize:11, color:'var(--text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.sub}</div>}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    // لا نتائج بيانات مطابقة — رجوع لروابط التنقّل السريعة
+                    // القديمة (لا تزال مفيدة لأسماء صفحات لا تُبحَث كبيانات).
+                    <>
+                      {[
+                        {label:tr('nav_doctors'), path:'/doctors', icon:'👨‍⚕️'},
+                        {label:tr('nav_patients'), path:'/patients', icon:'👥'},
+                        {label:tr('nav_appointments'), path:'/appointments', icon:'📅'},
+                        {label:tr('nav_ai_diagnosis'), path:'/ai-diagnosis', icon:'🧠'},
+                        {label:tr('nav_departments'), path:'/departments', icon:'🏢'},
+                        {label:tr('nav_hr'), path:'/hr', icon:'👔'},
+                        {label:tr('nav_accounts'), path:'/accounts', icon:'💰'},
+                      ].filter(item => item.label.includes(globalSearch) || item.path.includes(globalSearch.toLowerCase()))
+                       .slice(0, 5)
+                       .map(item => (
+                        <div key={item.path} onMouseDown={() => { navigate(item.path); setGlobalSearch(''); setShowSearchResults(false); }}
+                          style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, cursor:'pointer', fontSize:13 }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <span>{item.icon}</span><span>{item.label}</span>
+                        </div>
+                      ))}
+                      {[
+                        {label:tr('nav_doctors'), path:'/doctors'},
+                        {label:tr('nav_patients'), path:'/patients'},
+                        {label:tr('nav_appointments'), path:'/appointments'},
+                        {label:tr('nav_ai_diagnosis'), path:'/ai-diagnosis'},
+                        {label:tr('nav_departments'), path:'/departments'},
+                        {label:tr('nav_hr'), path:'/hr'},
+                        {label:tr('nav_accounts'), path:'/accounts'},
+                      ].filter(item => !item.label.includes(globalSearch) && !item.path.includes(globalSearch.toLowerCase())).length === 7 && (
+                        <div style={{ padding:'8px 12px', fontSize:12, color:'var(--text-secondary)', textAlign:'center' }}>
+                          {tr('layout_press_enter_search')}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <HolographicScrollHandle targetRef={searchResultsRef} side={searchResultsRailSide} />

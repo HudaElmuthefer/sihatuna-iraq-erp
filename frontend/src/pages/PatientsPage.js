@@ -28,8 +28,12 @@ const colors = ['#1a6bab', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'
 export default function PatientsPage() {
   const { lang, addToast, patients, setPatients, syncPatientToServer, hospitals, multiHospitalEnabled, filterByViewingHospital } = useApp();
   const tr = useT(lang);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // إصلاح: يقرأ ?q=... لو وصل من نتيجة بحث الـheader العام (Layout.js) — بدل
+  // أن يهبط المستخدم على قائمة كاملة غير مفلترة بعد نقر نتيجة بحث فعلية.
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
+  // نفس قيمة search الابتدائية (لا فارغة) — يمنع ومضة قائمة كاملة غير مفلترة
+  // للحظة قبل تفعيل التأخير (350ms) أدناه عند الوصول عبر ?q= تحديداً.
+  const [debouncedSearch, setDebouncedSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

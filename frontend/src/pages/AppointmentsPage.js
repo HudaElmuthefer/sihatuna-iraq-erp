@@ -26,7 +26,9 @@ export default function AppointmentsPage() {
   const ar = lang === 'ar';
   const visitTypes = [tr('visit_checkup'), tr('visit_followup'), tr('visit_consult'), tr('visit_emergency')];
 
-  const [search, setSearch]           = useState('');
+  // إصلاح: يقرأ ?q=... لو وصل من نتيجة بحث الـheader العام (Layout.js) — بدل
+  // أن يهبط المستخدم على قائمة كاملة غير مفلترة بعد نقر نتيجة بحث فعلية.
+  const [search, setSearch]           = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom]       = useState('');
   const [dateTo, setDateTo]           = useState('');

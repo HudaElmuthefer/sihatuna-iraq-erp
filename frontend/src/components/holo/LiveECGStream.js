@@ -1,10 +1,17 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 
 /**
  * High-Performance LiveECGStream (60 FPS Turbo Optimized)
  * Pure batch canvas rendering with GPU-accelerated glow - 0% CPU shadowBlur bottleneck
  */
-export default function LiveECGStream({ height = 55, paused = false }) {
+// إصلاح أداء: هذا المكوّن يرسم بنفسه عبر Canvas/rAF (لا يحتاج React لإعادة
+// رسمه إطلاقاً)، لكنه كان يُعاد رندره (تنفيذ الدالة + مطابقة JSX) في كل مرة
+// تُعيد DashboardPage الأصل رندرها — يحصل هذا حتى عشرات المرات بالثانية أثناء
+// سحب مصغّر واحد (isDraggingOverCenter تتغيّر كل 35ms بالسحب)، رغم أن height
+// وpaused (خاصيتاه الوحيدتان) لا تتغيّران إطلاقاً أثناء ذلك — تكلفة رندر
+// React مهدورة بالكامل تتراكم فوق نفس الفترة التي تحتاج فيها الصفحة أخف حمل
+// ممكن أصلاً. memo يمنع إعادة الرندر ما لم تتغيّر height/paused فعلياً.
+function LiveECGStream({ height = 55, paused = false }) {
   const canvasRef = useRef(null);
   // مرجع (لا state) لتفادي إعادة تشغيل الـ effect (وبالتالي فقدان currentX/
   // points وقفزة بصرية بالخط) عند كل تبديل paused — راجع سبب التوقف بالتعليق
@@ -143,3 +150,5 @@ export default function LiveECGStream({ height = 55, paused = false }) {
     </div>
   );
 }
+
+export default memo(LiveECGStream);

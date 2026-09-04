@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
@@ -39,6 +39,58 @@ const ROUTE_CHUNK_PREFETCH = {
   '/ambulance': () => import('./AmbulancePage'),
   '/medical-leave': () => import('./MedicalLeavePage'),
 };
+
+// إصلاح أداء: كانت هذه المصغّرات العشر تُرسَم inline داخل .map() بجسم
+// DashboardPage نفسه — أي أنها تُعاد رندرها كلها (10 عناصر motion.div بكل
+// تعقيدها) في كل مرة يُعاد فيها رندر DashboardPage، بما فيها أثناء أي سحب
+// نشط (isDraggingOverCenter تتحدّث كل 35ms — راجع handleDrag) رغم أن أياً من
+// خصائص المصغّرات نفسها (item/idx/lang) لا يتغيّر بذلك السحب إطلاقاً. فصلها
+// لمكوّن مستقل مُغلَّف بـmemo يمنع هذه الإعادة المهدورة بالكامل — تبقى
+// props الممرَّرة هنا (handleDragStart/handleDrag/handleDragEnd عبر
+// useCallback، setMagnifiedItem كدالة state ثابتة، item من curvedThumbnails
+// المحفوظة بـuseMemo) بنفس المرجع عبر كل رندر لا يغيّر lang فعلياً.
+const OrbitThumbnailNode = memo(function OrbitThumbnailNode({ item, idx, lang, onDragStart, onDrag, onDragEnd, onSelect }) {
+  return (
+    <motion.div
+      drag
+      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      dragElastic={0.08}
+      dragTransition={{ bounceStiffness: 600, bounceDamping: 25 }}
+      onDragStart={onDragStart}
+      onDrag={onDrag}
+      onDragEnd={(e, info) => onDragEnd(e, info, item)}
+      // إصلاح: onClick خام كان هنا سابقاً — يتعارض مع drag على نفس العنصر
+      // (نقرة اصطناعية بعد انتهاء السحب، خصوصاً بأول تفاعل قبل استقرار
+      // framer-motion، تُطلِق مساراً ثانياً يُحدِّث نفس حالة magnifiedItem
+      // فتظهر النافذة وتختفي عدة مرات). onTap هو التمييز الرسمي بـ
+      // framer-motion بين نقرة حقيقية وسحب.
+      onTap={() => onSelect(item)}
+      className={`cockpit-horseshoe-holo-node node-idx-${idx}`}
+      style={{
+        '--pos-x': `${item.radialPos.x}px`,
+        '--pos-y': `${item.radialPos.y}px`,
+        '--rot-deg': `${item.radialPos.rot}deg`,
+        '--node-w': `${item.radialPos.w}px`,
+        '--node-h': `${item.radialPos.h}px`,
+        '--anim-dur': `${(3.2 + (idx % 3) * 0.9).toFixed(1)}s`,
+        '--anim-delay': `${((idx * 0.45) % 2.5).toFixed(2)}s`,
+        '--float-shift': `${((idx % 2 === 0 ? 1 : -1) * 7)}px`
+      }}
+      whileHover={{ scale: 1.1, zIndex: 50 }}
+      whileDrag={{ scale: 1.15, zIndex: 60 }}
+      title={lang === 'ar' ? `اسحب للمركز أو انقر للمعاينة: ${item.title}` : `Drag to center or click: ${item.title}`}
+    >
+      <img
+        src={item.image}
+        alt={item.title}
+        className="cockpit-horseshoe-screen-img"
+        draggable={false}
+        loading="lazy"
+        decoding="async"
+      />
+    </motion.div>
+  );
+});
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -525,40 +577,16 @@ export default function DashboardPage() {
           {/* ── 10 FLOATING SCREENS POSITIONED ON COMPACT OPEN RING ── */}
           <div className="cockpit-horseshoe-ring-overlay">
             {curvedThumbnails.map((item, idx) => (
-              <motion.div
+              <OrbitThumbnailNode
                 key={item.key}
-                drag
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.08}
-                dragTransition={{ bounceStiffness: 600, bounceDamping: 25 }}
+                item={item}
+                idx={idx}
+                lang={lang}
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
-                onDragEnd={(e, info) => handleDragEnd(e, info, item)}
-                onClick={() => setMagnifiedItem(item)}
-                className={`cockpit-horseshoe-holo-node node-idx-${idx}`}
-                style={{
-                  '--pos-x': `${item.radialPos.x}px`,
-                  '--pos-y': `${item.radialPos.y}px`,
-                  '--rot-deg': `${item.radialPos.rot}deg`,
-                  '--node-w': `${item.radialPos.w}px`,
-                  '--node-h': `${item.radialPos.h}px`,
-                  '--anim-dur': `${(3.2 + (idx % 3) * 0.9).toFixed(1)}s`,
-                  '--anim-delay': `${((idx * 0.45) % 2.5).toFixed(2)}s`,
-                  '--float-shift': `${((idx % 2 === 0 ? 1 : -1) * 7)}px`
-                }}
-                whileHover={{ scale: 1.1, zIndex: 50 }}
-                whileDrag={{ scale: 1.15, zIndex: 60 }}
-                title={lang === 'ar' ? `اسحب للمركز أو انقر للمعاينة: ${item.title}` : `Drag to center or click: ${item.title}`}
-              >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="cockpit-horseshoe-screen-img"
-                  draggable={false}
-                  loading="lazy"
-                  decoding="async"
-                />
-              </motion.div>
+                onDragEnd={handleDragEnd}
+                onSelect={setMagnifiedItem}
+              />
             ))}
           </div>
 

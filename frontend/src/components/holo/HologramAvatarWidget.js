@@ -1,8 +1,16 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import holoAvatarPng from '../../assets/holoAvatar.png';
 
-export default function HologramAvatarWidget({
+// إصلاح أداء: DashboardPage الأصل يُعيد رندره حتى عشرات المرات بالثانية أثناء
+// سحب أي مصغّر (isDraggingOverCenter تتحدّث كل 35ms — راجع handleDrag)، وهذا
+// المكوّن كان يُعاد رندره في كل مرة معها حتى لو لم تتغيّر أي من خصائصه فعلياً
+// (مثلاً أثناء سحب مصغّر لا يزال بعيداً عن المركز، أو أثناء أي تحديث حالة آخر
+// بالصفحة لا علاقة له بالسحب إطلاقاً). memo يمنع إعادة الرندر ما لم تتغيّر
+// إحدى الخصائص فعلياً — يبقى يتحدّث بصرياً بشكل صحيح لحظة تغيّر
+// isDraggingOverCenter الفعلي (عند الاقتراب الحقيقي من المركز)، فقط يتفادى
+// إعادة الرندر المهدورة بقية الوقت.
+function HologramAvatarWidget({
   onSelectOrgan,
   selectedOrgan,
   isDraggingOverCenter,
@@ -192,3 +200,5 @@ export default function HologramAvatarWidget({
     </div>
   );
 }
+
+export default memo(HologramAvatarWidget);

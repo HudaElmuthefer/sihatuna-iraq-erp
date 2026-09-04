@@ -7,6 +7,7 @@
 // same panel instead of rebuilding it, while still triggering the shared
 // print-overlay mechanism owned by Layout.js.
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useApp } from '../contexts/AppContext';
 import { useT } from '../translations';
 import { getDefaultHeaderText, getDefaultFooterText } from '../utils/printDefaults';
@@ -49,7 +50,18 @@ export default function PrintOptionsModal({ show, onClose, onConfirm }) {
     });
   };
 
-  return (
+  // إصلاح: عند فتحه من PrintButton.js (زر الطباعة بالـheader)، كان يُرسَم
+  // كابن DOM عادي داخل .glass-header — التي تضع backdrop-filter (بجانب
+  // overflow:hidden الخاص بزواياها المستديرة) وبهذا تُصبح "containing block"
+  // فعلية لأي عنصر ابن position:fixed بداخلها (سلوك CSS قياسي لـ
+  // filter/backdrop-filter، وليس افتراضاً تخمينياً) — فتُحصَر .modal-overlay
+  // (fixed أصلاً) داخل صندوق الـheader الصغير (64px) المقصوص، بدل تغطية
+  // الشاشة كاملة كما تفترض تصميمها. نفس السبب الجذري بالضبط الذي أُصلح سابقاً
+  // لنتائج البحث ولوحة الإشعارات عبر Portal — لم يُطبَّق هنا من قبل. Portal
+  // مباشر لـdocument.body هنا (بدل HeaderFloatingPanel المُصمَّم للوحات
+  // "معلّقة تحت trigger محدَّد" فقط) لأن هذه نافذة توسّط الشاشة كاملة، وليست
+  // لوحة منسدلة مربوطة بموضع زر.
+  return ReactDOM.createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
         <div className="modal-header">
@@ -109,6 +121,7 @@ export default function PrintOptionsModal({ show, onClose, onConfirm }) {
           <button className="btn btn-primary" onClick={confirm}>🖨️ {tr('print_confirm')}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -528,9 +528,9 @@ export default function SettingsPage() {
   const [recycleLoading, setRecycleLoading] = useState(false);
   const [recycleBusyId, setRecycleBusyId] = useState(null);
   const [recycleBulkBusy, setRecycleBulkBusy] = useState(false);
-  // إصلاح: زر استرجاع/حذف نهائي كان لكل عنصر لحاله فقط — لو عندك عشرات
-  // العناصر بسلة المحذوفات، تحتاج تضغط لكل واحد لحاله. الآن تقدر
-  // تحدد عدة عناصر بمربعات اختيار وتنفّذ الإجراء على الكل مرة واحدة.
+  // إصلاح: زر استرجاع/حذف نهائي كان لكل عنصر بمفرده فقط — لو كان هناك عشرات
+  // العناصر بسلة المحذوفات، يتطلب الضغط على كل واحد بمفرده. أصبح الآن يمكن
+  // تحديد عدة عناصر بمربعات اختيار وتنفيذ الإجراء على الكل مرة واحدة.
   const [selectedRecycleIds, setSelectedRecycleIds] = useState(new Set());
   const toggleRecycleSelect = (id) => setSelectedRecycleIds(prev => {
     const next = new Set(prev);

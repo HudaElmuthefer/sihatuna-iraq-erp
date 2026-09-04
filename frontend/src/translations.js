@@ -501,7 +501,7 @@ const translations = {
   no_code_backups_yet:  { ar: 'لا توجد نسخ كود احتياطية بعد', en: 'No code backups yet' },
   code_backup_created:  { ar: 'تم إنشاء نسخة كود احتياطية بنجاح ✅', en: 'Code backup created successfully ✅' },
   set_tab_updates:      { ar: 'التحديثات',                 en: 'Updates' },
-  update_source_desc:   { ar: 'حدّدي مصدر التحديثات: قرص USB خارجي (فلاش)، مجلد شبكة مشترك، أو رابط GitHub. النظام يجلب التغييرات الجديدة فقط، لا يعيد تنصيب كل شيء من الصفر.', en: 'Configure where updates come from: a USB flash drive, a shared network folder, or a GitHub URL. The system pulls only what changed, not a full reinstall.' },
+  update_source_desc:   { ar: 'حدّد مصدر التحديثات: قرص USB خارجي (فلاش)، مجلد شبكة مشترك، أو رابط GitHub. النظام يجلب التغييرات الجديدة فقط، لا يعيد تنصيب كل شيء من الصفر.', en: 'Configure where updates come from: a USB flash drive, a shared network folder, or a GitHub URL. The system pulls only what changed, not a full reinstall.' },
   update_source_label:  { ar: 'مصدر التحديث',              en: 'Update Source' },
   update_source_hint:   { ar: 'مثال قرص فلاش: E:\\sihatuna-updates.git — مثال مجلد شبكة: \\\\SERVER\\share\\sihatuna-updates.git — مثال GitHub: https://github.com/...', en: 'Flash drive example: E:\\sihatuna-updates.git — Network folder: \\\\SERVER\\share\\sihatuna-updates.git — GitHub: https://github.com/...' },
   btn_save_source:      { ar: 'حفظ المصدر',                en: 'Save Source' },

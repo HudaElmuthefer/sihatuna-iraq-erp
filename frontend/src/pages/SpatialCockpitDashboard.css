@@ -27,21 +27,6 @@
   font-family: 'Tajawal', 'Segoe UI', system-ui, sans-serif;
 }
 
-/* خارطة العراق الزخرفية بالخلفية — خط رسم بسيط بشفافية منخفضة جداً، خلف
-   كل بطاقات وشاشات لوحة التحكم، بلا أي تأثير على تدفق الصفحة أو التمرير */
-.cockpit-iraq-map-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image: url('../assets/iraqMapOutline.svg');
-  background-repeat: no-repeat;
-  background-position: center 45%;
-  background-size: min(65%, 780px) auto;
-  opacity: 0.07;
-  pointer-events: none;
-  border-radius: 16px;
-}
-
 /* Scanlines overlay */
 .cockpit-scanlines {
   position: absolute;

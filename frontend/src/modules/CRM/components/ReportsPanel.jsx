@@ -1,5 +1,5 @@
 // frontend/src/modules/CRM/components/ReportsPanel.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 const L = (ar, en) => (localStorage.getItem('lang') === 'en' ? en : ar);
 
@@ -8,11 +8,7 @@ export default function ReportsPanel({ hospitalId, apiBaseUrl }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    load();
-  }, [hospitalId]);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [c1, c2] = await Promise.all([
@@ -24,7 +20,11 @@ export default function ReportsPanel({ hospitalId, apiBaseUrl }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [apiBaseUrl, hospitalId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) return <p>{L('جاري التحميل...', 'Loading...')}</p>;
 

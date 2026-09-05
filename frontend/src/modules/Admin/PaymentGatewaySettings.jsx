@@ -2,7 +2,7 @@
 // شاشة الإدمن: تفعيل/تعطيل بوابات الدفع وإدخال بياناتها حسب المستشفى المنصب عليه النظام
 // يتبع نفس نمط i18n المعتمد بالمشروع: L(ar, en)
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 const L = (ar, en) => (localStorage.getItem('lang') === 'en' ? en : ar);
 // عدّلها لتستخدم AppContext الفعلي بدل localStorage إذا يختلف النمط المعتمد
@@ -21,11 +21,7 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [hospitalId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [providersRes, gatewaysRes] = await Promise.all([
@@ -39,7 +35,11 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
     } finally {
       setLoading(false);
     }
-  }
+  }, [apiBaseUrl, hospitalId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   function isActive(providerCode) {
     return hospitalGateways.find((g) => g.provider_code === providerCode)?.is_active;

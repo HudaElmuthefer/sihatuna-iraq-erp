@@ -156,7 +156,7 @@ module.exports = {
   // ── إصلاح: صفحة إدارة الجودة (ISO) كانت بدون أي اتصال بقاعدة بيانات ──────────
   // كانت البيانات (مراجعات، عدم مطابقة، مؤشرات أداء) تُفقَد بمجرد تحديث
   // الصفحة. الثلاثة مخططات تحت تدعم التخزين الحقيقي — راجع
-  // routes/modules.js وmigrations/add-quality-tables.js.
+  // routes/modules.js وdatabase/postgres_schema.sql.
   qualityAudits: {
     title: { required: true, type: 'string' },
   },
@@ -169,7 +169,7 @@ module.exports = {
   // ── إصلاح: حقل "الصيانة" كان مجرد حالة + تاريخ يُكتَب فوقه بدون أي سجل تاريخي ──
   // كل مرة تُنهى صيانة، يُفقَد سجل الصيانة السابقة نهائياً (يُستبدَل فقط بتاريخ
   // جديد). الآن كل حدث صيانة يُسجَّل بشكل مستقل بسجل دائم — راجع
-  // routes/modules.js وmigrations/add-maintenance-log-tables.js.
+  // routes/modules.js وdatabase/postgres_schema.sql.
   ambulanceMaintenanceLog: {
     vehicleId: { required: true },
     date: { required: true, type: 'string' },

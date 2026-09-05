@@ -303,12 +303,17 @@ router.get('/medical-codes/stats', auth, async (req, res, next) => {
     `);
 
     const attachNames = async (rows, system) => {
-      const out = [];
-      for (const row of rows) {
-        const meta = await pool.query('SELECT name_ar AS "nameAr", name_en AS "nameEn" FROM medical_codes WHERE system = $1 AND code = $2', [system, row.code]);
-        out.push({ code: row.code, occurrences: parseInt(row.occurrences, 10), nameAr: meta.rows[0]?.nameAr || row.code, nameEn: meta.rows[0]?.nameEn || row.code });
-      }
-      return out;
+      if (rows.length === 0) return [];
+      const codes = rows.map((row) => row.code);
+      const meta = await pool.query(
+        'SELECT code, name_ar AS "nameAr", name_en AS "nameEn" FROM medical_codes WHERE system = $1 AND code = ANY($2::text[])',
+        [system, codes]
+      );
+      const metaByCode = new Map(meta.rows.map((m) => [m.code, m]));
+      return rows.map((row) => {
+        const m = metaByCode.get(row.code);
+        return { code: row.code, occurrences: parseInt(row.occurrences, 10), nameAr: m?.nameAr || row.code, nameEn: m?.nameEn || row.code };
+      });
     };
 
     res.json({

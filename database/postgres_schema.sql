@@ -314,25 +314,14 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 
--- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
-CREATE TABLE IF NOT EXISTS promotions (
+-- جدولا promotions وallowances القديمان دُمِجا بجدول واحد بـ
+-- migrations-sql/014_merge_promotions_allowances.sql (راجع accounts/PromotionsAllowancesTab.js)
+CREATE TABLE IF NOT EXISTS promotions_allowances (
     id              SERIAL PRIMARY KEY,
-    status          VARCHAR(30),
     data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_promotions_status ON promotions(status);
-
--- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
-CREATE TABLE IF NOT EXISTS allowances (
-    id              SERIAL PRIMARY KEY,
-    status          VARCHAR(30),
-    data            JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at      TIMESTAMPTZ DEFAULT now(),
-    updated_at      TIMESTAMPTZ DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_allowances_status ON allowances(status);
 
 CREATE TABLE IF NOT EXISTS salaries (
     id              SERIAL PRIMARY KEY,

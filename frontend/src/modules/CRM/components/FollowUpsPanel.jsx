@@ -1,5 +1,5 @@
 // frontend/src/modules/CRM/components/FollowUpsPanel.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 const L = (ar, en) => (localStorage.getItem('lang') === 'en' ? en : ar);
 
@@ -24,11 +24,7 @@ export default function FollowUpsPanel({ hospitalId, apiBaseUrl }) {
   const [filterStatus, setFilterStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    load();
-  }, [hospitalId, filterStatus]);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ hospitalId, ...(filterStatus !== 'all' && { status: filterStatus }) });
@@ -37,7 +33,11 @@ export default function FollowUpsPanel({ hospitalId, apiBaseUrl }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [apiBaseUrl, hospitalId, filterStatus]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function markStatus(id, status) {
     await fetch(`${apiBaseUrl}/follow-ups/${id}`, {

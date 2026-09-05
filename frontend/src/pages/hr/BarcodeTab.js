@@ -5,6 +5,8 @@
 // Generate: look up a letter by reference, print a barcode label.
 // Scan: read a barcode off a paper letter, see its full details instantly.
 import React, { useState, useRef, useEffect } from 'react';
+import qrcode from 'qrcode-generator';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { api } from '../../api';
 import ExcelImportModal from '../../components/ExcelImportModal';
 import ExcelExportButton from '../../components/ExcelExportButton';
@@ -73,35 +75,17 @@ function code39ToSvg(rawText, height = 60) {
   return { svg: `<svg viewBox="0 0 ${totalWidth} ${height}" xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${height}">${bars.join('')}</svg>` };
 }
 
-// -- تحميل مكتبة QR عند الحاجة فقط (لا تُحمَّل ما لم يختر المستخدم هذا النوع) --
-let qrLibPromise = null;
-function loadQrLib() {
-  if (window.qrcode) return Promise.resolve();
-  if (qrLibPromise) return qrLibPromise;
-  qrLibPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/qrcode-generator@1.4.4/qrcode.js';
-    script.onload = resolve;
-    script.onerror = () => { qrLibPromise = null; reject(new Error('failed to load qrcode-generator')); };
-    document.body.appendChild(script);
-  });
-  return qrLibPromise;
-}
-
 function qrToSvg(rawText) {
-  const qr = window.qrcode(0, 'M');
+  const qr = qrcode(0, 'M');
   qr.addData(rawText);
   qr.make();
   return { svg: qr.createSvgTag({ cellSize: 4, margin: 2 }) };
 }
 
-// دالة موحّدة: تولّد الباركود حسب النوع المطلوب، بعد التأكد من تحميل مكتبة
-// QR إن كان هذا النوع المختار (Code 39 لا يحتاج أي تحميل، مولَّد محلياً).
+// دالة موحّدة: تولّد الباركود حسب النوع المطلوب (Code 39 مولَّد محلياً، QR عبر
+// مكتبة qrcode-generator المستوردة مباشرة بحزمة الفرونت إند).
 async function generateBarcode(type, text) {
-  if (type === 'qr') {
-    await loadQrLib();
-    return qrToSvg(text);
-  }
+  if (type === 'qr') return qrToSvg(text);
   return code39ToSvg(text);
 }
 
@@ -222,16 +206,15 @@ export default function BarcodeTab({ lang }) {
     // while this closure variable already does that correctly for free.
     let cancelled = false;
     let startPromise = null;
-    const scriptId = 'html5-qrcode-script';
     const start = () => {
-      if (cancelled || !window.Html5Qrcode) return;
+      if (cancelled) return;
       // بدون تحديد formatsToSupport صراحة، المكتبة تحاول قراءة أنواع أخرى
       // فقط ولا تتعرف على Code 39 المُستخدَم هنا — هذا سبب فتح الكاميرا
       // دون قراءة فعلية للباركود.
-      const scanner = new window.Html5Qrcode('barcode-reader-hr', {
+      const scanner = new Html5Qrcode('barcode-reader-hr', {
         formatsToSupport: [
-          window.Html5QrcodeSupportedFormats.CODE_39,
-          window.Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.QR_CODE,
         ],
       });
       scannerInstance.current = scanner;
@@ -260,16 +243,7 @@ export default function BarcodeTab({ lang }) {
         if (!cancelled) setScanError(L('تعذّر تشغيل الكاميرا', 'Could not start the camera'));
       });
     };
-    if (window.Html5Qrcode) {
-      start();
-    } else if (!document.getElementById(scriptId)) {
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://unpkg.com/html5-qrcode';
-      script.onload = start;
-      script.onerror = () => { if (!cancelled) setScanError(L('تعذّر تحميل أداة القراءة', 'Could not load the scanner')); };
-      document.body.appendChild(script);
-    }
+    start();
     return () => {
       cancelled = true;
       if (startPromise) {

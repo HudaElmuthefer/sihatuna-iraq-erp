@@ -227,7 +227,7 @@ app.use('/api', router);
 // يعمل الآن عبر pgCrud مباشرة.
 try {
   const paymentRoutes = require('./routes/paymentRoutes');
-  app.use('/api', paymentRoutes);
+  app.use('/api', generalLimiter, paymentRoutes);
   devLog('✅ Payment module loaded (/api/payments, /api/admin/payment-gateways)');
 } catch (err) {
   console.warn('⚠️  Payment module not loaded — check that "pg" is installed and .env is configured:', err.message);

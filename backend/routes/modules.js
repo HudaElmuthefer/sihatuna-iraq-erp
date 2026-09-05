@@ -1490,7 +1490,7 @@ const registerAllModules = (router) => {
   ], 'crm_campaign_targets', { hospitalScoped: true, permission: 'crm' });
 
   // ── إصلاح: إدارة الجودة (ISO) — كانت بدون أي اتصال بقاعدة بيانات ────────────
-  // راجع middleware/schemas.js وmigrations/add-quality-tables.js لتفاصيل
+  // راجع middleware/schemas.js وdatabase/postgres_schema.sql لتفاصيل
   // الإصلاح الكامل. indexedColumns فاضية عمداً (JSONB بحت) — الحقول
   // (auditNo, ncNo, status...) لا تحتاج بحثاً سريعاً بحجم بيانات هذا الموديول
   // الطبيعي (عشرات-مئات السجلات كحد أقصى واقعي بمستشفى واحد).

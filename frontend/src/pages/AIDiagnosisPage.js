@@ -155,14 +155,15 @@ export default function AIDiagnosisPage() {
     setLabFile(null); setSonarFile(null); setMriFile(null); setCtFile(null);
   };
 
-  const severityColor = (s) => {
-    if (s === 'طارئ') return '#7c3aed';
-    if (s === 'مرتفع') return '#ef4444';
-    if (s === 'متوسط') return '#f59e0b';
-    return '#22c55e';
-  };
-  const severityIcon = (s) => ({ 'طارئ':'🚨','مرتفع':'⚠️','متوسط':'🔔','خفيف':'✅' }[s]||'🔔');
-  const SEV_LABEL = (s) => ({ 'طارئ': lang==='ar'?'طارئ':'Urgent', 'مرتفع': lang==='ar'?'مرتفع':'High', 'متوسط': lang==='ar'?'متوسط':'Moderate', 'خفيف': lang==='ar'?'خفيف':'Mild' }[s] || s);
+  // نظام الذكاء الاصطناعي الحقيقي (result.source==='ai') يرجع severity بالإنكليزية
+  // ("mild|moderate|high|urgent") لو lang==='en' — راجع buildPrompts بـ
+  // backend/routes/aiDiagnosisRoutes.js — بينما النظام المحلي الاحتياطي
+  // (buildFallback) يرجعها دائماً بالعربية. لازم نطبّع لمفتاح واحد قبل أي مقارنة
+  // وإلا نتيجة "urgent" بالإنكليزية تُعرَض بلون/أيقونة "خفيف" الافتراضية.
+  const SEVERITY_KEY = { 'طارئ':'urgent','مرتفع':'high','متوسط':'moderate','خفيف':'mild', urgent:'urgent', high:'high', moderate:'moderate', mild:'mild' };
+  const severityColor = (s) => ({ urgent:'#7c3aed', high:'#ef4444', moderate:'#f59e0b', mild:'#22c55e' }[SEVERITY_KEY[s]] || '#22c55e');
+  const severityIcon = (s) => ({ urgent:'🚨', high:'⚠️', moderate:'🔔', mild:'✅' }[SEVERITY_KEY[s]] || '🔔');
+  const SEV_LABEL = (s) => ({ urgent: L('طارئ','Urgent'), high: L('مرتفع','High'), moderate: L('متوسط','Moderate'), mild: L('خفيف','Mild') }[SEVERITY_KEY[s]] || s);
 
   const FileUpload = ({ label, icon, file, setFile, inputRef, accept }) => (
     <div
@@ -208,7 +209,7 @@ export default function AIDiagnosisPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
         {[1,2,3].map(s => (
           <React.Fragment key={s}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: step >= s ? '#1a6bab' : 'var(--border)', color: step >= s ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>{lang==='ar'?s.ar:s.en}</div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: step >= s ? '#1a6bab' : 'var(--border)', color: step >= s ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>{s}</div>
             {s < 3 && <div style={{ width: 60, height: 2, background: step > s ? '#1a6bab' : 'var(--border)' }} />}
           </React.Fragment>
         ))}
@@ -394,7 +395,7 @@ export default function AIDiagnosisPage() {
               {result.doctors.map((doc, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: 'var(--bg-card)', borderRadius: 10, marginBottom: 8, border: '1px solid var(--border)' }}>
                   <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#1a6bab', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
-                    {doc.name.charAt(doc.name.indexOf('.')+2)}
+                    {doc.name.replace(/^دكتور[ة]?\s+/, '').charAt(0) || doc.name.charAt(0)}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{doc.name}</div>

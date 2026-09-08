@@ -20,6 +20,7 @@ export default function useServerPagination(apiName, { search = '', status = 'al
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const requestId = useRef(0); // يمنع نتيجة طلب قديم متأخر من الكتابة فوق نتيجة أحدث (سباق طلبات)
   // نحوّل كائن الفلاتر لنص مستقر (JSON) حتى نقدر نستخدمه بمصفوفة اعتماديات
   // useEffect/useCallback مباشرة — كائن جديد بكل رندر كان راح يسبب حلقة جلب
@@ -29,6 +30,7 @@ export default function useServerPagination(apiName, { search = '', status = 'al
   const fetchPage = useCallback(async (pageToFetch) => {
     const myId = ++requestId.current;
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ page: String(pageToFetch), limit: String(pageSize) });
       if (search) params.set('search', search);
@@ -51,6 +53,7 @@ export default function useServerPagination(apiName, { search = '', status = 'al
       }
     } catch (err) {
       console.warn(`⚠️ تعذّر جلب صفحة ${apiName}:`, err.message);
+      if (myId === requestId.current) setError(err.message);
     } finally {
       if (myId === requestId.current) setLoading(false);
     }
@@ -61,5 +64,5 @@ export default function useServerPagination(apiName, { search = '', status = 'al
 
   useEffect(() => { fetchPage(page); }, [page, fetchPage]);
 
-  return { data, page, setPage, total, totalPages, loading, refetch: () => fetchPage(page) };
+  return { data, page, setPage, total, totalPages, loading, error, refetch: () => fetchPage(page) };
 }

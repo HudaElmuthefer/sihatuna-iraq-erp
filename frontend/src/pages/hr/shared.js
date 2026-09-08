@@ -6,20 +6,29 @@
 // الأخطاء أثناء التقسيم.
 import { useApp } from '../../contexts/AppContext';
 import { api } from '../../api';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+// ── إصلاح: كان فشل الجلب (شبكة/خادم) يُبتلَع بصمت (.catch(()=>{}))، فيبقى
+// الجدول فاضياً بدون أي تمييز عن حالة "لا توجد سجلات فعلاً" — ولا وجود لحالة
+// تحميل إطلاقاً. الآن يُرجِع الـhook loading/error ليعرضهما المستدعي بوضوح.
 function useBackendLoad(backendKey, setState) {
   const { user } = useApp();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api.get(`/${backendKey}`)
       .then(data => {
         if (!cancelled && Array.isArray(data)) setState(data);
       })
-      .catch(() => {}); // الباك إند لا يعمل — نكمل بالبيانات المحلية بدون كسر
+      .catch(err => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { loading, error };
 }
 
 // ── MOCK DATA ──────────────────────────────────────────────────────────────────

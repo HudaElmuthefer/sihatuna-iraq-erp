@@ -91,16 +91,21 @@ function usePersistedTab(storageKey, backendKey, initialData) {
   const [data, setData] = useState(() => {
     try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : initialData; } catch { return initialData; }
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(data)); }, [data, storageKey]);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api.get(`/${backendKey}`).then(serverData => {
       if (!cancelled && Array.isArray(serverData)) setData(serverData);
-    }).catch(() => {});
+    }).catch(err => { if (!cancelled) setError(err.message); })
+    .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  return [data, setData];
+  return [data, setData, loading, error];
 }
 
 // ── إصلاح: كانت هذه بيانات رواتب وهمية (4 موظفين برواتب وعلاوات وخصومات

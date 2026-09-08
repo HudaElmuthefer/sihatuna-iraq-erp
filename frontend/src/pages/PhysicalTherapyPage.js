@@ -56,14 +56,17 @@ export default function PhysicalTherapyPage() {
     return lang === 'ar' ? match.name : (match.nameEn || match.name);
   };
 
+  const [ptLoading, setPtLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setPtLoading(true);
     Promise.all([api.get('/ptEquipment'), api.get('/ptSessions')]).then(([e, s]) => {
       if (cancelled) return;
       if (Array.isArray(e)) setEquipment(e);
       if (Array.isArray(s)) setSessions(s);
-    }).catch(() => {});
+    }).catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+      .finally(() => { if (!cancelled) setPtLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -190,7 +193,8 @@ export default function PhysicalTherapyPage() {
                 {e.notes && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>{e.notes}</div>}
               </div>
             ))}
-            {equipment.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>{L('لا توجد أجهزة بعد', 'No equipment yet')}</p>}
+            {ptLoading && <p style={{ color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</p>}
+            {!ptLoading && equipment.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>{L('لا توجد أجهزة بعد', 'No equipment yet')}</p>}
           </div>
         </div>
       )}
@@ -236,7 +240,10 @@ export default function PhysicalTherapyPage() {
                       </td>
                     </tr>
                   ))}
-                  {filteredSessions.length === 0 && (
+                  {ptLoading && (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</td></tr>
+                  )}
+                  {!ptLoading && filteredSessions.length === 0 && (
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('لا توجد بيانات', 'No data')}</td></tr>
                   )}
                 </tbody>

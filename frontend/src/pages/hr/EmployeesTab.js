@@ -35,8 +35,9 @@ function EmployeesTab({ lang }) {
   // بقاعدة البيانات). القائمة الكاملة (employees أعلاه) تبقى محمَّلة كما هي —
   // تحتاجها AlertBanner (تنبيهات العلاوة/الترفيع/التقاعد) لكل الموظفين دفعة
   // وحدة، بغض النظر عن الصفحة المعروضة حالياً بالجدول.
-  const { data: empPageItems, page: empCurrentPage, setPage: setEmpCurrentPage, total: empTotalItems, totalPages: empTotalPages, refetch: refetchEmployees } =
+  const { data: empPageItems, page: empCurrentPage, setPage: setEmpCurrentPage, total: empTotalItems, totalPages: empTotalPages, loading: empLoading, error: empLoadError, refetch: refetchEmployees } =
     useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50, filters: { startDate: empDateFrom, endDate: empDateTo } });
+  useEffect(() => { if (empLoadError) showToast(empLoadError, 'error'); }, [empLoadError]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -57,7 +58,7 @@ function EmployeesTab({ lang }) {
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setShowModal(true); };
   const del = async (id) => {
-    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    if (!(await confirmDialog((lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')))) return;
     setEmployees(p=>p.filter(e=>e.id!==id));
     const synced = await syncToServer('employees','delete',{id});
     showToast(L(synced ? 'deleted' : 'sync_failed'), synced ? 'success' : 'warning');
@@ -252,6 +253,12 @@ function EmployeesTab({ lang }) {
                   </tr>
                 );
               })}
+              {empLoading && (
+                <tr><td colSpan={14} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{L('loading', 'جارٍ التحميل...', 'Loading...')}</td></tr>
+              )}
+              {!empLoading && empPageItems.length === 0 && (
+                <tr><td colSpan={14} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{L('no_data', 'لا توجد بيانات', 'No data')}</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -321,7 +328,7 @@ function EmployeesTab({ lang }) {
             <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
               <h3 style={{ fontSize: 20, marginBottom: 8 }}>{lang==='ar' ? `حذف ${selectedIds.size} موظف؟` : `Delete ${selectedIds.size} employees?`}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{(lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')}</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting} style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{L('btn_cancel')}</button>
                 <button onClick={handleBulkDelete} disabled={bulkDeleting} className="btn btn-danger">{bulkDeleting ? '...' : (lang==='ar' ? 'حذف' : 'Delete')}</button>

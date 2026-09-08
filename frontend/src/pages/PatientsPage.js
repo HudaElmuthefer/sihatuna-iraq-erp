@@ -67,8 +67,9 @@ export default function PatientsPage() {
   // المرضى الكلي، حتى لو وصل لعشرات الآلاف مستقبلاً. مصفوفة `patients` من
   // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
   // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذه الصفحة تحديداً.
-  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
     useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { startDate: dateFrom, endDate: dateTo } });
+  useEffect(() => { if (loadError) addToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openAdd = () => {
     // نعتمد على أعلى رقم مريض موجود فعلياً بدل عدد السجلات — الاعتماد على

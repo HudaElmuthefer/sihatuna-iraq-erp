@@ -178,8 +178,9 @@ export default function ProjectsPage() {
   // قبل هذا، الصفحة كانت تعرض *كل* المشاريع المطابقة دفعة وحدة بدون أي ترقيم
   // إطلاقاً (لا للبطاقات ولا للجدول) — مقبول بعدد محدود، لكن يصير بطيئاً مع
   // نمو عدد المشاريع. الآن تجيب فقط الصفحة الحالية من الخادم.
-  const { data: filtered, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+  const { data: filtered, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
     useServerPagination('projects', { search: debouncedSearch, status: statusFilter, pageSize: 50 });
+  useEffect(() => { if (loadError) showToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => ({
     total: projects.length,

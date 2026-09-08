@@ -92,8 +92,9 @@ export default function AssetsPage() {
   // نفس مبدأ صفحتي المرضى والمخزون — الجدول/البطاقات هنا تجيب فقط الصفحة
   // الحالية من الخادم. مصفوفة `assets` بالسياق العام تبقى محمَّلة كاملة
   // (تُستخدم بـ stats أدناه)، بدون علاقة بجدول هذه الصفحة تحديداً.
-  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
     useServerPagination('assets', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter }, pageSize: 50 });
+  useEffect(() => { if (loadError) showToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => ({
     total: assets.length,
@@ -175,8 +176,9 @@ export default function AssetsPage() {
       const forThisAsset = (Array.isArray(all) ? all : []).filter(m => m.assetId === asset.id);
       forThisAsset.sort((a, b) => new Date(b.date) - new Date(a.date));
       setMaintenanceLog(forThisAsset);
-    } catch {
+    } catch (err) {
       setMaintenanceLog([]);
+      showToast(err.message || L('فشل تحميل سجل الصيانة','Failed to load maintenance history'),'error');
     }
     setMaintenanceLoading(false);
   };
@@ -345,7 +347,7 @@ export default function AssetsPage() {
                 <div style={{padding:'8px 10px',background:days!==null&&days<=30?'#fee2e2':days!==null&&days<=90?'#fef3c7':'var(--bg-tertiary)',borderRadius:8,marginBottom:10}}>
                   <div style={{fontSize:11,fontWeight:600,color:days!==null&&days<=30?'#ef4444':days!==null&&days<=90?'#f59e0b':'var(--text-secondary)'}}>
                     🔧 {L('الصيانة القادمة:','Next Service:')} {a.nextMaintenance||L('غير محدد','Not Set')}
-                    {days!==null&&<span> ({days<=0?lang==='ar'?L('متأخرة!','Overdue!'):'Overdue!':days<=30?`خلال ${days} يوم`:`${days} يوم`})</span>}
+                    {days!==null&&<span> ({days<=0?L('متأخرة!','Overdue!'):days<=30?L(`خلال ${days} يوم`,`in ${days} days`):L(`${days} يوم`,`${days} days`)})</span>}
                   </div>
                 </div>
                 <div style={{display:'flex',gap:6}}>
@@ -382,8 +384,8 @@ export default function AssetsPage() {
           </thead>
           <tbody>
             {pageItems.map(a=>{
-              const cat=CATEGORIES[a.category]||CATEGORIES.other;
-              const st=STATUSES[a.status]||STATUSES.active;
+              const cat=CATEGORIES[normalizeLookupKey(a.category, CATEGORIES, 'unset')];
+              const st=STATUSES[normalizeLookupKey(a.status, STATUSES, 'unset')];
               const days=daysTo(a.nextMaintenance);
               return (
                 <tr key={a.id}>

@@ -1,6 +1,6 @@
 // frontend/src/pages/accounts/GeneralTab.js
 // استُخرج من AccountsPage.js — تبويب المعاملات المالية العامة.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
@@ -25,7 +25,8 @@ export default
 function GeneralTab() {
   const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled } = useApp();
   const tr = useT(lang);
-  const [txs, setTxs] = usePersistedTab('acc_transactions', 'transactions', initTransactions);
+  const [txs, setTxs, txsLoading, txsError] = usePersistedTab('acc_transactions', 'transactions', initTransactions);
+  useEffect(() => { if (txsError) showToast(txsError, 'error'); }, [txsError]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -198,6 +199,12 @@ function GeneralTab() {
                   <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(t)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(t.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
                 </tr>
               ))}
+              {txsLoading && (
+                <tr><td colSpan={9} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+              )}
+              {!txsLoading && pageItems.length === 0 && (
+                <tr><td colSpan={9} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'لا توجد بيانات':'No data'}</td></tr>
+              )}
             </tbody>
           </table>
         </div>

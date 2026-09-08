@@ -64,8 +64,9 @@ export default function InventoryPage() {
   // فلترة بالتصنيف والحالة تصير كلها بقاعدة البيانات). مصفوفة `inventory`
   // بالسياق العام تبقى محمَّلة كاملة كما هي — تحتاجها صفحة الصيدلية لخصم
   // المخزون عند صرف الوصفات، ولوحة التحكم للإحصائيات (stats تحتها بالأسفل).
-  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
     useServerPagination('inventory', { search: debouncedSearch, status: statusFilter, filters: { category: catFilter, startDate: dateFrom, endDate: dateTo }, pageSize: 50 });
+  useEffect(() => { if (loadError) showToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => ({
     total: inventory.length,
@@ -263,7 +264,7 @@ export default function InventoryPage() {
             <tr><td colSpan={11} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'جاري التحميل...':'Loading...'}</td></tr>
           )}
           {!loading && pageItems.length === 0 && (
-            <tr><td colSpan={11} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>لا توجد نتائج</td></tr>
+            <tr><td colSpan={11} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'لا توجد نتائج':'No results found'}</td></tr>
           )}
         </tbody>
       </table>

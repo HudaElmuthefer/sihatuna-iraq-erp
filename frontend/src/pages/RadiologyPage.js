@@ -264,7 +264,8 @@ export default function RadiologyPage() {
         </thead>
         <tbody>
           {pageItems.map(r=>{
-            const st=STATUSES[normalizeLookupKey(r.status, STATUSES, 'pending')];
+            const stKey=normalizeLookupKey(r.status, STATUSES, 'pending');
+            const st=STATUSES[stKey];
             const mod=MODALITIES[normalizeLookupKey(r.modality, MODALITIES, 'other')];
             return (
               <tr key={r.id}>
@@ -277,12 +278,12 @@ export default function RadiologyPage() {
                 <td style={S.td}><span style={S.badge(st.color,st.bg)}>{lang==='ar'?st.ar:st.en}</span></td>
                 <td style={S.td}>{r.priority==='urgent'?<span style={{color:'#ef4444',fontWeight:700,fontSize:11}}>⚡ {L('عاجل','Urgent')}</span>:<span style={{fontSize:11,color:'var(--text-secondary)'}}>{L('عادي','Normal')}</span>}</td>
                 <td style={{...S.td,textAlign:'center'}}>{r.images>0?<span style={{background:'#dbeafe',color:'#1a6bab',borderRadius:12,padding:'2px 8px',fontSize:11,fontWeight:600}}>{r.images} {lang==='ar'?'صورة':'images'}</span>:'—'}</td>
-                <td style={S.td}>{r.status==='reported'?<div><div style={{fontSize:11,fontWeight:600,color:'#10b981'}}>{lang==='ar'?L('✓ مكتمل','✓ Complete'):'✓ Complete'}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.reportDate}</div></div>:'—'}</td>
+                <td style={S.td}>{stKey==='reported'?<div><div style={{fontSize:11,fontWeight:600,color:'#10b981'}}>{lang==='ar'?L('✓ مكتمل','✓ Complete'):'✓ Complete'}</div><div style={{fontSize:10,color:'var(--text-secondary)'}}>{r.reportDate}</div></div>:'—'}</td>
                 <td style={S.td}>
                   <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                    {r.status==='scheduled'&&<button onClick={()=>updateStatus(r.id,'examined')} style={{...S.btn('#f59e0b'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'تم الفحص':'Examined'}</button>}
-                    {r.status==='examined'&&<button onClick={()=>{setShowReport(r);setFindings(r.findings||'');setImpression(r.impression||'');}} style={{...S.btn('#10b981'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'كتابة تقرير':'Write Report'}</button>}
-                    {r.status==='pending'&&<button onClick={()=>updateStatus(r.id,'scheduled')} style={{...S.btn('#1a6bab'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'جدولة':'Schedule'}</button>}
+                    {stKey==='scheduled'&&<button onClick={()=>updateStatus(r.id,'examined')} style={{...S.btn('#f59e0b'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'تم الفحص':'Examined'}</button>}
+                    {stKey==='examined'&&<button onClick={()=>{setShowReport(r);setFindings(r.findings||'');setImpression(r.impression||'');}} style={{...S.btn('#10b981'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'كتابة تقرير':'Write Report'}</button>}
+                    {stKey==='pending'&&<button onClick={()=>updateStatus(r.id,'scheduled')} style={{...S.btn('#1a6bab'),padding:'3px 7px',fontSize:10}}>{lang==='ar'?'جدولة':'Schedule'}</button>}
                     <button onClick={()=>{setForm({...r});setEditId(r.id);setShowModal(true);}} style={{...S.btn('#6b7280'),padding:'3px 7px',fontSize:10}}>✏️</button>
                     <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const prev=radiology;setRadiology(p=>p.filter(x=>x.id!==r.id));const ok=await syncToServer('radiology','delete',{id:r.id});if(!ok){setRadiology(prev);return;}showToast(L('تم الحذف','Deleted'),'info');}} style={{...S.btn('#ef4444'),padding:'3px 7px',fontSize:10}}>🗑</button>
                   </div>

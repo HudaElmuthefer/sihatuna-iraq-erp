@@ -18,10 +18,14 @@ export default function QueuePage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    api.get('/queueTickets').then(data => { if (!cancelled && Array.isArray(data)) setTickets(data); }).catch(() => {});
+    setTicketsLoading(true);
+    api.get('/queueTickets').then(data => { if (!cancelled && Array.isArray(data)) setTickets(data); })
+      .catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+      .finally(() => { if (!cancelled) setTicketsLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -196,12 +200,14 @@ export default function QueuePage() {
         <div className="card">
           <h3 style={{ margin: '0 0 12px', color: '#f59e0b' }}>⏳ {L('بالانتظار', 'Waiting')} ({waiting.length})</h3>
           {waiting.map(t => <TicketCard key={t.id} t={t} />)}
-          {waiting.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('لا يوجد أحد بالانتظار', 'No one waiting')}</p>}
+          {ticketsLoading && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('جارٍ التحميل...', 'Loading...')}</p>}
+          {!ticketsLoading && waiting.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('لا يوجد أحد بالانتظار', 'No one waiting')}</p>}
         </div>
         <div className="card">
           <h3 style={{ margin: '0 0 12px', color: '#3b82f6' }}>📢 {L('تم النداء', 'Called')} ({called.length})</h3>
           {called.map(t => <TicketCard key={t.id} t={t} />)}
-          {called.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('لا يوجد', 'None')}</p>}
+          {ticketsLoading && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('جارٍ التحميل...', 'Loading...')}</p>}
+          {!ticketsLoading && called.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{L('لا يوجد', 'None')}</p>}
         </div>
       </div>
 

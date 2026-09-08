@@ -4,7 +4,8 @@
 // name or code, add multiple diagnoses per patient (not just one), mark
 // one as primary. This is what makes the coding actually useful —
 // structured, searchable data instead of a single free-text field.
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { api } from '../api';
 
 // diagnoses shape: [{ id, icdCode, icdNameAr, icdNameEn, snomedCode, snomedNameAr, snomedNameEn, isPrimary, dateAdded }]
@@ -15,6 +16,27 @@ export default function DiagnosisPicker({ diagnoses, onChange, lang }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef(null);
+
+  // ── إصلاح: هذا الحقل يُستخدَم دائماً ضمن نموذج داخل .modal (راجع
+  // PatientsPage.js) — و.modal له overflow خاص بالتمرير، وبالوضع الليلي
+  // الصفحة الموجَّهة كلها تُلَفّ إضافياً بـCentralHolographicWorkspace
+  // (.chw-shell، له overflow:hidden تزييني — راجع الشرح المفصَّل بـ
+  // ResultsPage.js). القائمة كانت position:absolute عادية فتُقَصّ بأي من
+  // الاثنين. نفس حل HeaderFloatingPanel.js: بوابة مباشرة لـdocument.body
+  // بموضع مقيس فعلياً (fixed)، تتخطى كل الأسلاف دفعة واحدة.
+  const wrapperRef = useRef(null);
+  const [suggestRect, setSuggestRect] = useState(null);
+  useLayoutEffect(() => {
+    if (!showSuggestions || !wrapperRef.current) { setSuggestRect(null); return undefined; }
+    const measure = () => setSuggestRect(wrapperRef.current.getBoundingClientRect());
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [showSuggestions]);
 
   useEffect(() => {
     if (!showSuggestions) return;
@@ -58,7 +80,7 @@ export default function DiagnosisPicker({ diagnoses, onChange, lang }) {
         <button type="button" onClick={() => setSystem('snomed')} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #d1d5db', cursor: 'pointer', background: system === 'snomed' ? '#1a6bab' : '#fff', color: system === 'snomed' ? '#fff' : '#333', fontSize: 12 }}>SNOMED CT</button>
       </div>
 
-      <div style={{ position: 'relative' }}>
+      <div ref={wrapperRef} style={{ position: 'relative' }}>
         <input
           className="form-control"
           placeholder={L('ابحث عن تشخيص بالاسم أو الرمز...', 'Search diagnosis by name or code...')}
@@ -66,27 +88,32 @@ export default function DiagnosisPicker({ diagnoses, onChange, lang }) {
           onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true); }}
           onFocus={() => setShowSuggestions(true)}
         />
-        {showSuggestions && (
-          // إصلاح تباين الوضع الليلي: كانت الخلفية بيضاء ثابتة (#fff) بينما
-          // النص يرث color:var(--text-primary) من body — بالوضع الليلي هذه
-          // القيمة فاتحة تقريباً، فيصير النص غير مقروء على الخلفية البيضاء
-          // الثابتة. var(--bg-card)/var(--border) نفس المتغيرات المستخدَمة
-          // بكل القوائم المنسدلة المشابهة الأخرى بالتطبيق.
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 20, maxHeight: 260, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            {suggestions.length === 0 ? (
-              <div style={{ padding: 10, fontSize: 12, color: 'var(--text-secondary)' }}>{L('لا توجد نتائج', 'No results')}</div>
-            ) : suggestions.map((s) => (
-              <div key={s.code} onClick={() => addDiagnosis(s)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
-                <span style={{ fontFamily: 'monospace', color: '#1a6bab', marginInlineEnd: 8 }}>{s.code}</span>
-                {L(s.nameAr, s.nameEn)}
-              </div>
-            ))}
-            <div style={{ padding: '6px 12px', textAlign: 'center' }}>
-              <button type="button" onClick={() => setShowSuggestions(false)} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>{L('إغلاق', 'Close')}</button>
-            </div>
-          </div>
-        )}
       </div>
+      {showSuggestions && suggestRect && ReactDOM.createPortal(
+        // إصلاح تباين الوضع الليلي: كانت الخلفية بيضاء ثابتة (#fff) بينما
+        // النص يرث color:var(--text-primary) من body — بالوضع الليلي هذه
+        // القيمة فاتحة تقريباً، فيصير النص غير مقروء على الخلفية البيضاء
+        // الثابتة. var(--bg-card)/var(--border) نفس المتغيرات المستخدَمة
+        // بكل القوائم المنسدلة المشابهة الأخرى بالتطبيق.
+        // إصلاح: نفس خلل ResultsPage.js — position:fixed بارتفاع ثابت يتجاوز
+        // أسفل الشاشة المرئية يُرسَم خارجها فعلياً بلا أي تمرير يقدر يظهره
+        // (لا الصفحة ولا القائمة نفسها). نحسب أقصى ارتفاع متاح حتى أسفل
+        // الشاشة (بهامش 16px) بدل رقم ثابت.
+        <div style={{ position: 'fixed', top: suggestRect.bottom + 4, left: suggestRect.left, width: suggestRect.width, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, zIndex: 2000, maxHeight: Math.max(120, Math.min(260, window.innerHeight - suggestRect.bottom - 16)), overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          {suggestions.length === 0 ? (
+            <div style={{ padding: 10, fontSize: 12, color: 'var(--text-secondary)' }}>{L('لا توجد نتائج', 'No results')}</div>
+          ) : suggestions.map((s) => (
+            <div key={s.code} onClick={() => addDiagnosis(s)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+              <span style={{ fontFamily: 'monospace', color: '#1a6bab', marginInlineEnd: 8 }}>{s.code}</span>
+              {L(s.nameAr, s.nameEn)}
+            </div>
+          ))}
+          <div style={{ padding: '6px 12px', textAlign: 'center' }}>
+            <button type="button" onClick={() => setShowSuggestions(false)} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>{L('إغلاق', 'Close')}</button>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {diagnoses.length > 0 && (
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>

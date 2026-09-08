@@ -1,6 +1,6 @@
 // frontend/src/pages/accounts/SalariesTab.js
 // استُخرج من AccountsPage.js — تبويب الرواتب.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useT } from '../../translations';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
@@ -21,7 +21,8 @@ function SalariesTab() {
     jobTitleEn: e.jobTitleEn || JOB_EN[e.jobTitle] || e.jobTitle,
     deptEn: e.deptEn || DEPT_EN[e.dept] || e.dept,
   }));
-  const [salariesRaw, setSalaries] = usePersistedTab('acc_salaries', 'salaries', transformedInit);
+  const [salariesRaw, setSalaries, salariesLoading, salariesError] = usePersistedTab('acc_salaries', 'salaries', transformedInit);
+  useEffect(() => { if (salariesError) showToast(salariesError, 'error'); }, [salariesError]); // eslint-disable-line react-hooks/exhaustive-deps
   const salaries = filterByViewingHospital(salariesRaw);
   const { pageItems: salPageItems, currentPage: salCurrentPage, setCurrentPage: setSalCurrentPage, totalPages: salTotalPages, totalItems: salTotalItems } = usePagination(salaries, 50);
   const [showModal, setShowModal] = useState(false);
@@ -232,6 +233,12 @@ function SalariesTab() {
                 </React.Fragment>
               );
             })}
+            {salariesLoading && (
+              <tr><td colSpan={13} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+            )}
+            {!salariesLoading && salPageItems.length === 0 && (
+              <tr><td colSpan={13} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'لا توجد بيانات':'No data'}</td></tr>
+            )}
           </tbody>
         </table>
         <Pagination currentPage={salCurrentPage} totalPages={salTotalPages} onPageChange={setSalCurrentPage} totalItems={salTotalItems} pageSize={50} lang={lang} />

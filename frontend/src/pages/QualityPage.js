@@ -113,11 +113,11 @@ export default function QualityPage() {
   // KPI helpers — use lowerIsBetter flag, no string matching
   const kpiGood  = kpi => kpi.lowerIsBetter ? kpi.actual <= kpi.target : kpi.actual >= kpi.target;
   const kpiColor = kpi => {
-    const ratio = kpi.lowerIsBetter ? kpi.target / Math.max(kpi.actual,0.01) : kpi.actual / kpi.target;
+    const ratio = kpi.lowerIsBetter ? kpi.target / Math.max(kpi.actual,0.01) : kpi.actual / Math.max(kpi.target,0.01);
     return ratio >= 1 ? '#10b981' : ratio >= 0.9 ? '#f59e0b' : '#ef4444';
   };
   const kpiPct   = kpi => {
-    const ratio = kpi.lowerIsBetter ? kpi.target / Math.max(kpi.actual,0.01) : kpi.actual / kpi.target;
+    const ratio = kpi.lowerIsBetter ? kpi.target / Math.max(kpi.actual,0.01) : kpi.actual / Math.max(kpi.target,0.01);
     return Math.min(100, ratio * 100);
   };
   const trendIcon  = (trend, lowerIsBetter) => trend === 'stable' ? '→' : trend === 'up' ? '↑' : '↓';
@@ -385,7 +385,7 @@ export default function QualityPage() {
                   <td style={{ ...S.td, fontSize:11 }}>{a.auditor}</td>
                   <td style={{ ...S.td, fontSize:11, color:'var(--text-secondary)' }}>{a.date}</td>
                   <td style={S.td}><span style={S.badge(a.type==='internal'?'#1a6bab':'#8b5cf6', a.type==='internal'?'#dbeafe':'#ede9fe')}>{a.type==='internal'?L('داخلية','Internal'):L('خارجية','External')}</span></td>
-                  <td style={{ ...S.td, textAlign:'center' }}>{a.findings || '—'}</td>
+                  <td style={{ ...S.td, textAlign:'center' }}>{a.findings !== undefined && a.findings !== null ? a.findings : '—'}</td>
                   <td style={{ ...S.td, textAlign:'center' }}>{a.ncs > 0 ? <span style={{ color:'#ef4444', fontWeight:700 }}>{a.ncs}</span> : '—'}</td>
                   <td style={S.td}>{(a.score !== undefined && a.score !== null) ? <span style={{ fontWeight:700, color: a.score>=90?'#10b981':a.score>=80?'#f59e0b':'#ef4444' }}>{a.score}%</span> : '—'}</td>
                   <td style={S.td}><span style={S.badge(st.color, st.bg)}>{L(st.ar, st.en)}</span></td>

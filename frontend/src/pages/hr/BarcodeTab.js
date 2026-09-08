@@ -102,6 +102,7 @@ export default function BarcodeTab({ lang }) {
   const [letter, setLetter] = useState(null);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [previewSvg, setPreviewSvg] = useState('');
 
   const code39Disabled = letter ? hasArabic(letter.ref) : false;
@@ -143,8 +144,10 @@ export default function BarcodeTab({ lang }) {
     try {
       const result = await api.get(`/document-lookup/search?q=${encodeURIComponent(query.trim())}`);
       setResults(Array.isArray(result) ? result : []);
-    } catch {
+      setSearchError(null);
+    } catch (err) {
       setResults([]);
+      setSearchError(err.message);
     } finally {
       setSearching(false);
       setSearched(true);
@@ -310,7 +313,8 @@ export default function BarcodeTab({ lang }) {
             <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 16 }}>{L('رقم هذا الكتاب يحوي حرفاً عربياً، وCode 39 لا يدعم العربية — QR فقط متاح له.', "This letter's number contains an Arabic letter, and Code 39 doesn't support Arabic — only QR is available for it.")}</p>
           )}
 
-          {searched && results.length === 0 && <p style={{ color: '#dc2626' }}>{L('لم يُعثر على كتاب مطابق', 'No matching letter found')}</p>}
+          {searched && searchError && <p style={{ color: '#dc2626' }}>{searchError}</p>}
+          {searched && !searchError && results.length === 0 && <p style={{ color: '#dc2626' }}>{L('لم يُعثر على كتاب مطابق', 'No matching letter found')}</p>}
 
           {results.length > 0 && !letter && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

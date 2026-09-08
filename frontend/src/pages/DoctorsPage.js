@@ -68,8 +68,9 @@ export default function DoctorsPage() {
   // من الخادم (بحث بالاسم والتخصص + فلترة بالحالة تصير كلها بقاعدة البيانات).
   // مصفوفة `doctors` بالسياق العام تبقى محمَّلة كاملة لصفحات ثانية تحتاجها
   // كقائمة اختيار (الأقسام، المواعيد...)، ومنفصلة عن جدول هذه الصفحة تحديداً.
-  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
     useServerPagination('doctors', { search: debouncedSearch, status: filter, pageSize: 50 });
+  useEffect(() => { if (loadError) addToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openAdd = () => {
     setForm({ name: '', nameEn: '', specialization: 'باطنية وصدرية', spec: 'Internal Medicine', phone: '', experience: '', status: 'active', gender: 'male', rating: 4.5, patients: 0, deptId: 1, bio: '', workHours: '9:00 - 15:00', fee: 25000, availableDays: [] });
@@ -332,6 +333,12 @@ export default function DoctorsPage() {
                     </td>
                   </tr>
                 ))}
+                {loading && (
+                  <tr><td colSpan={9}><div className="empty-state"><div className="icon">⏳</div><h3>{ar ? 'جاري التحميل...' : 'Loading...'}</h3></div></td></tr>
+                )}
+                {!loading && pageItems.length === 0 && (
+                  <tr><td colSpan={9}><div className="empty-state"><div className="icon">👨‍⚕️</div><h3>{tr('x_latwjdatba')}</h3></div></td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -429,7 +436,7 @@ export default function DoctorsPage() {
             <div className="modal-body">
               <div style={{ textAlign: 'center', marginBottom: 24, padding: 20, background: `linear-gradient(135deg, ${selected.color}22, ${selected.color}11)`, borderRadius: 12 }}>
                 <div className="avatar" style={{ background: selected.color, color: 'white', width: 80, height: 80, fontSize: 32, margin: '0 auto 12px' }}>{selected.avatar}</div>
-                <h3 style={{ fontSize: 20, fontWeight: 800 }}>{ar ? selected.name : selected.nameEn}</h3>
+                <h3 style={{ fontSize: 20, fontWeight: 800 }}>{ar ? selected.name : (selected.nameEn || selected.name)}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{ar ? selected.specialization : (selected.specializationEn || selected.spec || selected.specialization)}</p>
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12 }}>
                   <span style={{ color: '#f59e0b', fontWeight: 700 }}>⭐ {selected.rating}</span>

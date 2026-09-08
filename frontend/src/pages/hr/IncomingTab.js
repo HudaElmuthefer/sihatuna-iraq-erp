@@ -1,6 +1,6 @@
 // frontend/src/pages/hr/IncomingTab.js
 // استُخرج من HRPage.js — تبويب الكتب الواردة.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import usePagination from '../../hooks/usePagination';
 import Pagination from '../../components/Pagination';
@@ -15,7 +15,8 @@ function IncomingTab({ lang }) {
   const { showToast, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled } = useApp();
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [letters, setLetters] = useState(initIncoming);
-  useBackendLoad('incoming', setLetters);
+  const { loading: lettersLoading, error: lettersError } = useBackendLoad('incoming', setLetters);
+  useEffect(() => { if (lettersError) showToast(lettersError, 'error'); }, [lettersError]); // eslint-disable-line react-hooks/exhaustive-deps
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   // Fallback to '' before the range comparison: some records (e.g. bulk-
@@ -48,7 +49,7 @@ function IncomingTab({ lang }) {
   const openAdd = () => { setEditing(null); setForm({...empty, ref: nextRef()}); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setShowModal(true); };
   const del = async (id) => {
-    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    if (!(await confirmDialog((lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')))) return;
     setLetters(p=>p.filter(r=>r.id!==id));
     const synced = await syncToServer('incoming','delete',{id});
     showToast(L(synced ? 'deleted' : 'sync_failed'), synced ? 'success' : 'warning');
@@ -155,7 +156,14 @@ function IncomingTab({ lang }) {
                 <button onClick={()=>del(l.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button>
               </div></td>
             </tr>
-          ))}</tbody>
+          ))}
+          {lettersLoading && (
+            <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+          )}
+          {!lettersLoading && inPageItems.length === 0 && (
+            <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'لا توجد بيانات':'No data'}</td></tr>
+          )}
+          </tbody>
         </table>
         <Pagination currentPage={inCurrentPage} totalPages={inTotalPages} onPageChange={setInCurrentPage} totalItems={inTotalItems} pageSize={50} lang={lang} />
       </div>
@@ -194,7 +202,7 @@ function IncomingTab({ lang }) {
             <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
               <h3 style={{ fontSize: 20, marginBottom: 8 }}>{lang==='ar' ? `حذف ${selectedIds.size} كتاب؟` : `Delete ${selectedIds.size} letters?`}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{(lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')}</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting} style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{L('btn_cancel')}</button>
                 <button onClick={handleBulkDelete} disabled={bulkDeleting} className="btn btn-danger">{bulkDeleting ? '...' : (lang==='ar' ? 'حذف' : 'Delete')}</button>

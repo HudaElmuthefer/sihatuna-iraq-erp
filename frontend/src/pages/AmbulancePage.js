@@ -78,13 +78,17 @@ export default function AmbulancePage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([api.get('/ambulanceVehicles').catch(() => []), api.get('/ambulanceMissions').catch(() => [])])
-      .then(([vehicles, missions]) => {
+    Promise.allSettled([api.get('/ambulanceVehicles'), api.get('/ambulanceMissions')])
+      .then(([vehiclesRes, missionsRes]) => {
         if (cancelled) return;
+        const vehicles = vehiclesRes.status === 'fulfilled' ? vehiclesRes.value : null;
+        const missions = missionsRes.status === 'fulfilled' ? missionsRes.value : null;
         setAmbulanceData(p => ({
-          vehicles: Array.isArray(vehicles) && vehicles.length > 0 ? vehicles : p.vehicles,
-          missions: Array.isArray(missions) && missions.length > 0 ? missions : p.missions,
+          vehicles: Array.isArray(vehicles) ? vehicles : p.vehicles,
+          missions: Array.isArray(missions) ? missions : p.missions,
         }));
+        if (vehiclesRes.status === 'rejected') showToast(vehiclesRes.reason?.message, 'error');
+        if (missionsRes.status === 'rejected') showToast(missionsRes.reason?.message, 'error');
       });
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -166,8 +170,9 @@ export default function AmbulancePage() {
       const forThisVeh = (Array.isArray(all) ? all : []).filter(m => m.vehicleId === veh.id);
       forThisVeh.sort((a, b) => new Date(b.date) - new Date(a.date));
       setMaintenanceLog(forThisVeh);
-    } catch {
+    } catch (err) {
       setMaintenanceLog([]);
+      showToast(err.message || L('فشل تحميل سجل الصيانة','Failed to load maintenance history'), 'error');
     }
     setMaintenanceLoading(false);
   };

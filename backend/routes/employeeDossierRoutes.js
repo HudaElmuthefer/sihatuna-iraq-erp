@@ -35,7 +35,7 @@ router.get('/employees/:id/dossier', async (req, res) => {
 router.post('/employees/:id/dossier', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, title, date } = req.body;
+    const { type, title, date, notes } = req.body;
     // إصلاح: بدون هذا الفحص، طلب بلا ملف مرفق كان يمر بصمت ويُنشئ سجلاً بلا
     // filePath — يكسر شرط الاختبار /^\/uploads\// لاحقاً بدل رفض واضح فوراً.
     if (!req.file) {
@@ -46,7 +46,9 @@ router.post('/employees/:id/dossier', upload.single('file'), async (req, res) =>
       type: type || '',
       title: title || '',
       date: date || '',
+      notes: notes || '',
       filePath: `/uploads/${req.file.filename}`,
+      fileType: req.file.mimetype,
       uploadedAt: new Date().toISOString(),
     };
     const result = await pool.query(

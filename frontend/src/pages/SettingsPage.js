@@ -41,7 +41,7 @@ const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef
 const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'ai', 'backups', 'updates', 'recycle', 'about'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncStatus, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
   // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
@@ -741,6 +741,12 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 ))}
+                {syncStatus.users === 'syncing' && (
+                  <div className="card" style={{ padding:'14px 18px', textAlign:'center', color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</div>
+                )}
+                {syncStatus.users !== 'syncing' && systemUsers.length === 0 && (
+                  <div className="card" style={{ padding:'14px 18px', textAlign:'center', color:'var(--text-secondary)' }}>{lang==='ar'?'لا يوجد مستخدمون':'No users found'}</div>
+                )}
               </div>
             </div>
           )}

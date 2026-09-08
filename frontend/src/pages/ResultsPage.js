@@ -9,7 +9,8 @@
 // This requires no WhatsApp Business API account or cost. A fully
 // automatic send (no click needed) would require a paid WhatsApp Business
 // API account through Meta — a separate, bigger project if ever needed.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import PageBanner from '../components/PageBanner';
@@ -106,7 +107,7 @@ export function printCombined(title, items, appNameAr) {
 }
 
 export default function ResultsPage() {
-  const { lang, appNameAr, appNameEn } = useApp();
+  const { lang, appNameAr, appNameEn, showToast } = useApp();
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 
   const [search, setSearch] = useState('');
@@ -114,17 +115,45 @@ export default function ResultsPage() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientLabResults, setPatientLabResults] = useState([]);
   const [patientRadiologyResults, setPatientRadiologyResults] = useState([]);
-  const [, setLoadingResults] = useState(false);  const [selectedLabIds, setSelectedLabIds] = useState(new Set());
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [selectedLabIds, setSelectedLabIds] = useState(new Set());
   const [selectedRadIds, setSelectedRadIds] = useState(new Set());
   const [doctors, setDoctors] = useState([]);
+
+  // ── إصلاح: القائمة المنسدلة لنتائج بحث المريض كانت `position:absolute`
+  // عادية داخل تدفق الصفحة — بالوضع الليلي كل صفحة موجَّهة (Outlet) تُلَفّ
+  // بـCentralHolographicWorkspace (راجع Layout.js) الذي صندوقه (.chw-shell)
+  // له overflow:hidden لغرض تزييني بحت (قصّ توهجات الخلفية عند حواف الإطار
+  // المدوَّرة) — وبما إن ارتفاع هذا الصندوق محكوم بارتفاع المحتوى ضمن التدفق
+  // الطبيعي فقط (مربّع البحث نفسه قصير جداً قبل اختيار أي مريض)، القائمة
+  // المنسدلة (خارج التدفق تماماً بحكم position:absolute) تُقَصّ بمجرد
+  // تجاوزها لأسفل ذلك الصندوق القصير — بصرف النظر عن أي maxHeight نضبطه
+  // عليها هي نفسها. نفس الخلل بالضبط الموثَّق أعلاه HeaderFloatingPanel.js
+  // لصندوق الهيدر (.glass-header)، وبنفس الحل: بوابة (Portal) مباشرة إلى
+  // document.body تتخطى شجرة .chw-shell بالكامل، مع إضافة استماع للتمرير
+  // (scroll) هنا تحديداً — الهيدر لا يتحرك أبداً مع محتوى الصفحة فلا يحتاجه،
+  // لكن مربّع البحث هذا ضمن محتوى صفحة قابل للتمرير فعلياً (.page-main).
+  const searchWrapperRef = useRef(null);
+  const [dropdownRect, setDropdownRect] = useState(null);
+  useLayoutEffect(() => {
+    if (matchingPatients.length === 0 || !searchWrapperRef.current) { setDropdownRect(null); return undefined; }
+    const measure = () => setDropdownRect(searchWrapperRef.current.getBoundingClientRect());
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [matchingPatients.length]);
 
   // Same issue as `patients` above: the app-wide `doctors` context array is
   // stale demo data, not synced with the real database. Fetch it directly
   // once on mount so doctor-phone lookups (for the WhatsApp send buttons)
   // actually match real records.
   useEffect(() => {
-    api.get('/doctors').then((data) => setDoctors(Array.isArray(data) ? data : [])).catch(() => setDoctors([]));
-  }, []);
+    api.get('/doctors').then((data) => setDoctors(Array.isArray(data) ? data : [])).catch((err) => { setDoctors([]); showToast(err.message, 'error'); });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live search against the real backend (uses the indexed name/phone
   // columns via pgCrud's ?search= support) — NOT the app-wide `patients`
@@ -135,10 +164,10 @@ export default function ResultsPage() {
     const timer = setTimeout(() => {
       api.get(`/patients?search=${encodeURIComponent(search.trim())}`)
         .then((data) => setMatchingPatients(Array.isArray(data) ? data.slice(0, 8) : []))
-        .catch(() => setMatchingPatients([]));
+        .catch((err) => { setMatchingPatients([]); showToast(err.message, 'error'); });
     }, 300); // small debounce so we don't fire a request on every keystroke
     return () => clearTimeout(timer);
-  }, [search, selectedPatient]);
+  }, [search, selectedPatient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Once a patient is selected, fetch ALL lab/radiology records (no ?page=
   // param → pgCrud returns the full unpaginated array) and filter them
@@ -155,9 +184,9 @@ export default function ResultsPage() {
         setPatientLabResults(Array.isArray(labs) ? labs.filter(matches) : []);
         setPatientRadiologyResults(Array.isArray(rads) ? rads.filter(matches) : []);
       })
-      .catch(() => { setPatientLabResults([]); setPatientRadiologyResults([]); })
+      .catch((err) => { setPatientLabResults([]); setPatientRadiologyResults([]); showToast(err.message, 'error'); })
       .finally(() => setLoadingResults(false));
-  }, [selectedPatient]);
+  }, [selectedPatient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const findDoctorPhone = (doctorName) => {
     if (!doctorName) return null;
@@ -302,30 +331,41 @@ export default function ResultsPage() {
     <div style={{ padding: 20 }}>
       <PageBanner icon="🧪" title={L('نتائج التحاليل والأشعة', 'Lab & Radiology Results')} subtitle={L('عرض وطباعة وإرسال نتائج المرضى', "View, print, and send patients' results")} gradient={BANNER_GRADIENT} />
 
-      <div style={{ position: 'relative', maxWidth: 420, marginBottom: 20 }}>
+      <div ref={searchWrapperRef} style={{ position: 'relative', maxWidth: 420, marginBottom: 20 }}>
         <input
           className="form-control"
           placeholder={L('ابحث عن مريض بالاسم أو رقم الهاتف...', 'Search patient by name or phone...')}
           value={search}
           onChange={(e) => { setSearch(e.target.value); setSelectedPatient(null); }}
         />
-        {matchingPatients.length > 0 && (
-          // إصلاح تباين الوضع الليلي: خلفية بيضاء ثابتة + نص موروث
-          // color:var(--text-primary) من body (فاتح بالوضع الليلي) = نص غير
-          // مقروء. نفس متغيرات .form-control/.modal الموحَّدة بالتطبيق.
-          <div style={{ position: 'absolute', top: '100%', insetInlineStart: 0, insetInlineEnd: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            {matchingPatients.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => { setSelectedPatient(p); setSearch(p.name); }}
-                style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
-              >
-                {p.name} <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>({p.phone})</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
+      {matchingPatients.length > 0 && dropdownRect && ReactDOM.createPortal(
+        // إصلاح تباين الوضع الليلي: خلفية بيضاء ثابتة + نص موروث
+        // color:var(--text-primary) من body (فاتح بالوضع الليلي) = نص غير
+        // مقروء. نفس متغيرات .form-control/.modal الموحَّدة بالتطبيق.
+        // position:fixed مع إحداثيات مقيسة فعلياً (dropdownRect) بدل
+        // position:absolute — راجع تعليق useLayoutEffect أعلاه لسبب البوابة.
+        // إصلاح: position:fixed يهرب من تمرير الصفحة تماماً — لو حصرنا
+        // الارتفاع بـ440 ثابتة بغض النظر عن موضع مربّع البحث فعلياً بالشاشة،
+        // أي جزء يتجاوز أسفل الشاشة المرئية (viewport) يُرسَم خارج الشاشة
+        // حرفياً (ليس "مقصوصاً" بخاصية overflow قابلة للتمرير) — لا الصفحة
+        // ولا القائمة نفسها تقدر تُمرَّر لإظهاره، لأن position:fixed خارج أي
+        // سياق تمرير من الأساس. الحل: نحسب أقصى ارتفاع متاح فعلياً حتى أسفل
+        // الشاشة (بهامش 16px)، فتنشط شريط تمرير القائمة الداخلي (overflowY:
+        // auto) بأمان دائماً ضمن الحيّز المرئي الفعلي، لا بعده.
+        <div style={{ position: 'fixed', top: dropdownRect.bottom + 4, left: dropdownRect.left, width: dropdownRect.width, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, zIndex: 2000, maxHeight: Math.max(120, Math.min(440, window.innerHeight - dropdownRect.bottom - 16)), overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          {matchingPatients.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => { setSelectedPatient(p); setSearch(p.name); }}
+              style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+            >
+              {p.name} <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>({p.phone})</span>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
 
       {selectedPatient && (
         <>
@@ -364,7 +404,9 @@ export default function ResultsPage() {
               </button>
             )}
           </div>
-          {patientLabResults.length === 0 ? (
+          {loadingResults ? (
+            <p style={{ color: '#999', marginBottom: 20 }}>{L('جارٍ التحميل...', 'Loading...')}</p>
+          ) : patientLabResults.length === 0 ? (
             <p style={{ color: '#999', marginBottom: 20 }}>{L('لا توجد نتائج مختبر لهذا المريض', 'No lab results for this patient')}</p>
           ) : (
             <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -398,7 +440,9 @@ export default function ResultsPage() {
               </button>
             )}
           </div>
-          {patientRadiologyResults.length === 0 ? (
+          {loadingResults ? (
+            <p style={{ color: '#999' }}>{L('جارٍ التحميل...', 'Loading...')}</p>
+          ) : patientRadiologyResults.length === 0 ? (
             <p style={{ color: '#999' }}>{L('لا توجد نتائج أشعة لهذا المريض', 'No radiology results for this patient')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

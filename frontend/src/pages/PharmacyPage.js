@@ -608,7 +608,8 @@ export default function PharmacyPage() {
           </div>
         )}
         {rxPageItems.map(rx => {
-          const st = RX_STATUS[normalizeLookupKey(rx.status, RX_STATUS, 'pending')];
+          const stKey = normalizeLookupKey(rx.status, RX_STATUS, 'pending');
+          const st = RX_STATUS[stKey];
           return (
             <div key={rx.id} style={S.rxCard}>
               <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
@@ -640,7 +641,7 @@ export default function PharmacyPage() {
                 ))}
               </div>
               <div style={{ display:'flex', gap:8, marginTop:10, borderTop:'1px solid var(--border)', paddingTop:10, flexWrap:'wrap' }}>
-                {rx.status==='pending' && <button onClick={()=>dispense(rx.id)} style={S.btn('#10b981')}>✅ {L('صرف الوصفة','Dispense')}</button>}
+                {stKey==='pending' && <button onClick={()=>dispense(rx.id)} style={S.btn('#10b981')}>✅ {L('صرف الوصفة','Dispense')}</button>}
                 <button onClick={()=>{ setRxForm({...rx,items:rx.items||[]}); setEditRxId(rx.id); setPrescriptionInteractions(null); setLinkedPatientId(''); setPrescriptionAllergyResult(null); setShowRxModal(true); }} style={S.btn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
                 <button onClick={()=>deleteRx(rx.id)} style={S.btn('#ef4444')}>🗑 {L('حذف','Delete')}</button>
               </div>

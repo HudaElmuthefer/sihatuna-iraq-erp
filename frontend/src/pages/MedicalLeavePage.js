@@ -31,12 +31,10 @@ const leaveStatus = (raw) => LEAVE_STATUS_ALIASES[raw] || raw;
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)';
 
-const init = [
-  { id: 1, employee: 'محمد علي حسن', employeeEn:'Mohammed Ali Hassan', dept: 'قسم الطوارئ', deptEn:'Emergency Dept.', type: 'sick', from: '2024-06-01', to: '2024-06-05', days: 5, diagnosis: 'التهاب حاد', diagnosisEn:'Acute Inflammation', doctor: 'د. أحمد الكريم', status: 'approved', notes: '' },
-  { id: 2, employee: 'سارة جاسم', employeeEn:'Sara Jasim', dept: 'قسم الجراحة', deptEn:'Surgery Dept.', type: 'ولادة', from: '2024-05-15', to: '2024-08-15', days: 92, diagnosis: 'إجازة أمومة', diagnosisEn:'Maternity Leave', doctor: 'د. فاطمة الموسوي', status: 'approved', notes: '' },
-  { id: 3, employee: 'علي رضا محمد', employeeEn:'Ali Rida Mohammed', dept: 'قسم الأطفال', deptEn:'Pediatrics Dept.', type: 'sick', from: '2024-06-10', to: '2024-06-12', days: 3, diagnosis: 'ضغط دم', diagnosisEn:'Blood Pressure', doctor: 'د. حسين العبادي', status: 'review', notes: 'يجب التحقق من المستندات' },
-  { id: 4, employee: 'نورا سعد', employeeEn:'Nora Saad', dept: 'قسم المختبر', deptEn:'Laboratory Dept.', type: 'عارضة', from: '2024-06-08', to: '2024-06-09', days: 2, diagnosis: 'حادث منزلي', diagnosisEn:'Home Accident', doctor: 'د. ليلى الهاشمي', status: 'rejected', notes: 'لم تُقدم وثائق كافية' },
-];
+// ── إصلاح: كانت هذه بيانات تجريبية وهمية (4 موظفين بإجازات مرضية حقيقية
+// الشكل) تبقى ظاهرة للأبد لو فشل جلب البيانات الحقيقية (خطأ شبكة/صلاحيات) —
+// لا يوجد أي تمييز بينها وبين بيانات حقيقية. تبدأ فاضية بصراحة الآن.
+const init = [];
 
 const empty = { employee: '', dept: '', type: 'sick', from: '', to: '', days: '', diagnosis: '', doctor: '', status: 'review', notes: '' };
 const depts_ar = ['قسم الطوارئ', 'قسم الجراحة', 'قسم الأطفال', 'قسم المختبر', 'قسم الأشعة', 'قسم الباطنية'];
@@ -71,14 +69,15 @@ export default function MedicalLeavePage() {
     rejected: tr('leave_status_rej2'),
   }[leaveStatus(value)] || value);
   const [leaves, setLeaves] = useState(init);
+  const [leavesLoading, setLeavesLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    // إصلاح: نفس خلل AppContext — لو كان عدد الإجازات الحقيقي صفراً، تبقى
-    // الصفحة تعرض بيانات تجريبية وهمية ثابتة (init) للأبد بدل الصفر الصحيح.
+    setLeavesLoading(true);
     api.get('/medicalLeaves').then(data => {
       if (!cancelled && Array.isArray(data)) setLeaves(data);
-    }).catch(() => {});
+    }).catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+      .finally(() => { if (!cancelled) setLeavesLoading(false); });
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
@@ -274,7 +273,8 @@ export default function MedicalLeavePage() {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{tr('msg_no_data')}</td></tr>}
+              {leavesLoading && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>}
+              {!leavesLoading && filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{tr('msg_no_data')}</td></tr>}
             </tbody>
           </table>
         </div>

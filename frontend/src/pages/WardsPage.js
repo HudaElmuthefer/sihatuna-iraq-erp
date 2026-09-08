@@ -41,10 +41,12 @@ export default function WardsPage() {
   const [admissions, setAdmissions] = useState([]);
   const [orders, setOrders] = useState([]);
   const [administrations, setAdministrations] = useState([]);
+  const [wardsLoading, setWardsLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setWardsLoading(true);
     Promise.all([
       api.get('/wards'), api.get('/admissions'), api.get('/medicationOrders'), api.get('/medicationAdministrations'),
     ]).then(([w, a, o, ad]) => {
@@ -53,7 +55,8 @@ export default function WardsPage() {
       if (Array.isArray(a)) setAdmissions(a);
       if (Array.isArray(o)) setOrders(o);
       if (Array.isArray(ad)) setAdministrations(ad);
-    }).catch(() => {});
+    }).catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+      .finally(() => { if (!cancelled) setWardsLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -394,7 +397,8 @@ export default function WardsPage() {
                 </div>
               );
             })}
-            {wards.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>{L('لا توجد ردهات بعد', 'No wards yet')}</p>}
+            {wardsLoading && <p style={{ color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</p>}
+            {!wardsLoading && wards.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>{L('لا توجد ردهات بعد', 'No wards yet')}</p>}
           </div>
         </div>
       )}
@@ -457,7 +461,10 @@ export default function WardsPage() {
                       </td>
                     </tr>
                   ))}
-                  {visibleAdmissions.length === 0 && (
+                  {wardsLoading && (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</td></tr>
+                  )}
+                  {!wardsLoading && visibleAdmissions.length === 0 && (
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('لا توجد بيانات', 'No data')}</td></tr>
                   )}
                 </tbody>

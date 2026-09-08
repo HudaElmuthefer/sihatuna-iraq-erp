@@ -411,6 +411,12 @@ export default function DepartmentsPage() {
                 </div>
               </div>
             ))}
+            {departments.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🏢</div>
+                <p>{lang === 'ar' ? 'لا توجد أقسام' : 'No departments found'}</p>
+              </div>
+            )}
           </div>
         </div>
 

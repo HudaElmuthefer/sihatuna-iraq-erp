@@ -39,10 +39,14 @@ export default function DeliveryRoomPage() {
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [records, setRecords] = useState([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    api.get('/deliveries').then(data => { if (!cancelled && Array.isArray(data)) setRecords(data); }).catch(() => {});
+    setRecordsLoading(true);
+    api.get('/deliveries').then(data => { if (!cancelled && Array.isArray(data)) setRecords(data); })
+      .catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+      .finally(() => { if (!cancelled) setRecordsLoading(false); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -229,7 +233,10 @@ export default function DeliveryRoomPage() {
                     </td>
                   </tr>
                 ))}
-                {admitted.length === 0 && (
+                {recordsLoading && (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</td></tr>
+                )}
+                {!recordsLoading && admitted.length === 0 && (
                   <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('لا توجد أمهات مسجَّلات قبل الولادة حالياً', 'No mothers currently admitted before delivery')}</td></tr>
                 )}
               </tbody>
@@ -285,7 +292,10 @@ export default function DeliveryRoomPage() {
                     </td>
                   </tr>
                 ))}
-                {delivered.length === 0 && (
+                {recordsLoading && (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('جارٍ التحميل...', 'Loading...')}</td></tr>
+                )}
+                {!recordsLoading && delivered.length === 0 && (
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{L('لا توجد سجلات ولادة بعد', 'No delivery records yet')}</td></tr>
                 )}
               </tbody>

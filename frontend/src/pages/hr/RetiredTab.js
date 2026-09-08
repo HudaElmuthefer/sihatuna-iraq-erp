@@ -15,7 +15,8 @@ function RetiredTab({ lang }) {
   const { showToast, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [retired, setRetired] = useState(initRetired);
-  useBackendLoad('retired', setRetired);
+  const { loading: retiredLoading, error: retiredError } = useBackendLoad('retired', setRetired);
+  useEffect(() => { if (retiredError) showToast(retiredError, 'error'); }, [retiredError]); // eslint-disable-line react-hooks/exhaustive-deps
   const visibleRetired = filterByViewingHospital(retired);
   // فلترة بتاريخ التقاعد (retireDate) افتراضياً: هو الحقل الزمني الوحيد ذو
   // المعنى الفعلي لسجل "متقاعد" (بعكس تاريخ التعيين مثلاً، الذي لا يظهر
@@ -59,7 +60,7 @@ function RetiredTab({ lang }) {
   const openAdd = () => { setEditing(null); setForm(empty); setShowModal(true); };
   const openEdit = (r) => { setEditing(r); setForm({...r}); setShowModal(true); };
   const del = async (id) => {
-    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    if (!(await confirmDialog((lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')))) return;
     setRetired(p=>p.filter(r=>r.id!==id));
     const synced = await syncToServer('retired','delete',{id});
     showToast(L(synced ? 'deleted' : 'sync_failed'), synced ? 'success' : 'warning');
@@ -125,7 +126,7 @@ function RetiredTab({ lang }) {
     }
   };
   const delDoc = async (rId, dId) => {
-    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    if (!(await confirmDialog((lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')))) return;
     const prev = retiredDossiers;
     setRetiredDossiers(prev2 => ({ ...prev2, [rId]: (prev2[rId]||[]).filter(d=>d.id!==dId) }));
     const ok = await syncToServer('dossiers', 'delete', { id: dId });
@@ -264,7 +265,14 @@ function RetiredTab({ lang }) {
               </button></td>
               <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(r)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(r.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
             </tr>
-          ))}</tbody>
+          ))}
+          {retiredLoading && (
+            <tr><td colSpan={10} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+          )}
+          {!retiredLoading && retPageItems.length === 0 && (
+            <tr><td colSpan={10} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'لا توجد بيانات':'No data'}</td></tr>
+          )}
+          </tbody>
         </table>
         <Pagination currentPage={retCurrentPage} totalPages={retTotalPages} onPageChange={setRetCurrentPage} totalItems={retTotalItems} pageSize={50} lang={lang} />
       </div>
@@ -301,7 +309,7 @@ function RetiredTab({ lang }) {
             <div className="modal-body" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
               <h3 style={{ fontSize: 20, marginBottom: 8 }}>{lang==='ar' ? `حذف ${selectedIds.size} متقاعد؟` : `Delete ${selectedIds.size} retirees?`}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>{(lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')}</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button onClick={() => setBulkDeleteConfirm(false)} disabled={bulkDeleting} style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text-primary)', cursor:'pointer' }}>{L('btn_cancel')}</button>
                 <button onClick={handleBulkDelete} disabled={bulkDeleting} className="btn btn-danger">{bulkDeleting ? '...' : (lang==='ar' ? 'حذف' : 'Delete')}</button>

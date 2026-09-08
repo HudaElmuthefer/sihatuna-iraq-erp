@@ -22,7 +22,8 @@ export default
 function PromotionsAllowancesTab() {
   const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, refreshNotifSources, user } = useApp();
   const tr = useT(lang);
-  const [recordsRaw, setRecords] = usePersistedTab('acc_promotions_allowances', 'promotionsAllowances', initPromotionsAllowances);
+  const [recordsRaw, setRecords, recordsLoading, recordsError] = usePersistedTab('acc_promotions_allowances', 'promotionsAllowances', initPromotionsAllowances);
+  useEffect(() => { if (recordsError) showToast(recordsError, 'error'); }, [recordsError]); // eslint-disable-line react-hooks/exhaustive-deps
   const records = filterByViewingHospital(recordsRaw);
   const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(records, 50);
   const [showModal, setShowModal] = useState(false);
@@ -326,6 +327,12 @@ function PromotionsAllowancesTab() {
                   <td><div style={{ display:'flex', gap:6 }}><button onClick={()=>openEdit(r)} style={{ background:'none',border:'none',cursor:'pointer',color:'#1a6bab' }}>✏️</button><button onClick={()=>del(r.id)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ef4444' }}>🗑️</button></div></td>
                 </tr>
               ))}
+              {recordsLoading && (
+                <tr><td colSpan={18} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+              )}
+              {!recordsLoading && pageItems.length === 0 && (
+                <tr><td colSpan={18} style={{ textAlign:'center', padding:24, color:'var(--text-secondary)' }}>{lang==='ar'?'لا توجد بيانات':'No data'}</td></tr>
+              )}
             </tbody>
           </table>
         </div>

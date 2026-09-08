@@ -20,25 +20,41 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
   const [credentialsDraft, setCredentialsDraft] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  // fetch() لا يرمي على 4xx/5xx (يرمي فقط على فشل الشبكة نفسه) — بدون فحص
+  // response.ok صراحة، رد خطأ (مثلاً 403 من requireAdmin) يُقرأ كأنه بيانات
+  // ناجحة، أو يُبتلَع بصمت بالـcatch الخارجي لو الجسم ليس JSON صالحاً.
+  const fetchJson = async (url, options) => {
+    const res = await fetch(url, options);
+    let data = null;
+    try { data = await res.json(); } catch { /* لا محتوى */ }
+    if (!res.ok) throw new Error(data?.message || `${res.status}`);
+    return data;
+  };
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    setError(null);
     try {
       const [providersRes, gatewaysRes] = await Promise.all([
-        fetch(`${apiBaseUrl}/admin/payment-providers`).then((r) => r.json()),
-        fetch(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`).then((r) => r.json()),
+        fetchJson(`${apiBaseUrl}/admin/payment-providers`),
+        fetchJson(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`),
       ]);
       setAllProviders(providersRes);
       setHospitalGateways(gatewaysRes);
     } catch (err) {
       console.error('فشل تحميل إعدادات الدفع:', err);
-    } finally {
-      setLoading(false);
+      setError(err.message || L('تعذّر تحميل إعدادات الدفع', 'Failed to load payment settings'));
     }
   }, [apiBaseUrl, hospitalId]);
 
+  // إصلاح: loadData يُنادى أيضاً بعد كل toggle/save (لتحديث القائمة) — كان
+  // يضبط نفس loading المستخدم بشرط الرندر الأول، فتختفي الشاشة كاملة وتظهر
+  // "جاري التحميل..." بعد كل نقرة (تفقد الـmodal المفتوح). الآن loadData لا
+  // يلمس loading إطلاقاً؛ فقط التحميل الأولي هنا يضبطه.
   useEffect(() => {
-    loadData();
+    setLoading(true);
+    loadData().finally(() => setLoading(false));
   }, [loadData]);
 
   function isActive(providerCode) {
@@ -53,7 +69,7 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
     const config = currentConfig(provider.code);
     setSaving(true);
     try {
-      await fetch(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`, {
+      await fetchJson(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,6 +80,8 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
         }),
       });
       await loadData();
+    } catch (err) {
+      setError(err.message || L('فشل الحفظ', 'Save failed'));
     } finally {
       setSaving(false);
     }
@@ -72,7 +90,7 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
   async function saveCredentials(provider) {
     setSaving(true);
     try {
-      await fetch(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`, {
+      await fetchJson(`${apiBaseUrl}/admin/hospitals/${hospitalId}/payment-gateways`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,6 +104,8 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
       setEditingProvider(null);
       setCredentialsDraft({});
       await loadData();
+    } catch (err) {
+      setError(err.message || L('فشل الحفظ', 'Save failed'));
     } finally {
       setSaving(false);
     }
@@ -108,6 +128,12 @@ export default function PaymentGatewaySettings({ hospitalId, apiBaseUrl = '/api'
           'Enable one or more gateways per this hospital\'s agreements. Sensitive credentials are encrypted.'
         )}
       </p>
+
+      {error && (
+        <div style={{ background: '#fef2f2', border: '1px solid #ef4444', color: '#991b1b', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {Object.entries(grouped).map(([type, providers]) => (
         <div key={type} style={{ marginBottom: 32 }}>

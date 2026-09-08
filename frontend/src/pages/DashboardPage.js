@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from '
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
+import { api } from '../api';
 import { useT } from '../translations';
 import HologramAvatarWidget from '../components/holo/HologramAvatarWidget';
 import LiveECGStream from '../components/holo/LiveECGStream';
@@ -13,7 +14,7 @@ import { startDragSound, stopDragSound, playSnap, playReturn, playConfirm } from
 
 import {
   FaUsers, FaUserMd, FaCalendarAlt, FaBed, FaFlask,
-  FaCapsules, FaTimes, FaExternalLinkAlt
+  FaTimes, FaExternalLinkAlt
 } from 'react-icons/fa';
 
 // إصلاح أداء: App.js يحمّل كل صفحة (ما عدا تسجيل الدخول واللوحة الرئيسية)
@@ -122,19 +123,28 @@ export default function DashboardPage() {
   const today = new Date().toISOString().split('T')[0];
   const todayApts = useMemo(() => appointments.filter(a => a.date === today), [appointments, today]);
   const activeDoctors = useMemo(() => doctors.filter(d => d.status === 'active' || !d.status), [doctors]);
-  const totalPatientsCount = Math.max(patients.length, 24850);
-  
-  const totalBeds = useMemo(() => {
-    let sum = departments.reduce((acc, d) => acc + (d.beds || d.capacity || 20), 0);
-    return sum > 0 ? sum : 250;
-  }, [departments]);
-  
-  const occupiedBeds = useMemo(() => {
-    let sum = departments.reduce((acc, d) => acc + (d.occupied || Math.round((d.beds || 20) * 0.78)), 0);
-    return sum > 0 ? sum : 196;
-  }, [departments]);
-  
-  const bedOccupancyRate = ((occupiedBeds / totalBeds) * 100).toFixed(1);
+  const totalPatientsCount = patients.length;
+
+  // ── إصلاح: كانت السعة السريرية تُحسَب من حقول (d.beds/d.capacity/d.occupied)
+  // غير موجودة إطلاقاً بنموذج الأقسام (راجع DepartmentsPage.js) — فتسقط دائماً
+  // على القيم الاحتياطية الوهمية (20 سريراً و78% إشغال ثابتَين لكل قسم). البيانات
+  // الحقيقية للأسرّة والإشغال موجودة فعلاً بمسارَي /wards و/admissions (نفس
+  // المصدر الذي تستخدمه WardsPage.js) — نجلبها هنا مباشرة بدل اختلاق حقول.
+  const [wardsData, setWardsData] = useState(null);
+  const [admissionsData, setAdmissionsData] = useState(null);
+  useEffect(() => {
+    Promise.all([api.get('/wards'), api.get('/admissions')])
+      .then(([wardsRes, admissionsRes]) => {
+        setWardsData(Array.isArray(wardsRes) ? wardsRes : []);
+        setAdmissionsData(Array.isArray(admissionsRes) ? admissionsRes : []);
+      })
+      .catch(() => { setWardsData([]); setAdmissionsData([]); });
+  }, []);
+
+  const totalBeds = useMemo(() => (wardsData || []).reduce((acc, w) => acc + (+w.bedCount || 0), 0), [wardsData]);
+  const occupiedBeds = useMemo(() => (admissionsData || []).filter(a => a.status === 'admitted').length, [admissionsData]);
+  const bedDataReady = wardsData !== null && admissionsData !== null;
+  const bedOccupancyRate = bedDataReady && totalBeds > 0 ? ((occupiedBeds / totalBeds) * 100).toFixed(1) : null;
 
   // ── 10 Curved Holographic Page Screens (Compact Orbit Around Avatar) ──────
   // Tightly contracted orbit close to avatar box with 100% zero overlap
@@ -403,9 +413,6 @@ export default function DashboardPage() {
               <span>{totalPatientsCount.toLocaleString()}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'مريض' : 'pts'}</span>
             </div>
-            <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: '88%' }} />
-            </div>
           </div>
 
           {/* KPI 2: Bed Occupancy */}
@@ -419,11 +426,11 @@ export default function DashboardPage() {
               <FaBed className="text-amber-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{bedOccupancyRate}%</span>
-              <span className="cockpit-kpi-unit">{occupiedBeds}/{totalBeds}</span>
+              <span>{bedOccupancyRate !== null ? `${bedOccupancyRate}%` : (lang === 'ar' ? '—' : '—')}</span>
+              <span className="cockpit-kpi-unit">{bedDataReady ? `${occupiedBeds}/${totalBeds}` : (lang === 'ar' ? 'جارٍ التحميل...' : 'Loading...')}</span>
             </div>
             <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: `${Math.min(100, bedOccupancyRate)}%` }} />
+              <div className="cockpit-kpi-fill" style={{ width: `${Math.min(100, bedOccupancyRate || 0)}%` }} />
             </div>
           </div>
 
@@ -438,11 +445,8 @@ export default function DashboardPage() {
               <FaFlask className="text-purple-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{Math.max(labTests.length, 142)}</span>
+              <span>{labTests.length}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'فحص' : 'tests'}</span>
-            </div>
-            <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: '74%' }} />
             </div>
           </div>
 
@@ -457,11 +461,8 @@ export default function DashboardPage() {
               <FaUserMd className="text-emerald-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{Math.max(activeDoctors.length, 184)}</span>
+              <span>{activeDoctors.length}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'طبيب وممرض' : 'active'}</span>
-            </div>
-            <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: '92%' }} />
             </div>
           </div>
 
@@ -476,30 +477,8 @@ export default function DashboardPage() {
               <FaCalendarAlt className="text-sky-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{Math.max(todayApts.length, 64)}</span>
+              <span>{todayApts.length}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'موعد' : 'appts'}</span>
-            </div>
-            <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: '68%' }} />
-            </div>
-          </div>
-
-          {/* KPI 6: Pharmacy Stream */}
-          <div
-            onClick={() => handleOpenPage('/pharmacy')}
-            className="cockpit-card cockpit-kpi-card cursor-pointer"
-            style={{ '--kpi-accent': '#f43f5e' }}
-          >
-            <div className="cockpit-kpi-header">
-              <span>{lang === 'ar' ? 'كفاءة الصيدلية' : 'Pharmacy Stock'}</span>
-              <FaCapsules className="text-rose-400 text-xs" />
-            </div>
-            <div className="cockpit-kpi-value">
-              <span>98.6%</span>
-              <span className="cockpit-kpi-unit">{lang === 'ar' ? 'توفر' : 'ready'}</span>
-            </div>
-            <div className="cockpit-kpi-bar">
-              <div className="cockpit-kpi-fill" style={{ width: '98.6%' }} />
             </div>
           </div>
         </section>

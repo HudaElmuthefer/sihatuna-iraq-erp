@@ -44,15 +44,18 @@ export default function VaccinationsPage() {
   const { showToast, lang, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
   const tr = useT(lang);
   const [records, setRecords] = useState([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     // الحالة الأولية [] فارغة عمداً (بدل بيانات تجريبية وهمية) — تفادياً لأي
     // ومضة إحصائيات خاطئة قبل وصول رد الخادم الفعلي. نثق بأي رد صالح من
     // الخادم، فارغاً كان أو لا.
+    setRecordsLoading(true);
     api.get('/vaccinations').then(data => {
       if (!cancelled && Array.isArray(data)) setRecords(data);
-    }).catch(() => {});
+    }).catch(err => { if (!cancelled) showToast(err.message, 'error'); })
+    .finally(() => { if (!cancelled) setRecordsLoading(false); });
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
@@ -238,7 +241,10 @@ export default function VaccinationsPage() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {recordsLoading && (
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'جارٍ التحميل...':'Loading...'}</td></tr>
+              )}
+              {!recordsLoading && filtered.length === 0 && (
                 <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{tr('vac_no_data')}</td></tr>
               )}
             </tbody>

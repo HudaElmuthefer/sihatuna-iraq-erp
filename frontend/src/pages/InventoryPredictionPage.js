@@ -266,6 +266,9 @@ export default function InventoryPredictionPage() {
                       </React.Fragment>
                     );
                   })}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>{lang==='ar'?'لا توجد نتائج':'No results found'}</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -369,7 +369,8 @@ export default function ProcurementPage() {
       )}
 
       {pageItems.map(po => {
-        const st = STATUS_CONFIG[normalizeLookupKey(po.status, STATUS_CONFIG, 'pending')];
+        const stKey = normalizeLookupKey(po.status, STATUS_CONFIG, 'pending');
+        const st = STATUS_CONFIG[stKey];
         const pr = PRIORITY_CONFIG[po.priority] || PRIORITY_CONFIG.normal;
         return (
           <div key={po.id} style={S.card}>
@@ -399,9 +400,9 @@ export default function ProcurementPage() {
             </div>
             <div style={{ display:'flex', gap:8, marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, flexWrap:'wrap' }}>
               <button onClick={()=>openEdit(po)} style={S.smBtn('#6b7280')}>✏️ {L('تعديل','Edit')}</button>
-              {po.status==='pending'   && <button onClick={()=>updateStatus(po.id,'approved')}  style={S.smBtn('#10b981')}>✅ {L('اعتماد','Approve')}</button>}
-              {po.status==='approved'  && <button onClick={()=>updateStatus(po.id,'delivered')} style={S.smBtn('#1a6bab')}>📦 {L('تسجيل استلام','Mark Delivered')}</button>}
-              {['pending','approved'].includes(po.status) && <button onClick={()=>updateStatus(po.id,'cancelled')} style={S.smBtn('#ef4444')}>❌ {L('إلغاء','Cancel')}</button>}
+              {stKey==='pending'   && <button onClick={()=>updateStatus(po.id,'approved')}  style={S.smBtn('#10b981')}>✅ {L('اعتماد','Approve')}</button>}
+              {stKey==='approved'  && <button onClick={()=>updateStatus(po.id,'delivered')} style={S.smBtn('#1a6bab')}>📦 {L('تسجيل استلام','Mark Delivered')}</button>}
+              {['pending','approved'].includes(stKey) && <button onClick={()=>updateStatus(po.id,'cancelled')} style={S.smBtn('#ef4444')}>❌ {L('إلغاء','Cancel')}</button>}
               <button onClick={()=>del(po.id)} style={S.smBtn('#ef4444')}>🗑️ {L('حذف','Delete')}</button>
             </div>
           </div>

@@ -33,7 +33,7 @@ export default function MedicalCodesPage() {
     setLoading(true);
     api.get(`/medical-codes/browse?system=${system}&q=${encodeURIComponent(query.trim())}&page=${page}`)
       .then((data) => { setRows(data.data || []); setTotalPages(data.totalPages || 1); })
-      .catch(() => { setRows([]); setTotalPages(1); })
+      .catch((err) => { setRows([]); setTotalPages(1); showToast(err.message, 'error'); })
       .finally(() => setLoading(false));
   };
 

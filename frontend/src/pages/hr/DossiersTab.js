@@ -31,7 +31,7 @@ export default function DossiersTab({ lang }) {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    api.get('/employees').then(data => { if (!cancelled && Array.isArray(data)) setEmployees(data); }).catch(() => {});
+    api.get('/employees').then(data => { if (!cancelled && Array.isArray(data)) setEmployees(data); }).catch(err => { if (!cancelled) showToast(err.message || L('sync_failed'), 'error'); });
     return () => { cancelled = true; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -40,10 +40,14 @@ export default function DossiersTab({ lang }) {
     setLoadingDocs(true);
     try {
       const all = await api.get('/dossiers');
-      const docs = Array.isArray(all) ? all.filter(d => d.employeeId === empId) : [];
+      // employeeId مخزَّن كنص بالـJSONB (راجع employeeDossierRoutes.js) بينما
+      // empId هنا رقم صحيح قادم من قائمة الموظفين — مقارنة === الصارمة كانت
+      // تفشل دائماً بعد أي تحديث للصفحة (يعيد جلب الموظفين من جديد كأرقام).
+      const docs = Array.isArray(all) ? all.filter(d => String(d.employeeId) === String(empId)) : [];
       setDocsByEmployee(p => ({ ...p, [empId]: docs }));
-    } catch {
+    } catch (err) {
       setDocsByEmployee(p => ({ ...p, [empId]: [] }));
+      showToast(err.message || L('sync_failed'), 'error');
     }
     setLoadingDocs(false);
   };
@@ -65,7 +69,7 @@ export default function DossiersTab({ lang }) {
     }
   };
   const delDoc = async (empId, docId) => {
-    if (!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.')))) return;
+    if (!(await confirmDialog((lang==='ar'?'هل أنت متأكد؟ لا يمكن التراجع.':'Are you sure? This cannot be undone.')))) return;
     const prev = docsByEmployee;
     setDocsByEmployee(p => ({ ...p, [empId]: (p[empId]||[]).filter(d=>d.id!==docId) }));
     const ok = await syncToServer('dossiers', 'delete', { id: docId });

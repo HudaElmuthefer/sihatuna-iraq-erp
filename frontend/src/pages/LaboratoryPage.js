@@ -352,7 +352,8 @@ export default function LaboratoryPage() {
         </thead>
         <tbody>
           {pageItems.map(t=>{
-            const st=STATUSES[normalizeLookupKey(t.status, STATUSES, 'pending')];
+            const stKey=normalizeLookupKey(t.status, STATUSES, 'pending');
+            const st=STATUSES[stKey];
             const cat=CATEGORIES[normalizeLookupKey(t.category, CATEGORIES, 'other')];
             return (
               <tr key={t.id}>
@@ -368,8 +369,8 @@ export default function LaboratoryPage() {
                 <td style={S.td}>{t.results?<div><div style={{color:'#10b981',fontWeight:600,fontSize:11}}>{lang==='ar'?t.results.value:(t.results.valueEn||t.results.value)}</div>{t.results.notes&&<div style={{fontSize:10,color:'var(--text-secondary)'}}>{lang==='ar'?t.results.notes:(t.results.notesEn||t.results.notes)}</div>}</div>:<span style={{color:'var(--text-secondary)',fontSize:11}}>—</span>}</td>
                 <td style={S.td}>
                   <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                    {t.status==='pending'&&<button onClick={()=>updateStatus(t.id,'processing')} style={{...S.btn('#f59e0b'),padding:'3px 8px',fontSize:10}}>{L('أخذ العينة','Take Sample')}</button>}
-                    {t.status==='processing'&&<button onClick={()=>{setShowResultModal(t);setResultText('');setResultNote('');}} style={{...S.btn('#10b981'),padding:'3px 8px',fontSize:10}}>{L('إدخال النتيجة','Enter Result')}</button>}
+                    {stKey==='pending'&&<button onClick={()=>updateStatus(t.id,'processing')} style={{...S.btn('#f59e0b'),padding:'3px 8px',fontSize:10}}>{L('أخذ العينة','Take Sample')}</button>}
+                    {stKey==='processing'&&<button onClick={()=>{setShowResultModal(t);setResultText('');setResultNote('');}} style={{...S.btn('#10b981'),padding:'3px 8px',fontSize:10}}>{L('إدخال النتيجة','Enter Result')}</button>}
                     <button onClick={()=>openEdit(t)} style={{...S.btn('#6b7280'),padding:'3px 8px',fontSize:10}}>✏️</button>
                     <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const prev=labTests;setLabTests(p=>p.filter(x=>x.id!==t.id));const ok=await syncToServer('labTests','delete',{id:t.id});if(!ok){setLabTests(prev);return;}showToast(L('تم الحذف','Deleted'),'info');}} style={{...S.btn('#ef4444'),padding:'3px 8px',fontSize:10}}>🗑</button>
                   </div>

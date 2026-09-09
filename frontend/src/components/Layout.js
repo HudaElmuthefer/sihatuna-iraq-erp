@@ -324,7 +324,15 @@ export default function Layout() {
                 {pages.map(page => {
                   // القوائم الفرعية تُخفى بوضع القائمة المطوية (أيقونات فقط) —
                   // لا مساحة كافية لعرضها، ونفس مبدأ أشجار التنقّل المطوية عادةً.
-                  const subTabs = sidebarCollapsed ? [] : (SIDEBAR_SUB_TABS[page.key] || []).filter(t => !t.adminOnly || user?.role === 'admin');
+                  // إصلاح: تبويب "المستخدمون" الفرعي بقائمة الإعدادات كان يظهر
+                  // بلا شرط لأي دور — مسؤول مستشفى (role:'admin' له hospitalId)
+                  // يجتاز شرط adminOnly (دوره فعلياً 'admin') رغم عدم امتلاكه أي
+                  // صلاحية إدارة مستخدمين (راجع usersRoutes.js: requireGlobalAdmin
+                  // وSettingsPage.js: isHospitalAdmin) — يُستثنى صراحة هنا أيضاً.
+                  const isHospitalAdminUser = user?.role === 'admin' && !!user?.hospitalId;
+                  const subTabs = sidebarCollapsed ? [] : (SIDEBAR_SUB_TABS[page.key] || [])
+                    .filter(t => !t.adminOnly || user?.role === 'admin')
+                    .filter(t => !(page.key === 'settings' && t.key === 'users' && isHospitalAdminUser));
                   const hasSubTabs = subTabs.length > 0;
                   const isExpanded = expandedNavKeys.has(page.key);
                   const isOnThisPage = location.pathname === page.path;

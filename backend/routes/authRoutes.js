@@ -25,6 +25,14 @@ router.post('/auth/login', loginLimiter, (req, res) => {
     return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
   }
 
+  // ── حساب معطَّل (تعطيل جماعي لمستخدمي منشأة، راجع usersRoutes.js
+  // bulk-deactivate) — isActive غير موجودة إطلاقاً على حسابات قديمة تعني
+  // "نشط" ضمنياً (undefined !== false)، فلا حاجة لأي ترحيل بيانات هنا.
+  if (user.isActive === false) {
+    logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'account_deactivated' } });
+    return res.status(401).json({ message: 'هذا الحساب معطّل، يرجى التواصل مع الإدارة' });
+  }
+
   // كل كلمات المرور مشفّرة بـ bcrypt الآن (بعد migratePlaintextPasswords عند الإقلاع)،
   // فلا حاجة لأي مسار مقارنة نصّية صريحة بعد اليوم.
   const valid = bcrypt.compareSync(password, user.password);

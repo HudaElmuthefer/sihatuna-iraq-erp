@@ -29,6 +29,8 @@ export const SIDEBAR_SUB_TABS = {
   ],
   accounts: [
     { key: 'general', ar: 'الحسابات العامة', en: 'General Accounts' },
+    { key: 'revenue', ar: 'الإيرادات', en: 'Revenue' },
+    { key: 'profitSharing', ar: 'تقسيم الحصص', en: 'Profit Sharing' },
     { key: 'salaries', ar: 'كشف الرواتب', en: 'Salaries' },
     { key: 'promotionsAllowances', ar: 'سجل الترفيعات والعلاوات', en: 'Promotions & Allowances Record' },
   ],

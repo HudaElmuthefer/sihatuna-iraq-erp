@@ -20,15 +20,28 @@ import BackupDestinationModal from '../components/BackupDestinationModal';
 import AppLogo from '../components/AppLogo';
 import PageBanner from '../components/PageBanner';
 import { getDefaultHeaderText, getDefaultFooterText } from '../utils/printDefaults';
-const ROLES = ['admin','doctor','nurse','receptionist','accountant','hr'];
+// ── "مسؤول مستشفى" ليس دوراً مخزَّناً مستقلاً بقاعدة البيانات — يبقى
+// role:'admin' فعلياً (نفس تجاوز الصلاحيات الكامل لأي role==='admin' بكل
+// من requirePermission.js وpgCrud.js، مُختبَر بالفعل عبر hospital-scoping.
+// test.js)، ويُميَّز فقط بوجود hospitalId. 'hospital_admin' هنا قيمة وهمية
+// (pseudo) تُستخدَم فقط بقائمة الاختيار وform.role أثناء التحرير — save()
+// يحوّلها لـrole:'admin' الحقيقي قبل الإرسال للخادم، ويُشترَط اختيار منشأة
+// معها. هذا يعطي المستخدم اختياراً واضحاً بالواجهة ("مدير النظام" مقابل
+// "مسؤول مستشفى") بدل الاعتماد الضمني على وجود/غياب حقل المنشأة فقط.
+const ROLES = ['admin','hospital_admin','doctor','nurse','receptionist','accountant','hr'];
 const ROLE_LABELS = (tr) => ({
   admin: tr('role_admin'),
+  hospital_admin: tr('role_hospital_admin'),
   doctor: tr('role_doctor'),
   nurse: tr('role_nurse'),
   receptionist: tr('role_receptionist'),
   accountant: tr('role_accountant'),
   hr: tr('role_hr'),
 });
+// عرض دور المستخدم الفعلي بالجدول/الشارات — حساب "مسؤول مستشفى" مخزَّن
+// كـrole:'admin' حقيقةً (راجع الكومنت أعلاه)، فيُشتَق تمييزه هنا من وجود
+// hospitalId بدل قراءة u.role مباشرة، وإلا سيظهر خطأً كـ"مدير النظام".
+const displayRoleKey = (u) => (u.role === 'admin' && u.hospitalId) ? 'hospital_admin' : u.role;
 const emptyUser = { name:'', username:'', password:'', email:'', role:'doctor', jobTitle:'', avatar:'م', color:'#1a6bab', permissions:[] };
 const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef4444','#6366f1'];
 // تبويبات الإدمن (logo/appname/hospitals/backups/updates/recycle) مقبولة هنا
@@ -43,6 +56,11 @@ const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'ap
 export default function SettingsPage() {
   const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncStatus, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
   const tr = useT(lang);
+  // مسؤول مستشفى (role:'admin' له hospitalId) لا يستطيع إدارة أي مستخدمين
+  // إطلاقاً (راجع usersRoutes.js: requireGlobalAdmin) رغم امتلاكه صلاحية
+  // كاملة على بقية تبويبات الإعدادات عبر تجاوز role==='admin' العام — يُستخدَم
+  // هذا لإخفاء تبويب "المستخدمون" نفسه بدل ترك أزرار تفشل صامتاً بـ403.
+  const isHospitalAdmin = user?.role === 'admin' && !!user?.hospitalId;
   // القيمة الابتدائية تحترم ?tab= بالرابط (القائمة الجانبية القابلة للتوسّع
   // — راجع components/Layout.js وconfig/sidebarSubTabs.js)، مع تجاهل أي
   // قيمة غير معروفة بدل عرض صفحة فارغة بصمت (SETTINGS_TAB_KEYS مُعرَّفة
@@ -50,7 +68,8 @@ export default function SettingsPage() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
     const fromUrl = searchParams.get('tab');
-    return SETTINGS_TAB_KEYS.includes(fromUrl) ? fromUrl : 'users';
+    if (SETTINGS_TAB_KEYS.includes(fromUrl) && !(fromUrl === 'users' && isHospitalAdmin)) return fromUrl;
+    return isHospitalAdmin ? 'appearance' : 'users';
   });
   // الـuseState أعلاه يُنفَّذ مرة واحدة فقط عند التركيب — لا يكفي وحده حين
   // تُنقَّل من تبويب فرعي بالقائمة الجانبية لآخر بنفس هذه الصفحة (المسار
@@ -59,8 +78,8 @@ export default function SettingsPage() {
   // على التبديل اليدوي (أزرار التبويبات لا تُغيّر الرابط أصلاً).
   React.useEffect(() => {
     const fromUrl = searchParams.get('tab');
-    if (SETTINGS_TAB_KEYS.includes(fromUrl)) setTab(fromUrl);
-  }, [searchParams]);
+    if (SETTINGS_TAB_KEYS.includes(fromUrl) && !(fromUrl === 'users' && isHospitalAdmin)) setTab(fromUrl);
+  }, [searchParams, isHospitalAdmin]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyUser);
@@ -238,7 +257,7 @@ export default function SettingsPage() {
   // البيانات، بدل تصحيحها يدوياً مرة وحدة (وتصير قديمة ثانية لاحقاً).
   const openEdit = (u) => {
     setEditing(u);
-    setForm({ ...u, password: u.password || '', permissions: u.role === 'admin' ? ALL_PAGES.map(p => p.key) : (u.permissions || []) });
+    setForm({ ...u, role: displayRoleKey(u), password: u.password || '', permissions: u.role === 'admin' ? ALL_PAGES.map(p => p.key) : (u.permissions || []) });
     setShowModal(true);
   };
   const delUser = async (id) => {
@@ -279,6 +298,7 @@ export default function SettingsPage() {
   const setRoleDefaults = (role) => {
     const defaults = {
       admin: ALL_PAGES.map(p => p.key),
+      hospital_admin: ALL_PAGES.map(p => p.key),
       doctor: ['dashboard','services','patients','appointments','medical-leave','vaccinations','wards','delivery'],
       nurse: ['dashboard','patients','appointments','vaccinations','medical-leave','wards','delivery','queue'],
       receptionist: ['dashboard','patients','appointments','departments','services','queue'],
@@ -290,20 +310,29 @@ export default function SettingsPage() {
   const save = async () => {
     if (!form.name || !form.username || (!editing && !form.password)) { showToast(tr('set_user_required'), 'error'); return; }
     if (!editing && systemUsers.find(u => u.username === form.username)) { showToast(tr('set_username_exists'), 'error'); return; }
+    // "مسؤول مستشفى" يحتاج منشأة مُحدَّدة إلزامياً — بدونها لا فرق فعلياً عن
+    // مدير نظام عام (hospitalId فارغ)، وهذا سيمنحه صلاحيات وزارة كاملة خطأً.
+    if (form.role === 'hospital_admin' && !form.hospitalId) {
+      showToast(lang === 'ar' ? 'مسؤول المستشفى يحتاج اختيار منشأة' : 'Hospital Admin requires selecting a hospital', 'error');
+      return;
+    }
     const prev = systemUsers;
-    // إصلاح: نفرض قائمة الصفحات الكاملة الحالية لأي حساب إدمن وقت الحفظ —
-    // بغض النظر عمّا بقائمة form.permissions فعلياً (قائمة التحديد نفسها
-    // مخفية لدور الإدمن بالواجهة أدناه، فما تتغيّر أصلاً) — يضمن عدم حفظ
-    // مصفوفة قديمة/ناقصة لأي حساب إدمن، حتى لو تغيّرت صفحات النظام لاحقاً.
-    const permissions = form.role === 'admin' ? ALL_PAGES.map(p => p.key) : form.permissions;
+    // "مسؤول مستشفى" قيمة وهمية بالواجهة فقط (راجع كومنت ROLES أعلاه) —
+    // تُخزَّن دائماً كـrole:'admin' حقيقي بالخادم.
+    const actualRole = form.role === 'hospital_admin' ? 'admin' : form.role;
+    // إصلاح: نفرض قائمة الصفحات الكاملة الحالية لأي حساب إدمن (عام أو
+    // مسؤول مستشفى) وقت الحفظ — بغض النظر عمّا بقائمة form.permissions فعلياً
+    // (قائمة التحديد نفسها مخفية لهذا الدور بالواجهة أدناه، فما تتغيّر أصلاً)
+    // — يضمن عدم حفظ مصفوفة قديمة/ناقصة، حتى لو تغيّرت صفحات النظام لاحقاً.
+    const permissions = actualRole === 'admin' ? ALL_PAGES.map(p => p.key) : form.permissions;
     if (editing) {
-      const uu = { ...form, permissions, id: editing.id };
+      const uu = { ...form, role: actualRole, permissions, id: editing.id };
       setSystemUsers(p => p.map(u => u.id === editing.id ? uu : u));
       const ok = await syncToServer('users', 'update', uu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
       if (!ok) { setSystemUsers(prev); return; }
       showToast(tr('msg_edited'), 'success');
     } else {
-      const nu = { ...form, permissions, id: Date.now() };
+      const nu = { ...form, role: actualRole, permissions, id: Date.now() };
       setSystemUsers(p => [...p, nu]);
       const ok = await syncToServer('users', 'create', nu); // الباك إند يشفّر كلمة المرور تلقائياً بـ bcrypt
       if (!ok) { setSystemUsers(prev); return; }
@@ -313,7 +342,7 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { key: 'users',      labelKey: 'set_tab_users',      icon: '👥' },
+    ...(isHospitalAdmin ? [] : [{ key: 'users', labelKey: 'set_tab_users', icon: '👥' }]),
     { key: 'appearance', labelKey: 'set_tab_appearance',  icon: '🎨' },
     { key: 'system',     labelKey: 'set_tab_system',      icon: '⚙️' },
     { key: 'print',      labelKey: 'set_tab_print',       icon: '🖨️' },
@@ -327,7 +356,7 @@ export default function SettingsPage() {
     { key: 'about',      labelKey: 'set_tab_about',       icon: 'ℹ️' },
   ];
 
-  const roleColor = (r) => ({ admin:'#ef4444', doctor:'#1a6bab', nurse:'#8b5cf6', receptionist:'#10b981', accountant:'#f59e0b', hr:'#06b6d4' }[r] || '#6b7280');
+  const roleColor = (r) => ({ admin:'#ef4444', hospital_admin:'#dc2626', doctor:'#1a6bab', nurse:'#8b5cf6', receptionist:'#10b981', accountant:'#f59e0b', hr:'#06b6d4' }[r] || '#6b7280');
 
   // ── النسخ الاحتياطي ──────────────────────────────────────────────────────
   const loadBackups = async () => {
@@ -657,6 +686,42 @@ export default function SettingsPage() {
     }
   };
 
+  // ── تعطيل/حذف جماعي لكل مستخدمي منشأة واحدة (بما فيهم مسؤول المستشفى نفسه)
+  // دفعة واحدة — يُستخدَم عند انتهاء اشتراك مستشفى، بدل تعطيل/حذف كل مستخدم
+  // بواحد يدوياً. حصراً لمدير النظام العام (الباك إند يفرض هذا بـ
+  // requireGlobalAdmin بغض النظر عن أي تحقق هنا). راجع usersRoutes.js.
+  const bulkDeactivateHospitalUsers = async (h) => {
+    const count = systemUsers.filter(u => u.hospitalId === h.id).length;
+    if (count === 0) { showToast(lang === 'ar' ? 'لا يوجد مستخدمون بهذه المنشأة' : 'No users in this hospital', 'error'); return; }
+    const msg = lang === 'ar'
+      ? `سيتم تعطيل ${count} مستخدم(ين) تابعين لـ"${h.name_ar}" (بما فيهم مسؤول المستشفى). متابعة؟`
+      : `This will deactivate ${count} user(s) under "${h.name_en}" (including the hospital admin). Continue?`;
+    if (!(await confirmDialog(msg))) return;
+    try {
+      const res = await api.post('/users/bulk-deactivate', { hospitalId: h.id });
+      setSystemUsers(p => p.map(u => u.hospitalId === h.id ? { ...u, isActive: false } : u));
+      showToast(lang === 'ar' ? `تم تعطيل ${res.count} مستخدم` : `Deactivated ${res.count} user(s)`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const bulkDeleteHospitalUsers = async (h) => {
+    const count = systemUsers.filter(u => u.hospitalId === h.id).length;
+    if (count === 0) { showToast(lang === 'ar' ? 'لا يوجد مستخدمون بهذه المنشأة' : 'No users in this hospital', 'error'); return; }
+    const msg = lang === 'ar'
+      ? `سيتم حذف ${count} مستخدم(ين) تابعين لـ"${h.name_ar}" نهائياً (بما فيهم مسؤول المستشفى). هذا الإجراء لا يمكن التراجع عنه. متابعة؟`
+      : `This will permanently delete ${count} user(s) under "${h.name_en}" (including the hospital admin). This cannot be undone. Continue?`;
+    if (!(await confirmDialog(msg))) return;
+    try {
+      const res = await api.post('/users/bulk-delete', { hospitalId: h.id });
+      setSystemUsers(p => p.filter(u => u.hospitalId !== h.id));
+      showToast(lang === 'ar' ? `تم حذف ${res.count} مستخدم` : `Deleted ${res.count} user(s)`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
   React.useEffect(() => {
     if (tab === 'hospitals') loadHospitals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -683,8 +748,8 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div>
-          {/* ── USERS TAB ── */}
-          {tab === 'users' && (
+          {/* ── USERS TAB (لا تُعرَض لمسؤول مستشفى — راجع isHospitalAdmin أعلاه) ── */}
+          {tab === 'users' && !isHospitalAdmin && (
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                 <h3 style={{ margin:0 }}>{tr('set_users_title')} ({systemUsers.length})</h3>
@@ -701,7 +766,7 @@ export default function SettingsPage() {
                       <div style={{ flex:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
                           <span style={{ fontWeight:700, fontSize:15 }}>{u.name}</span>
-                          <span style={{ background:`${roleColor(u.role)}15`, color:roleColor(u.role), padding:'2px 8px', borderRadius:8, fontSize:11, fontWeight:700 }}>{ROLE_LABELS(tr)[u.role] || u.role}</span>
+                          <span style={{ background:`${roleColor(displayRoleKey(u))}15`, color:roleColor(displayRoleKey(u)), padding:'2px 8px', borderRadius:8, fontSize:11, fontWeight:700 }}>{ROLE_LABELS(tr)[displayRoleKey(u)] || u.role}</span>
                           {u.id === user?.id && <span style={{ background:'#dcfce7', color:'#166534', padding:'2px 8px', borderRadius:8, fontSize:10, fontWeight:700 }}>{tr('set_you')}</span>}
                         </div>
                         <div style={{ fontSize:12, color:'var(--text-secondary)', marginBottom:6 }}>
@@ -1036,8 +1101,14 @@ export default function SettingsPage() {
                           <div style={{ fontSize:12, color:'var(--text-secondary)', marginTop:2 }}>{h.address}{h.address && h.phone ? ' · ' : ''}{h.phone}</div>
                         )}
                       </div>
-                      <div style={{ display:'flex', gap:8 }}>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
                         <button onClick={() => openEditHosp(h)} className="btn btn-outline" style={{ fontSize:12, padding:'6px 12px' }}>{tr('btn_edit')}</button>
+                        <button onClick={() => bulkDeactivateHospitalUsers(h)} className="btn btn-outline" style={{ fontSize:12, padding:'6px 12px', color:'#f59e0b' }} title={lang === 'ar' ? 'تعطيل كل مستخدمي هذه المنشأة دفعة واحدة (عند انتهاء الاشتراك)' : 'Deactivate all of this hospital\'s users at once (subscription ended)'}>
+                          {lang === 'ar' ? '⏸️ تعطيل كل المستخدمين' : '⏸️ Deactivate all users'}
+                        </button>
+                        <button onClick={() => bulkDeleteHospitalUsers(h)} className="btn btn-outline" style={{ fontSize:12, padding:'6px 12px', color:'#ef4444' }} title={lang === 'ar' ? 'حذف كل مستخدمي هذه المنشأة نهائياً دفعة واحدة' : 'Permanently delete all of this hospital\'s users at once'}>
+                          {lang === 'ar' ? '🗑️ حذف كل المستخدمين' : '🗑️ Delete all users'}
+                        </button>
                         <button onClick={() => deleteHospital(h.id)} className="btn btn-outline" style={{ fontSize:12, padding:'6px 12px', color:'#ef4444' }}>{tr('btn_delete')}</button>
                       </div>
                     </div>
@@ -1518,11 +1589,12 @@ export default function SettingsPage() {
                       {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS(tr)[r]}</option>)}
                     </select>
                   </div>
-                  {multiHospitalEnabled && (
+                  {(multiHospitalEnabled || form.role === 'hospital_admin') && (
                     <div>
                       <label className="form-label">{tr('select_hospital_field')}</label>
                       <select value={form.hospitalId || ''} onChange={e => setForm(p => ({ ...p, hospitalId: e.target.value }))} className="form-control">
-                        <option value="">{tr('super_admin_all_hospitals')}</option>
+                        {form.role !== 'hospital_admin' && <option value="">{tr('super_admin_all_hospitals')}</option>}
+                        {form.role === 'hospital_admin' && !form.hospitalId && <option value="">—</option>}
                         {hospitals.map(h => <option key={h.id} value={h.id}>{h.name_ar}</option>)}
                       </select>
                     </div>
@@ -1542,13 +1614,17 @@ export default function SettingsPage() {
                   كان يوهم بأن صلاحياته "مُعدَّة يدوياً" وقد تنسى صفحة جديدة، رغم
                   إنها فعلياً غير مستخدَمة إطلاقاً بمنطق التحقق. بدلها: ملاحظة
                   توضيحية ثابتة، بلا أي قائمة يمكن أن تصير قديمة. */}
-              {form.role === 'admin' ? (
+              {(form.role === 'admin' || form.role === 'hospital_admin') ? (
                 <div style={{ background:'var(--bg-primary)', borderRadius:10, padding:16, display:'flex', alignItems:'center', gap:10 }}>
                   <span style={{ fontSize:20 }}>🔑</span>
                   <span style={{ fontSize:13, color:'var(--text-secondary)' }}>
-                    {lang === 'ar'
-                      ? 'حساب الإدمن يملك صلاحية كاملة لكل صفحات النظام دائماً — حالياً ومستقبلاً — بلا حاجة لأي تحديد يدوي.'
-                      : 'Admin accounts always have full access to every page in the system — now and in the future — nothing to select here.'}
+                    {form.role === 'hospital_admin'
+                      ? (lang === 'ar'
+                          ? 'مسؤول المستشفى يملك صلاحية كاملة على كل صفحات النظام، لكن محصورة ببيانات منشأته المختارة فقط — ولا يستطيع إنشاء أو إدارة أي مستخدمين (حصراً لمدير النظام العام).'
+                          : 'A Hospital Admin has full access to every page, scoped only to their selected hospital\'s data — and cannot create or manage any users (Super Admin only).')
+                      : (lang === 'ar'
+                          ? 'حساب الإدمن يملك صلاحية كاملة لكل صفحات النظام دائماً — حالياً ومستقبلاً — بلا حاجة لأي تحديد يدوي.'
+                          : 'Admin accounts always have full access to every page in the system — now and in the future — nothing to select here.')}
                   </span>
                 </div>
               ) : (

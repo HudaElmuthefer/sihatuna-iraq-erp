@@ -314,6 +314,20 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 
+-- تقسيم الحصص (Profit Sharing) — راجع migrations-sql/015_profit_sharing_beneficiaries.sql
+-- لشرح كامل. أعمدة حقيقية عمداً (لا JSONB) لأجل فحص SUM(percentage) <= 100
+-- الموثوق بجانب الخادم (routes/profitSharingRoutes.js).
+CREATE TABLE IF NOT EXISTS profit_sharing_beneficiaries (
+    id           SERIAL PRIMARY KEY,
+    hospital_id  UUID REFERENCES hospitals(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    type         TEXT,
+    percentage   NUMERIC(5,2) NOT NULL CHECK (percentage > 0 AND percentage <= 100),
+    created_at   TIMESTAMPTZ DEFAULT now(),
+    updated_at   TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_profit_sharing_beneficiaries_hospital ON profit_sharing_beneficiaries(hospital_id);
+
 -- status: رُقِّي من JSONB لعمود حقيقي بـ migrations-sql/004_promote_batch2.sql
 -- ── تنبيه: هذان الجدولان يُدمَجان لاحقاً بـmigrations-sql/014_merge_promotions_allowances.sql
 -- بجدول promotions_allowances واحد، ثم يُحذَفان (DROP) — تعمّداً لم يُعدَّلا هنا

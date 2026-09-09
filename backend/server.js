@@ -200,6 +200,8 @@ router.get('/queue-display', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 router.use(require('./routes/usersRoutes'));
+router.use(require('./routes/revenueRoutes'));
+router.use(require('./routes/profitSharingRoutes'));
 // إصلاح: مسار "الإضابير الشخصية" (رفع/عرض/حذف وثيقة موظف بملف مرفق حقيقي)
 // كان غير مسجَّل بالسيرفر إطلاقاً — راجع التعليق أعلى employeeDossierRoutes.js.
 router.use(require('./routes/employeeDossierRoutes'));

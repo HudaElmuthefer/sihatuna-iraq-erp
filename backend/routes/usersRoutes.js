@@ -7,19 +7,29 @@
 // يغيّر دور/كلمة مرور أي حساب آخر بالنظام — استيلاء كامل على الصلاحيات.
 // الآن: كل عمليات القراءة والتعديل على المستخدمين للإدمن فقط.
 //
-// ── إصلاح أمني ثانٍ: فلترة حسب المنشأة ────────────────────────────────────────
+// ── إصلاح أمني ثانٍ (تاريخي — الآن مُشدَّد أكثر، راجع الفقرة التالية) ─────────
 // requireAdmin وحدها تتحقق فقط من role === 'admin' — بدون أي اعتبار لأي منشأة
-// ينتمي لها هذا الإدمن. يعني إدمن محلي مرتبط بمستشفى معيّن (hospitalId محدَّد
-// بحسابه) كان يستطيع أن يرى ويعدّل ويحذف بل حتى **يعيد ضبط كلمة مرور** مستخدمين
-// بمستشفيات ثانية غيره تماماً. الآن: إدمن له hospitalId يرى فقط مستخدمي نفس
-// منشأته، وأي عملية على مستخدم بمنشأة ثانية تُرفَض (404، بنفس نمط
-// belongsToUserHospital المستخدم بـ pgCrud.js لباقي الموديولات). إدمن عام
-// (بدون hospitalId — مستوى الوزارة) يرى ويدير الجميع كالمعتاد.
+// ينتمي لها هذا الإدمن. كان إدمن محلي مرتبط بمستشفى معيّن (hospitalId محدَّد
+// بحسابه) يستطيع أن يرى ويعدّل ويحذف بل حتى **يعيد ضبط كلمة مرور** مستخدمين
+// بمستشفيات ثانية غيره تماماً. أول إصلاح كان: إدمن له hospitalId يرى فقط
+// مستخدمي نفس منشأته (inScope أدناه، بنفس نمط belongsToUserHospital المستخدم
+// بـpgCrud.js لباقي الموديولات).
+//
+// ── إصلاح أمني ثالث: إدارة المستخدمين تصير حصراً للإدمن العام ─────────────────
+// "مسؤول مستشفى" (إدمن له hospitalId) يحصل تلقائياً على صلاحيات كاملة على
+// بيانات منشأته عبر تجاوز requirePermission.js العام لأي role==='admin' —
+// هذا مقصود ولا يحتاج تعديلاً. لكن إدارة الحسابات نفسها (إنشاء/تعديل/حذف
+// مستخدمين، إعادة ضبط كلمات المرور) يجب أن تبقى حصراً بيد الإدمن العام
+// (مستوى الوزارة) — حتى إدمن محلي لا يُنشئ حسابات لمنشأته هو حتى، فقط
+// الإدمن العام يفعل ذلك نيابة عنه. لذا كل مسارات هذا الملف (عدا self-service
+// أدناه) تستخدم الآن requireGlobalAdmin بدل requireAdmin. inScope تبقى هنا
+// (غير فعّالة عملياً الآن بما أن actingAdmin.hospitalId دائماً فارغ لأي طالب
+// يجتاز requireGlobalAdmin) توثيقاً للمنطق ولمرونة أي تفويض جزئي مستقبلي.
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
-const requireAdmin = require('../middleware/requireAdmin');
+const requireGlobalAdmin = require('../middleware/requireGlobalAdmin');
 const { readDB, writeDB, nextId } = require('../utils/db');
 const { logAudit } = require('../utils/auditLog');
 
@@ -32,13 +42,13 @@ const inScope = (actingAdmin, targetUser) => {
   return targetUser?.hospitalId === actingAdmin.hospitalId;
 };
 
-router.get('/users', auth, requireAdmin, (req, res) => {
+router.get('/users', auth, requireGlobalAdmin, (req, res) => {
   const db = readDB();
   const users = (db.users || []).filter(u => inScope(req.user, u));
   res.json(users.map(({ password: _, ...u }) => u));
 });
 
-router.post('/users', auth, requireAdmin, (req, res) => {
+router.post('/users', auth, requireGlobalAdmin, (req, res) => {
   const db = readDB();
   if (!db.users) db.users = [];
   const { password, ...rest } = req.body;
@@ -55,7 +65,7 @@ router.post('/users', auth, requireAdmin, (req, res) => {
   res.status(201).json(safe);
 });
 
-router.put('/users/:id', auth, requireAdmin, (req, res) => {
+router.put('/users/:id', auth, requireGlobalAdmin, (req, res) => {
   const db = readDB();
   const idx = (db.users || []).findIndex(u => u.id == req.params.id);
   if (idx === -1 || !inScope(req.user, db.users[idx])) return res.status(404).json({ message: 'غير موجود' });
@@ -74,7 +84,7 @@ router.put('/users/:id', auth, requireAdmin, (req, res) => {
   res.json(safe);
 });
 
-router.delete('/users/:id', auth, requireAdmin, (req, res) => {
+router.delete('/users/:id', auth, requireGlobalAdmin, (req, res) => {
   if (req.params.id == 1) return res.status(403).json({ message: 'لا يمكن حذف المدير الرئيسي' });
   const db = readDB();
   const target = (db.users || []).find(u => u.id == req.params.id);
@@ -85,13 +95,41 @@ router.delete('/users/:id', auth, requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ── تعطيل/حذف جماعي لكل مستخدمي منشأة واحدة دفعة واحدة ───────────────────────
+// يُستخدَم عند انتهاء اشتراك مستشفى: بدل تعطيل/حذف مستخدم بواحد (بما فيهم
+// مسؤول المستشفى نفسه)، الإدمن العام يضغط زراً واحداً يطبَّق على الجميع معاً.
+// حصراً للإدمن العام (requireGlobalAdmin) — لا معنى لتفويض هذا لمسؤول
+// المستشفى نفسه (لن يستطيع أصلاً تعطيل حسابه هو من داخل جلسته الحالية).
+router.post('/users/bulk-deactivate', auth, requireGlobalAdmin, (req, res) => {
+  const { hospitalId } = req.body;
+  if (!hospitalId) return res.status(400).json({ message: 'hospitalId مطلوب' });
+  const db = readDB();
+  const affected = (db.users || []).filter(u => u.hospitalId === hospitalId && u.id != 1);
+  affected.forEach(u => { u.isActive = false; });
+  writeDB(db);
+  logAudit({ module: 'users', action: 'bulk_deactivate', userId: req.user.id, userRole: req.user.role, after: { hospitalId, count: affected.length, userIds: affected.map(u => u.id) } });
+  res.json({ success: true, count: affected.length });
+});
+
+router.post('/users/bulk-delete', auth, requireGlobalAdmin, (req, res) => {
+  const { hospitalId } = req.body;
+  if (!hospitalId) return res.status(400).json({ message: 'hospitalId مطلوب' });
+  const db = readDB();
+  const affected = (db.users || []).filter(u => u.hospitalId === hospitalId && u.id != 1);
+  const affectedIds = affected.map(u => u.id);
+  db.users = (db.users || []).filter(u => !(u.hospitalId === hospitalId && u.id != 1));
+  writeDB(db);
+  logAudit({ module: 'users', action: 'bulk_delete', userId: req.user.id, userRole: req.user.role, after: { hospitalId, count: affectedIds.length, userIds: affectedIds } });
+  res.json({ success: true, count: affectedIds.length });
+});
+
 // ── استعادة كلمة المرور (بدون بريد إلكتروني — النظام لا يملك خدمة SMTP) ──────
 // الحل العملي المتاح: الإدمن يولّد كلمة مرور مؤقتة عشوائية للمستخدم (تُعرض
 // له مرة واحدة فقط بواجهة الإدمن، يوصّلها للمستخدم يدوياً بالهاتف أو حضورياً)،
 // ويُجبَر ذاك المستخدم على تغييرها بأول تسجيل دخول له (mustChangePassword).
 // الكلمة المؤقتة نفسها لا تُخزَّن أبداً كنص صريح — فقط نسختها المشفّرة (bcrypt)،
 // ولا تُسجَّل بسجل التدقيق (audit log) لأي سبب.
-router.post('/users/:id/reset-password', auth, requireAdmin, (req, res) => {
+router.post('/users/:id/reset-password', auth, requireGlobalAdmin, (req, res) => {
   const db = readDB();
   const idx = (db.users || []).findIndex(u => u.id == req.params.id);
   if (idx === -1 || !inScope(req.user, db.users[idx])) return res.status(404).json({ message: 'غير موجود' });

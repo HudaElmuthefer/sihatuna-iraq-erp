@@ -233,6 +233,30 @@ const translations = {
   acc_paid:             { ar: 'مدفوع',                  en: 'Paid' },
   acc_pending:          { ar: 'معلق',                    en: 'Pending' },
 
+  // ─── الحسابات / الإيرادات وتقسيم الحصص ───────────────────────────────────
+  acc_tab_revenue:       { ar: 'الإيرادات',               en: 'Revenue' },
+  acc_tab_profit_sharing:{ ar: 'تقسيم الحصص',            en: 'Profit Sharing' },
+  rev_source:            { ar: 'المصدر',                 en: 'Source' },
+  rev_source_patient:    { ar: 'مريض',                   en: 'Patient' },
+  rev_source_pharmacy:   { ar: 'صيدلية',                 en: 'Pharmacy' },
+  rev_source_other:      { ar: 'أخرى',                   en: 'Other' },
+  rev_filter_all:        { ar: 'الكل',                   en: 'All' },
+  rev_no_data:           { ar: 'لا توجد إيرادات لهذه الفترة', en: 'No revenue for this period' },
+  rev_select_hospital:   { ar: 'اختر منشأة لعرض إيراداتها', en: 'Select a hospital to view its revenue' },
+  ps_beneficiaries:      { ar: 'المستفيدون',              en: 'Beneficiaries' },
+  ps_add_beneficiary:    { ar: 'إضافة مستفيد',            en: 'Add Beneficiary' },
+  ps_name:               { ar: 'الاسم',                   en: 'Name' },
+  ps_type:                { ar: 'النوع (وصفي)',           en: 'Type (descriptive)' },
+  ps_percentage:          { ar: 'النسبة المئوية',          en: 'Percentage' },
+  ps_due_amount:          { ar: 'المستحق',                en: 'Due Amount' },
+  ps_total_percentage:    { ar: 'إجمالي النسب المخصَّصة',  en: 'Total Allocated' },
+  ps_unallocated:         { ar: 'غير مخصَّص',              en: 'Unallocated' },
+  ps_warning_under_100:   { ar: 'تنبيه: مجموع النسب أقل من 100% — جزء من الإيرادات غير مخصَّص لأي مستفيد', en: 'Warning: total percentage is under 100% — part of the revenue is unallocated' },
+  ps_no_beneficiaries:    { ar: 'لا يوجد مستفيدون بعد', en: 'No beneficiaries yet' },
+  ps_delete_confirm:      { ar: 'حذف هذا المستفيد نهائياً؟', en: 'Permanently delete this beneficiary?' },
+  ps_percentage_placeholder: { ar: 'مثال: 25', en: 'e.g. 25' },
+  ps_type_placeholder:    { ar: 'مثال: مستثمر، طبيب، صيدلي...', en: 'e.g. Investor, Doctor, Pharmacist...' },
+
   // ─── الموارد البشرية / HR ────────────────────────────────────────────────────
   hr_title:             { ar: 'الموارد البشرية',          en: 'Human Resources' },
   hr_tab_employees:     { ar: 'الموظفون',                 en: 'Employees' },
@@ -735,6 +759,7 @@ const translations = {
 
   // ─── Settings extra ──────────────────────────────────────────────────────────
   role_admin:         { ar: 'مدير النظام', en: 'System Admin' },
+  role_hospital_admin: { ar: 'مسؤول مستشفى', en: 'Hospital Admin' },
   role_doctor:        { ar: 'طبيب', en: 'Doctor' },
   role_nurse:         { ar: 'ممرضة', en: 'Nurse' },
   role_receptionist:  { ar: 'موظف استقبال', en: 'Receptionist' },

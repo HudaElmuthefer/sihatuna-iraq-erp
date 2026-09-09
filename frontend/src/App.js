@@ -68,9 +68,21 @@ function RouteLoadingFallback() {
 }
 
 function ProtectedRoute({ children, pageKey }) {
-  const { user, hasPermission } = useApp();
+  const { user, hasPermission, hospitals } = useApp();
   if (!user) return <Navigate to="/login" replace />;
   if (pageKey && !hasPermission(pageKey)) return <Navigate to="/" replace />;
+  // ── إصلاح: enabled_pages كانت تُطبَّق فقط لإخفاء الروابط من الشريط الجانبي
+  // (راجع Layout.js) — لا شيء كان يمنع الوصول الفعلي لو كُتب المسار مباشرة
+  // بشريط العنوان. نفس شرط الإخفاء بالضبط هنا: منشأة المستخدم بلا قيود
+  // معرَّفة (enabled_pages فارغة/غير موجودة)، أو مستوى الوزارة (بلا hospitalId)
+  // = يُسمح بكل الصفحات المسموحة بدوره أصلاً، بدون أي تغيير بالسلوك الحالي.
+  const userHospital = hospitals?.find(h => h.id === user?.hospitalId);
+  const hospitalPages = userHospital?.enabled_pages;
+  if (pageKey && Array.isArray(hospitalPages) && hospitalPages.length > 0) {
+    if (!hospitalPages.includes(pageKey) && pageKey !== 'dashboard' && pageKey !== 'settings') {
+      return <Navigate to="/" replace />;
+    }
+  }
   return children;
 }
 

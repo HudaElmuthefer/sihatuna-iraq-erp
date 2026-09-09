@@ -17,12 +17,16 @@ import { api } from '../api';
 import GeneralTab from './accounts/GeneralTab';
 import SalariesTab from './accounts/SalariesTab';
 import PromotionsAllowancesTab from './accounts/PromotionsAllowancesTab';
+import RevenueTab from './accounts/RevenueTab';
+import ProfitSharingTab from './accounts/ProfitSharingTab';
 import PageBanner from '../components/PageBanner';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg,#064e3b,#059669)';
 
 const ACCT_TABS = [
   { key:'general',    labelKey:'acc_tab_general',   icon:'💰' },
+  { key:'revenue',    labelKey:'acc_tab_revenue',   icon:'📈' },
+  { key:'profitSharing', labelKey:'acc_tab_profit_sharing', icon:'🤝' },
   { key:'salaries',   labelKey:'acc_tab_salaries',  icon:'💵' },
   { key:'promotionsAllowances', labelKey:'acc_promo_allow_title', icon:'⬆️' },
 ];
@@ -89,6 +93,8 @@ export default function AccountsPage() {
       </div>
 
       {tab==='general'    && <GeneralTab />}
+      {tab==='revenue'    && <RevenueTab />}
+      {tab==='profitSharing' && <ProfitSharingTab />}
       {tab==='salaries'   && <SalariesTab />}
       {tab==='promotionsAllowances' && <PromotionsAllowancesTab />}
     </div>

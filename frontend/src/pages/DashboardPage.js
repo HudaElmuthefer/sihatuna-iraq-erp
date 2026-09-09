@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
@@ -95,6 +95,7 @@ const OrbitThumbnailNode = memo(function OrbitThumbnailNode({ item, idx, lang, o
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     lang,
     user,
@@ -299,6 +300,18 @@ export default function DashboardPage() {
     // لا حاجة لتصفير magnifiedItem أصلاً هنا: DashboardPage كامل سيُفكَّك
     // (unmount) بمجرد تغيّر المسار، فتُهمَل حالته تلقائياً بلا أي أثر —
     // navigate() مباشرة كافٍ ولا يمر بأي محطة وسيطة.
+    //
+    // ── إصلاح: مصغّرة "لوحة التحكم" مساره الجذر "/" — نفس مسار DashboardPage
+    // الحالية أصلاً. navigate('/') وأنت واقف على "/" لا يُحدِث أي تنقّل فعلي
+    // (نفس المسار)، فـReact Router لا يُفكِّك/يُعيد بناء أي شيء — النافذة
+    // المكبَّرة تبقى ظاهرة كما هي بلا أي استجابة للنقر، وكأن الصفحة "لا تُفتَح
+    // إطلاقاً". بما أننا أصلاً على الصفحة المطلوبة، الفعل الصحيح هو إغلاق
+    // المعاينة المكبَّرة والعودة للمشهد الرئيسي، لا محاولة تنقّل عديمة الأثر.
+    if (route === location.pathname) {
+      playConfirm();
+      setMagnifiedItem(null);
+      return;
+    }
     playConfirm();
     navigate(route);
   };

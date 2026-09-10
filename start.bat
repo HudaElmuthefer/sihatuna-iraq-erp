@@ -45,7 +45,44 @@ echo.
 
 echo  [*] Starting the system (backend + frontend) ...
 cd /d "%~dp0"
+
+REM ── Port-conflict check (only for a truly fresh start) ─────────────────────
+REM If PM2 already knows about these apps (from an earlier start.bat run),
+REM ports 3000/8000 being busy is normal - PM2 owns them. But if PM2 has
+REM never heard of sihatuna-backend/sihatuna-frontend and the port is
+REM already taken by something else, "pm2 start" would otherwise fail
+REM silently in the background and the 5-minute wait loop below would just
+REM time out with no real explanation. Catch that here instead.
+call pm2 describe sihatuna-backend >nul 2>nul
+if errorlevel 1 (
+    for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:"LISTENING" ^| findstr :8000') do (
+        echo.
+        echo  [!] Port 8000 ^(backend^) is already in use by another program ^(PID %%P^).
+        echo      Close that program first, or find out what it is with:
+        echo      tasklist /FI "PID eq %%P"
+        pause
+        exit /b 1
+    )
+)
+call pm2 describe sihatuna-frontend >nul 2>nul
+if errorlevel 1 (
+    for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:"LISTENING" ^| findstr :3000') do (
+        echo.
+        echo  [!] Port 3000 ^(frontend^) is already in use by another program ^(PID %%P^).
+        echo      Close that program first, or find out what it is with:
+        echo      tasklist /FI "PID eq %%P"
+        pause
+        exit /b 1
+    )
+)
+
 call pm2 start ecosystem.config.js
+if errorlevel 1 (
+    echo.
+    echo  [!] PM2 failed to start the system - see the message above.
+    pause
+    exit /b 1
+)
 
 echo.
 echo  ============================================

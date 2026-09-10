@@ -1,0 +1,7 @@
+# Windows batch launchers must always be checked out with CRLF line endings.
+# cmd.exe's batch parser can misparse REM comment lines and other statements
+# when the file has LF-only endings, causing stray words to be executed as
+# invalid commands (this broke start.bat's startup entirely). This rule keeps
+# them CRLF on checkout regardless of any machine's core.autocrlf setting.
+*.bat text eol=crlf
+*.cmd text eol=crlf

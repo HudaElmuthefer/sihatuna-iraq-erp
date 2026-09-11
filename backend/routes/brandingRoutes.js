@@ -14,6 +14,15 @@
 // or without an authenticated session. Every other uploaded file in the
 // system stays behind the auth-gated `/uploads` static mount in server.js;
 // this is the one narrow, intentional exception, scoped only to the logo.
+//
+// ── Security fix ─────────────────────────────────────────────────────────
+// Every write route below used to require just `requireAdmin` (any admin
+// tier, including a single hospital's own local admin) — but this setting is
+// one global row with zero hospital scoping. A single hospital's admin could
+// silently overwrite the branding seen by every other hospital on this
+// deployment. Now requireGlobalAdmin (ministry-level admin) only — matches
+// the same restriction already used for anything affecting every hospital
+// (see hospitalsRoutes.js's system-settings route, gitUpdateRoutes.js).
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -21,7 +30,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const asyncHandler = require('../middleware/asyncHandler');
 const auth = require('../middleware/auth');
-const requireAdmin = require('../middleware/requireAdmin');
+const requireGlobalAdmin = require('../middleware/requireGlobalAdmin');
 const { pool } = require('../config/database');
 const { logAudit } = require('../utils/auditLog');
 const { UPLOADS_DIR } = require('../config/uploadConfig');
@@ -84,7 +93,7 @@ router.get('/branding/logo', asyncHandler(async (req, res) => {
   res.sendFile(fullPath);
 }));
 
-router.post('/branding/logo', auth, requireAdmin, uploadLogo.single('file'), asyncHandler(async (req, res) => {
+router.post('/branding/logo', auth, requireGlobalAdmin, uploadLogo.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
   const previousLogoPath = await getLogoPath();
@@ -107,7 +116,7 @@ router.post('/branding/logo', auth, requireAdmin, uploadLogo.single('file'), asy
   res.json({ success: true, hasLogo: true });
 }));
 
-router.delete('/branding/logo', auth, requireAdmin, asyncHandler(async (req, res) => {
+router.delete('/branding/logo', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
   const previousLogoPath = await getLogoPath();
   await pool.query('DELETE FROM system_settings WHERE key=$1', [LOGO_SETTING_KEY]);
   if (previousLogoPath) {
@@ -133,7 +142,7 @@ router.get('/branding/app-name', asyncHandler(async (req, res) => {
   res.json({ nameAr: val.ar || null, nameEn: val.en || null });
 }));
 
-router.put('/branding/app-name', auth, requireAdmin, asyncHandler(async (req, res) => {
+router.put('/branding/app-name', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
   const nameAr = (req.body.nameAr || '').trim();
   const nameEn = (req.body.nameEn || '').trim();
   if (!nameAr && !nameEn) {
@@ -151,7 +160,7 @@ router.put('/branding/app-name', auth, requireAdmin, asyncHandler(async (req, re
   res.json({ success: true, nameAr: nameAr || null, nameEn: nameEn || null });
 }));
 
-router.delete('/branding/app-name', auth, requireAdmin, asyncHandler(async (req, res) => {
+router.delete('/branding/app-name', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
   await pool.query('DELETE FROM system_settings WHERE key=$1', [APP_NAME_SETTING_KEY]);
   logAudit({ module: 'system_settings', action: 'delete', recordId: APP_NAME_SETTING_KEY, userId: req.user.id, userRole: req.user.role });
   res.json({ success: true, nameAr: null, nameEn: null });

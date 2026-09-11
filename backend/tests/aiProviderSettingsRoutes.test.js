@@ -13,11 +13,21 @@
 // .test.js — يعتمد على available:false بدون مفاتيح API، لكن لو تسرّب هنا
 // mode:'bot' فيصير available:true دائماً، فيفشل ذاك الاختبار رغم عدم لمسه
 // إطلاقاً). الحل: تنظيف الصف صراحة قبل وبعد كل تشغيل لهذا الملف.
+//
+// ── إصلاح حرج: لا نستورد pool بأعلى الملف إطلاقاً ────────────────────────────
+// كان مستورَداً هنا مباشرة (const { pool } = require('../config/database'))،
+// أي قبل استدعاء setupTestEnv() بالأسفل فعلياً — فيُبنى الـ Pool بقيمة
+// PG_DATABASE الأصلية بملف .env (قاعدة التطوير الحقيقية!) بدل قاعدة الاختبار
+// المعزولة. النتيجة الفعلية المؤكَّدة (في نسخة أخرى من هذا المشروع، ثم
+// تأكَّدت هنا بالفحص): كل طلب بهذا الملف (بما فيها تسجيل الدخول عبر app
+// نفسه) كان يضرب قاعدة التطوير الحقيقية مباشرة، وcloseDbPool (الذي يُنظّف
+// جدول users بعد كل ملف اختبار) كان سيحذف كل مستخدمي قاعدة التطوير الحقيقية
+// فعلياً. نفس نمط الحذر المطلوب بكل ملفات الاختبار الأخرى.
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
-const { pool } = require('../config/database');
 
 const SETTINGS_KEY = 'ai_provider_settings';
+let pool;
 async function resetSettingsRow() {
   await pool.query('DELETE FROM system_settings WHERE key=$1', [SETTINGS_KEY]);
 }
@@ -26,15 +36,29 @@ let dbPath;
 let app;
 let adminToken;
 let nurseToken;
+let localHospitalAdminToken; // إدمن محلي لمستشفى واحد — يجب أن يُرفض من تغيير إعداد يؤثر على كل المستشفيات
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('ai-provider-settings');
+  dbPath = await setupTestEnv('ai-provider-settings');
+  ({ pool } = require('../config/database')); // بعد ضبط PG_DATABASE مباشرة — راجع الشرح أعلاه
   app = require('../server');
   await resetSettingsRow();
   const adminLogin = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   adminToken = adminLogin.body.token;
   const nurseLogin = await request(app).post('/api/auth/login').send({ username: 'testnurse', password: 'testpass123' });
   nurseToken = nurseLogin.body.token;
+
+  // مستشفى تجريبي واحد، وإدمن محلي مرتبط به تحديداً — لاختبار الإصلاح الأمني
+  // أدناه (كان إدمن مستشفى واحد محلي يستطيع تغيير إعداد يؤثر على كل
+  // المستشفيات الأخرى بنفس النظام).
+  const hospital = await request(app).post('/api/hospitals').set('Authorization', `Bearer ${adminToken}`)
+    .send({ nameAr: 'مستشفى اختبار إعدادات الذكاء الاصطناعي', nameEn: 'AI Settings Test Hospital' });
+  const hospitalId = hospital.body.id;
+  const localAdminUsername = `local_hosp_admin_${Date.now()}`;
+  await request(app).post('/api/users').set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'إدمن مستشفى محلي', username: localAdminUsername, password: 'testpass123', role: 'admin', hospitalId });
+  const localAdminLogin = await request(app).post('/api/auth/login').send({ username: localAdminUsername, password: 'testpass123' });
+  localHospitalAdminToken = localAdminLogin.body.token;
 });
 
 afterAll(async () => {
@@ -90,5 +114,14 @@ describe('PUT /api/ai-provider-settings', () => {
   test('بدون توكن دخول: يُرفض بـ401', async () => {
     const res = await request(app).put('/api/ai-provider-settings').send({ invoiceReader: 'bot' });
     expect(res.status).toBe(401);
+  });
+
+  // ── إصلاح أمني: راجع تعليق requireGlobalAdmin بأعلى الملف والراوت نفسه ──
+  test('إدمن مستشفى واحد محلي يُرفض بـ403 (لا يستطيع التأثير على مستشفيات أخرى)', async () => {
+    const res = await request(app)
+      .put('/api/ai-provider-settings')
+      .set('Authorization', `Bearer ${localHospitalAdminToken}`)
+      .send({ invoiceReader: 'offline' });
+    expect(res.status).toBe(403);
   });
 });

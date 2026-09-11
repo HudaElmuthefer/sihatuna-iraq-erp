@@ -12,7 +12,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('ai-diagnosis');
+  dbPath = await setupTestEnv('ai-diagnosis');
   // نتأكد إن كلا مفتاحي الذكاء الاصطناعي فاضيين لهذا الاختبار تحديداً (سيناريو
   // النشر الافتراضي لأغلب المستخدمين) بغض النظر عن بيئة التشغيل الحقيقية —
   // خصوصاً إن ملف .env المحلي هنا قد يحتوي مفتاح Gemini حقيقي فعلاً. نضبطهم

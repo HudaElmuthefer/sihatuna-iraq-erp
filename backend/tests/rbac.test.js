@@ -18,7 +18,7 @@ let adminToken;
 let nurseToken;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('rbac');
+  dbPath = await setupTestEnv('rbac');
   app = require('../server');
 
   const adminLogin = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });

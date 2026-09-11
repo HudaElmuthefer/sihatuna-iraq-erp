@@ -22,7 +22,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('module-sanity');
+  dbPath = await setupTestEnv('module-sanity');
   app = require('../server');
 
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });

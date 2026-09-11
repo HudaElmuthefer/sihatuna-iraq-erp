@@ -22,7 +22,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('dossier-file-cleanup');
+  dbPath = await setupTestEnv('dossier-file-cleanup');
   app = require('../server');
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   token = login.body.token; // testadmin دوره admin — يتجاوز adminOnly بسلة المحذوفات وrequirePermission('hr')

@@ -20,7 +20,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('excel-import-route');
+  dbPath = await setupTestEnv('excel-import-route');
   app = require('../server');
 
   const loginRes = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });

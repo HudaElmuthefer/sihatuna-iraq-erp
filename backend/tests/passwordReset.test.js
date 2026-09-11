@@ -10,15 +10,17 @@ let dbPath;
 let app;
 let adminToken;
 let nurseTokenBeforeReset; // نلتقطه هنا قبل أي اختبار لاحق يغيّر كلمة مرور الممرضة
+let nurseUserId;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('password-reset');
+  dbPath = await setupTestEnv('password-reset');
   app = require('../server');
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   adminToken = login.body.token;
 
   const nurseLogin = await request(app).post('/api/auth/login').send({ username: 'testnurse', password: 'testpass123' });
   nurseTokenBeforeReset = nurseLogin.body.token;
+  nurseUserId = nurseLogin.body.user.id;
 });
 
 afterAll(async () => {
@@ -28,9 +30,9 @@ afterAll(async () => {
 });
 
 describe('POST /api/users/:id/reset-password — الإدمن يولّد كلمة مرور مؤقتة', () => {
-  test('توليد كلمة مرور مؤقتة للمستخدم رقم 2 (testnurse) ينجح ويرجع كلمة مرور فعلية', async () => {
+  test('توليد كلمة مرور مؤقتة للممرضة (testnurse) ينجح ويرجع كلمة مرور فعلية', async () => {
     const res = await request(app)
-      .post('/api/users/2/reset-password')
+      .post(`/api/users/${nurseUserId}/reset-password`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.tempPassword).toBeDefined();
@@ -39,7 +41,7 @@ describe('POST /api/users/:id/reset-password — الإدمن يولّد كلم�
 
   test('مستخدم غير موجود يرجع 404', async () => {
     const res = await request(app)
-      .post('/api/users/99999/reset-password')
+      .post('/api/users/00000000-0000-0000-0000-000000000000/reset-password')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(404);
   });
@@ -54,7 +56,7 @@ describe('POST /api/users/:id/reset-password — الإدمن يولّد كلم�
   test('التدفّق الكامل: كلمة مرور مؤقتة تعمل فعلياً لتسجيل الدخول، والمستخدم يستطيع تغييرها بنفسه', async () => {
     // 1) الإدمن يولّد كلمة مرور مؤقتة جديدة
     const resetRes = await request(app)
-      .post('/api/users/2/reset-password')
+      .post(`/api/users/${nurseUserId}/reset-password`)
       .set('Authorization', `Bearer ${adminToken}`);
     const tempPassword = resetRes.body.tempPassword;
 

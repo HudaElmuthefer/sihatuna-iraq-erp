@@ -12,7 +12,7 @@ let adminToken;
 let nurseToken; // لا تملك صلاحية accounts — تُستخدم للتحقق من الرفض
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('accounts');
+  dbPath = await setupTestEnv('accounts');
   app = require('../server');
 
   const adminLogin = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });

@@ -13,7 +13,7 @@ let token;
 let patientId;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('invoices');
+  dbPath = await setupTestEnv('invoices');
   app = require('../server');
 
   const loginRes = await request(app)

@@ -20,14 +20,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const bcrypt = require('bcryptjs');
 
 const { JWT_SECRET } = require('./config/jwtConfig'); // يطبع تحذير أمان تلقائياً لو المفتاح افتراضي
 const { generalLimiter } = require('./config/rateLimiters');
 const { testConnection, pool } = require('./config/database');
 const { UPLOADS_DIR } = require('./config/uploadConfig');
 const auth = require('./middleware/auth');
-const { readDB, writeDB } = require('./utils/db');
 const { startAutoBackup } = require('./utils/backup');
 const { devLog } = require('./utils/logger');
 const { sendAlert } = require('./utils/alerts');
@@ -93,30 +91,6 @@ app.use(cookieParser());
 // اسمه) كان يفتح مباشرة بالمتصفح من أي شخص، حتى بدون حساب بالنظام. الآن
 // يحتاج طلب عرض أي ملف توكن دخول صالح، تماماً مثل باقي مسارات الـ API.
 app.use('/uploads', auth, express.static(UPLOADS_DIR));
-
-// ── ترحيل كلمات المرور القديمة غير المشفّرة ────────────────────────────────────
-// إصدارات سابقة من النظام كانت تسمح بمقارنة كلمة المرور كنص صريح كحل احتياطي
-// (لدعم حسابات تجريبية قديمة أُنشئت يدوياً بملف db.json). هذا ثغرة أمنية حقيقية:
-// أي تسريب لملف db.json يكشف كلمات المرور مباشرة بدون أي تشفير.
-// هذه الدالة تعمل مرة واحدة تلقائياً عند كل بدء تشغيل: تفحص كل حساب، وأي كلمة
-// مرور غير مشفّرة بعد (لا تبدأ بـ "$2" وهو الرمز المميز لتشفير bcrypt) تُشفَّر
-// فوراً وتُحفَظ بمكانها — دون تغيير كلمة المرور نفسها التي يستخدمها المستخدم لتسجيل
-// الدخول، فقط طريقة تخزينها. بعد هذه الدالة، لا داعي لأي مقارنة نصّية عند الدخول.
-const migratePlaintextPasswords = () => {
-  const db = readDB();
-  if (!Array.isArray(db.users) || db.users.length === 0) return;
-  let migratedCount = 0;
-  db.users.forEach(u => {
-    if (u.password && !u.password.startsWith('$2')) {
-      u.password = bcrypt.hashSync(u.password, 10);
-      migratedCount++;
-    }
-  });
-  if (migratedCount > 0) {
-    writeDB(db);
-    devLog(`🔒 تم تشفير ${migratedCount} كلمة مرور كانت مخزّنة كنص صريح.`);
-  }
-};
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 const router = express.Router();
@@ -300,23 +274,15 @@ app.use((err, req, res, next) => {
 // المنفذ 8000 وتكتب فوق قاعدة البيانات الحقيقية بمجرد استيراد الملف — وهذا بالضبط
 // ما يمنع كتابة اختبارات آمنة لهذا المشروع حتى الآن.
 if (require.main === module) {
-  // تشفير أي كلمة مرور نصّية عالقة قبل قبول أي طلب دخول
-  migratePlaintextPasswords();
-
   const server = app.listen(PORT, async () => {
     devLog(`\n╔════════════════════════════════════════╗`);
     devLog(`║     SIHATUNA IRAQ — Backend Server     ║`);
     devLog(`║  Developer: Huda Abduladheem           ║`);
     devLog(`╠════════════════════════════════════════╣`);
     devLog(`║  🟢 Server: http://localhost:${PORT}     ║`);
-    devLog(`║  📁 DB:     data/db.json               ║`);
+    devLog(`║  📁 DB:     PostgreSQL (${process.env.PG_DATABASE || 'sihatuna_iraq'})  ║`);
     devLog(`║  📎 Uploads: /uploads                  ║`);
     devLog(`╚════════════════════════════════════════╝\n`);
-    devLog('Login credentials:');
-    devLog('  admin / admin      -> System Admin (full access)');
-    devLog('  doctor / doctor    -> Doctor');
-    devLog('  nurse / nurse      -> Nurse');
-    devLog('  accountant / account -> Accountant\n');
 
     // ── حارس التفرّد تحت PM2 cluster mode ──────────────────────────────────
     // بعد التحويل لـ cluster mode (عدة عمليات worker لنفس السيرفر)، أي كود هنا

@@ -1,13 +1,17 @@
 // backend/tests/testUtils.js
 //
 // أداة مساعدة مشتركة لكل ملفات الاختبار. الهدف الأهم هنا: عزل بيانات الاختبار
-// تماماً عن قاعدة البيانات الحقيقية (backend/data/db.json) — كل ملف اختبار
-// يحصل على ملف قاعدة بيانات مؤقت خاص به (بمجلد نظام التشغيل المؤقت)، يُنشأ قبل
-// الاختبارات ويُحذف بعدها، حتى لا يتأثر أي شيء بجهازك الفعلي أو بياناتك الحقيقية.
+// تماماً عن قاعدة البيانات الحقيقية — كل ملف اختبار يعمل على قاعدة PostgreSQL
+// معزولة تماماً (PG_DATABASE مختلف)، ومستخدمو الاختبار (testadmin/testnurse)
+// يُزرعان بجدول users الحقيقي بتلك القاعدة المعزولة قبل كل ملف، ويُنظَّفان
+// بعده (راجع closeDbPool أدناه) — لا علاقة لهذا الملف بأي JSON بعد الآن
+// (كان يستخدم db.json سابقاً، قبل ترحيل موديول المستخدمين لـPostgreSQL،
+// راجع migrations-sql/016_users_real_columns.sql وscripts/
+// migrateUsersFromJson.js لتفاصيل ذلك الترحيل).
 //
-// ملاحظة مهمة: يجب ضبط متغيرات البيئة (DB_PATH و JWT_SECRET) *قبل* استدعاء
-// require('../server') في كل ملف اختبار، لأن server.js يقرأ هذه القيم مرة
-// واحدة عند التحميل الأول للملف (كونها ثوابت const بأعلى الملف).
+// ملاحظة مهمة: يجب ضبط متغيرات البيئة (JWT_SECRET وPG_DATABASE) *قبل*
+// استدعاء require('../server') في كل ملف اختبار، لأن server.js/config/
+// database.js يقرآن هذه القيم مرة واحدة عند التحميل الأول للملف.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -27,12 +31,10 @@ const bcrypt = require('bcryptjs');
 // لاحقاً — عندها فقط يُبنى الـ Pool لأول مرة بهذا السجل (Jest module registry
 // الخاص بكل ملف اختبار على حدة)، فيلتقط القيمة الصحيحة المُعاد ضبطها.
 
-function setupTestEnv(testFileName) {
-  const dbPath = path.join(os.tmpdir(), `sihatuna-test-db-${testFileName}-${Date.now()}.json`);
-  process.env.DB_PATH = dbPath;
+async function setupTestEnv(testFileName) {
   // عزل PostgreSQL: قاعدة اختبار منفصلة تماماً (sihatuna_iraq_test)، بنفس
-  // مخطط قاعدة التطوير الحقيقية (أُنشئت عبر pg_dump --schema-only) — أي بيانات
-  // وهمية تُنشَأ هنا لا تلمس sihatuna_iraq الحقيقية إطلاقاً بعد الآن.
+  // مخطط قاعدة التطوير الحقيقية — أي بيانات وهمية تُنشَأ هنا لا تلمس قاعدة
+  // التطوير الحقيقية إطلاقاً بعد الآن.
   process.env.PG_DATABASE = process.env.TEST_PG_DATABASE || 'sihatuna_iraq_test';
   // ── عزل Redis (المرحلة الثانية) ──────────────────────────────────────────
   // نفس المشكلة بالضبط التي حلّها PG_DATABASE أعلاه: بدون هذا، كل ملف اختبار
@@ -62,22 +64,38 @@ function setupTestEnv(testFileName) {
 
   // مستخدم إدمن جاهز بكلمة مرور مشفّرة، لاستخدامه بتسجيل الدخول ضمن الاختبارات
   // + مستخدم ثانٍ محدود الصلاحيات (دور ممرضة) لاختبار فرض الصلاحيات (RBAC) فعلياً —
-  // لا يملك صلاحية "inventory" ولا "accounts"، فقط "patients" و"appointments"
-  const seedData = {
-    users: [
-      { id: 1, username: 'testadmin', email: 'testadmin@sihatuna.iq', password: bcrypt.hashSync('testpass123', 10), role: 'admin', name: 'Test Admin' },
-      { id: 2, username: 'testnurse', email: 'testnurse@sihatuna.iq', password: bcrypt.hashSync('testpass123', 10), role: 'nurse', name: 'Test Nurse', permissions: ['dashboard', 'patients', 'appointments'] },
-    ],
-    patients: [],
-    doctors: [],
-    invoices: [],
-  };
-  fs.writeFileSync(dbPath, JSON.stringify(seedData, null, 2), 'utf8');
+  // لا يملك صلاحية "inventory" ولا "accounts"، فقط "patients" و"appointments".
+  // يُزرعان الآن بجدول users الحقيقي بقاعدة الاختبار المعزولة (لا db.json بعد
+  // الآن) — UPSERT (ON CONFLICT) بدل INSERT بسيط، حتى يبقى آمناً للتكرار حتى
+  // لو لم تُنظَّف بيانات تشغيل سابق فشل قبل اكتمال afterAll (راجع closeDbPool
+  // أدناه، حيث يحصل التنظيف الفعلي).
+  // يُستورَد config/database هنا فقط (وليس بأعلى الملف) — لنفس السبب المشروح
+  // بالتعليق الكبير أعلى الملف بخصوص PG_DATABASE.
+  const { pool } = require('../config/database');
+  const hashed = bcrypt.hashSync('testpass123', 10);
+  await pool.query(
+    `INSERT INTO users (full_name, username, email, password, role, permissions, is_active)
+     VALUES ('Test Admin', 'testadmin', 'testadmin@sihatuna.iq', $1, 'admin', '[]'::jsonb, true)
+     ON CONFLICT (username) WHERE username IS NOT NULL DO UPDATE
+       SET password = EXCLUDED.password, role = EXCLUDED.role, permissions = EXCLUDED.permissions, is_active = true`,
+    [hashed]
+  );
+  await pool.query(
+    `INSERT INTO users (full_name, username, email, password, role, permissions, is_active)
+     VALUES ('Test Nurse', 'testnurse', 'testnurse@sihatuna.iq', $1, 'nurse', $2::jsonb, true)
+     ON CONFLICT (username) WHERE username IS NOT NULL DO UPDATE
+       SET password = EXCLUDED.password, role = EXCLUDED.role, permissions = EXCLUDED.permissions, is_active = true`,
+    [hashed, JSON.stringify(['dashboard', 'patients', 'appointments'])]
+  );
 
-  return dbPath;
+  // القيمة المُعادة لم يعد لها أي معنى فعلي (كانت مسار db.json مؤقتاً) —
+  // تبقى فقط توافقاً مع نمط الاستدعاء القديم بكل ملفات الاختبار
+  // (dbPath = await setupTestEnv(...); ... cleanupTestEnv(dbPath);).
+  return null;
 }
 
 function cleanupTestEnv(dbPath) {
+  if (!dbPath) return; // لم يعد يُستخدَم db.json بعد الآن — راجع closeDbPool للتنظيف الفعلي بجدول users
   try {
     if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
   } catch { /* لا بأس لو فشل الحذف، الملف بمجلد مؤقت أصلاً وسيُنظَّف من النظام لاحقاً */ }
@@ -120,6 +138,14 @@ async function closeDbPool() {
   // فعلياً لكن نُبقيه هنا لنفس السبب: يُغلَق فقط لو استُخدم أصلاً بالملف).
   const { pool } = require('../config/database');
   const { closeClient } = require('../utils/redisService');
+  // تنظيف مستخدمي الاختبار (testadmin/testnurse، وأي مستخدم آخر أُنشئ أثناء
+  // هذا الملف عبر POST /users الحقيقي) قبل إغلاق الاتصال — قاعدة الاختبار
+  // معزولة تماماً عن قاعدة التطوير الحقيقية (PG_DATABASE مختلف)، فحذف كل
+  // صفوف users هنا آمن دائماً، ويمنع تراكمها أو تعارض اسم مستخدم بين
+  // تشغيلات ملفات اختبار متتالية. يُلتقَط الخطأ بصمت (بدل رميه) لأن بعض
+  // ملفات الاختبار (لا تحتاج PostgreSQL إطلاقاً) تستدعي closeDbPool بعد
+  // اتصال لم يُفتَح فعلياً أصلاً.
+  try { await pool.query('DELETE FROM users'); } catch { /* لا بأس، راجع الشرح أعلاه */ }
   await Promise.all([pool.end(), closeClient()]);
 }
 

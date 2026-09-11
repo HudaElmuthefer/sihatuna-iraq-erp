@@ -11,7 +11,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('inventory');
+  dbPath = await setupTestEnv('inventory');
   app = require('../server');
   const loginRes = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   token = loginRes.body.token;

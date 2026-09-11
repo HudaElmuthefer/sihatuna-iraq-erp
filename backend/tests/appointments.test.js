@@ -17,7 +17,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('appointments');
+  dbPath = await setupTestEnv('appointments');
   app = require('../server');
 
   const loginRes = await request(app)

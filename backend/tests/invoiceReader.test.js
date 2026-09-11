@@ -20,7 +20,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('invoice-reader');
+  dbPath = await setupTestEnv('invoice-reader');
   app = require('../server');
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   token = login.body.token;

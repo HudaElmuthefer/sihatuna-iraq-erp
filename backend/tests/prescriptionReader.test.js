@@ -17,7 +17,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('prescription-reader');
+  dbPath = await setupTestEnv('prescription-reader');
   app = require('../server');
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   token = login.body.token;

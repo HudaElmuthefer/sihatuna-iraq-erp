@@ -44,17 +44,33 @@ INSERT INTO system_settings (key, value) VALUES ('multi_hospital_enabled', 'fals
 ON CONFLICT (key) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
--- 2) المستخدمين (مختصر — طابقه مع نظامك الحالي لو عندك جدول users فعلي)
+-- 2) المستخدمين (حسابات تسجيل الدخول الفعلية — كل حقل هنا مطابق تماماً لما
+-- تقرأه/تكتبه routes/authRoutes.js وroutes/usersRoutes.js؛ راجع
+-- migrations-sql/016_users_real_columns.sql لتاريخ إضافة الأعمدة أدناه على
+-- قاعدة أُنشئت قبل هذا التصحيح).
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    hospital_id     UUID REFERENCES hospitals(id) ON DELETE SET NULL,
-    full_name       VARCHAR(200) NOT NULL,
-    email           VARCHAR(200) UNIQUE,
-    role            VARCHAR(50) NOT NULL DEFAULT 'staff', -- admin | staff | doctor | accountant
-    is_active       BOOLEAN DEFAULT TRUE,
-    created_at      TIMESTAMPTZ DEFAULT now()
+    id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    hospital_id           UUID REFERENCES hospitals(id) ON DELETE SET NULL,
+    full_name             VARCHAR(200) NOT NULL,
+    username              VARCHAR(100),
+    password              TEXT,                          -- تجزئة bcrypt، ليست نصاً صريحاً أبداً
+    email                 VARCHAR(200) UNIQUE,
+    role                  VARCHAR(50) NOT NULL DEFAULT 'staff', -- admin | staff | doctor | nurse | accountant | ...
+    job_title             VARCHAR(200),
+    avatar                VARCHAR(20),
+    color                 VARCHAR(20),
+    permissions           JSONB NOT NULL DEFAULT '[]'::jsonb,
+    dashboard_layout      JSONB,
+    must_change_password  BOOLEAN NOT NULL DEFAULT FALSE,
+    -- الحساب الجذري الوحيد الذي أُنشئ به النظام أول مرة — لا يمكن حذفه (راجع
+    -- routes/usersRoutes.js)، بغض النظر عن قيمة id (UUID، لا معنى لتمييزه بقيمة ثابتة).
+    is_primary_admin      BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active             BOOLEAN DEFAULT TRUE,
+    created_at            TIMESTAMPTZ DEFAULT now(),
+    updated_at            TIMESTAMPTZ DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users (username) WHERE username IS NOT NULL;
 
 -- ----------------------------------------------------------------------------
 -- 3) المرضى
@@ -585,7 +601,7 @@ CREATE TABLE IF NOT EXISTS recycle_bin (
     original_id     INTEGER NOT NULL,
     data            JSONB NOT NULL,
     hospital_id     TEXT,
-    deleted_by      INTEGER,
+    deleted_by      UUID REFERENCES users(id) ON DELETE SET NULL,
     deleted_by_name VARCHAR(200),
     deleted_at      TIMESTAMPTZ DEFAULT now()
 );

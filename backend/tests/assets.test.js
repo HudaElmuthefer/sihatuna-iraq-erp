@@ -23,7 +23,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('assets');
+  dbPath = await setupTestEnv('assets');
   app = require('../server');
   const loginRes = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   token = loginRes.body.token;

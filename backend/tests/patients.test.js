@@ -13,7 +13,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('patients');
+  dbPath = await setupTestEnv('patients');
   app = require('../server');
 
   const loginRes = await request(app)

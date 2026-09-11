@@ -14,24 +14,33 @@ let globalAdminToken;
 let hospA_AdminToken;
 let hospA_UserId;
 let hospB_UserId;
+let hospBId;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('hospital-scoped-users');
+  dbPath = await setupTestEnv('hospital-scoped-users');
   app = require('../server');
 
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   globalAdminToken = login.body.token;
 
-  // ننشئ إدمن محلي لمنشأة "hospA"، ومستخدم عادي بكل من منشأتين مختلفتين
+  // مستشفيان تجريبيان حقيقيان (معرّف UUID فعلي، وليس نصاً حراً) — لاختبار عزل إدمن محلي
+  const hospA = await request(app).post('/api/hospitals').set('Authorization', `Bearer ${globalAdminToken}`)
+    .send({ nameAr: 'مستشفى أ', nameEn: 'Hospital A' });
+  const hospAId = hospA.body.id;
+  const hospB = await request(app).post('/api/hospitals').set('Authorization', `Bearer ${globalAdminToken}`)
+    .send({ nameAr: 'مستشفى ب', nameEn: 'Hospital B' });
+  hospBId = hospB.body.id;
+
+  // ننشئ إدمن محلي لمستشفى A، ومستخدم عادي بكل من مستشفيين مختلفين
   const hospAAdmin = await request(app).post('/api/users').set('Authorization', `Bearer ${globalAdminToken}`)
-    .send({ name: 'إدمن منشأة A', username: `hospA_admin_${Date.now()}`, password: 'testpass123', role: 'admin', hospitalId: 'hospA' });
+    .send({ name: 'إدمن منشأة A', username: `hospA_admin_${Date.now()}`, password: 'testpass123', role: 'admin', hospitalId: hospAId });
 
   const hospAUser = await request(app).post('/api/users').set('Authorization', `Bearer ${globalAdminToken}`)
-    .send({ name: 'مستخدم منشأة A', username: `hospA_user_${Date.now()}`, password: 'testpass123', role: 'nurse', hospitalId: 'hospA' });
+    .send({ name: 'مستخدم منشأة A', username: `hospA_user_${Date.now()}`, password: 'testpass123', role: 'nurse', hospitalId: hospAId });
   hospA_UserId = hospAUser.body.id;
 
   const hospBUser = await request(app).post('/api/users').set('Authorization', `Bearer ${globalAdminToken}`)
-    .send({ name: 'مستخدم منشأة B', username: `hospB_user_${Date.now()}`, password: 'testpass123', role: 'nurse', hospitalId: 'hospB' });
+    .send({ name: 'مستخدم منشأة B', username: `hospB_user_${Date.now()}`, password: 'testpass123', role: 'nurse', hospitalId: hospBId });
   hospB_UserId = hospBUser.body.id;
 
   // تسجيل دخول كإدمن منشأة A
@@ -117,7 +126,7 @@ describe('إدمن عام (بدون hospitalId) — يرى ويدير الجمي
     const res = await request(app)
       .post('/api/users/bulk-deactivate')
       .set('Authorization', `Bearer ${globalAdminToken}`)
-      .send({ hospitalId: 'hospB' });
+      .send({ hospitalId: hospBId });
     expect(res.status).toBe(200);
     expect(res.body.count).toBeGreaterThanOrEqual(1);
 
@@ -136,7 +145,7 @@ describe('إدمن عام (بدون hospitalId) — يرى ويدير الجمي
     const res = await request(app)
       .post('/api/users/bulk-delete')
       .set('Authorization', `Bearer ${globalAdminToken}`)
-      .send({ hospitalId: 'hospB' });
+      .send({ hospitalId: hospBId });
     expect(res.status).toBe(200);
 
     const after = await request(app).get('/api/users').set('Authorization', `Bearer ${globalAdminToken}`);

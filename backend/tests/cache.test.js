@@ -19,7 +19,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('cache');
+  dbPath = await setupTestEnv('cache');
   app = require('../server');
 
   const loginRes = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });

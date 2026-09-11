@@ -12,7 +12,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('dosage-check');
+  dbPath = await setupTestEnv('dosage-check');
   // نفس مبدأ drugInteractions.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv
   // من إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';

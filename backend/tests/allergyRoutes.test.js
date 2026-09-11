@@ -13,7 +13,7 @@ let app;
 let token;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('allergy-check');
+  dbPath = await setupTestEnv('allergy-check');
   // نفس مبدأ dosageRoutes.test.js — نضبط لنص فارغ (وليس حذف) لمنع dotenv من
   // إعادة تحميل مفتاح Gemini الحقيقي من ملف .env المحلي
   process.env.ANTHROPIC_API_KEY = '';

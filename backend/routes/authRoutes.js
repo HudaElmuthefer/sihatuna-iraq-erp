@@ -6,7 +6,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const auth = require('../middleware/auth');
-const { readDB } = require('../utils/db');
+const { pool } = require('../config/database');
+const { mapUserRow } = require('../utils/userMapper');
 const { logAudit } = require('../utils/auditLog');
 const { revoke: revokeToken } = require('../utils/tokenRevocation');
 const { JWT_SECRET } = require('../config/jwtConfig');
@@ -14,67 +15,68 @@ const { loginLimiter } = require('../config/rateLimiters');
 
 const router = express.Router();
 
-router.post('/auth/login', loginLimiter, (req, res) => {
-  const { username, password } = req.body;
-  const db = readDB();
-  const user = (db.users || []).find(u =>
-    u.username === username || u.email === username
-  );
-  if (!user) {
-    logAudit({ module: 'auth', action: 'login_failed', userId: null, userRole: null, after: { attemptedUsername: username, reason: 'user_not_found' } });
-    return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
-  }
+router.post('/auth/login', loginLimiter, async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1 OR email = $1',
+      [username]
+    );
+    const user = result.rows[0];
+    if (!user) {
+      logAudit({ module: 'auth', action: 'login_failed', userId: null, userRole: null, after: { attemptedUsername: username, reason: 'user_not_found' } });
+      return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
+    }
 
-  // ── حساب معطَّل (تعطيل جماعي لمستخدمي منشأة، راجع usersRoutes.js
-  // bulk-deactivate) — isActive غير موجودة إطلاقاً على حسابات قديمة تعني
-  // "نشط" ضمنياً (undefined !== false)، فلا حاجة لأي ترحيل بيانات هنا.
-  if (user.isActive === false) {
-    logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'account_deactivated' } });
-    return res.status(401).json({ message: 'هذا الحساب معطّل، يرجى التواصل مع الإدارة' });
-  }
+    // حساب معطَّل (تعطيل جماعي لمستخدمي منشأة، راجع usersRoutes.js bulk-deactivate)
+    if (user.is_active === false) {
+      logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'account_deactivated' } });
+      return res.status(401).json({ message: 'هذا الحساب معطّل، يرجى التواصل مع الإدارة' });
+    }
 
-  // كل كلمات المرور مشفّرة بـ bcrypt الآن (بعد migratePlaintextPasswords عند الإقلاع)،
-  // فلا حاجة لأي مسار مقارنة نصّية صريحة بعد اليوم.
-  const valid = bcrypt.compareSync(password, user.password);
-  if (!valid) {
-    logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'wrong_password' } });
-    return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
-  }
+    // كل الحسابات تُنشَأ بكلمة مرور مشفّرة بـbcrypt دائماً (routes/usersRoutes.js،
+    // scripts/migrateUsersFromJson.js) — لا مسار مقارنة نصّية صريحة إطلاقاً.
+    const valid = user.password && bcrypt.compareSync(password, user.password);
+    if (!valid) {
+      logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'wrong_password' } });
+      return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
+    }
 
-  const { password: _, ...safeUser } = user;
-  // permissions تُضمَّن الآن بالتوكن نفسه ليستطيع requirePermission (middleware
-  // الصلاحيات بموديولات pgCrud) يتحقق منها بدون أي استعلام إضافي لقاعدة
-  // البيانات بكل طلب. حساب admin يتجاوز هذا الفحص دائماً بغض النظر عن القيمة هنا.
-  // jti (JWT ID) معرّف فريد لهذا التوكن تحديداً — يسمح لتسجيل الخروج بإبطاله
-  // فعلياً لاحقاً (انظر utils/tokenRevocation.js) بدل انتظار انتهاء صلاحيته الطبيعية.
-  const jti = uuidv4();
-  const token = jwt.sign({ id: user.id, role: user.role, hospitalId: user.hospitalId || null, permissions: user.permissions || [], jti }, JWT_SECRET, { expiresIn: '1d' });
-  logAudit({ module: 'auth', action: 'login_success', userId: user.id, userRole: user.role });
-  // ── إصلاح أمني ────────────────────────────────────────────────────────────
-  // التوكن الآن يُرسَل أيضاً بـ httpOnly cookie — هذا ما يعتمد عليه الفرونت
-  // إند فعلياً (كود الجافاسكربت لا يستطيع قراءة هذه الكوكي إطلاقاً، حتى لو صار
-  // XSS بأي مكان بالتطبيق). يبقى موجوداً بجسم الاستجابة (body) أيضاً فقط من
-  // أجل التوافق مع أدوات API مباشرة واختبارات jest الآلية — الفرونت إند لا
-  // يخزّنه ولا يقرأه من الجسم بعد اليوم.
-  // ── إصلاح أمني ────────────────────────────────────────────────────────────
-  // sameSite: 'strict' (بدل 'lax' سابقاً) يمنع المتصفح من إرسال الكوكي إطلاقاً
-  // مع أي طلب مصدره موقع آخر (حتى طلبات GET من رابط بموقع خارجي) — يقفل ثغرة
-  // CSRF بشكل شبه كامل بدون حاجة لآلية توكن CSRF منفصلة. هذا مناسب تماماً
-  // لنظام داخلي مثل هذا (لا توجد حالة استخدام مشروعة لفتح رابط من موقع خارجي
-  // يدخل جلسة المستخدم). ملاحظة: هذا يفترض إن الفرونت إند والباك إند يعملان
-  // على نفس "الموقع" (Same Site) — نفس الدومين الأساسي، حتى لو بمنافذ مختلفة
-  // (localhost:3000 و localhost:8000 يُعتبَران نفس الموقع). لو نُشر المشروع
-  // مستقبلاً بحيث الفرونت إند والباك إند على نطاقين فرعيين مختلفين تماماً
-  // (مثل app.sihatuna.iq و api.sihatuna.iq)، هذا الإعداد يمنع إرسال الكوكي
-  // بينهما تماماً ويكسر تسجيل الدخول — يجب إرجاعه لـ'lax' بهذه الحالة تحديداً.
-  res.cookie('auth_token', token, {
-    httpOnly: true,
-    secure: process.env.USE_HTTPS === 'true', // مرتبط بـ HTTPS الفعلي (متغيّر مستقل)، وليس بوضع production بشكل عام — نظامك يشتغل حالياً عبر HTTP على شبكة محلية، فيبقى false افتراضياً حتى لو NODE_ENV=production. فعّله فقط لو نصّبت شهادة SSL حقيقية.
-    sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000, // يوم واحد، نفس مدة صلاحية التوكن نفسه
-    path: '/',
-  });
-  res.json({ token, user: safeUser });
+    const safeUser = mapUserRow(user);
+    // permissions تُضمَّن الآن بالتوكن نفسه ليستطيع requirePermission (middleware
+    // الصلاحيات بموديولات pgCrud) يتحقق منها بدون أي استعلام إضافي لقاعدة
+    // البيانات بكل طلب. حساب admin يتجاوز هذا الفحص دائماً بغض النظر عن القيمة هنا.
+    // jti (JWT ID) معرّف فريد لهذا التوكن تحديداً — يسمح لتسجيل الخروج بإبطاله
+    // فعلياً لاحقاً (انظر utils/tokenRevocation.js) بدل انتظار انتهاء صلاحيته الطبيعية.
+    const jti = uuidv4();
+    const token = jwt.sign({ id: safeUser.id, role: safeUser.role, hospitalId: safeUser.hospitalId || null, permissions: safeUser.permissions || [], jti }, JWT_SECRET, { expiresIn: '1d' });
+    logAudit({ module: 'auth', action: 'login_success', userId: safeUser.id, userRole: safeUser.role });
+    // ── إصلاح أمني ──────────────────────────────────────────────────────────
+    // التوكن الآن يُرسَل أيضاً بـ httpOnly cookie — هذا ما يعتمد عليه الفرونت
+    // إند فعلياً (كود الجافاسكربت لا يستطيع قراءة هذه الكوكي إطلاقاً، حتى لو صار
+    // XSS بأي مكان بالتطبيق). يبقى موجوداً بجسم الاستجابة (body) أيضاً فقط من
+    // أجل التوافق مع أدوات API مباشرة واختبارات jest الآلية — الفرونت إند لا
+    // يخزّنه ولا يقرأه من الجسم بعد اليوم.
+    // ── إصلاح أمني ──────────────────────────────────────────────────────────
+    // sameSite: 'strict' (بدل 'lax' سابقاً) يمنع المتصفح من إرسال الكوكي إطلاقاً
+    // مع أي طلب مصدره موقع آخر (حتى طلبات GET من رابط بموقع خارجي) — يقفل ثغرة
+    // CSRF بشكل شبه كامل بدون حاجة لآلية توكن CSRF منفصلة. هذا مناسب تماماً
+    // لنظام داخلي مثل هذا (لا توجد حالة استخدام مشروعة لفتح رابط من موقع خارجي
+    // يدخل جلسة المستخدم). ملاحظة: هذا يفترض إن الفرونت إند والباك إند يعملان
+    // على نفس "الموقع" (Same Site) — نفس الدومين الأساسي، حتى لو بمنافذ مختلفة
+    // (localhost:3000 و localhost:8000 يُعتبَران نفس الموقع). لو نُشر المشروع
+    // مستقبلاً بحيث الفرونت إند والباك إند على نطاقين فرعيين مختلفين تماماً
+    // (مثل app.sihatuna.iq و api.sihatuna.iq)، هذا الإعداد يمنع إرسال الكوكي
+    // بينهما تماماً ويكسر تسجيل الدخول — يجب إرجاعه لـ'lax' بهذه الحالة تحديداً.
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.USE_HTTPS === 'true', // مرتبط بـ HTTPS الفعلي (متغيّر مستقل)، وليس بوضع production بشكل عام — نظامك يشتغل حالياً عبر HTTP على شبكة محلية، فيبقى false افتراضياً حتى لو NODE_ENV=production. فعّله فقط لو نصّبت شهادة SSL حقيقية.
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // يوم واحد، نفس مدة صلاحية التوكن نفسه
+      path: '/',
+    });
+    res.json({ token, user: safeUser });
+  } catch (err) { next(err); }
 });
 
 router.post('/auth/logout', async (req, res) => {
@@ -99,12 +101,12 @@ router.post('/auth/logout', async (req, res) => {
   res.json({ success: true });
 });
 
-router.get('/auth/me', auth, (req, res) => {
-  const db = readDB();
-  const user = (db.users || []).find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ message: 'غير موجود' });
-  const { password: _, ...safeUser } = user;
-  res.json(safeUser);
+router.get('/auth/me', auth, async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'غير موجود' });
+    res.json(mapUserRow(result.rows[0]));
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

@@ -1,12 +1,15 @@
 // backend/utils/backup.js
 //
 // نظام نسخ احتياطي مزدوج:
-// 1) db.json وaudit-log.json (يبقى كما كان — احتياطي إضافي بسيط، رغم أن
-//    البيانات الحقيقية انتقلت الآن لـ PostgreSQL ولا يُعتمد عليه وحده)
+// 1) audit-log.json (يبقى كما كان — احتياطي إضافي بسيط لسجل التدقيق فقط.
+//    db.json كان هنا سابقاً أيضاً، قبل ترحيل موديول المستخدمين الأخير
+//    لـPostgreSQL بالكامل — راجع routes/usersRoutes.js وscripts/
+//    migrateUsersFromJson.js. لم يعد له أي دور، فأُزيل من هذه القائمة).
 // 2) نسخة كاملة حقيقية من قاعدة بيانات PostgreSQL عبر pg_dump — هذا الجزء
 //    أُضيف بعد اكتشاف أن كل البيانات الفعلية (المرضى، الفواتير، المدفوعات)
 //    كانت بلا أي نسخ احتياطي إطلاقاً بعد الانتقال من db.json — ثغرة حرجة
-//    كانت تعني فقدان كل شيء نهائياً عند أي عطل بالقرص أو حذف خاطئ.
+//    كانت تعني فقدان كل شيء نهائياً عند أي عطل بالقرص أو حذف خاطئ. يشمل
+//    الآن جدول users أيضاً (نفس قاعدة البيانات، pg_dump ينسخها كاملة).
 //
 // وجهة خارجية اختيارية (EXTERNAL_BACKUP_DIR بملف .env): بدون هذا، كل النسخ
 // الاحتياطية محفوظة بنفس القرص الفيزيائي لجهازك — لو تعطّل القرص نفسه أو
@@ -29,7 +32,7 @@ const { execFile } = require('child_process');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const BACKUPS_DIR = path.join(__dirname, '..', 'backups');
-const FILES_TO_BACKUP = ['db.json', 'audit-log.json'];
+const FILES_TO_BACKUP = ['audit-log.json'];
 const BACKUP_INTERVAL_MS = 60 * 60 * 1000; // كل ساعة
 const MAX_BACKUPS = 48; // نحتفظ بآخر 48 نسخة (يعني تغطية يومين تقريباً بمعدل كل ساعة)
 

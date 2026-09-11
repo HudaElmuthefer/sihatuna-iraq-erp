@@ -13,7 +13,7 @@ let adminToken;
 let hospitalATokenUser, hospitalBTokenUser;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('hospital-scoping');
+  dbPath = await setupTestEnv('hospital-scoping');
   app = require('../server');
 
   const adminLogin = await request(app)

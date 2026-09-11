@@ -11,7 +11,7 @@ let app;
 let adminToken;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('crm');
+  dbPath = await setupTestEnv('crm');
   app = require('../server');
   const login = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   adminToken = login.body.token;

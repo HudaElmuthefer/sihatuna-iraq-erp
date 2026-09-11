@@ -8,7 +8,7 @@ let adminToken;
 let nurseToken;
 
 beforeAll(async () => {
-  dbPath = setupTestEnv('procurement');
+  dbPath = await setupTestEnv('procurement');
   app = require('../server');
   const adminLogin = await request(app).post('/api/auth/login').send({ username: 'testadmin', password: 'testpass123' });
   adminToken = adminLogin.body.token;

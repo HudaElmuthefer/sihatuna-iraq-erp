@@ -12,9 +12,9 @@ const { setupTestEnv, cleanupTestEnv, closeDbPool } = require('./testUtils');
 let dbPath;
 let app;
 
-beforeAll(() => {
-  dbPath = setupTestEnv('auth');
-  app = require('../server'); // يُستورد بعد ضبط DB_PATH وJWT_SECRET مباشرة
+beforeAll(async () => {
+  dbPath = await setupTestEnv('auth');
+  app = require('../server'); // يُستورد بعد ضبط PG_DATABASE وJWT_SECRET مباشرة
 });
 
 afterAll(async () => {

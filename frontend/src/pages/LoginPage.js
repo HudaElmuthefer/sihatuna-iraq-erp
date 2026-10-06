@@ -58,12 +58,17 @@ export default function LoginPage() {
         <button type="button" onClick={toggleLang} className="la-topbar-btn">
           {tr('login_lang_toggle')}
         </button>
-        <button type="button" onClick={toggleTheme} className="la-topbar-btn">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="la-topbar-btn"
+          aria-label={theme === 'light' ? (lang === 'ar' ? 'التبديل إلى الوضع الداكن' : 'Switch to dark mode') : (lang === 'ar' ? 'التبديل إلى الوضع الفاتح' : 'Switch to light mode')}
+        >
           {theme === 'light' ? '🌙' : '☀️'}
         </button>
       </div>
 
-      <div className="la-stage">
+      <main className="la-stage">
         {/* MedicalHologramArea — العنصر البصري الرئيسي الثاني بجانب اللوحة
            (MAIN VISUAL CORE، وليس زخرفة جانبية صغيرة — بند 1 صراحةً).
            حقل ضوء متعدد الطبقات (large atmospheric → medium → core →
@@ -78,6 +83,8 @@ export default function LoginPage() {
           <img
             src={theme === 'dark' ? heroDark : heroLight}
             alt=""
+            width={820}
+            height={547}
             className="la-hologram-img"
           />
         </div>
@@ -121,7 +128,12 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   className="la-input"
                 />
-                <button type="button" className="la-pw-toggle" onClick={() => setShowPw(p => !p)}>
+                <button
+                  type="button"
+                  className="la-pw-toggle"
+                  onClick={() => setShowPw(p => !p)}
+                  aria-label={showPw ? (lang === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (lang === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
+                >
                   {showPw ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
@@ -159,7 +171,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       <style>{`
         /* ══════════════════════════════════════════════════════════════
@@ -207,6 +219,11 @@ export default function LoginPage() {
         }
 
         .la-topbar-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 44px;
+          min-height: 44px;
           padding: 8px 16px;
           border-radius: 10px;
           cursor: pointer;
@@ -452,12 +469,16 @@ export default function LoginPage() {
 
         .la-pw-toggle {
           position: absolute;
-          left: 14px;
+          left: 0;
+          width: 44px;
+          height: 44px;
           background: none;
           border: none;
           cursor: pointer;
           font-size: 16px;
           display: flex;
+          align-items: center;
+          justify-content: center;
           padding: 0;
           transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -519,6 +540,10 @@ export default function LoginPage() {
         }
 
         .la-role-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 44px;
           padding: 6px 14px;
           border-radius: 20px;
           border-width: 1.5px;

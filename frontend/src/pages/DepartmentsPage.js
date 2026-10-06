@@ -11,7 +11,14 @@ const BANNER_GRADIENT = 'linear-gradient(135deg,#0f1923,#1a2940)';
 const emptyDept = { name: '', nameEn: '', icon: '🏥', description: '', head: '', color: '#1a6bab', status: 'active' };
 
 export default function DepartmentsPage() {
-  const { showToast, lang, departments, setDepartments, doctors: allDoctors, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule } = useApp();
+  const { showToast, lang, departments, setDepartments, doctors: allDoctors, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule, loadModule } = useApp();
+
+  // Loads departments and doctors once per session, the first time a page
+  // that needs them mounts — a no-op if another page already triggered it.
+  React.useEffect(() => {
+    loadModule('departments');
+    loadModule('doctors');
+  }, [loadModule]);
   const tr = useT(lang);
   const [selected, setSelected] = useState(null);
   const [bookingDoctor, setBookingDoctor] = useState(null);

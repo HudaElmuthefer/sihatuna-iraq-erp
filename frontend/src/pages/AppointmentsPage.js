@@ -20,7 +20,16 @@ const statusConfig = {
 };
 
 export default function AppointmentsPage() {
-  const { lang, addToast, appointments: apts, setAppointments: setApts, doctors, patients, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule } = useApp();
+  const { lang, addToast, appointments: apts, setAppointments: setApts, doctors, patients, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule, loadModule } = useApp();
+
+  // Loads appointments, doctors, and patients once per session, the first
+  // time a page that needs them mounts — a no-op if another page already
+  // triggered it.
+  React.useEffect(() => {
+    loadModule('appointments');
+    loadModule('doctors');
+    loadModule('patients');
+  }, [loadModule]);
   const tr = useT(lang);
   const ar = lang === 'ar';
   const visitTypes = [tr('visit_checkup'), tr('visit_followup'), tr('visit_consult'), tr('visit_emergency')];

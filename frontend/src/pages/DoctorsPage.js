@@ -29,7 +29,14 @@ const colors = ['#1a6bab', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'
 
 export default function DoctorsPage() {
   const navigate = useNavigate();
-  const { lang, addToast, doctors, setDoctors, departments, setDepartments, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule } = useApp();
+  const { lang, addToast, doctors, setDoctors, departments, setDepartments, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule, loadModule } = useApp();
+
+  // Loads doctors and departments once per session, the first time a page
+  // that needs them mounts — a no-op if another page already triggered it.
+  useEffect(() => {
+    loadModule('doctors');
+    loadModule('departments');
+  }, [loadModule]);
   const tr = useT(lang);
   // إصلاح: يقرأ ?q=... لو وصل من نتيجة بحث الـheader العام (Layout.js) — بدل
   // أن يهبط المستخدم على قائمة كاملة غير مفلترة بعد نقر نتيجة بحث فعلية.

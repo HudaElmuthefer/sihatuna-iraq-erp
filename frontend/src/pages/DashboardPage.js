@@ -104,8 +104,20 @@ export default function DashboardPage() {
     appointments = [],
     departments = [],
     labTests = [],
-    hospitals = []
+    hospitals = [],
+    loadModule
   } = useApp();
+
+  // Loads the datasets this dashboard reads once per session, the first
+  // time a page that needs them mounts — a no-op if another page already
+  // triggered it.
+  useEffect(() => {
+    loadModule('patients');
+    loadModule('doctors');
+    loadModule('appointments');
+    loadModule('departments');
+    loadModule('labTests');
+  }, [loadModule]);
 
   const tr = useT(lang);
 

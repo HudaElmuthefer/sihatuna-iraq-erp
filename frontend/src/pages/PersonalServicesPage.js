@@ -11,7 +11,17 @@ const BANNER_GRADIENT = 'linear-gradient(135deg,#0f2340 0%,#1a6bab 100%)';
 
 export default function PersonalServicesPage() {
   const navigate = useNavigate();
-  const { lang, addToast, doctors, departments, appointments, setAppointments, syncToServer, patients } = useApp();
+  const { lang, addToast, doctors, departments, appointments, setAppointments, syncToServer, patients, loadModule } = useApp();
+
+  // Loads doctors, departments, appointments, and patients once per session,
+  // the first time a page that needs them mounts — a no-op if another page
+  // already triggered it.
+  useEffect(() => {
+    loadModule('doctors');
+    loadModule('departments');
+    loadModule('appointments');
+    loadModule('patients');
+  }, [loadModule]);
   const tr = useT(lang);
   const ar = lang === 'ar';
   const [search, setSearch] = useState('');

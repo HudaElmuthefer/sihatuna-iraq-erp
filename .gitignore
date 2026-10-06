@@ -16,6 +16,9 @@ frontend/node_modules/
 # مخرجات البناء
 frontend/build/
 
+# Output of scripts/lighthouse-all.js — regenerable, not source
+frontend/lighthouse-report-*.json
+
 # بيانات تشغيلية (تُنشأ تلقائياً، ما تُرفع لـ GitHub)
 backend/backups/
 # نسخ احتياطية مسحوبة يدوياً لقاعدة بيانات Docker (تحتوي بيانات مرضى حقيقية —

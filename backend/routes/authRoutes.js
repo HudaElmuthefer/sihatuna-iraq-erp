@@ -9,7 +9,7 @@ const auth = require('../middleware/auth');
 const { pool } = require('../config/database');
 const { mapUserRow } = require('../utils/userMapper');
 const { logAudit } = require('../utils/auditLog');
-const { revoke: revokeToken } = require('../utils/tokenRevocation');
+const { revoke: revokeToken, isRevoked } = require('../utils/tokenRevocation');
 const { JWT_SECRET } = require('../config/jwtConfig');
 const { loginLimiter } = require('../config/rateLimiters');
 
@@ -105,6 +105,38 @@ router.get('/auth/me', auth, async (req, res, next) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'غير موجود' });
+    res.json(mapUserRow(result.rows[0]));
+  } catch (err) { next(err); }
+});
+
+// Silent session probe, used only by the frontend's mount-time session
+// recovery (AppContext.js) when it has no local user yet and needs to know
+// whether the httpOnly cookie still carries a valid session. Deliberately
+// a separate route from /auth/me instead of reusing the shared `auth`
+// middleware there: that route's 401-on-no-token contract is relied on by
+// existing tests and by any caller that's actually trying to access an
+// authenticated resource, which a visitor loading /login is not — for them
+// "not logged in" is the normal, expected outcome, not an error. Returning
+// 200 with a null body for that case means the browser doesn't log a
+// failed-resource console error on every anonymous page load.
+router.get('/auth/session', async (req, res, next) => {
+  try {
+    const cookieToken = req.cookies?.auth_token;
+    const header = req.headers.authorization;
+    const headerToken = header ? header.split(' ')[1] : null;
+    const token = cookieToken || headerToken;
+    if (!token) return res.json(null);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.json(null);
+    }
+    if (await isRevoked(decoded.jti)) return res.json(null);
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.id]);
+    if (result.rows.length === 0) return res.json(null);
     res.json(mapUserRow(result.rows[0]));
   } catch (err) { next(err); }
 });

@@ -85,6 +85,14 @@ export default function LoginPage() {
             alt=""
             width={820}
             height={547}
+            // This is the page's LCP element. There's no stable URL to
+            // <link rel="preload"> from index.html (the file name is
+            // content-hashed per build, and which of the two theme
+            // variants renders isn't known until the theme is read from
+            // localStorage at runtime) — fetchpriority is the safe
+            // equivalent here: it's on the element React actually
+            // renders, so it always points at the right file.
+            fetchPriority="high"
             className="la-hologram-img"
           />
         </div>

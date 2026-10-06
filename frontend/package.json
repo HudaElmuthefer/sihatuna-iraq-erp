@@ -46,5 +46,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "lighthouse": "^13.5.0",
+    "puppeteer-core": "^25.12.0"
   }
 }

@@ -537,20 +537,10 @@ export function AppProvider({ children }) {
   // ── إعدادات بوابات الدفع ──────────────────────────────────────────────────
   // بوابات الدفع: تُحمَّل من الخادم الحقيقي (PostgreSQL) بدل localStorage —
   // هذا يضمن ظهور نفس الإعدادات بغض النظر عن الجهاز أو المتصفح المستخدَم.
+  // Fetched through the shared SYNCED_MODULES loader (key 'admin/payment-gateways',
+  // below) instead of its own effect — same data, loaded only when a page
+  // that reads it mounts instead of unconditionally on every login.
   const [paymentGateways, setPaymentGateways] = useState([]);
-  useEffect(() => {
-    if (!user) return; // بدون توكن قابل للقراءة من الفرونت إند بعد اليوم، نعتمد على حالة user نفسها كمؤشر تسجيل دخول
-    api.get('/admin/payment-gateways')
-      .then(rows => {
-        setPaymentGateways(rows.map(r => ({
-          providerCode: r.provider_code,
-          isActive: r.is_active,
-          isSandbox: r.is_sandbox,
-          hasCredentials: r.has_credentials,
-        })));
-      })
-      .catch(err => console.warn('⚠️ تعذّر تحميل إعدادات بوابات الدفع من الخادم:', err.message));
-  }, [user]);
   // صفحة تجيبها لحالها، حتى تستطيع أي صفحة (مثل المرضى) أن تسأل "هل الوضع مفعّل؟"
   // وتعرض حقل اختيار المنشأة عند الحاجة فقط.
   const [hospitals, setHospitals] = useState([]);
@@ -891,6 +881,20 @@ export function AppProvider({ children }) {
     // كان يظهر أبداً. الآن تُجلَب فعلياً عند تسجيل الدخول مثل بقية الموديولات.
     { key: 'ambulanceVehicles', setState: (data) => setAmbulanceData(p => ({ ...p, vehicles: data })), normalize: x => x },
     { key: 'ambulanceMissions', setState: (data) => setAmbulanceData(p => ({ ...p, missions: data })), normalize: x => x },
+    // Endpoint path differs from every other key above (admin/payment-gateways,
+    // not payment-gateways), which is fine — loadModule builds the request
+    // URL as `/${key}` either way. Field names are renamed from the raw
+    // snake_case row shape, same job `normalize` already does elsewhere.
+    {
+      key: 'admin/payment-gateways',
+      setState: setPaymentGateways,
+      normalize: r => ({
+        providerCode: r.provider_code,
+        isActive: r.is_active,
+        isSandbox: r.is_sandbox,
+        hasCredentials: r.has_credentials,
+      }),
+    },
   ], []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Per-module in-memory cache, keyed by SYNCED_MODULES key.
@@ -980,20 +984,18 @@ export function AppProvider({ children }) {
   // changed out from under the normal optimistic-update flow).
   const reloadModule = useCallback((key) => loadModule(key, { force: true }), [loadModule]);
 
-  // On login (a real token present), load every synced module from the real
-  // backend instead of the local copy — this solves "every device sees
-  // different data". Still loads every module at once here (a later phase
-  // moves each fetch to the page that actually needs it) — this just
-  // replaces the old inline loop with the same shared loader pages now use too.
+  // On login (a real token present) or logout, reset the cache so a
+  // different user's session never reuses the previous user's data or lets
+  // a slow in-flight response from before the switch land here. Modules are
+  // no longer all requested here unconditionally — each page that reads a
+  // given module calls loadModule(key) itself on mount (see e.g.
+  // PatientsPage, LaboratoryPage, CRMPage), so a session that never visits
+  // a given page never pays for that module's request at all.
   useEffect(() => {
-    // Bump the generation and clear the cache first so a new login (or a
-    // logout) never lets a previous user's in-flight response land here.
     dataGenerationRef.current += 1;
     moduleCacheRef.current.clear();
     sessionExpiredHandledRef.current = false;
-    if (!user) return;
-    SYNCED_MODULES.forEach(({ key }) => { loadModule(key); });
-  }, [user, SYNCED_MODULES]); // eslint-disable-line react-hooks/exhaustive-deps -- deliberately not re-fetching just because lang/showToast changed
+  }, [user]);
 
   // مزامنة الكتابة الموحّدة: تُستدعى بعد أي إضافة أو تعديل أو حذف محلي بأي موديول مربوط،
   // وترسلها إلى الباك إند الحقيقي دون إيقاف الواجهة أثناء الانتظار.

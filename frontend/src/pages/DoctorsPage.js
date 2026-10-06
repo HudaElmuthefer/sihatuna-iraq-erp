@@ -9,7 +9,6 @@ import Pagination from '../components/Pagination';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
-import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)';
 
@@ -30,7 +29,7 @@ const colors = ['#1a6bab', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'
 
 export default function DoctorsPage() {
   const navigate = useNavigate();
-  const { lang, addToast, doctors, setDoctors, departments, setDepartments, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital } = useApp();
+  const { lang, addToast, doctors, setDoctors, departments, setDepartments, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule } = useApp();
   const tr = useT(lang);
   // إصلاح: يقرأ ?q=... لو وصل من نتيجة بحث الـheader العام (Layout.js) — بدل
   // أن يهبط المستخدم على قائمة كاملة غير مفلترة بعد نقر نتيجة بحث فعلية.
@@ -186,10 +185,10 @@ export default function DoctorsPage() {
           lang={lang}
           onClose={() => setShowImport(false)}
           onImported={async () => {
-            try {
-              const fresh = await api.get('/doctors');
-              if (Array.isArray(fresh)) setDoctors(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
+            // loadModule/reloadModule never rejects — a failed request just
+            // leaves doctors at its previous value and will retry on the
+            // next call, same as a failed refresh here always did.
+            await reloadModule('doctors');
             refetch();
           }}
         />

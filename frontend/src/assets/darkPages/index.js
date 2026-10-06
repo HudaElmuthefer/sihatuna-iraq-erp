@@ -18,19 +18,6 @@ import ambulance from './page-ambulance.webp';
 import medicalLeave from './page-medical-leave.webp';
 import aiDiagnosis from './page-ai-diagnosis.webp';
 
-export const CURVED_PAGE_IMAGES = {
-  dashboard,
-  patients,
-  'medical-codes': medicalCodes,
-  doctors,
-  appointments,
-  departments,
-  vaccinations,
-  ambulance,
-  'medical-leave': medicalLeave,
-  'ai-diagnosis': aiDiagnosis,
-};
-
 // Small 320x213 variants of the exact same images, for the 10 orbiting
 // thumbnails (displayed at ~205x120 max — see DashboardPage.js's
 // curvedThumbnails radialPos.w/h). The full 800x533 images above stay in
@@ -47,6 +34,19 @@ import vaccinationsThumb from './page-vaccinations-thumb.webp';
 import ambulanceThumb from './page-ambulance-thumb.webp';
 import medicalLeaveThumb from './page-medical-leave-thumb.webp';
 import aiDiagnosisThumb from './page-ai-diagnosis-thumb.webp';
+
+export const CURVED_PAGE_IMAGES = {
+  dashboard,
+  patients,
+  'medical-codes': medicalCodes,
+  doctors,
+  appointments,
+  departments,
+  vaccinations,
+  ambulance,
+  'medical-leave': medicalLeave,
+  'ai-diagnosis': aiDiagnosis,
+};
 
 export const CURVED_PAGE_THUMBNAILS = {
   dashboard: dashboardThumb,

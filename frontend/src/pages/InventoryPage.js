@@ -8,7 +8,6 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
 import DateRangeFilter from '../components/DateRangeFilter';
-import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #78350f 0%, #b45309 100%)';
 
@@ -27,7 +26,7 @@ const CAT_CONFIG = {
 const EMPTY = { code:'', name:'', nameEn:'', category:'medicine', unit:'Box', qty:0, minQty:0, maxQty:0, unitCost:0, supplier:'', location:'', expiry:'', status:'active' };
 
 export default function InventoryPage() {
-  const { inventory, setInventory, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { inventory, setInventory, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule } = useApp();
   const tr = useT(lang);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
@@ -174,10 +173,9 @@ export default function InventoryPage() {
           lang={lang}
           onClose={() => setShowImport(false)}
           onImported={async () => {
-            try {
-              const fresh = await api.get('/inventory');
-              if (Array.isArray(fresh)) setInventory(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
+            // loadModule/reloadModule never rejects — a failed request just
+            // leaves inventory at its previous value, same as before.
+            await reloadModule('inventory');
             refetch();
           }}
         />

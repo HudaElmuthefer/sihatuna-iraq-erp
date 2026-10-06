@@ -37,7 +37,11 @@ const COMMON_DRUGS = [
 ];
 
 export default function DosageCheckPage() {
-  const { lang, showToast, patients } = useApp();
+  const { lang, showToast, patients, loadModule } = useApp();
+
+  // Loads patients once per session, the first time a page that needs them
+  // mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('patients'); }, [loadModule]);
   const tr = useT(lang);
 
   const [drugName, setDrugName] = useState('');

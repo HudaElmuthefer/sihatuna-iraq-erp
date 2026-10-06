@@ -40,7 +40,18 @@ const BarChart = ({ data, color, lang }) => (
 const PERIOD_MONTHS = { month: 1, '3months': 3, '6months': 6, year: 12 };
 
 export default function SmartReportsPage() {
-  const { showToast, lang, patients, appointments, doctors, departments, invoices, setPrintOverlay } = useApp();
+  const { showToast, lang, patients, appointments, doctors, departments, invoices, setPrintOverlay, loadModule } = useApp();
+
+  // Loads the datasets this page reads once per session, the first time a
+  // page that needs them mounts — a no-op if another page already
+  // triggered it.
+  React.useEffect(() => {
+    loadModule('patients');
+    loadModule('appointments');
+    loadModule('doctors');
+    loadModule('departments');
+    loadModule('invoices');
+  }, [loadModule]);
   const tr = useT(lang);
   const [period, setPeriod] = useState('6months');
   const [showPrintOptions, setShowPrintOptions] = useState(false);

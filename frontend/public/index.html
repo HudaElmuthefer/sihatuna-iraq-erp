@@ -20,7 +20,20 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <!--
+    Single consolidated font request for every family/weight the app uses
+    (previously split across this file's own <link> for just Cairo, plus a
+    second, overlapping @import in index.css for Cairo+Tajawal+Inter+IBM
+    Plex Sans Arabic — two separate round trips to Google Fonts, with the
+    Cairo weight lists not even matching). display=swap is already in the
+    URL, so text renders in a fallback font immediately either way; the
+    media="print" / onload swap below additionally keeps this stylesheet
+    from blocking first render while it downloads. noscript covers the
+    case where that onload handler never runs.
+  -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>

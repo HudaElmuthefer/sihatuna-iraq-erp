@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap');
+/* The Cairo/Tajawal/Inter/IBM Plex Sans Arabic font request used to live
+   here as a CSS @import — moved to public/index.html as a single
+   consolidated, non-render-blocking <link> instead (see the comment
+   there). An @import is itself a render-blocking fetch, and this one
+   duplicated a chunk of what index.html was already loading separately. */
 /* IBM Plex Sans Arabic — chosen after a live on-screen re-test of all 5
    requested candidates specifically for a "futuristic/techno" feel (this
    is a different question from the earlier "closest match to the

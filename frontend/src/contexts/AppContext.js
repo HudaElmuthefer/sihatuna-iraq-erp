@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { api, checkBackendReachable, LOGO_IMAGE_URL } from '../api';
 import { calcPromotionDue, calcAllowanceDue } from '../pages/hr/promotionCalc';
 
@@ -893,58 +893,107 @@ export function AppProvider({ children }) {
     { key: 'ambulanceMissions', setState: (data) => setAmbulanceData(p => ({ ...p, missions: data })), normalize: x => x },
   ], []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // عند تسجيل الدخول (وجود توكن حقيقي)، نحمّل كل موديول مربوط من الباك إند الحقيقي
-  // بدل النسخة المحلية — هذا يحل مشكلة "كل جهاز يرى بيانات مختلفة"
+  // Per-module in-memory cache, keyed by SYNCED_MODULES key.
+  // Holds the in-flight/resolved Promise for a module once loadModule() has
+  // been called for it — absent means "never requested, or a previous
+  // request failed and was deliberately evicted so the next call retries".
+  const moduleCacheRef = useRef(new Map());
+  // Guards against stale responses: bumped every time `user` changes (login,
+  // logout, or switching accounts), so a slow response that was in flight
+  // for a previous user can never write into the next user's state — same
+  // safety the old per-effect `cancelled` flag gave, but keyed per-login
+  // instead of per-effect-run so it also covers calls made outside this
+  // effect (page-triggered loads, added in a later phase).
+  const dataGenerationRef = useRef(0);
+  // Prevents showing the "session expired" toast once per failed module
+  // instead of once overall — reset alongside the cache on every user change.
+  const sessionExpiredHandledRef = useRef(false);
+
+  // Single per-module loader: fetches `/${key}` and applies the same
+  // setState/normalize pair SYNCED_MODULES already defines for it, but only
+  // if no request for that key is already in flight or already succeeded.
+  // A failed request is evicted from the cache so the next call retries
+  // instead of being stuck "cached" as a failure.
+  const loadModule = useCallback((key, { force = false } = {}) => {
+    if (!user) return Promise.resolve(); // no real login yet — stays local-only, same as before
+    if (force) moduleCacheRef.current.delete(key);
+    const cached = moduleCacheRef.current.get(key);
+    if (cached) return cached;
+
+    const moduleConfig = SYNCED_MODULES.find(m => m.key === key);
+    if (!moduleConfig) return Promise.resolve(); // unknown key — nothing to load
+    const { setState, normalize } = moduleConfig;
+    const generation = dataGenerationRef.current;
+
+    setSyncStatus(prev => ({ ...prev, [key]: 'syncing' }));
+    const promise = api.get(`/${key}`)
+      .then(serverData => {
+        if (generation !== dataGenerationRef.current) return; // superseded by a newer login/logout
+        // The old condition `serverData.length > 0` used to skip updating
+        // state whenever the server's real answer was a genuinely empty
+        // array (e.g. after deleting every project/item in a module, or a
+        // brand-new facility with no data yet) — leaving the UI showing
+        // stale counts from localStorage forever instead of the correct
+        // zero. Now any valid array from the server updates state, empty
+        // or not — it's always the source of truth once logged in.
+        if (Array.isArray(serverData)) {
+          setState(serverData.map(normalize));
+        }
+        setSyncStatus(prev => ({ ...prev, [key]: 'synced' }));
+      })
+      .catch((err) => {
+        if (generation !== dataGenerationRef.current) return;
+        moduleCacheRef.current.delete(key); // do not cache a failure — allow the next call to retry
+        setSyncStatus(prev => ({ ...prev, [key]: 'offline' }));
+        // A 403 means "this account has no right to see this data at all" —
+        // leaving it at its old localStorage-cached value (from a previous
+        // session, possibly a completely different account on the same
+        // browser/device, e.g. a hospital admin opening the browser after a
+        // ministry-level admin) would show users/records unrelated to them
+        // (names, roles, emails...) instead of relying on an empty 200 —
+        // the server won't send a 200 here at all. Current clearest example:
+        // `users` for a hospital admin (see usersRoutes.js). Clear local
+        // state immediately instead of leaving it displayed as if current.
+        if (err.status === 403) {
+          setState([]);
+        }
+        // Expired session: log the user out once with a clear message
+        // instead of letting every module fail silently, making the system
+        // look like it's "just working offline" for no obvious reason.
+        if (err.status === 401 && !sessionExpiredHandledRef.current) {
+          sessionExpiredHandledRef.current = true;
+          logout();
+          showToast(
+            lang === 'ar'
+              ? 'انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد'
+              : 'Your session has expired — please log in again',
+            'error'
+          );
+        }
+      });
+    moduleCacheRef.current.set(key, promise);
+    return promise;
+  }, [user, SYNCED_MODULES]); // eslint-disable-line react-hooks/exhaustive-deps -- lang/showToast/logout read via closure deliberately, same as the code this replaces
+
+  // Forces a fresh fetch for one module regardless of cache state (used
+  // after bulk operations like an Excel import, where the server's data
+  // changed out from under the normal optimistic-update flow).
+  const reloadModule = useCallback((key) => loadModule(key, { force: true }), [loadModule]);
+
+  // On login (a real token present), load every synced module from the real
+  // backend instead of the local copy — this solves "every device sees
+  // different data". Still loads every module at once here (a later phase
+  // moves each fetch to the page that actually needs it) — this just
+  // replaces the old inline loop with the same shared loader pages now use too.
   useEffect(() => {
-    if (!user) return; // بدون توكن قابل للقراءة من الفرونت إند بعد اليوم — user نفسها المؤشر الوحيد لتسجيل الدخول
-    let cancelled = false;
-    let sessionExpiredHandled = false; // يمنع تكرار رسالة "انتهت الجلسة" لكل موديول فشل على حدة
-    SYNCED_MODULES.forEach(({ key, setState, normalize }) => {
-      setSyncStatus(prev => ({ ...prev, [key]: 'syncing' }));
-      api.get(`/${key}`)
-        .then(serverData => {
-          if (cancelled) return;
-          // إصلاح: الشرط السابق `serverData.length > 0` كان يمنع أي تحديث لو
-          // كانت النتيجة الحقيقية بالخادم مصفوفة فارغة (مثلاً بعد حذف كل
-          // مشاريع/عناصر موديول معيّن، أو منشأة جديدة بلا بيانات بعد) —
-          // فتبقى الواجهة عارضة أرقام قديمة محفوظة بالمتصفح (localStorage)
-          // للأبد بدل الصفر الصحيح. الآن نحدّث الحالة بأي مصفوفة صالحة من
-          // الخادم، فارغة كانت أو لا — هو مصدر الحقيقة دائماً بعد تسجيل الدخول.
-          if (Array.isArray(serverData)) {
-            setState(serverData.map(normalize));
-          }
-          setSyncStatus(prev => ({ ...prev, [key]: 'synced' }));
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setSyncStatus(prev => ({ ...prev, [key]: 'offline' }));
-          // ── إصلاح: 403 يعني "هذا الحساب لا يملك أي حق برؤية هذه البيانات
-          // إطلاقاً" — تركها بحالتها القديمة المحفوظة بـlocalStorage (من جلسة
-          // سابقة، ربما لحساب آخر تماماً استخدم نفس المتصفح/الجهاز، كمسؤول
-          // مستشفى يفتح المتصفح بعد مدير نظام عام) يعرض بيانات مستخدمين/سجلات
-          // لا علاقة له بها إطلاقاً (أسماء، أدوار، بريد إلكتروني...) بدل
-          // الاعتماد على 200 فارغة فقط — الخادم لن يرسل 200 أصلاً هنا. أوضح
-          // مثال حالياً: users لمسؤول مستشفى (راجع usersRoutes.js). نُصفّر
-          // الحالة المحلية فوراً بدل تركها معروضة كأنها حديثة.
-          if (err.status === 403) {
-            setState([]);
-          }
-          // جلسة دخول منتهية: نسجّل خروج المستخدم مرة واحدة برسالة واضحة
-          // بدل ترك كل موديول يفشل بصمت ويظهر النظام وكأنه "يعمل محلياً فقط" بلا سبب واضح
-          if (err.status === 401 && !sessionExpiredHandled) {
-            sessionExpiredHandled = true;
-            logout();
-            showToast(
-              lang === 'ar'
-                ? 'انتهت جلسة الدخول، يرجى تسجيل الدخول من جديد'
-                : 'Your session has expired — please log in again',
-              'error'
-            );
-          }
-        });
-    });
-    return () => { cancelled = true; };
-  }, [user, SYNCED_MODULES]); // eslint-disable-line react-hooks/exhaustive-deps -- نتعمّد عدم إعادة الجلب عند تغيّر lang/showToast فقط
+    // Bump the generation and clear the cache first so a new login (or a
+    // logout) never lets a previous user's in-flight response land here.
+    dataGenerationRef.current += 1;
+    moduleCacheRef.current.clear();
+    sessionExpiredHandledRef.current = false;
+    if (!user) return;
+    SYNCED_MODULES.forEach(({ key }) => { loadModule(key); });
+  }, [user, SYNCED_MODULES]); // eslint-disable-line react-hooks/exhaustive-deps -- deliberately not re-fetching just because lang/showToast changed
 
   // مزامنة الكتابة الموحّدة: تُستدعى بعد أي إضافة أو تعديل أو حذف محلي بأي موديول مربوط،
   // وترسلها إلى الباك إند الحقيقي دون إيقاف الواجهة أثناء الانتظار.
@@ -1395,6 +1444,12 @@ export function AppProvider({ children }) {
       notifications, markNotifRead, markAllNotifRead,
       systemUsers, setSystemUsers,
       hasPermission,
+      // Triggers the shared per-module loader for one SYNCED_MODULES key —
+      // a no-op if that module is already loaded or already loading.
+      // reloadModule bypasses the cache and fetches fresh (e.g. after an
+      // Excel import changes server data behind the normal optimistic-update
+      // flow). Every existing value/setter above this line is unchanged.
+      loadModule, reloadModule,
       // Clinical data
       // ملاحظة: القوائم أدناه تُعرض بعد تطبيق فلتر "المنشأة المعروضة حالياً"
       // (filterByViewingHospital) تلقائياً — أي صفحة تستهلكها من الـ Context

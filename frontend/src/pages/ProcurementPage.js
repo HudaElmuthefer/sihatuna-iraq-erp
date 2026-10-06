@@ -26,7 +26,11 @@ const PRIORITY_CONFIG = {
 const EMPTY = { poNo:'', title:'', titleEn:'', supplier:'', supplierEn:'', date:'', deliveryDate:'', totalAmount:0, status:'pending', items:1, priority:'normal', approvedBy:null };
 
 export default function ProcurementPage() {
-  const { procurement, setProcurement, user, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { procurement, setProcurement, user, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads procurement once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  React.useEffect(() => { loadModule('procurement'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 

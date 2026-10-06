@@ -26,7 +26,11 @@ const CAT_CONFIG = {
 const EMPTY = { code:'', name:'', nameEn:'', category:'medicine', unit:'Box', qty:0, minQty:0, maxQty:0, unitCost:0, supplier:'', location:'', expiry:'', status:'active' };
 
 export default function InventoryPage() {
-  const { inventory, setInventory, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule } = useApp();
+  const { inventory, setInventory, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule, loadModule } = useApp();
+
+  // Loads inventory once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('inventory'); }, [loadModule]);
   const tr = useT(lang);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;

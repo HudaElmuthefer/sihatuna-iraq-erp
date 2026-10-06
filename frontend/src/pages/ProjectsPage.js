@@ -155,7 +155,11 @@ function downloadPrimaveraXML(projectsList, lang, appNameAr, appNameEn) {
 }
 
 export default function ProjectsPage() {
-  const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, appNameAr, appNameEn } = useApp();
+  const { projects, setProjects, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, appNameAr, appNameEn, loadModule } = useApp();
+
+  // Loads projects once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('projects'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 

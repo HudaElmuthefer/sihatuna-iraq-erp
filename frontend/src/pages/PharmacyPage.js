@@ -36,7 +36,16 @@ const EMPTY_ITEM = { name:'', qty:1, unit:'Tablet', dosage:'' };
 const EMPTY_DRUG = { code:'', name:'', nameEn:'', category:'other', form:'Tablet', strength:'', manufacturer:'', unitCost:0, qty:0, minQty:10, maxQty:500, expiry:'', notes:'' };
 
 export default function PharmacyPage() {
-  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, patients, reloadModule } = useApp();
+  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, patients, reloadModule, loadModule } = useApp();
+
+  // Loads pharmacyOrders, inventory, and patients once per session, the
+  // first time a page that needs them mounts — a no-op if another page
+  // already triggered it.
+  React.useEffect(() => {
+    loadModule('pharmacyOrders');
+    loadModule('inventory');
+    loadModule('patients');
+  }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';

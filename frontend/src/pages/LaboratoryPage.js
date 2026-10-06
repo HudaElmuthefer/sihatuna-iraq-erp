@@ -72,7 +72,11 @@ const TEST_PANELS = [
 const EMPTY_PANEL_FORM = { patientName: '', patientId: '', doctorName: '', requestDate: '', priority: 'normal', panelKey: '', selectedTests: [] };
 
 export default function LaboratoryPage() {
-  const { labTests, setLabTests, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { labTests, setLabTests, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads labTests once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  React.useEffect(() => { loadModule('labTests'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';

@@ -21,6 +21,8 @@ export default function AppLogo({ size = 38, radius = 10, fontSize }) {
       <img
         src={logoUrl}
         alt="Logo"
+        width={size}
+        height={size}
         onError={() => setImgFailed(true)}
         style={{ width: size, height: size, borderRadius: radius, objectFit: 'cover', flexShrink: 0 }}
       />

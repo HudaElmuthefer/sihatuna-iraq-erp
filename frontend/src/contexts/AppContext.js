@@ -338,12 +338,18 @@ export function AppProvider({ children }) {
   // تكن (فعلاً غير مسجّل دخول) نبقى بحالة تسجيل الخروج الطبيعية بدون أي تغيير.
   useEffect(() => {
     if (user) return; // عندنا نسخة محلية فعلاً، لا حاجة للتحقق
-    api.get('/auth/me')
+    // /auth/session (not /auth/me) on purpose: a silent probe that returns
+    // 200 + null instead of 401 when there's no valid cookie — the normal
+    // case for any logged-out visitor, including every /login page load.
+    // That keeps the browser from logging a failed-resource console error
+    // on a routine, expected check. See the route's comment in authRoutes.js.
+    api.get('/auth/session')
       .then(freshUser => {
+        if (!freshUser) return; // no valid cookie — normal logged-out state, nothing to do
         localStorage.setItem('auth_user', JSON.stringify(freshUser));
         setUser(freshUser);
       })
-      .catch(() => { /* لا كوكي صالحة فعلاً — تسجيل خروج طبيعي، لا داعي لأي إجراء */ });
+      .catch(() => { /* actual network/server error — stay in the current logged-out state */ });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- نتعمّد التحقق مرة واحدة فقط عند التحميل
   const [toasts, setToasts] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

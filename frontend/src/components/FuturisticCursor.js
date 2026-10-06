@@ -222,9 +222,15 @@ export default function FuturisticCursor() {
       // sluggish, noticeably-lagging feel the slower factor used to have.
       ringX += (coreX - ringX) * 0.4;
       ringY += (coreY - ringY) * 0.4;
-      if (core) core.style.transform = `translate(${coreX}px, ${coreY}px)`;
-      if (ring) ring.style.transform = `translate(${ringX}px, ${ringY}px)`;
 
+      // Forced-reflow fix: elementFromPoint() (and getBoundingClientRect()
+      // further below) force the browser to flush layout synchronously if
+      // it's "dirty" from a style write earlier in the same frame. This
+      // read block used to run right after the core/ring transform writes
+      // below, forcing exactly that flush on every single animation frame.
+      // Reading everything first, then writing (core/ring transforms,
+      // classList toggles) after, lets the browser batch this frame's
+      // writes with the next frame's instead.
       const el = document.elementFromPoint(coreX, coreY);
       const isTextInput = !!(el && el.closest && el.closest(TEXT_INPUT_SELECTOR));
 
@@ -274,6 +280,12 @@ export default function FuturisticCursor() {
       // الكتابة. isHovering يبقى false هنا عمداً حتى لو كان العنصر تحته
       // زر/رابط تقنياً (نادر عند حافة شريط تمرير فعلي).
       const isHovering = !isTextInput && !inZone && !!(el && el.closest && el.closest(HOVER_SELECTOR));
+
+      // Write phase — every DOM write for this frame happens from here on,
+      // after every read above, so none of them can trigger the forced
+      // synchronous layout a write-then-read pattern would.
+      if (core) core.style.transform = `translate(${coreX}px, ${coreY}px)`;
+      if (ring) ring.style.transform = `translate(${ringX}px, ${ringY}px)`;
       if (ring) ring.classList.toggle('cursor-ring-hover', isHovering);
       if (core) core.classList.toggle('cursor-core-hover', isHovering);
       // فوق حقول الكتابة أو منطقة شريط تمرير: نخفي الماسح المخصص ونعيد

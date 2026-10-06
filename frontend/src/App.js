@@ -1,22 +1,20 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
-import Layout from './components/Layout';
 import ToastContainer from './components/ToastContainer';
 import ConfirmDialog from './components/ConfirmDialog';
 import ForceChangePasswordScreen from './pages/ForceChangePasswordScreen';
 import FuturisticCursor from './components/FuturisticCursor';
 import useRippleEffect from './hooks/useRippleEffect';
-// LoginPage وDashboardPage فقط يبقيان استيراداً عادياً (بلا lazy) — هما أول
-// شاشتين يراهما أي مستخدم فعلياً (قبل الدخول، وبعده مباشرة)، فتحميلهما ضمن
-// الحزمة الرئيسية يمنع أي وميض تحميل إضافي على المسار الأكثر شيوعاً. باقي
-// الصفحات الـ30 (كل موديولات ERP) كانت جميعها تُستورَد فورياً بلا استثناء —
-// يعني حزمة main.js واحدة تحمّل كل النظام دفعة واحدة حتى لمستخدم يريد فقط
-// تسجيل الدخول ورؤية اللوحة الرئيسية. React.lazy() + Suspense يقسّم كل صفحة
-// إلى ملف JS منفصل يُحمَّل فقط عند زيارتها فعلياً — قياس فعلي قبل/بعد هذا
-// التعديل موثَّق بملخص المهمة.
+// Only LoginPage stays a plain (non-lazy) import — it is the one screen an
+// unauthenticated visitor actually needs, so it belongs in the main bundle.
+// Layout (sidebar/header chrome) and every ERP page, DashboardPage included,
+// are React.lazy()-loaded: none of their code or CSS is needed to render
+// /login, and bundling them eagerly used to pull the whole 32-module system
+// into main.js just to show the login form.
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
+const Layout = lazy(() => import('./components/Layout'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const PatientsPage = lazy(() => import('./pages/PatientsPage'));
 const MedicalCodesPage = lazy(() => import('./pages/MedicalCodesPage'));
 const DoctorsPage = lazy(() => import('./pages/DoctorsPage'));

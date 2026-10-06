@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { useT } from '../translations';
@@ -9,7 +9,7 @@ import HologramAvatarWidget from '../components/holo/HologramAvatarWidget';
 import LiveECGStream from '../components/holo/LiveECGStream';
 import './SpatialCockpitDashboard.css';
 
-import { CURVED_PAGE_IMAGES } from '../assets/darkPages';
+import { CURVED_PAGE_IMAGES, CURVED_PAGE_THUMBNAILS } from '../assets/darkPages';
 import { startDragSound, stopDragSound, playSnap, playReturn, playConfirm } from '../utils/holographicSound';
 
 import {
@@ -82,7 +82,7 @@ const OrbitThumbnailNode = memo(function OrbitThumbnailNode({ item, idx, lang, o
       title={lang === 'ar' ? `اسحب للمركز أو انقر للمعاينة: ${item.title}` : `Drag to center or click: ${item.title}`}
     >
       <img
-        src={item.image}
+        src={item.thumb}
         alt={item.title}
         className="cockpit-horseshoe-screen-img"
         draggable={false}
@@ -156,6 +156,7 @@ export default function DashboardPage() {
       icon: '👥',
       route: '/patients',
       image: CURVED_PAGE_IMAGES['patients'],
+      thumb: CURVED_PAGE_THUMBNAILS['patients'],
       desc: lang === 'ar' ? 'إدارة السجلات الطبية، التاريخ الصحي، والملفات الإلكترونية' : 'Electronic Health Records & Patient Profiles',
       // Left Lower Elevated
       radialPos: { x: -350, y: -15, rot: 5, w: 205, h: 120 }
@@ -166,6 +167,7 @@ export default function DashboardPage() {
       icon: '🩺',
       route: '/doctors',
       image: CURVED_PAGE_IMAGES['doctors'],
+      thumb: CURVED_PAGE_THUMBNAILS['doctors'],
       desc: lang === 'ar' ? 'جدول مناوبات الأطباء، التخصصات السريرية، والتواجد' : 'Physicians Roster & Clinical Specialists',
       // Left Outer Mid Elevated
       radialPos: { x: -400, y: -135, rot: 4, w: 205, h: 120 }
@@ -176,6 +178,7 @@ export default function DashboardPage() {
       icon: '📅',
       route: '/appointments',
       image: CURVED_PAGE_IMAGES['appointments'],
+      thumb: CURVED_PAGE_THUMBNAILS['appointments'],
       desc: lang === 'ar' ? 'حجوزات العيادات الخارجية والعمليات المجدولة' : 'Outpatient Scheduling & Booking System',
       // Left Inner Mid Elevated
       radialPos: { x: -275, y: -90, rot: 3, w: 200, h: 118 }
@@ -186,6 +189,7 @@ export default function DashboardPage() {
       icon: '🏢',
       route: '/departments',
       image: CURVED_PAGE_IMAGES['departments'],
+      thumb: CURVED_PAGE_THUMBNAILS['departments'],
       desc: lang === 'ar' ? 'إشغال الأقسام، السعة التشغيلية، والردهات' : 'Hospital Departments & Capacity Management',
       // Left Upper Elevated
       radialPos: { x: -310, y: -205, rot: 2, w: 200, h: 118 }
@@ -196,6 +200,7 @@ export default function DashboardPage() {
       icon: '🧠',
       route: '/ai-diagnosis',
       image: CURVED_PAGE_IMAGES['ai-diagnosis'],
+      thumb: CURVED_PAGE_THUMBNAILS['ai-diagnosis'],
       desc: lang === 'ar' ? 'التحليل التنبؤي للأعراض، الصور الشعاعية، والفحوصات' : 'Predictive Clinical AI Diagnostics',
       // Top Left Crown
       radialPos: { x: -115, y: -305, rot: 1, w: 205, h: 120 }
@@ -206,6 +211,7 @@ export default function DashboardPage() {
       icon: '🏠',
       route: '/',
       image: CURVED_PAGE_IMAGES['dashboard'],
+      thumb: CURVED_PAGE_THUMBNAILS['dashboard'],
       desc: lang === 'ar' ? 'النواة المركزية للتحكم ومراقبة شبكة المستشفيات' : 'Central Hospital Intelligence Core',
       // Top Right Crown
       radialPos: { x: 115, y: -305, rot: -1, w: 205, h: 120 }
@@ -216,6 +222,7 @@ export default function DashboardPage() {
       icon: '🏷️',
       route: '/medical-codes',
       image: CURVED_PAGE_IMAGES['medical-codes'],
+      thumb: CURVED_PAGE_THUMBNAILS['medical-codes'],
       desc: lang === 'ar' ? 'دليل الترميز الطبي الدولي والتشخيصات المعتمدة' : 'WHO ICD-11 Standardized Medical Coding',
       // Right Upper Elevated
       radialPos: { x: 310, y: -205, rot: -2, w: 200, h: 118 }
@@ -226,6 +233,7 @@ export default function DashboardPage() {
       icon: '💉',
       route: '/vaccinations',
       image: CURVED_PAGE_IMAGES['vaccinations'],
+      thumb: CURVED_PAGE_THUMBNAILS['vaccinations'],
       desc: lang === 'ar' ? 'سجل اللقاحات الوطنية، الجرعات، وتتبع المناعة' : 'National Immunization & Vaccine Registry',
       // Right Inner Mid Elevated
       radialPos: { x: 275, y: -90, rot: -3, w: 200, h: 118 }
@@ -236,6 +244,7 @@ export default function DashboardPage() {
       icon: '🚑',
       route: '/ambulance',
       image: CURVED_PAGE_IMAGES['ambulance'],
+      thumb: CURVED_PAGE_THUMBNAILS['ambulance'],
       desc: lang === 'ar' ? 'إدارة أسطول الإسعاف، نقل الحالات الحرجة، والمسارات' : 'EMS Fleet Dispatch & Emergency Logistics',
       // Right Outer Mid Elevated
       radialPos: { x: 400, y: -135, rot: -4, w: 205, h: 120 }
@@ -246,6 +255,7 @@ export default function DashboardPage() {
       icon: '🏥',
       route: '/medical-leave',
       image: CURVED_PAGE_IMAGES['medical-leave'],
+      thumb: CURVED_PAGE_THUMBNAILS['medical-leave'],
       desc: lang === 'ar' ? 'إصدار التقارير الطبية الرسمية والإجازات المعتمدة' : 'Official Medical Certificates & Leaves',
       // Right Lower Elevated
       radialPos: { x: 350, y: -15, rot: -5, w: 205, h: 120 }
@@ -317,6 +327,11 @@ export default function DashboardPage() {
   };
 
   return (
+    // reducedMotion="user" makes every motion.* animation below instant
+    // (not merely faster) for anyone with the OS "reduce motion"
+    // preference set, without requiring a transition/animate override on
+    // each individual motion component.
+    <MotionConfig reducedMotion="user">
     <div className="cockpit-wrapper">
 
       {/* Scanlines, Cyber Neon Laser Rain & Ambient Glow Backgrounds */}
@@ -586,5 +601,6 @@ export default function DashboardPage() {
 
       </div>
     </div>
+    </MotionConfig>
   );
 }

@@ -107,7 +107,7 @@ export function printCombined(title, items, appNameAr) {
 }
 
 export default function ResultsPage() {
-  const { lang, appNameAr, appNameEn, showToast } = useApp();
+  const { lang, appNameAr, appNameEn, showToast, doctors, loadModule } = useApp();
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 
   const [search, setSearch] = useState('');
@@ -118,7 +118,6 @@ export default function ResultsPage() {
   const [loadingResults, setLoadingResults] = useState(false);
   const [selectedLabIds, setSelectedLabIds] = useState(new Set());
   const [selectedRadIds, setSelectedRadIds] = useState(new Set());
-  const [doctors, setDoctors] = useState([]);
 
   // ── إصلاح: القائمة المنسدلة لنتائج بحث المريض كانت `position:absolute`
   // عادية داخل تدفق الصفحة — بالوضع الليلي كل صفحة موجَّهة (Outlet) تُلَفّ
@@ -147,13 +146,13 @@ export default function ResultsPage() {
     };
   }, [matchingPatients.length]);
 
-  // Same issue as `patients` above: the app-wide `doctors` context array is
-  // stale demo data, not synced with the real database. Fetch it directly
-  // once on mount so doctor-phone lookups (for the WhatsApp send buttons)
-  // actually match real records.
+  // Doctor-phone lookups (for the WhatsApp send buttons) need the full
+  // doctors list — load it through the shared cached loader instead of
+  // this page's own request, so a visit here reuses whatever's already
+  // loaded (or in flight) for any other page instead of fetching it again.
   useEffect(() => {
-    api.get('/doctors').then((data) => setDoctors(Array.isArray(data) ? data : [])).catch((err) => { setDoctors([]); showToast(err.message, 'error'); });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    loadModule('doctors');
+  }, [loadModule]);
 
   // Live search against the real backend (uses the indexed name/phone
   // columns via pgCrud's ?search= support) — NOT the app-wide `patients`

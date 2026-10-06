@@ -30,3 +30,33 @@ export const CURVED_PAGE_IMAGES = {
   'medical-leave': medicalLeave,
   'ai-diagnosis': aiDiagnosis,
 };
+
+// Small 320x213 variants of the exact same images, for the 10 orbiting
+// thumbnails (displayed at ~205x120 max — see DashboardPage.js's
+// curvedThumbnails radialPos.w/h). The full 800x533 images above stay in
+// use only for the single enlarged preview window, which actually needs
+// that resolution; rendering all ten tiny orbit nodes from the full-size
+// files was costing ~1.6 MiB of unused image data on every dashboard load.
+import dashboardThumb from './page-dashboard-thumb.webp';
+import patientsThumb from './page-patients-thumb.webp';
+import medicalCodesThumb from './page-medical-codes-thumb.webp';
+import doctorsThumb from './page-doctors-thumb.webp';
+import appointmentsThumb from './page-appointments-thumb.webp';
+import departmentsThumb from './page-departments-thumb.webp';
+import vaccinationsThumb from './page-vaccinations-thumb.webp';
+import ambulanceThumb from './page-ambulance-thumb.webp';
+import medicalLeaveThumb from './page-medical-leave-thumb.webp';
+import aiDiagnosisThumb from './page-ai-diagnosis-thumb.webp';
+
+export const CURVED_PAGE_THUMBNAILS = {
+  dashboard: dashboardThumb,
+  patients: patientsThumb,
+  'medical-codes': medicalCodesThumb,
+  doctors: doctorsThumb,
+  appointments: appointmentsThumb,
+  departments: departmentsThumb,
+  vaccinations: vaccinationsThumb,
+  ambulance: ambulanceThumb,
+  'medical-leave': medicalLeaveThumb,
+  'ai-diagnosis': aiDiagnosisThumb,
+};

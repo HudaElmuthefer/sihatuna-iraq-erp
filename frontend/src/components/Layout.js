@@ -14,6 +14,10 @@ import CentralHolographicWorkspace from './holo/CentralHolographicWorkspace';
 import { isPrintButtonHidden } from '../config/printConfig';
 import './Layout.dark.css';
 import '../styles/holographic-dark.css';
+// Sidebar/header/dashboard-hero rules split out of index.css so they ship
+// in this lazy-loaded chunk instead of the main bundle — see the file's
+// own header comment for why.
+import '../styles/layout-chrome.css';
 // ملاحظة: صورة القائمة الجانبية المرجعية (كانت مستوردة هنا سابقاً باسم
 // sidebarDarkV3، من components/dark/ChatGPT Image Aug 30, 2026, 05_36_27 PM
 // (3).png) أُزيلت من الرندر نهائياً. السبب: الصورة بأكملها عبارة عن عناصر

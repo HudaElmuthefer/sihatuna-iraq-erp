@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
 import { api } from '../api';
 import { useT } from '../translations';
@@ -327,6 +327,11 @@ export default function DashboardPage() {
   };
 
   return (
+    // reducedMotion="user" makes every motion.* animation below instant
+    // (not merely faster) for anyone with the OS "reduce motion"
+    // preference set, without requiring a transition/animate override on
+    // each individual motion component.
+    <MotionConfig reducedMotion="user">
     <div className="cockpit-wrapper">
 
       {/* Scanlines, Cyber Neon Laser Rain & Ambient Glow Backgrounds */}
@@ -596,5 +601,6 @@ export default function DashboardPage() {
 
       </div>
     </div>
+    </MotionConfig>
   );
 }

@@ -2914,3 +2914,19 @@
 [data-theme="light"] .cockpit-orb-right {
   background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 70%) !important;
 }
+
+/* Respect the OS-level "reduce motion" preference. None of the animations
+   in this file (scanlines, laser-rain beams, orbiting thumbnails, rotating
+   3D elements, etc.) checked for it before — this blanket override turns
+   every animation/transition in the dashboard near-instant instead of
+   trying to catch each of the ~45 individual animation rules above one by
+   one. No effect on users who haven't set this preference. */
+@media (prefers-reduced-motion: reduce) {
+  .cockpit-wrapper *,
+  .cockpit-wrapper *::before,
+  .cockpit-wrapper *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

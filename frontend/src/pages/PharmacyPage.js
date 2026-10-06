@@ -36,7 +36,7 @@ const EMPTY_ITEM = { name:'', qty:1, unit:'Tablet', dosage:'' };
 const EMPTY_DRUG = { code:'', name:'', nameEn:'', category:'other', form:'Tablet', strength:'', manufacturer:'', unitCost:0, qty:0, minQty:10, maxQty:500, expiry:'', notes:'' };
 
 export default function PharmacyPage() {
-  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, patients } = useApp();
+  const { pharmacyOrders, setPharmacyOrders, inventory, setInventory, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, patients, reloadModule } = useApp();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';
@@ -546,12 +546,9 @@ export default function PharmacyPage() {
           title={ar ? 'استيراد وصفات طبية من Excel' : 'Import Prescriptions from Excel'}
           lang={lang}
           onClose={() => setShowImport(false)}
-          onImported={async () => {
-            try {
-              const fresh = await api.get('/pharmacyOrders');
-              if (Array.isArray(fresh)) setPharmacyOrders(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
-          }}
+          // loadModule/reloadModule never rejects — a failed request just
+          // leaves pharmacyOrders at its previous value, same as before.
+          onImported={() => reloadModule('pharmacyOrders')}
         />
       )}
 

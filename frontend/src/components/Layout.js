@@ -461,12 +461,12 @@ export default function Layout() {
               <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.95)' : '#14283d', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
               <div style={{ color: isDark ? 'rgba(235, 248, 255, 0.55)' : '#4b6478', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.jobTitle || user?.role}</div>
             </div>
-            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 16, padding: 4 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} aria-label={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 16, padding: 4 }}>🚪</button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: user?.color || '#1a6bab', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 12 }}>{user?.avatar || 'م'}</div>
-            <button onClick={handleLogout} title={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 14 }}>🚪</button>
+            <button onClick={handleLogout} title={tr('btn_logout')} aria-label={tr('btn_logout')} className="sidebar-control-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.45)' : '#5a7185', fontSize: 14 }}>🚪</button>
           </div>
         )}
       </div>
@@ -500,7 +500,7 @@ export default function Layout() {
           overflow: 'hidden',
           zIndex: 100 }} className={`desktop-sidebar no-print ${isDark ? 'sidebar-glow-frame' : 'sidebar-glow-frame-light'}`}>
           {/* Collapse toggle */}
-          <button onClick={toggleSidebar} className="sidebar-control-btn" style={{
+          <button onClick={toggleSidebar} aria-label={sidebarCollapsed ? (lang === 'ar' ? 'توسيع الشريط الجانبي' : 'Expand sidebar') : (lang === 'ar' ? 'طيّ الشريط الجانبي' : 'Collapse sidebar')} className="sidebar-control-btn" style={{
             position: 'absolute', [lang === 'ar' ? 'left' : 'right']: -14, top: 72, width: 28, height: 28,
             borderRadius: '50%', background: 'var(--primary)', border: '2px solid var(--border-glass)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -540,15 +540,15 @@ export default function Layout() {
             padding: '0 20px', flexShrink: 0, zIndex: 50 }}>
           {/* Left: back button + hamburger + search */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 0 }}>
-            <button onClick={() => setMobileOpen(true)} className="mobile-menu-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-primary)', display: 'none' }}>☰</button>
+            <button onClick={() => setMobileOpen(true)} aria-label={lang === 'ar' ? 'فتح القائمة الجانبية' : 'Open sidebar menu'} className="mobile-menu-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-primary)', display: 'none' }}>☰</button>
             {/* Back button */}
-            <button onClick={() => navigate(-1)} title={tr('btn_back')} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate(-1)} title={tr('btn_back')} aria-label={tr('btn_back')} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               {/* أيقونة بدل الرمز النصي "←" الأصلي — نفس الاتجاه بالضبط بغض
                  النظر عن اللغة، لا تغيير سلوكي، فقط استبدال بصري. */}
               <FaArrowLeft />
             </button>
             {/* Home button */}
-            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
+            <button onClick={() => navigate('/')} title={lang === 'ar' ? 'الرئيسية' : 'Home'} aria-label={lang === 'ar' ? 'الرئيسية' : 'Home'} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width:36, height:36, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--bg-primary)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-primary)', flexShrink:0 }}>
               <FaHome />
             </button>
             <div ref={searchWrapRef} style={{ position:'relative', flex: '1 1 auto', minWidth: 0, maxWidth: 420 }} className="header-search-wrap">
@@ -686,10 +686,10 @@ export default function Layout() {
             )}
             {/* Theme — فاتح/داكن فقط. */}
             <div className={`theme-switcher ${isDark ? 'theme-switcher-dark' : 'theme-switcher-light'}`} role="group" aria-label={lang === 'ar' ? 'اختيار الوضع البصري' : 'Theme mode'}>
-              <button type="button" onClick={() => setTheme('light')} className={`theme-switcher-btn ${theme === 'light' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'فاتح' : 'Light'} aria-pressed={theme === 'light'}>
+              <button type="button" onClick={() => setTheme('light')} className={`theme-switcher-btn ${theme === 'light' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'فاتح' : 'Light'} aria-label={lang === 'ar' ? 'فاتح' : 'Light'} aria-pressed={theme === 'light'}>
                 <FaSun />
               </button>
-              <button type="button" onClick={() => setTheme('dark')} className={`theme-switcher-btn ${theme === 'dark' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'داكن' : 'Dark'} aria-pressed={theme === 'dark'}>
+              <button type="button" onClick={() => setTheme('dark')} className={`theme-switcher-btn ${theme === 'dark' ? 'theme-switcher-btn-active' : ''}`} title={lang === 'ar' ? 'داكن' : 'Dark'} aria-label={lang === 'ar' ? 'داكن' : 'Dark'} aria-pressed={theme === 'dark'}>
                 <FaMoon />
               </button>
             </div>
@@ -702,6 +702,7 @@ export default function Layout() {
                 className="header-icon-btn-dark"
                 style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}
                 title={soundMuted ? (lang === 'ar' ? 'تشغيل الأصوات' : 'Unmute sounds') : (lang === 'ar' ? 'كتم الأصوات' : 'Mute sounds')}
+                aria-label={soundMuted ? (lang === 'ar' ? 'تشغيل الأصوات' : 'Unmute sounds') : (lang === 'ar' ? 'كتم الأصوات' : 'Mute sounds')}
                 aria-pressed={soundMuted}
               >
                 {soundMuted ? <FaVolumeMute /> : <FaVolumeUp />}
@@ -735,7 +736,7 @@ export default function Layout() {
                لقصّ الشارة، وليس أي overflow أو z-index. الـwrapper نفسه بلا
                clip-path فتظهر الشارة كاملة فوق حافة الزر تماماً كالتصميم. */}
             <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={() => setShowNotif(p => !p)} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+              <button onClick={() => setShowNotif(p => !p)} aria-label={lang === 'ar' ? `الإشعارات${unread > 0 ? ` (${unread} غير مقروء)` : ''}` : `Notifications${unread > 0 ? ` (${unread} unread)` : ''}`} className={isDark ? 'header-icon-btn-dark' : 'header-icon-btn-light'} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                 <FaBell />
               </button>
               {unread > 0 && (

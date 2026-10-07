@@ -99,33 +99,17 @@ export default function DashboardPage() {
   const {
     lang,
     user,
-    patients = [],
-    doctors = [],
-    appointments = [],
-    departments = [],
     hospitals = [],
-    loadModule
   } = useApp();
 
-  // Loads the datasets this dashboard reads once per session, the first
-  // time a page that needs them mounts — a no-op if another page already
-  // triggered it.
+  // All 5 KPI numbers below come from one aggregate endpoint instead of
+  // loading the full patients/doctors/appointments/wards/admissions
+  // datasets (~1.1 MiB) just to read a count or sum off each — see
+  // backend/routes/dashboardRoutes.js for the equivalent COUNT/SUM queries.
+  const [summary, setSummary] = useState(null);
   useEffect(() => {
-    loadModule('patients');
-    loadModule('doctors');
-    loadModule('appointments');
-    loadModule('departments');
-  }, [loadModule]);
-
-  // The lab-tests stat only needs a count, not the full record set (20,000+
-  // rows, several MB) — ask the server for just the total via the existing
-  // pagination support (?page=&limit=) instead of going through the shared
-  // loadModule cache, which would pull every field of every row into memory
-  // for a single number.
-  const [labTestsCount, setLabTestsCount] = useState(0);
-  useEffect(() => {
-    api.get('/labTests?page=1&limit=1')
-      .then(res => setLabTestsCount(res?.total || 0))
+    api.get('/dashboard/summary')
+      .then(setSummary)
       .catch(() => {});
   }, []);
 
@@ -143,31 +127,15 @@ export default function DashboardPage() {
   }, [magnifiedItem]);
 
   // ── ERP Real Data Aggregations ────────────────────────────────────────────
-  const today = new Date().toISOString().split('T')[0];
-  const todayApts = useMemo(() => appointments.filter(a => a.date === today), [appointments, today]);
-  const activeDoctors = useMemo(() => doctors.filter(d => d.status === 'active' || !d.status), [doctors]);
-  const totalPatientsCount = patients.length;
-
-  // ── إصلاح: كانت السعة السريرية تُحسَب من حقول (d.beds/d.capacity/d.occupied)
-  // غير موجودة إطلاقاً بنموذج الأقسام (راجع DepartmentsPage.js) — فتسقط دائماً
-  // على القيم الاحتياطية الوهمية (20 سريراً و78% إشغال ثابتَين لكل قسم). البيانات
-  // الحقيقية للأسرّة والإشغال موجودة فعلاً بمسارَي /wards و/admissions (نفس
-  // المصدر الذي تستخدمه WardsPage.js) — نجلبها هنا مباشرة بدل اختلاق حقول.
-  const [wardsData, setWardsData] = useState(null);
-  const [admissionsData, setAdmissionsData] = useState(null);
-  useEffect(() => {
-    Promise.all([api.get('/wards'), api.get('/admissions')])
-      .then(([wardsRes, admissionsRes]) => {
-        setWardsData(Array.isArray(wardsRes) ? wardsRes : []);
-        setAdmissionsData(Array.isArray(admissionsRes) ? admissionsRes : []);
-      })
-      .catch(() => { setWardsData([]); setAdmissionsData([]); });
-  }, []);
-
-  const totalBeds = useMemo(() => (wardsData || []).reduce((acc, w) => acc + (+w.bedCount || 0), 0), [wardsData]);
-  const occupiedBeds = useMemo(() => (admissionsData || []).filter(a => a.status === 'admitted').length, [admissionsData]);
-  const bedDataReady = wardsData !== null && admissionsData !== null;
-  const bedOccupancyRate = bedDataReady && totalBeds > 0 ? ((occupiedBeds / totalBeds) * 100).toFixed(1) : null;
+  // All read from the single /dashboard/summary fetch above.
+  const totalPatientsCount = summary?.totalPatients ?? 0;
+  const activeDoctorsCount = summary?.activeDoctors ?? 0;
+  const todayApptsCount = summary?.todayAppointments ?? 0;
+  const labTestsCount = summary?.dailyLabTests ?? 0;
+  const bedDataReady = summary !== null;
+  const totalBeds = summary?.bedOccupancy?.totalBeds ?? 0;
+  const occupiedBeds = summary?.bedOccupancy?.occupiedBeds ?? 0;
+  const bedOccupancyRate = summary?.bedOccupancy?.rate ?? null;
 
   // ── 10 Curved Holographic Page Screens (Compact Orbit Around Avatar) ──────
   // Tightly contracted orbit close to avatar box with 100% zero overlap
@@ -511,7 +479,7 @@ export default function DashboardPage() {
               <FaUserMd className="text-emerald-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{activeDoctors.length}</span>
+              <span>{activeDoctorsCount}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'طبيب وممرض' : 'active'}</span>
             </div>
           </div>
@@ -527,7 +495,7 @@ export default function DashboardPage() {
               <FaCalendarAlt className="text-sky-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{todayApts.length}</span>
+              <span>{todayApptsCount}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'موعد' : 'appts'}</span>
             </div>
           </div>

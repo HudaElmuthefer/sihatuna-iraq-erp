@@ -77,7 +77,6 @@ jobs:
           PG_PASSWORD: postgres
           PG_DATABASE: sihatuna_iraq_test
         run: node run-migrations.js
-        continue-on-error: true # نفس منطق الخطوة السابقة — لا نوقف كل الـ CI لو فشلت
 
       - name: تشغيل اختبارات الباك إند
         working-directory: backend

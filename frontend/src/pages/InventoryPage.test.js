@@ -15,6 +15,7 @@ jest.mock('../hooks/useServerPagination', () => jest.fn());
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     inventory: [],
     setInventory: jest.fn(),
     lang: 'ar',

@@ -23,6 +23,7 @@ const renderPage = () => render(<MemoryRouter><AmbulancePage /></MemoryRouter>);
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     ambulanceData: {
       vehicles: [
         { id: 1, code: 'AMB-01', plate: '12345', type: 'advanced', status: 'available', crew: '', location: '' },

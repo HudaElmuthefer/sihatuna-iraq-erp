@@ -16,6 +16,7 @@ const renderPage = () => render(<MemoryRouter><PharmacyPage /></MemoryRouter>);
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     pharmacyOrders: [
       { id: 1, prescNo: 'RX-2026-0001', patientName: 'مريض كامل البيانات', doctorName: 'د. أحمد', date: '2026-07-01', items: [], status: 'dispensed', totalCost: 1000 },
       // Missing prescNo AND status entirely — the real-data shape (all 2305

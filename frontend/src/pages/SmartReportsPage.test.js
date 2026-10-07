@@ -10,6 +10,7 @@ import SmartReportsPage from './SmartReportsPage';
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     showToast: jest.fn(),
     lang: 'ar',
     patients: [],

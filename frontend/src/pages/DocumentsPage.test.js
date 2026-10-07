@@ -10,6 +10,7 @@ import DocumentsPage from './DocumentsPage';
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     documents: [
       { id: 1, docNo: 'IN-2026-0001', title: 'وثيقة كاملة البيانات', from: 'وزارة الصحة', subject: 'تعميم', type: 'incoming', status: 'pending', priority: 'normal', date: '2026-07-01' },
       // Missing title entirely.

@@ -60,7 +60,11 @@ const CONDITIONS = {
 const EMPTY = { assetNo:'', name:'', nameEn:'', category:'other', brand:'', model:'', serial:'', purchaseDate:'', purchaseCost:0, currentValue:0, location:'', status:'active', condition:'good', warranty:'', lastMaintenance:'', nextMaintenance:'', responsiblePerson:'', notes:'' };
 
 export default function AssetsPage() {
-  const { assets, setAssets, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { assets, setAssets, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads assets once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('assets'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const [search, setSearch] = useState('');

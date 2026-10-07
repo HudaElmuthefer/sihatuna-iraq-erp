@@ -103,9 +103,31 @@ export default function DashboardPage() {
     doctors = [],
     appointments = [],
     departments = [],
-    labTests = [],
-    hospitals = []
+    hospitals = [],
+    loadModule
   } = useApp();
+
+  // Loads the datasets this dashboard reads once per session, the first
+  // time a page that needs them mounts — a no-op if another page already
+  // triggered it.
+  useEffect(() => {
+    loadModule('patients');
+    loadModule('doctors');
+    loadModule('appointments');
+    loadModule('departments');
+  }, [loadModule]);
+
+  // The lab-tests stat only needs a count, not the full record set (20,000+
+  // rows, several MB) — ask the server for just the total via the existing
+  // pagination support (?page=&limit=) instead of going through the shared
+  // loadModule cache, which would pull every field of every row into memory
+  // for a single number.
+  const [labTestsCount, setLabTestsCount] = useState(0);
+  useEffect(() => {
+    api.get('/labTests?page=1&limit=1')
+      .then(res => setLabTestsCount(res?.total || 0))
+      .catch(() => {});
+  }, []);
 
   const tr = useT(lang);
 
@@ -473,7 +495,7 @@ export default function DashboardPage() {
               <FaFlask className="text-purple-400 text-xs" />
             </div>
             <div className="cockpit-kpi-value">
-              <span>{labTests.length}</span>
+              <span>{labTestsCount}</span>
               <span className="cockpit-kpi-unit">{lang === 'ar' ? 'فحص' : 'tests'}</span>
             </div>
           </div>

@@ -14,7 +14,11 @@ const BANNER_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)';
 const empty = { patientName: '', department: '', priority: 'normal', notes: '' };
 
 export default function QueuePage() {
-  const { lang, showToast, syncToServer, confirmDialog, user, departments, filterByViewingHospital, hospitals, multiHospitalEnabled } = useApp();
+  const { lang, showToast, syncToServer, confirmDialog, user, departments, filterByViewingHospital, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads departments once per session, the first time a page that needs
+  // them mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('departments'); }, [loadModule]);
   const L = (ar, en) => lang === 'ar' ? ar : en;
 
   const [tickets, setTickets] = useState([]);

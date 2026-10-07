@@ -38,7 +38,20 @@ export default function CRMPage() {
     crmCampaigns, addCrmCampaign, buildCrmCampaignTargets,
     crmCampaignTargets,
     hospitals, multiHospitalEnabled,
+    loadModule,
   } = useApp();
+
+  // Loads the datasets this page reads once per session, the first time a
+  // page that needs them mounts — a no-op if another page already
+  // triggered it.
+  React.useEffect(() => {
+    loadModule('patients');
+    loadModule('crmFollowUps');
+    loadModule('crmSegments');
+    loadModule('crmInteractions');
+    loadModule('crmCampaigns');
+    loadModule('crmCampaignTargets');
+  }, [loadModule]);
 
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => (lang === 'ar' ? ar : en);

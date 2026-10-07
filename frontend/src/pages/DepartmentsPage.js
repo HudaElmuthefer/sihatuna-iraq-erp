@@ -4,7 +4,6 @@ import { useApp, translateDays } from '../contexts/AppContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
-import { api } from '../api';
 import { FaFileExcel } from 'react-icons/fa';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg,#0f1923,#1a2940)';
@@ -12,7 +11,14 @@ const BANNER_GRADIENT = 'linear-gradient(135deg,#0f1923,#1a2940)';
 const emptyDept = { name: '', nameEn: '', icon: '🏥', description: '', head: '', color: '#1a6bab', status: 'active' };
 
 export default function DepartmentsPage() {
-  const { showToast, lang, departments, setDepartments, doctors: allDoctors, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { showToast, lang, departments, setDepartments, doctors: allDoctors, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadModule, loadModule } = useApp();
+
+  // Loads departments and doctors once per session, the first time a page
+  // that needs them mounts — a no-op if another page already triggered it.
+  React.useEffect(() => {
+    loadModule('departments');
+    loadModule('doctors');
+  }, [loadModule]);
   const tr = useT(lang);
   const [selected, setSelected] = useState(null);
   const [bookingDoctor, setBookingDoctor] = useState(null);
@@ -278,12 +284,9 @@ export default function DepartmentsPage() {
           title={lang === 'ar' ? 'استيراد أقسام من Excel' : 'Import Departments from Excel'}
           lang={lang}
           onClose={() => setShowImport(false)}
-          onImported={async () => {
-            try {
-              const fresh = await api.get('/departments');
-              if (Array.isArray(fresh)) setDepartments(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً */ }
-          }}
+          // loadModule/reloadModule never rejects — a failed request just
+          // leaves departments at its previous value, same as before.
+          onImported={() => reloadModule('departments')}
         />
       )}
 

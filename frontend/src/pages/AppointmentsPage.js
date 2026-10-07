@@ -9,7 +9,6 @@ import DateRangeFilter from '../components/DateRangeFilter';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ExcelExportButton from '../components/ExcelExportButton';
 import PageBanner from '../components/PageBanner';
-import { api } from '../api';
 
 const BANNER_GRADIENT = 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)';
 
@@ -21,7 +20,16 @@ const statusConfig = {
 };
 
 export default function AppointmentsPage() {
-  const { lang, addToast, appointments: apts, setAppointments: setApts, doctors, patients, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital } = useApp();
+  const { lang, addToast, appointments: apts, setAppointments: setApts, doctors, patients, syncToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, reloadModule, loadModule } = useApp();
+
+  // Loads appointments, doctors, and patients once per session, the first
+  // time a page that needs them mounts — a no-op if another page already
+  // triggered it.
+  React.useEffect(() => {
+    loadModule('appointments');
+    loadModule('doctors');
+    loadModule('patients');
+  }, [loadModule]);
   const tr = useT(lang);
   const ar = lang === 'ar';
   const visitTypes = [tr('visit_checkup'), tr('visit_followup'), tr('visit_consult'), tr('visit_emergency')];
@@ -134,12 +142,9 @@ export default function AppointmentsPage() {
           title={ar ? 'استيراد مواعيد من Excel' : 'Import Appointments from Excel'}
           lang={lang}
           onClose={() => setShowImport(false)}
-          onImported={async () => {
-            try {
-              const fresh = await api.get('/appointments');
-              if (Array.isArray(fresh)) setApts(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
-          }}
+          // loadModule/reloadModule never rejects — a failed request just
+          // leaves appointments at its previous value, same as before.
+          onImported={() => reloadModule('appointments')}
         />
       )}
 

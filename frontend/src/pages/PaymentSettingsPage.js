@@ -12,7 +12,12 @@ const TYPE_LABELS = {
 };
 
 export default function PaymentSettingsPage() {
-  const { lang, showToast, paymentGateways, togglePaymentGateway, savePaymentCredentials } = useApp();
+  const { lang, showToast, paymentGateways, togglePaymentGateway, savePaymentCredentials, loadModule } = useApp();
+
+  // Loads payment gateway settings (key 'admin/payment-gateways') once per
+  // session, the first time a page that needs them mounts — a no-op if
+  // another page already triggered it.
+  React.useEffect(() => { loadModule('admin/payment-gateways'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => (lang === 'ar' ? ar : en);
   const [editing, setEditing] = useState(null);

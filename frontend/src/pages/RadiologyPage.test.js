@@ -10,6 +10,7 @@ import RadiologyPage from './RadiologyPage';
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     radiology: [
       { id: 1, reqNo: 'RAD-2026-0001', patientName: 'مريض كامل البيانات', modality: 'xray', bodyPart: 'الصدر', requestDate: '2026-07-01', status: 'pending', priority: 'normal', images: 0 },
       // Missing reqNo entirely — the exact shape that crashed the page.

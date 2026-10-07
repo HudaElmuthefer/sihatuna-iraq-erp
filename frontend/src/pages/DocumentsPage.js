@@ -33,7 +33,11 @@ const TYPE_CONFIG = {
 const EMPTY = { docNo: '', type: 'incoming', title: '', from: '', date: '', receivedDate: '', priority: 'normal', status: 'pending', subject: '', assignedTo: '', tags: [] };
 
 export default function DocumentsPage() {
-  const { documents, setDocuments, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { documents, setDocuments, lang, showToast, user, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads documents once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  React.useEffect(() => { loadModule('documents'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 

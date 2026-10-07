@@ -27,6 +27,7 @@ jest.mock('../hooks/useServerPagination', () => jest.fn());
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     assets: [],
     setAssets: jest.fn(),
     lang: 'ar',

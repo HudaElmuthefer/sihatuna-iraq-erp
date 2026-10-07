@@ -54,7 +54,15 @@ const EMPTY_VEH  = { code:'', plate:'', type:'advanced', model:'', crew:'', stat
 const EMPTY_MISS = { missionNo:'', vehicleId:'', type:'emergency', callTime:'', address:'', patient:'', status:'active', crew:'', notes:'' };
 
 export default function AmbulancePage() {
-  const { ambulanceData, setAmbulanceData, lang, showToast, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user } = useApp();
+  const { ambulanceData, setAmbulanceData, lang, showToast, syncToServer, confirmDialog, filterByViewingHospital, hospitals, multiHospitalEnabled, user, loadModule } = useApp();
+
+  // Loads ambulance vehicles and missions once per session, the first time
+  // a page that needs them mounts — a no-op if another page already
+  // triggered it.
+  useEffect(() => {
+    loadModule('ambulanceVehicles');
+    loadModule('ambulanceMissions');
+  }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
 

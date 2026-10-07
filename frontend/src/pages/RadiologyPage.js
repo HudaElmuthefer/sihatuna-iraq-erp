@@ -30,7 +30,11 @@ const STATUSES = {
 const EMPTY = { reqNo:'', patientName:'', patientId:'', doctorName:'', modality:'xray', bodyPart:'', requestDate:'', examDate:'', reportDate:'', status:'pending', priority:'normal', technician:'', radiologist:'', findings:'', impression:'', images:0 };
 
 export default function RadiologyPage() {
-  const { radiology, setRadiology, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { radiology, setRadiology, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+
+  // Loads radiology once per session, the first time a page that needs it
+  // mounts — a no-op if another page already triggered it.
+  React.useEffect(() => { loadModule('radiology'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';

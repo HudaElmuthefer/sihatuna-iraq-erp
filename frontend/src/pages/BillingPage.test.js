@@ -9,6 +9,7 @@ import BillingPage from './BillingPage';
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     lang: 'ar',
     showToast: jest.fn(),
     patients: [

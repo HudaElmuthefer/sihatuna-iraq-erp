@@ -30,7 +30,11 @@ const sevLabelAr = (s) => ({ mild: 'خفيفة', moderate: 'متوسطة', sever
 const sevLabelEn = (s) => ({ mild: 'Mild', moderate: 'Moderate', severe: 'Severe' }[s] || (s || 'Unspecified'));
 
 export default function AllergyCheckPage() {
-  const { lang, showToast, patients } = useApp();
+  const { lang, showToast, patients, loadModule } = useApp();
+
+  // Loads patients once per session, the first time a page that needs them
+  // mounts — a no-op if another page already triggered it.
+  useEffect(() => { loadModule('patients'); }, [loadModule]);
   const tr = useT(lang);
   const L = (ar, en) => (lang === 'ar' ? ar : en);
 

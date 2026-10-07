@@ -10,6 +10,7 @@ import ProcurementPage from './ProcurementPage';
 
 jest.mock('../contexts/AppContext', () => ({
   useApp: () => ({
+    loadModule: jest.fn(),
     procurement: [
       { id: 1, poNo: 'PO-2026-0001', title: 'أمر شراء كامل البيانات', supplier: 'شركة التوريدات', date: '2026-07-01', status: 'pending', priority: 'normal', totalAmount: 1000, items: 1 },
       // Missing poNo entirely.

@@ -27,6 +27,8 @@ const DOCTOR_COLUMNS = [...DEFAULT_COLUMNS, { field: 'specialization', column: '
 const registerExcelImport = require('./excelImportRoutes');
 const { importLimiter } = require('../config/rateLimiters');
 const { pool } = require('../config/database');
+const auth = require('../middleware/auth');
+const requirePermission = require('../middleware/requirePermission');
 
 const registerAllModules = (router) => {
   // ── STANDARD CRUD COLLECTIONS (db.json) ───────────────────────────────────────
@@ -430,6 +432,41 @@ const registerAllModules = (router) => {
       { header: 'النتيجة', example: '10 10^9/L (طبيعي: 4.0–10.0)' },
       { header: 'ملاحظات', example: '' },
     ],
+  });
+
+  // ── إضافة: رقم الطلب التالي لطلبات المختبر (reqNo) ────────────────────────
+  // LaboratoryPage.js يحتاج أعلى تسلسل reqNo مستخدَم هذا العام (نمط
+  // LAB-{year}-{seq}) لتوليد رقم طلب جديد لا يتكرر، سواء عند إضافة طلب واحد
+  // أو إنشاء دفعة من حزمة فحوصات (TEST_PANELS). كان هذا يتطلّب جلب كل
+  // سجلات labTests (20,000+ سجل، ~5.76 ميجابايت) فقط لحساب رقم واحد. هذا
+  // المسار يحسبها على الخادم ويُعيد الرقم فقط — مسجَّل عمداً *قبل* استدعاء
+  // pgCrud(router, 'labTests', ...) بالأسفل، لتفادي تعارض GET /labTests/:id
+  // مع GET /labTests/next-req-no (نفس القاعدة المتبعة لكل موديول بهذا الملف).
+  // نفس فلترة hospitalScoped المستخدمة بتسجيل pgCrud لهذا الموديول أدناه —
+  // إدمن بلا hospitalId (مستوى الوزارة) يرى تسلسل كل المنشآت مجتمعة، بالضبط
+  // كما كان الحساب القديم على الفرونت إند (كان يفحص كل السجلات بلا فلترة
+  // لهذا الحساب أيضاً).
+  router.get('/labTests/next-req-no', auth, requirePermission('laboratory'), async (req, res, next) => {
+    try {
+      const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+      const prefix = `LAB-${year}-`;
+      const conditions = [`data->>'reqNo' LIKE $1`];
+      const params = [`${prefix}%`];
+      if (req.user?.hospitalId) {
+        params.push(req.user.hospitalId);
+        conditions.push(`data->>'hospitalId' = $${params.length}`);
+      }
+      const result = await pool.query(
+        `SELECT data->>'reqNo' AS req_no FROM lab_tests WHERE ${conditions.join(' AND ')}`,
+        params
+      );
+      let maxSeq = 0;
+      for (const row of result.rows) {
+        const v = parseInt(row.req_no.slice(prefix.length), 10);
+        if (Number.isFinite(v) && v > maxSeq) maxSeq = v;
+      }
+      res.json({ maxSeq });
+    } catch (err) { next(err); }
   });
 
   // ── إضافة: استيراد Excel لطلبات الأشعة والتصوير الطبي (radiology) ─────────
@@ -1433,7 +1470,15 @@ const registerAllModules = (router) => {
   pgCrud(router, 'labTests', collectionSchemas.labTests, [
     { field: 'status', column: 'status' },
     { field: 'priority', column: 'priority' },
-  ], 'lab_tests', { hospitalScoped: true, permission: 'laboratory', extraFilterFields: ['status', 'priority'] });
+  ], 'lab_tests', {
+    hospitalScoped: true, permission: 'laboratory', extraFilterFields: ['status', 'priority', 'category'],
+    // Added so LaboratoryPage.js can page through this table server-side
+    // (20,000+ rows) instead of fetching everything — these match exactly
+    // the fields its own search box and date-range filter already used
+    // client-side, just evaluated on the server now.
+    searchFields: ['patientName', 'reqNo', 'testType'],
+    dateRangeField: 'requestDate',
+  });
   pgCrud(router, 'radiology', collectionSchemas.radiology, [
     { field: 'status', column: 'status' },
     { field: 'modality', column: 'modality' },

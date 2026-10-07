@@ -54,7 +54,12 @@ const COLORS = ['#1a6bab','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#ef
 const SETTINGS_TAB_KEYS = ['users', 'appearance', 'system', 'print', 'logo', 'appname', 'hospitals', 'ai', 'backups', 'updates', 'recycle', 'about'];
 
 export default function SettingsPage() {
-  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncStatus, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName } = useApp();
+  const { theme, toggleTheme, lang, setLang, showToast, user, systemUsers, setSystemUsers, syncStatus, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, reloadHospitalsAndMode, fetchRecycleBin, restoreFromRecycleBin, purgeFromRecycleBin, printSettings, setPrintSettings, logoUrl, reloadLogo, appName, appNameAr, appNameEn, reloadAppName, loadModule } = useApp();
+
+  // Loads the system users list (key 'users') once per session, the first
+  // time a page that needs it mounts — a no-op if another page already
+  // triggered it.
+  React.useEffect(() => { loadModule('users'); }, [loadModule]);
   const tr = useT(lang);
   // مسؤول مستشفى (role:'admin' له hospitalId) لا يستطيع إدارة أي مستخدمين
   // إطلاقاً (راجع usersRoutes.js: requireGlobalAdmin) رغم امتلاكه صلاحية

@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from 'react';
-import usePagination from '../hooks/usePagination';
+import React, { useState, useEffect } from 'react';
+import useServerPagination from '../hooks/useServerPagination';
 import Pagination from '../components/Pagination';
 import { useApp } from '../contexts/AppContext';
 import { FaFileExcel, FaTrash } from 'react-icons/fa';
@@ -72,15 +72,19 @@ const TEST_PANELS = [
 const EMPTY_PANEL_FORM = { patientName: '', patientId: '', doctorName: '', requestDate: '', priority: 'normal', panelKey: '', selectedTests: [] };
 
 export default function LaboratoryPage() {
-  const { labTests, setLabTests, lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, loadModule } = useApp();
+  const { lang, showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
 
-  // Loads labTests once per session, the first time a page that needs it
-  // mounts — a no-op if another page already triggered it.
-  React.useEffect(() => { loadModule('labTests'); }, [loadModule]);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   const L = (ar, en) => lang === 'ar' ? ar : en;
   const ar = lang === 'ar';
   const [search, setSearch] = useState('');
+  // Debounced so typing doesn't fire a server request on every keystroke —
+  // same 350ms pattern used by PatientsPage.js's own server-paginated search.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   // requestDate is used as the date filter's field: it's always set at
@@ -109,41 +113,49 @@ export default function LaboratoryPage() {
     return next;
   });
 
-  const filtered = useMemo(() => labTests.filter(t => {
-    const q = search.toLowerCase();
-    // Fallback to '' before calling string methods: some records (e.g. bulk-
-    // imported/seeded data) can have a missing patientName, reqNo, or
-    // testType, which would otherwise throw here and crash the whole page.
-    return (!q || (t.patientName || '').includes(q) || (t.reqNo || '').toLowerCase().includes(q) || (t.testType || '').includes(q))
-      // Normalized the same way the table row below resolves its displayed
-      // category/status, so a record shown as e.g. "Other"/"Awaiting Sample"
-      // (its real value doesn't match any known key) also matches when that
-      // same category/status is selected as a filter.
-      && (catFilter === 'all' || normalizeLookupKey(t.category, CATEGORIES, 'other') === catFilter)
-      && (statusFilter === 'all' || normalizeLookupKey(t.status, STATUSES, 'pending') === statusFilter)
-      && (!dateFrom || t.requestDate >= dateFrom) && (!dateTo || t.requestDate <= dateTo);
-  }), [labTests, search, catFilter, statusFilter, dateFrom, dateTo]);
-  const { pageItems, currentPage, setCurrentPage, totalPages, totalItems } = usePagination(filtered, 50);
+  // Fetches one page of lab tests directly from the server (search/status/
+  // category/date-range all evaluated server-side) instead of loading the
+  // full table (20,000+ rows, ~5.76 MiB) and filtering/paginating it in the
+  // browser. Clearing any stale selection whenever the visible set changes
+  // avoids "N selected" surviving a page/filter change for rows no longer shown.
+  const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, refetch } =
+    useServerPagination('labTests', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { category: catFilter, startDate: dateFrom, endDate: dateTo } });
+  useEffect(() => { setSelectedIds(new Set()); }, [currentPage, debouncedSearch, catFilter, statusFilter, dateFrom, dateTo]);
 
-  const stats = useMemo(() => ({
-    total: labTests.length,
-    // Normalized the same way the table displays status, so this count stays
-    // consistent with what selecting that same status filter shows below.
-    pending: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='pending').length,
-    processing: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='processing').length,
-    completed: labTests.filter(t=>normalizeLookupKey(t.status, STATUSES, 'pending')==='completed').length,
-    urgent: labTests.filter(t=>t.priority==='urgent').length,
-  }), [labTests]);
+  // Lightweight counts for the stat cards above the table — each is a single
+  // row's worth of data (just the `total` field from the existing pagination
+  // response), not the full dataset. Independent of the table's own search/
+  // filter state, matching the stat cards' previous all-records behavior.
+  const [stats, setStats] = useState({ total: 0, pending: 0, processing: 0, completed: 0, urgent: 0 });
+  const loadStats = React.useCallback(() => {
+    Promise.all([
+      api.get('/labTests?page=1&limit=1'),
+      api.get('/labTests?page=1&limit=1&status=pending'),
+      api.get('/labTests?page=1&limit=1&status=processing'),
+      api.get('/labTests?page=1&limit=1&status=completed'),
+      api.get('/labTests?page=1&limit=1&priority=urgent'),
+    ]).then(([total, pending, processing, completed, urgent]) => {
+      setStats({
+        total: total?.total || 0,
+        pending: pending?.total || 0,
+        processing: processing?.total || 0,
+        completed: completed?.total || 0,
+        urgent: urgent?.total || 0,
+      });
+    }).catch(() => {});
+  }, []);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
-  const openAdd = () => {
-    // إصلاح: labTests.length+1 يكرر رقم طلب موجود فعلاً بعد أي حذف
+  // Finds the highest reqNo sequence already used this year directly on the
+  // server (GET /labTests/next-req-no) instead of scanning all 20,000+
+  // records in the browser just to compute one number.
+  const fetchMaxReqSeq = async () => {
+    try { const r = await api.get('/labTests/next-req-no'); return r?.maxSeq || 0; } catch { return 0; }
+  };
+  const openAdd = async () => {
     const lYear = new Date().getFullYear();
     const lPrefix = `LAB-${lYear}-`;
-    const lMaxSeq = labTests.reduce((max,t)=>{
-      if (typeof t.reqNo !== 'string' || !t.reqNo.startsWith(lPrefix)) return max;
-      const v = parseInt(t.reqNo.slice(lPrefix.length),10);
-      return Number.isFinite(v) && v>max ? v : max;
-    },0);
+    const lMaxSeq = await fetchMaxReqSeq();
     const n = `${lPrefix}${String(lMaxSeq+1).padStart(4,'0')}`;
     setForm({ ...EMPTY, reqNo:n, requestDate:new Date().toISOString().split('T')[0] });
     setEditId(null); setShowModal(true);
@@ -157,29 +169,25 @@ export default function LaboratoryPage() {
     setPanelForm({ ...EMPTY_PANEL_FORM, requestDate: new Date().toISOString().split('T')[0] });
     setShowPanelModal(true);
   };
-  const nextReqNo = (offset) => {
-    const lYear = new Date().getFullYear();
-    const lPrefix = `LAB-${lYear}-`;
-    const lMaxSeq = labTests.reduce((max,t)=>{
-      if (typeof t.reqNo !== 'string' || !t.reqNo.startsWith(lPrefix)) return max;
-      const v = parseInt(t.reqNo.slice(lPrefix.length),10);
-      return Number.isFinite(v) && v>max ? v : max;
-    },0);
-    return `${lPrefix}${String(lMaxSeq + offset).padStart(4,'0')}`;
-  };
   const savePanel = async () => {
     if (!panelForm.patientName || panelForm.selectedTests.length === 0) {
       showToast(L('يرجى تعبئة اسم المريض واختيار تحليل واحد على الأقل', 'Please fill patient name and select at least one test'), 'error');
       return;
     }
     setSavingPanel(true);
+    const lYear = new Date().getFullYear();
+    const lPrefix = `LAB-${lYear}-`;
+    // Fetched once for the whole batch (not per test) — every test's reqNo
+    // is then derived locally from this same base, so a slower network
+    // round trip per test can never let two tests in the same panel collide.
+    const baseMaxSeq = await fetchMaxReqSeq();
     let createdCount = 0;
     for (let i = 0; i < panelForm.selectedTests.length; i++) {
       const test = panelForm.selectedTests[i];
       const nt = {
         ...EMPTY,
         id: Date.now() + i, // فريد لكل سجل بنفس الدفعة (Date.now() وحدها تتكرر بحلقة سريعة)
-        reqNo: nextReqNo(i + 1),
+        reqNo: `${lPrefix}${String(baseMaxSeq + i + 1).padStart(4,'0')}`,
         patientName: panelForm.patientName,
         patientId: panelForm.patientId,
         doctorName: panelForm.doctorName,
@@ -188,8 +196,7 @@ export default function LaboratoryPage() {
         testType: test.testType,
         category: test.category,
       };
-      setLabTests(p => [...p, nt]);
-      const ok = await syncToServer('labTests', 'create', nt); // نسلسل الإنشاء (await بكل تكرار) بدل الكل دفعة وحدة، لضمان عدم تكرار reqNo عند حساب nextReqNo لعنصر لاحق
+      const ok = await syncToServer('labTests', 'create', nt); // نسلسل الإنشاء (await بكل تكرار) لضمان ترتيب واضح لو فشل أحدها
       if (ok) createdCount++;
     }
     setSavingPanel(false);
@@ -200,45 +207,40 @@ export default function LaboratoryPage() {
         : L(`تم إنشاء ${createdCount} من ${panelForm.selectedTests.length} طلب — راجع القائمة`, `${createdCount} of ${panelForm.selectedTests.length} created — please review the list`),
       createdCount === panelForm.selectedTests.length ? 'success' : 'warning'
     );
+    refetch(); loadStats();
   };
   const openEdit = (t) => { setForm({...t}); setEditId(t.id); setShowModal(true); };
   const save = async () => {
     if (!form.patientName || !form.testType) { showToast(L('يرجى تعبئة المريض ونوع التحليل','Please fill patient and test type'),'error'); return; }
-    const prev = labTests;
     if (editId) {
       const ut = {...form,id:editId};
-      setLabTests(p=>p.map(t=>t.id===editId?{...t,...ut}:t));
       const ok = await syncToServer('labTests','update',ut);
-      if (!ok) { setLabTests(prev); return; }
+      if (!ok) return;
       showToast(L('تم التحديث','Updated'),'success');
     } else {
       const nt = {...form,id:Date.now()};
-      setLabTests(p=>[...p,nt]);
       const ok = await syncToServer('labTests','create',nt);
-      if (!ok) { setLabTests(prev); return; }
+      if (!ok) return;
       showToast(L('تمت إضافة الطلب','Request added'),'success');
     }
     setShowModal(false);
+    refetch(); loadStats();
   };
   const updateStatus = async (id, status) => {
-    const prev = labTests;
-    const current = labTests.find(t => t.id === id);
+    const current = pageItems.find(t => t.id === id);
     if (!current) return;
     const changed = {...current, status, ...(status==='processing'?{sampleDate:new Date().toISOString().split('T')[0]}:{})};
-    setLabTests(p => p.map(t=>t.id===id?changed:t));
     const ok = await syncToServer('labTests','update',changed);
-    if (!ok) { setLabTests(prev); return; }
+    if (!ok) return;
     showToast(L('تم تحديث الحالة','Status updated'),'success');
+    refetch(); loadStats();
   };
   const addResult = async () => {
-    const prev = labTests;
-    const current = labTests.find(t => t.id === showResultModal.id);
-    if (!current) return;
-    const changed = {...current,status:'completed',resultDate:new Date().toISOString().split('T')[0],results:{value:resultText,notes:resultNote}};
-    setLabTests(p => p.map(t=>t.id===showResultModal.id?changed:t));
+    const changed = {...showResultModal,status:'completed',resultDate:new Date().toISOString().split('T')[0],results:{value:resultText,notes:resultNote}};
     const ok = await syncToServer('labTests','update',changed);
-    if (!ok) { setLabTests(prev); return; }
+    if (!ok) return;
     showToast(L('تم إدخال النتيجة','Result entered'),'success'); setShowResultModal(null);
+    refetch(); loadStats();
   };
 
   // ── حذف جماعي (بنفس نمط PatientsPage.handleBulkDelete) ───────────────────
@@ -249,7 +251,7 @@ export default function LaboratoryPage() {
     let deleted = 0;
     for (const id of ids) {
       const ok = await syncToServer('labTests', 'delete', { id });
-      if (ok) { setLabTests(p => p.filter(t => t.id !== id)); deleted++; }
+      if (ok) deleted++;
     }
     setBulkDeleting(false);
     setBulkDeleteConfirm(false);
@@ -258,6 +260,7 @@ export default function LaboratoryPage() {
       ar ? `تم حذف ${deleted} من ${ids.length} طلب` : `Deleted ${deleted} of ${ids.length} requests`,
       deleted === ids.length ? 'success' : 'warning'
     );
+    refetch(); loadStats();
   };
 
   const S = {
@@ -299,12 +302,7 @@ export default function LaboratoryPage() {
           title={ar ? 'استيراد طلبات مختبر من Excel' : 'Import Lab Requests from Excel'}
           lang={lang}
           onClose={() => setShowImport(false)}
-          onImported={async () => {
-            try {
-              const fresh = await api.get('/labTests');
-              if (Array.isArray(fresh)) setLabTests(fresh);
-            } catch { /* لو فشل التحديث التلقائي، البيانات محفوظة بالخادم فعلياً وتظهر بأول تحديث لاحق */ }
-          }}
+          onImported={() => { refetch(); loadStats(); }}
         />
       )}
 
@@ -355,7 +353,11 @@ export default function LaboratoryPage() {
           </tr>
         </thead>
         <tbody>
-          {pageItems.map(t=>{
+          {loading ? (
+            <tr><td colSpan={11} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>⏳ {L('جارٍ التحميل...','Loading...')}</td></tr>
+          ) : pageItems.length === 0 ? (
+            <tr><td colSpan={11} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>
+          ) : pageItems.map(t=>{
             const stKey=normalizeLookupKey(t.status, STATUSES, 'pending');
             const st=STATUSES[stKey];
             const cat=CATEGORIES[normalizeLookupKey(t.category, CATEGORIES, 'other')];
@@ -376,13 +378,12 @@ export default function LaboratoryPage() {
                     {stKey==='pending'&&<button onClick={()=>updateStatus(t.id,'processing')} style={{...S.btn('#f59e0b'),padding:'3px 8px',fontSize:10}}>{L('أخذ العينة','Take Sample')}</button>}
                     {stKey==='processing'&&<button onClick={()=>{setShowResultModal(t);setResultText('');setResultNote('');}} style={{...S.btn('#10b981'),padding:'3px 8px',fontSize:10}}>{L('إدخال النتيجة','Enter Result')}</button>}
                     <button onClick={()=>openEdit(t)} style={{...S.btn('#6b7280'),padding:'3px 8px',fontSize:10}}>✏️</button>
-                    <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const prev=labTests;setLabTests(p=>p.filter(x=>x.id!==t.id));const ok=await syncToServer('labTests','delete',{id:t.id});if(!ok){setLabTests(prev);return;}showToast(L('تم الحذف','Deleted'),'info');}} style={{...S.btn('#ef4444'),padding:'3px 8px',fontSize:10}}>🗑</button>
+                    <button onClick={async ()=>{if(!(await confirmDialog(L('هل أنت متأكد؟ لا يمكن التراجع.','Are you sure? This cannot be undone.'))))return;const ok=await syncToServer('labTests','delete',{id:t.id});if(!ok)return;showToast(L('تم الحذف','Deleted'),'info');refetch();loadStats();}} style={{...S.btn('#ef4444'),padding:'3px 8px',fontSize:10}}>🗑</button>
                   </div>
                 </td>
               </tr>
             );
           })}
-          {filtered.length===0&&<tr><td colSpan={11} style={{...S.td,textAlign:'center',padding:40,color:'var(--text-secondary)'}}>{L('لا توجد طلبات','No requests found')}</td></tr>}
         </tbody>
       </table>
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={totalItems} pageSize={50} lang={lang} />

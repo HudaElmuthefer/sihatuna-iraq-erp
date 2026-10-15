@@ -200,7 +200,7 @@ async function explainTrend(item, lang, mode) {
     const parsed = aiResult.parsed || {};
     return { available: true, provider: aiResult.provider, note: parsed.note || null };
   }
-  if (aiResult.error) console.error(`⚠️  [inventory-prediction-agent] فشل استدعاء ${aiResult.provider}:`, aiResult.error);
+  if (aiResult.error) console.error(`[inventory-prediction-agent] Call to ${aiResult.provider} failed:`, aiResult.error);
   return { available: false };
 }
 

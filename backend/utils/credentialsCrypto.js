@@ -19,16 +19,14 @@ const KEY = Buffer.from(KEY_HEX, 'hex');
 // "مشفّرة" فعلياً بمفتاح معروف مسبقاً لأي شخص يطّلع على الكود، أي بلا حماية
 // حقيقية. نفس منطق التحذير المستخدم مع JWT_SECRET بملف server.js.
 if (KEY_HEX === DEFAULT_KEY_HEX) {
-  console.error('\n╔════════════════════════════════════════════════════════════════╗');
-  console.error('║  ⚠️  تحذير أمان خطير: مفتاح تشفير بيانات الدفع الافتراضي مستخدم!  ║');
-  console.error('╚════════════════════════════════════════════════════════════════╝');
-  console.error('  CREDENTIALS_ENCRYPTION_KEY غير محدَّد بملف .env، فبيانات اعتماد');
-  console.error('  بوابات الدفع (مفاتيح API) "مشفَّرة" بمفتاح معروف للجميع (كله أصفار)،');
-  console.error('  أي شخص يستطيع فك تشفيرها لو وصل لقاعدة البيانات.');
-  console.error('  أضف CREDENTIALS_ENCRYPTION_KEY بملف backend/.env بقيمة عشوائية قوية.');
-  console.error('  توليد مفتاح صالح: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+  console.error('\nSECURITY WARNING: the default payment credentials encryption key is in use!');
+  console.error('CREDENTIALS_ENCRYPTION_KEY is not set in .env, so payment gateway credentials');
+  console.error('(API keys) are "encrypted" with a key known to everyone (all zeros) --');
+  console.error('anyone who gets access to the database can decrypt them.');
+  console.error('Set CREDENTIALS_ENCRYPTION_KEY in backend/.env to a strong random value.');
+  console.error('Generate a valid key: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
   if (process.env.NODE_ENV === 'production') {
-    console.error('❌ تم إيقاف التشغيل لأن NODE_ENV=production والمفتاح الافتراضي لا يزال مستخدماً.\n');
+    console.error('Startup aborted: NODE_ENV=production and the default key is still in use.\n');
     process.exit(1);
   }
 }

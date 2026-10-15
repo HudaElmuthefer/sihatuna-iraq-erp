@@ -77,7 +77,7 @@ router.post('/invoice-reader/read', auth, requirePermission('procurement'), invo
       // تعذّر الوصول لطابور المعالجة (Redis غير متاح) — نفس التسمية الصادقة
       // "غير مُفعَّل" المستخدمة أصلاً لو مزوّد الذكاء الاصطناعي نفسه غير
       // مُعدّ، بدل خطأ 500 مربك لموظف يحاول قراءة فاتورة.
-      console.error('⚠️  [invoice-reader] تعذّر إضافة مهمة لطابور المعالجة (Redis):', err.message);
+      console.error('[invoice-reader] Could not add a job to the processing queue (Redis):', err.message);
       return res.json({ available: false });
     }
 

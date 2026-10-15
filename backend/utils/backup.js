@@ -70,8 +70,8 @@ function runPostgresBackup(backupFolder) {
       if (err) {
         // لا نوقف تشغيل السيرفر أبداً بسبب فشل النسخ الاحتياطي — فقط نُسجّل
         // تحذيراً واضحاً بالسبب الأكثر شيوعاً (pg_dump غير موجود بمسار PATH)
-        console.warn('⚠️  فشل النسخ الاحتياطي لـ PostgreSQL:', err.message);
-        console.warn('    تأكد أن مجلد PostgreSQL\\bin مضاف إلى PATH (نفس المطلوب لأمر psql).');
+        console.warn('PostgreSQL backup failed:', err.message);
+        console.warn('    Make sure the PostgreSQL\\bin folder is added to PATH (same requirement as the psql command).');
         resolve(false);
       } else {
         resolve(true);
@@ -89,8 +89,8 @@ function copyToExternalDestination(backupFolder, ts) {
 
   try {
     if (!fs.existsSync(externalRoot)) {
-      console.warn(`⚠️  مسار النسخ الاحتياطي الخارجي غير موجود حالياً: ${externalRoot}`);
-      console.warn('    (طبيعي لو كان قرصاً خارجياً غير موصول بالجهاز وقت هذه النسخة)');
+      console.warn(`External backup path not currently available: ${externalRoot}`);
+      console.warn('    (normal if this is an external drive that was not connected at backup time)');
       return { attempted: true, ok: false };
     }
     const externalFolder = path.join(externalRoot, ts);
@@ -100,7 +100,7 @@ function copyToExternalDestination(backupFolder, ts) {
     });
     return { attempted: true, ok: true };
   } catch (err) {
-    console.warn('⚠️  فشل نسخ النسخة الاحتياطية للوجهة الخارجية:', err.message);
+    console.warn('Failed to copy the backup to the external destination:', err.message);
     return { attempted: true, ok: false };
   }
 }
@@ -119,7 +119,7 @@ function cleanupOldExternalBackups() {
       });
     }
   } catch (err) {
-    console.warn('⚠️  تعذّر تنظيف النسخ الخارجية القديمة:', err.message);
+    console.warn('Could not clean up old external backups:', err.message);
   }
 }
 
@@ -149,12 +149,12 @@ async function runBackup() {
   let externalNote = '';
   if (backedUpAny) {
     const ext = copyToExternalDestination(backupFolder, ts);
-    if (ext.attempted) externalNote = ext.ok ? ' (خارجي ✅)' : ' (خارجي ⚠️ فشل — راجع التحذير أعلاه)';
+    if (ext.attempted) externalNote = ext.ok ? ' (external: ok)' : ' (external: failed -- see the warning above)';
     cleanupOldExternalBackups();
   }
 
   if (backedUpAny) {
-    console.log(`💾 New backup created: backend/backups/${ts}${pgOk ? ' (PostgreSQL ✅)' : ' (PostgreSQL ⚠️ فشل — راجع التحذير أعلاه)'}${externalNote}`);
+    console.log(`New backup created: backend/backups/${ts}${pgOk ? ' (PostgreSQL: ok)' : ' (PostgreSQL: failed -- see the warning above)'}${externalNote}`);
   } else if (fs.existsSync(backupFolder)) {
     fs.rmdirSync(backupFolder); // لا يوجد شيء تم نسخه، احذف المجلد الفارغ
   }
@@ -224,9 +224,9 @@ function restoreFromBackup(backupName) {
     const dest = path.join(DATA_DIR, filename);
     if (fs.existsSync(src)) fs.copyFileSync(src, dest);
   });
-  console.log(`♻️  Restored from backup: ${backupName}`);
-  console.log(`    ملاحظة: لاستعادة بيانات PostgreSQL أيضاً، افتح الملف`);
-  console.log(`    backend/backups/${backupName}/postgres_backup.sql يدوياً بـ pgAdmin`);
+  console.log(`Restored from backup: ${backupName}`);
+  console.log(`    Note: to also restore the PostgreSQL data, open the file`);
+  console.log(`    backend/backups/${backupName}/postgres_backup.sql manually in pgAdmin`);
 }
 
 // يرفع ملفاً واحداً لرابط سحابي عبر PUT (webhook أو pre-signed URL)
@@ -303,17 +303,15 @@ function startAutoBackup() {
   if (process.env.BACKUP_ON_STARTUP === 'true') runBackup();
   setInterval(runBackup, BACKUP_INTERVAL_MS);
   const extNote = process.env.EXTERNAL_BACKUP_DIR ? ` + external (${process.env.EXTERNAL_BACKUP_DIR})` : ' (no external destination configured)';
-  console.log(`💾 Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);
+  console.log(`Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);
 
   if (!process.env.EXTERNAL_BACKUP_DIR) {
-    console.warn('\n╔════════════════════════════════════════════════════════════╗');
-    console.warn('║  ⚠️  تنبيه: لا توجد وجهة نسخ احتياطي خارجية!                  ║');
-    console.warn('╚════════════════════════════════════════════════════════════╝');
-    console.warn('  كل النسخ الاحتياطية محفوظة حالياً بنفس قرص هذا الجهاز فقط.');
-    console.warn('  لو تعطّل الجهاز (عطل قرص، سرقة، حريق...) تُفقَد كل البيانات');
-    console.warn('  نهائياً بدون أي وسيلة استرجاع، بما فيها النسخ الاحتياطية نفسها.');
-    console.warn('  أضف EXTERNAL_BACKUP_DIR بملف backend/.env يشير لمكان ثانٍ');
-    console.warn('  (قرص USB خارجي دائم الاتصال، أو مجلد Google Drive/OneDrive مزامَن).\n');
+    console.warn('\nWARNING: no external backup destination configured!');
+    console.warn('  All backups are currently stored on this same machine\'s disk only.');
+    console.warn('  If this machine fails (disk failure, theft, fire...) all data is lost');
+    console.warn('  permanently with no way to recover it, including the backups themselves.');
+    console.warn('  Add EXTERNAL_BACKUP_DIR in backend/.env pointing to a second location');
+    console.warn('  (a permanently-connected external drive, or a synced Google Drive/OneDrive folder).\n');
   }
 }
 

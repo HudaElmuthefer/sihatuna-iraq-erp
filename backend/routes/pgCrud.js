@@ -456,7 +456,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       // الاتصال بالخادم" حتى بطلبات ثانية غير متعلقة، وتبقى حتى إعادة تشغيل
       // يدوية. الآن أي فشل بـ ROLLBACK يُسجَّل فقط ولا يُسقط السيرفر أبداً.
       try { await client.query('ROLLBACK'); } catch (rollbackErr) {
-        console.error(`⚠️ فشل ROLLBACK بعد خطأ حذف [${tableName}]:`, rollbackErr.message);
+        console.error(`ROLLBACK failed after a delete error [${tableName}]:`, rollbackErr.message);
       }
       next(err);
     } finally {

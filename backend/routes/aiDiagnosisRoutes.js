@@ -49,7 +49,7 @@ router.get('/ai-diagnosis/referral-doctors', auth, requirePermission('ai-diagnos
     const doctors = JSON.parse(fs.readFileSync(REFERRAL_DOCTORS_PATH, 'utf8'));
     res.json(doctors);
   } catch (err) {
-    console.error('⚠️  [ai-diagnosis] تعذّر قراءة ملف الأطباء المُقترَحين:', err.message);
+    console.error('[ai-diagnosis] Could not read the suggested-doctors file:', err.message);
     res.json([]); // لا نكسر تجربة المستخدم لو الملف تالف — قائمة فاضية بدل خطأ
   }
 });
@@ -107,7 +107,7 @@ router.post('/ai-diagnosis/analyze', auth, requirePermission('ai-diagnosis'), ai
     const result = await routeTextCall('aiDiagnosis', systemPrompt, userPrompt, mode);
 
     if (!result.available) {
-      if (result.error) console.error(`⚠️  [ai-diagnosis] فشل استدعاء ${result.provider}:`, result.error);
+      if (result.error) console.error(`[ai-diagnosis] Call to ${result.provider} failed:`, result.error);
       return res.json({ available: false });
     }
 

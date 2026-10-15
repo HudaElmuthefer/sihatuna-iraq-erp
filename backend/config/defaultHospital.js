@@ -27,7 +27,7 @@ async function getDefaultHospitalId() {
     ['المنشأة الرئيسية', 'Main Facility']
   );
   cachedHospitalId = inserted.rows[0].id;
-  console.log(`🏥 تم إنشاء سجل المنشأة الافتراضي تلقائياً (id=${cachedHospitalId})`);
+  console.log(`Default facility record created automatically (id=${cachedHospitalId})`);
   return cachedHospitalId;
 }
 

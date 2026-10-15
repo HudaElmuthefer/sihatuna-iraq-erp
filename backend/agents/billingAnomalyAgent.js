@@ -222,7 +222,7 @@ async function explainAnomaly(item, lang, mode) {
     const parsed = aiResult.parsed || {};
     return { available: true, provider: aiResult.provider, explanation: parsed.explanation || null };
   }
-  if (aiResult.error) console.error(`⚠️  [billing-anomaly-agent] فشل استدعاء ${aiResult.provider}:`, aiResult.error);
+  if (aiResult.error) console.error(`[billing-anomaly-agent] Call to ${aiResult.provider} failed:`, aiResult.error);
   return { available: false };
 }
 

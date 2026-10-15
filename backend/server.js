@@ -42,7 +42,7 @@ const PORT = process.env.PORT || 8000;
 // بصمت (يعطّل جلسات كل المستخدمين لأجل طلب واحد فاشل). الحل الحقيقي دائماً
 // معالجة كل Promise بمكانها (try/catch)، هذا فقط شبكة أمان لو نسينا مكاناً.
 process.on('unhandledRejection', (reason) => {
-  console.error('🔥 خطأ غير مُعالَج (unhandledRejection) — كاد يُسقط السيرفر:', reason);
+  console.error('Unhandled rejection -- almost crashed the server:', reason);
 });
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ router.use(generalLimiter);
 // قرار التنبيه، بدون كشف أي تفصيل داخلي حساس.
 router.get('/health', async (req, res) => {
   const dbCheck = await testConnection();
-  if (!dbCheck.ok) console.error('⚠️  [health] فشل اتصال قاعدة البيانات:', dbCheck.error.message);
+  if (!dbCheck.ok) console.error('[health] Database connection failed:', dbCheck.error.message);
   res.status(dbCheck.ok ? 200 : 503).json({
     status: dbCheck.ok ? 'ok' : 'degraded',
     system: 'SIHATUNA IRAQ',
@@ -257,8 +257,8 @@ app.use((err, req, res, next) => {
   const alertKey = `${req.method} ${req.originalUrl} :: ${err.message}`;
   if (shouldAlert(alertKey)) {
     sendAlert(
-      `خطأ غير متوقع بالخادم — ${req.method} ${req.originalUrl}`,
-      `الرسالة: ${err.message}\nالمستخدم: ${req.user?.username || 'غير مسجّل دخول'}\nالوقت: ${new Date().toLocaleString('ar-IQ')}`
+      `Unexpected server error -- ${req.method} ${req.originalUrl}`,
+      `Message: ${err.message}\nUser: ${req.user?.username || 'not logged in'}\nTime: ${new Date().toLocaleString('ar-IQ')}`
     ).catch(() => {}); // لو فشل التنبيه نفسه، ما نكسر الاستجابة الأصلية بسببه
   }
 
@@ -307,7 +307,7 @@ if (require.main === module) {
         const { startHL7Listener } = require('./services/hl7/hl7Listener');
         startHL7Listener();
       } catch (err) {
-        console.error('⚠️  فشل تشغيل خادم HL7 (تكامل المختبر):', err.message);
+        console.error('Failed to start the HL7 server (lab integration):', err.message);
       }
     }
 
@@ -317,17 +317,15 @@ if (require.main === module) {
     // المشكلة لاحقاً كخطأ 503 غامض بمنتصف استخدامه للنظام.
     const dbCheck = await testConnection();
     if (dbCheck.ok) {
-      devLog('✅ الاتصال بقاعدة بيانات PostgreSQL يعمل بنجاح.\n');
+      devLog('Connected to the PostgreSQL database successfully.\n');
     } else {
-      console.error('\n╔════════════════════════════════════════════════════════════╗');
-      console.error('║  ⚠️  تعذّر الاتصال بقاعدة بيانات PostgreSQL!                  ║');
-      console.error('╚════════════════════════════════════════════════════════════╝');
-      console.error(`  الخطأ: ${dbCheck.error.message}`);
-      console.error('  الخادم يعمل، لكن كل طلب يحتاج قاعدة البيانات (المرضى، الأطباء...)');
-      console.error('  سيفشل برمز 503 حتى تُحل هذه المشكلة. تأكد من:');
-      console.error('  1) خدمة PostgreSQL تعمل فعلياً بجهازك');
-      console.error('  2) بيانات الاتصال بملف backend/.env صحيحة (PG_HOST/PG_PORT/PG_USER/PG_PASSWORD/PG_DATABASE)');
-      console.error('  3) قاعدة البيانات "sihatuna_iraq" (أو الاسم المحدَّد بـ.env) منشأة فعلاً\n');
+      console.error('\nCould not connect to the PostgreSQL database!');
+      console.error(`  Error: ${dbCheck.error.message}`);
+      console.error('  The server is running, but every request that needs the database (patients, doctors...)');
+      console.error('  will fail with a 503 until this is fixed. Make sure:');
+      console.error('  1) The PostgreSQL service is actually running on this machine');
+      console.error('  2) The connection details in backend/.env are correct (PG_HOST/PG_PORT/PG_USER/PG_PASSWORD/PG_DATABASE)');
+      console.error('  3) The database "sihatuna_iraq" (or the name set in .env) has actually been created\n');
     }
   });
 
@@ -337,19 +335,19 @@ if (require.main === module) {
   // هنا نطبع رسالة واضحة بالعربية وحل عملي، بدل ترك Node يطبع Stack Trace غير مفهوم.
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`\n❌ المنفذ ${PORT} مستخدم مسبقاً من عملية أخرى.`);
-      console.error('   هذا يعني على الأغلب أن نسخة سابقة من الخادم لا تزال تعمل بالخلفية');
-      console.error('   (حتى لو أُغلقت نافذتها) وهي التي ترد فعلياً على localhost:8000 —');
-      console.error('   ما يفسّر ظهور استجابات قديمة أو غير متوقعة رغم تشغيل السيرفر من جديد.\n');
-      console.error('   الحل: أغلق العملية العالقة أولاً، من داخل PowerShell:');
+      console.error(`\nPort ${PORT} is already in use by another process.`);
+      console.error('   This usually means a previous copy of the server is still running in the background');
+      console.error('   (even if its window was closed) and it is the one actually answering on localhost:8000 --');
+      console.error('   which explains old or unexpected responses despite restarting the server.\n');
+      console.error('   Fix: close the stuck process first, from PowerShell:');
       console.error(`     netstat -ano | findstr :${PORT}`);
-      console.error('     (لاحظ رقم PID بآخر السطر، ثم:)');
-      console.error('     taskkill /PID <رقم_العملية> /F\n');
-      console.error('   أو ببساطة: افتح "إدارة المهام" (Task Manager) وأنهِ كل عمليات "Node.js" يدوياً،');
-      console.error('   ثم أعد تشغيل start-backend.bat من جديد.\n');
+      console.error('     (note the PID in the last column, then:)');
+      console.error('     taskkill /PID <PID> /F\n');
+      console.error('   Or simply: open Task Manager and end all "Node.js" processes manually,');
+      console.error('   then restart start-backend.bat.\n');
       process.exit(1);
     } else {
-      console.error('❌ خطأ غير متوقع عند بدء تشغيل الخادم:', err.message);
+      console.error('Unexpected error while starting the server:', err.message);
       process.exit(1);
     }
   });

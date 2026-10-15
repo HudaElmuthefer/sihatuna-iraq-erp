@@ -176,7 +176,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         } catch (dupErr) {
           // فشل فحص التكرار نفسه (مثلاً عمود JSONB بحاجة صياغة مختلفة) — لا
           // نوقف الاستيراد كله بسببه، نكمل للإدراج مباشرة كما لو لا يوجد تكرار
-          console.warn(`⚠️ [${apiName}] فشل فحص التكرار للصف ${rowNumber}:`, dupErr.message);
+          console.warn(`[${apiName}] Duplicate check failed for row ${rowNumber}:`, dupErr.message);
         }
 
         const indexedValues = indexedColumns.map(({ field }) => data[field] ?? null);
@@ -206,7 +206,7 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         }
       }
 
-      console.log(`📥 [${apiName}] استيراد Excel: ${results.imported} نجح، ${results.duplicates} مكرر، ${results.failed} فشل — بواسطة user #${req.user?.id}`);
+      console.log(`[${apiName}] Excel import: ${results.imported} succeeded, ${results.duplicates} duplicate, ${results.failed} failed -- by user #${req.user?.id}`);
       res.json(results);
     } catch (err) { next(err); }
   });

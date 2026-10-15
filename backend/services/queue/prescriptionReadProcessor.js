@@ -28,7 +28,7 @@ async function processPrescriptionReadJob(jobData) {
       },
     });
   } else if (result.error) {
-    console.error(`⚠️  [prescription-worker] فشل استدعاء ${result.provider}:`, result.error);
+    console.error(`[prescription-worker] Call to ${result.provider} failed:`, result.error);
   }
 
   return result;

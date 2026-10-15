@@ -63,7 +63,7 @@ router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), pr
         patientAllergies: validPatientAllergies,
       });
     } catch (err) {
-      console.error('⚠️  [prescription-reader] تعذّر إضافة مهمة لطابور المعالجة (Redis):', err.message);
+      console.error('[prescription-reader] Could not add a job to the processing queue (Redis):', err.message);
       return res.json({ available: false });
     }
 

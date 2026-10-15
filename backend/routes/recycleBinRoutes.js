@@ -115,7 +115,7 @@ router.post('/:id/restore', auth, adminOnly, async (req, res, next) => {
     // إصلاح حرج: نفس مشكلة مسار الحذف بـ pgCrud.js — ROLLBACK غير محمي يقدر
     // يُسقط السيرفر كامل لو فشل هو نفسه.
     try { await client.query('ROLLBACK'); } catch (rollbackErr) {
-      console.error('⚠️ فشل ROLLBACK بعد خطأ استرجاع من سلة المحذوفات:', rollbackErr.message);
+      console.error('ROLLBACK failed after a recycle-bin restore error:', rollbackErr.message);
     }
     next(err);
   } finally {

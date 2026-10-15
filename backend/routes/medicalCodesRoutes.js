@@ -150,7 +150,7 @@ router.post('/patient-diagnoses/import-excel', auth, importUpload.single('file')
       }
     }
 
-    console.log(`📥 [patient-diagnoses] استيراد: ${results.imported} تمّ، ${results.duplicates} مكرر، ${results.failed} فشل`);
+    console.log(`[patient-diagnoses] Import: ${results.imported} done, ${results.duplicates} duplicate, ${results.failed} failed`);
     res.json(results);
   } catch (err) { next(err); }
 });

@@ -3,6 +3,7 @@
     "data/*.json",
     "data/monitor-state.json",
     "logs/*",
-    "uploads/*"
+    "uploads/*",
+    "backups/**"
   ]
 }

@@ -1,33 +1,37 @@
 // backend/config/redisRateLimitStore.js
 //
-// Store مخصَّص لـexpress-rate-limit (v7 — راجع واجهة Store بملف
-// node_modules/express-rate-limit/dist/index.d.ts) مبني على Redis، بديل عن
-// الذاكرة الداخلية الافتراضية (MemoryStore). كانت المشكلة: بعد التحويل
-// لـPM2 cluster mode (عدة عمليات worker منفصلة، كل وحدة بذاكرتها الخاصة —
-// راجع تعليق ecosystem.config.js)، أي حد "300 طلب/5 دقائق" فعلياً يتضاعف
-// تلقائياً بعدد أنوية المعالج (كل worker يعدّ من الصفر بذاكرته المنفصلة)،
-// ونفس الأمر لحد محاولات تسجيل الدخول — يُضعف الحماية ضد التخمين
-// (Brute Force) فعلياً بقدر ما يزيد عدد الأنوية. Redis (مصدر عدّاد واحد
-// مشترك فعلياً بين كل العمليات) يصحّح هذا.
+// A custom Store for express-rate-limit (v7 -- see the Store interface in
+// node_modules/express-rate-limit/dist/index.d.ts) built on Redis, replacing
+// the default in-memory store (MemoryStore). The problem was: after
+// switching to PM2 cluster mode (several separate worker processes, each
+// with its own memory -- see the comment in ecosystem.config.js), any limit
+// like "300 requests/5 minutes" effectively multiplies by the number of CPU
+// cores (each worker counts from zero in its own separate memory), and the
+// same goes for the login-attempt limit -- weakening brute-force protection
+// in direct proportion to the number of cores. Redis (a single counter
+// actually shared across all processes) fixes this.
 //
-// ── fail-open عند تعذّر الوصول لـRedis ────────────────────────────────────
-// تحديد المعدل أقل أهمية بكثير من استمرار عمل النظام — لا يصح أن يفشل كل
-// طلب تسجيل دخول أو كل طلب API بالنظام لمجرد انقطاع Redis لحظياً. كل خطأ
-// هنا يُعامَل كـ"لا حد بعد" (كأنه أول طلب بهذه النافذة)، وليس كخطأ يوقف
-// الطلب. راجع نفس الفلسفة المشروحة بأعلى utils/redisService.js.
+// ── Fail-open when Redis is unreachable ──────────────────────────────────
+// Rate limiting matters far less than keeping the system running -- every
+// login or API request in the system must not fail just because Redis had
+// a momentary outage. Every error here is treated as "no limit yet" (as if
+// it were the first request in this window), not as an error that blocks
+// the request. See the same philosophy explained at the top of
+// utils/redisService.js.
 const { getClient } = require('../utils/redisService');
 
 class RedisRateLimitStore {
-  // prefix: مطلوب ومنفصل لكل limiter (login/general/import/...) حتى لا
-  // تتشارك عدة محدِّدات مختلفة نفس مساحة المفاتيح بـRedis رغم استخدامها
-  // نفس نوع المفتاح (IP أو user:id) بالمصادفة.
+  // prefix: required and separate per limiter (login/general/import/...) so
+  // that several different limiters don't accidentally share the same
+  // Redis key space even though they happen to use the same kind of key
+  // (IP or user:id).
   constructor(prefix) {
     this.prefix = prefix;
   }
 
-  // يُستدعى مرة واحدة تلقائياً من express-rate-limit عند إعداد الـ
-  // middleware، ويمرر إعدادات الحد (windowMs) — نحتاجه لضبط مدة صلاحية
-  // مفتاح Redis بنفس مدة النافذة الزمنية المُعدَّة بكل limiter.
+  // Called once automatically by express-rate-limit when setting up the
+  // middleware, passing the limit settings (windowMs) -- needed to set the
+  // Redis key's expiry to match each limiter's configured time window.
   init(options) {
     this.windowMs = options.windowMs;
   }
@@ -55,8 +59,9 @@ class RedisRateLimitStore {
       const totalHits = await client.incr(redisKey);
       let ttl = await client.pttl(redisKey);
       if (ttl < 0) {
-        // مفتاح جديد (أول طلب بهذه النافذة) — نضبط مدة صلاحيته الآن فقط،
-        // وليس بكل زيادة (وإلا نافذة الحد تنزلق للأمام مع كل طلب ولا تنتهي أبداً)
+        // A new key (the first request in this window) -- set its expiry
+        // only now, not on every increment (otherwise the limit window
+        // would keep sliding forward with every request and never end).
         await client.pexpire(redisKey, this.windowMs);
         ttl = this.windowMs;
       }
@@ -68,11 +73,11 @@ class RedisRateLimitStore {
   }
 
   async decrement(k) {
-    try { await getClient().decr(this.key(k)); } catch { /* غير حرج — تحديد المعدل فقط */ }
+    try { await getClient().decr(this.key(k)); } catch { /* Not critical -- rate limiting only */ }
   }
 
   async resetKey(k) {
-    try { await getClient().del(this.key(k)); } catch { /* غير حرج */ }
+    try { await getClient().del(this.key(k)); } catch { /* Not critical */ }
   }
 }
 

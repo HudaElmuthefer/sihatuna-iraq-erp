@@ -1,35 +1,43 @@
 // backend/config/rateLimiters.js
 //
-// كل محددات المعدل (Rate Limiters) المستخدمة بالنظام، بمكان واحد.
+// All the rate limiters used across the system, in one place.
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('./jwtConfig');
-// ── المرحلة الثانية: عدّاد مشترك عبر Redis بدل ذاكرة كل عملية ──────────────
-// راجع تعليق config/redisRateLimitStore.js للسبب الكامل (PM2 cluster mode
-// كان يُضاعف الحد الفعلي تلقائياً بعدد أنوية المعالج). كل limiter يحتاج
-// نسخة Store منفصلة (prefix مختلف)، حتى لو تشابهت إعداداتهم.
+// ── Phase 2: a shared counter via Redis instead of per-process memory ──────
+// See the comment in config/redisRateLimitStore.js for the full reason
+// (PM2 cluster mode was automatically multiplying the effective limit by
+// the number of CPU cores). Each limiter needs its own Store instance
+// (a different prefix), even if their settings are otherwise identical.
 const RedisRateLimitStore = require('./redisRateLimitStore');
 
-// ── تعطيل تحديد المعدل أثناء الاختبارات (skipInTest) ────────────────────────
-// كل limiter بهذا الملف وبملفات routes/*.js (dosageRoutes وغيرها — كل من يبني
-// RedisRateLimitStore خاصة به) يشارك عدّاداً واحداً بـRedis مفتاحه IP أو معرّف
-// المستخدم الوهمي الثابت (1) الذي تزرعه tests/testUtils.js — بعكس db.json/
-// PostgreSQL/سجل التدقيق، هذا العدّاد غير معزول فعلياً بين ملفات الاختبار
-// (يتراكم عبر كل الملفات بنفس نافذة الدقائق الـ15)، فتشغيل مجموعة الاختبارات
-// الكاملة (٢٨+ ملفاً يسجّلون الدخول، وملفات أخرى بعشرات الطلبات لنفس المسار)
-// يتجاوز الحد الحقيقي بسرعة ويُفشِل اختبارات لا علاقة لها بصحة الكود
-// المُختبَر فعلياً بـ429 عشوائية. لذا: `skip` (خاصية express-rate-limit
-// الرسمية) تُعطِّل تحديد المعدل بالكامل تحت NODE_ENV=test، بدل تعديل قيم
-// الحد أو لمس RedisRateLimitStore نفسها (المُختبَرة مباشرة ومُتعمَّداً
-// بـtests/redisRateLimitStore.test.js — تعطيلها هناك سيُبطل ذلك الاختبار).
+// ── Disabling rate limiting during tests (skipInTest) ───────────────────────
+// Every limiter in this file and in routes/*.js (dosageRoutes and others --
+// anywhere that builds its own RedisRateLimitStore) shares a single Redis
+// counter keyed by IP or by the fixed fake user id (1) that
+// tests/testUtils.js seeds -- unlike db.json/PostgreSQL/the audit log, this
+// counter isn't actually isolated between test files (it accumulates
+// across all of them within the same 15-minute window), so running the
+// full test suite (28+ files that log in, plus other files making dozens
+// of requests to the same route) quickly exceeds the real limit and fails
+// tests that have nothing to do with the code actually being tested, with
+// random 429s. So: `skip` (an official express-rate-limit option)
+// disables rate limiting entirely under NODE_ENV=test, instead of
+// adjusting the limit values or touching RedisRateLimitStore itself
+// (which is deliberately tested directly in
+// tests/redisRateLimitStore.test.js -- disabling it there would invalidate
+// that test).
 const skipInTest = () => process.env.NODE_ENV === 'test';
 
-// ── دالة مشتركة: تستخرج هوية المستخدم من التوكن لو موجود وصالح، وإلا IP ────
-// نقرأ التوكن يدويًا هنا (نفس طريقة middleware/auth.js بالضبط: كوكي أولاً ثم
-// Authorization header) لأن generalLimiter يشتغل *قبل* middleware auth بترتيب
-// server.js الحالي — فـ req.user غير موجود بعد بهذه المرحلة. لو فك تشفير
-// التوكن فشل (منتهي، غير صالح، أو غير موجود أصلاً — مثل صفحة تسجيل الدخول
-// نفسها)، نرجع لعنوان IP كخط احتياط، بدل ما يفشل الطلب بالكامل بخطأ غير متوقع.
+// ── Shared helper: extracts the user's identity from the token if present
+// and valid, otherwise falls back to IP ──────────────────────────────────
+// The token is read manually here (the exact same way as
+// middleware/auth.js: cookie first, then the Authorization header) because
+// generalLimiter runs *before* the auth middleware in server.js's current
+// order -- so req.user doesn't exist yet at this stage. If decoding the
+// token fails (expired, invalid, or simply absent -- like on the login
+// page itself), it falls back to the IP address instead of failing the
+// whole request with an unexpected error.
 const keyByUserOrIP = (req) => {
   const cookieToken = req.cookies?.auth_token;
   const header = req.headers.authorization;
@@ -40,14 +48,15 @@ const keyByUserOrIP = (req) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     return `user:${decoded.id}`;
   } catch (e) {
-    return req.ip; // توكن غير صالح/منتهي — نعامله كزائر مجهول بالـ IP
+    return req.ip; // Invalid/expired token -- treat it as an anonymous visitor by IP
   }
 };
 
-// ── تقييد محاولات تسجيل الدخول ────────────────────────────────────────────
-// يبقى بالـ IP دائمًا (بلا تغيير) — هذا مقصود: تسجيل الدخول نفسه لا يوجد له
-// مستخدم مصادَق بعد أصلاً، فمفهوم "لكل مستخدم" غير منطقي هنا. هذا هو الخط
-// الدفاعي ضد تخمين كلمات المرور (Brute Force)، ويجب أن يبقى صارمًا بالـ IP.
+// ── Limiting login attempts ─────────────────────────────────────────────
+// Always stays keyed by IP (unchanged) -- this is deliberate: there is no
+// authenticated user yet for login itself, so "per user" doesn't make
+// sense here. This is the main defense against password guessing
+// (brute force), and it must stay strict and IP-based.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -58,10 +67,11 @@ const loginLimiter = rateLimit({
   store: new RedisRateLimitStore('login'),
 });
 
-// ── تحديد معدل عام لكل مسارات API ──────────────────────────────────────────
-// الآن لكل مستخدم مسجّل دخوله حصته الخاصة 300 طلب/5 دقائق، بغض النظر عن كم
-// موظف ثاني يشتغل بنفس الوقت أو بنفس الشبكة (حتى لو خلف NAT مشترك). الزوار
-// غير المسجّلين (توكن غير صالح أو معدوم) يبقون محدودين بالـ IP كخط احتياط.
+// ── General rate limit for all API routes ────────────────────────────────
+// Every logged-in user now gets their own quota of 300 requests/5 minutes,
+// regardless of how many other staff are working at the same time or on
+// the same network (even behind a shared NAT). Unauthenticated visitors
+// (invalid or missing token) remain limited by IP as a fallback.
 const generalLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 300,

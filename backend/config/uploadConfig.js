@@ -1,7 +1,8 @@
 // backend/config/uploadConfig.js
 //
-// إعداد multer المشترك لرفع الملفات (المستندات، الوثائق، مرفقات المتقاعدين...).
-// استُخرج من server.js لتصغيره ولإتاحة استخدامه من أي ملف مسارات دون تكرار.
+// Shared multer setup for file uploads (documents, records, retiree
+// attachments...). Extracted from server.js to keep it smaller and make it
+// usable from any route file without duplicating it.
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
@@ -18,11 +19,13 @@ const storage = multer.diskStorage({
   },
 });
 
-// ── إصلاح أمني ────────────────────────────────────────────────────────────────
-// ما كان في أي قيد على نوع الملف المرفوع — أي امتداد كان يُقبل (حتى ملفات
-// تنفيذية أو HTML/SVG قد تحتوي جافاسكربت). الآن نسمح فقط بأنواع الملفات
-// التي فعلاً يحتاجها النظام (وثائق ومستندات ومرفقات طبية/إدارية عادية)،
-// ونتحقق من الامتداد *ونوع المحتوى* معاً حتى ما ينفع تمويه ملف خطير باسم مزيّف.
+// ── Security fix ──────────────────────────────────────────────────────────────
+// There used to be no restriction at all on the uploaded file type -- any
+// extension was accepted (even executables, or HTML/SVG that could contain
+// JavaScript). Now only the file types the system actually needs are
+// allowed (regular documents and medical/administrative attachments), and
+// both the extension *and* the content type are checked together so
+// disguising a dangerous file under a fake name doesn't work.
 const ALLOWED_UPLOAD_TYPES = {
   '.pdf': 'application/pdf',
   '.jpg': 'image/jpeg',
@@ -45,9 +48,11 @@ const uploadFileFilter = (req, file, cb) => {
     err.statusCode = 400;
     return cb(err);
   }
-  // بعض المتصفحات ترسل mimetype عام (application/octet-stream) لملفات صحيحة —
-  // نتساهل بهذه الحالة (الامتداد وحده يكفي)، لكن لو حدّد المتصفح نوعاً صريحاً
-  // مختلفاً تماماً عن الممتد (تمويه واضح)، نرفض الملف.
+  // Some browsers send a generic mimetype (application/octet-stream) for
+  // otherwise valid files -- that case is tolerated (the extension alone is
+  // enough), but if the browser specified an explicit type that's
+  // completely different from the extension (a clear disguise attempt),
+  // the file is rejected.
   if (file.mimetype !== expectedMime && file.mimetype !== 'application/octet-stream') {
     const err = new Error('نوع محتوى الملف لا يطابق امتداده — الملف مرفوض');
     err.statusCode = 400;
@@ -58,15 +63,19 @@ const uploadFileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter: uploadFileFilter, limits: { fileSize: 20 * 1024 * 1024 } });
 
-// ── حذف ملف مرفوع فعلياً من القرص ──────────────────────────────────────────
-// إصلاح: حذف سجل يحمل مرفقاً (وثيقة إضبارة موظف/متقاعد) كان يحذف السطر من
-// قاعدة البيانات فقط، ويترك الملف الفعلي بـUPLOADS_DIR يتيماً للأبد — راجع
-// نقاط الاستدعاء بـemployeeDossierRoutes.js وrecycleBinRoutes.js (الحذف
-// النهائي من سلة المحذوفات تحديداً، وليس النقل لسلة المحذوفات نفسه — يجب أن
-// يبقى الملف موجوداً طالما السجل قابلاً للاسترجاع).
-// path.basename هنا مقصود كحماية من تلاعب بمسار الملف المخزَّن (Path
-// Traversal) — نتجاهل أي مجلدات بالمسار المخزَّن ونستخدم اسم الملف فقط ضمن
-// UPLOADS_DIR، حتى لو كان filePath قيمة غير متوقعة قادمة من data قاعدة البيانات.
+// ── Actually delete an uploaded file from disk ───────────────────────────────
+// Fix: deleting a record with an attachment (an employee/retiree dossier
+// document) used to only delete the row from the database, leaving the
+// actual file in UPLOADS_DIR orphaned forever -- see the call sites in
+// employeeDossierRoutes.js and recycleBinRoutes.js (specifically the final
+// purge from the recycle bin, not the move into the recycle bin itself --
+// the file must stay in place as long as the record can still be
+// restored).
+// path.basename here is deliberate protection against tampering with the
+// stored file path (path traversal) -- any directories in the stored path
+// are ignored and only the filename itself is used within UPLOADS_DIR, even
+// if filePath is an unexpected value coming from the database's data
+// column.
 async function deleteUploadedFile(filePath) {
   if (!filePath || typeof filePath !== 'string') return;
   const filename = path.basename(filePath);
@@ -74,11 +83,14 @@ async function deleteUploadedFile(filePath) {
   try {
     await fs.promises.unlink(path.join(UPLOADS_DIR, filename));
   } catch (err) {
-    // ENOENT (الملف أصلاً غير موجود) ليس خطأً يستحق تحذيراً — أي خطأ آخر
-    // (صلاحيات، قرص، إلخ) يُسجَّل فقط ولا يُفشِل الطلب (نفس فلسفة fail-open
-    // المتّبعة بباقي النظام — حذف السجل أهم من نجاح تنظيف الملف). مُنتظَرة
-    // (async/await) لا "أطلق ولا تنتظر" — حتى تنتهي فعلياً قبل رد الطلب،
-    // ويصير التحقق منها باختبار حتمياً بلا حاجة لانتظار عشوائي.
+    // ENOENT (the file didn't exist in the first place) isn't an error
+    // worth warning about -- any other error (permissions, disk, etc.) is
+    // just logged and doesn't fail the request (the same fail-open
+    // philosophy used elsewhere in this system -- deleting the record
+    // matters more than successfully cleaning up the file). Awaited
+    // (async/await), not "fire and forget" -- so it actually finishes
+    // before the response, making it deterministic to test without needing
+    // an arbitrary wait.
     if (err.code !== 'ENOENT') {
       console.warn(`[uploadConfig] Could not delete the attached file from disk (${filename}):`, err.message);
     }

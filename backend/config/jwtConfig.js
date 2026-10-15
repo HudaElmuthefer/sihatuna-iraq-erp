@@ -1,17 +1,21 @@
 // backend/config/jwtConfig.js
 //
-// مصدر واحد موثوق لمفتاح JWT بكل النظام — استُخرج من server.js حتى تستطيع ملفات
-// المسارات المنفصلة (routes/authRoutes.js وغيرها) تستخدم نفس المفتاح بالضبط
-// دون تكراره أو خطر عدم تطابقه بمكانين مختلفين (لو صار هذا، كل التوكنات
-// الصادرة بمفتاح تصير غير صالحة عند التحقق منها بمفتاح آخر).
-const DEFAULT_JWT_SECRET = 'sihatuna-secret-2026'; // منشور علناً بالمستودع — لا يصلح كمفتاح فعلي أبداً
+// A single trusted source for the JWT key across the whole system --
+// extracted from server.js so that separate route files
+// (routes/authRoutes.js and others) can use exactly the same key without
+// duplicating it or risking a mismatch between two places (if that
+// happened, tokens issued with one key would fail verification against
+// the other).
+const DEFAULT_JWT_SECRET = 'sihatuna-secret-2026'; // published openly in the repository -- never usable as a real key
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
-// ── تحذير أمان عند بدء التشغيل ────────────────────────────────────────────────
-// المفتاح الافتراضي أعلاه مكتوب صراحة بالكود (وبالتالي منشور مع أي نسخة من المشروع
-// على GitHub)، فأي شخص يعرفه يستطيع إصدار توكن دخول مزوّر بصلاحية إدمن كاملة.
-// لو .env الحقيقي ما يحدّد JWT_SECRET مختلفاً، يجب تنبيه المطوّر بوضوح شديد —
-// وبمرحلة الإنتاج، نرفض تشغيل الخادم أصلاً بدل تشغيله بثغرة أمنية معروفة.
+// ── Startup security warning ─────────────────────────────────────────────────
+// The default key above is written explicitly in the code (and therefore
+// published with any copy of the project on GitHub), so anyone who knows it
+// can issue a forged login token with full admin access. If the real .env
+// doesn't set a different JWT_SECRET, the developer must be warned very
+// clearly -- and in production, the server refuses to start at all instead
+// of running with a known security hole.
 if (JWT_SECRET === DEFAULT_JWT_SECRET) {
   console.error('\nSECURITY WARNING: the default JWT_SECRET is still in use!');
   console.error('This key is written directly in the source code and is not secret at all --');

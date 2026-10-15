@@ -1,38 +1,38 @@
-# لا ترفعي بيانات حساسة أو ملفات ثقيلة لـ GitHub
+# Do not upload sensitive data or heavy files to GitHub
 
-# متغيرات البيئة (تحتوي بيانات بوابات الدفع وأسرار أخرى)
+# Environment variables (contain payment gateway credentials and other secrets)
 backend/.env
 frontend/.env.local
-# ملف بيئة Docker Compose الحقيقي (المرحلة الثالثة) — منسوخ من
-# .env.docker.example، يحمل أسراراً حقيقية. / بأول السطر يحصره بجذر
-# المشروع فقط (بلا تأثير على backend/.env المذكور أعلاه، مسار مختلف تماماً).
+# The real Docker Compose env file (Phase 3) — copied from
+# .env.docker.example, holds real secrets. The leading "/" scopes this to
+# the project root only (no effect on backend/.env above, a different path entirely).
 /.env
 
-# مجلدات التبعيات
+# Dependency folders
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# مخرجات البناء
+# Build output
 frontend/build/
 
 # Output of scripts/lighthouse-all.js — regenerable, not source
 frontend/lighthouse-report-*.json
 
-# بيانات تشغيلية (تُنشأ تلقائياً، ما تُرفع لـ GitHub)
+# Runtime data (generated automatically, not uploaded to GitHub)
 backend/backups/
-# نسخ احتياطية مسحوبة يدوياً لقاعدة بيانات Docker (تحتوي بيانات مرضى حقيقية —
-# لا تُرفع لـGitHub إطلاقاً، احتفظي بها خارج المستودع)
+# Manually pulled backups of the Docker database (contain real patient data —
+# never upload to GitHub, keep them outside the repository)
 db-backups/
 backend/data/audit-log.json
 backend/data/revoked-tokens.json
 backend/data/alerts-log.json
 backend/data/monitor-state.json
 
-# ملفات النظام
+# System files
 .DS_Store
 Thumbs.db
 
-# سجلات
+# Logs
 *.log
 npm-debug.log*

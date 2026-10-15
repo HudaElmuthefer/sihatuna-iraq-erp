@@ -1,24 +1,28 @@
-name: تشغيل الاختبارات تلقائياً
+name: Run tests automatically
 
-# ── لماذا هذا الملف ────────────────────────────────────────────────────────
-# قبل هذا، الاختبارات (70 اختبار Jest) موجودة لكن لا يوجد شيء يشغّلها تلقائياً —
-# يجب أن تتذكر تشغيلها يدوياً (npm test) قبل كل رفع للكود. لو نسيت، ممكن
-# تدفعين تعديلاً يكسر شيء بدون ما تنتبهين. الآن: كل مرة تدفعين كود لـ GitHub
-# (أو يفتح أحد Pull Request)، GitHub تلقائياً تجهّز بيئة نظيفة، تثبّت الحزم،
-# وتشغّل كل الاختبارات — وتعطيج ✅ أو ❌ واضحة بصفحة المستودع مباشرة.
+# ── Why this file exists ────────────────────────────────────────────────────
+# Before this, the tests (70 Jest tests) existed but nothing ran them
+# automatically — you had to remember to run them manually (npm test) before
+# every push. If you forgot, you could push a change that breaks something
+# without noticing. Now: every time code is pushed to GitHub (or a pull
+# request is opened), GitHub automatically prepares a clean environment,
+# installs the packages, and runs all the tests — showing a clear ✅ or ❌
+# right on the repository page.
 #
-# ملاحظة مهمة: اختبارات كثيرة بهذا المشروع (RBAC، استيراد Excel...) تحتاج
-# PostgreSQL حقيقي لتعمل بكامل قوتها — بدونه تتجاوز نفسها بأمان (skip) بدل
-# الفشل. أضفنا خدمة PostgreSQL هنا (services: postgres) بالضبط حتى تعمل هذه
-# الاختبارات بكامل تغطيتها هنا تلقائياً، وليس فقط الجزء الذي لا يحتاج قاعدة بيانات.
+# Important note: many tests in this project (RBAC, Excel import...) need a
+# real PostgreSQL instance to run at full strength — without it they safely
+# skip themselves instead of failing. We added a PostgreSQL service here
+# (services: postgres) specifically so these tests run with full coverage
+# here automatically, not just the part that doesn't need a database.
 
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-  # يسمح بتشغيل هذا الـ workflow يدوياً من تبويب Actions بصفحة المستودع (زر
-  # "Run workflow")، على أي فرع تختاره — بدل انتظار push أو Pull Request.
+  # Allows running this workflow manually from the Actions tab on the
+  # repository page ("Run workflow" button), on any branch you choose —
+  # instead of waiting for a push or pull request.
   workflow_dispatch:
 
 jobs:
@@ -41,34 +45,36 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: تحميل الكود
+      - name: Check out code
         uses: actions/checkout@v4
 
-      - name: إعداد Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
-      - name: تثبيت حزم الباك إند
+      - name: Install backend packages
         working-directory: backend
         run: npm ci
 
-      - name: تجهيز بنية قاعدة البيانات (schema)
+      - name: Prepare database schema
         working-directory: backend
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d sihatuna_iraq_test -f ../database/postgres_schema.sql
-        continue-on-error: true # لو الملف يحتاج امتدادات غير متوفرة بالحاوية الافتراضية، لا نوقف كل الـ CI بسببها — الاختبارات نفسها ستتجاوز نفسها بأمان (pgAvailable check)
+        continue-on-error: true # If the file needs extensions unavailable in the default container, don't stop all of CI because of it — the tests themselves will safely skip (pgAvailable check).
 
-      - name: تطبيق ترحيلات SQL الإضافية (migrations-sql/)
-        # نفس الخطوة التي تحصل تلقائياً بكل نشر محلي/Docker (راجع run-migrations
-        # .js) — بدونها، جداول أُضيفت بمراحل لاحقة (medical_codes، drug_interactions...)
-        # غير موجودة إطلاقاً بقاعدة CI، فأي اختبار يعتمد عليها يفشل بخطأ اتصال
-        # حقيقي بدل أن يعمل بكامل تغطيته. idempotent فعلياً (راجع تعليق كل ملف
-        # migrations-sql/*.sql) — لا ضرر من تشغيلها هنا حتى لو postgres_schema.sql
-        # أعلاه طبّق بعضها مسبقاً بالخطأ (schema_migrations يمنع التكرار).
+      - name: Apply additional SQL migrations (migrations-sql/)
+        # Same step that happens automatically on every local/Docker deploy
+        # (see run-migrations.js) — without it, tables added in later stages
+        # (medical_codes, drug_interactions...) wouldn't exist at all in the
+        # CI database, so any test depending on them would fail with a real
+        # connection error instead of running at full coverage. Actually
+        # idempotent (see the comment in each migrations-sql/*.sql file) — no
+        # harm running it here even if postgres_schema.sql above already
+        # applied some of it by mistake (schema_migrations prevents repeats).
         working-directory: backend
         env:
           PG_HOST: localhost
@@ -78,7 +84,7 @@ jobs:
           PG_DATABASE: sihatuna_iraq_test
         run: node run-migrations.js
 
-      - name: تشغيل اختبارات الباك إند
+      - name: Run backend tests
         working-directory: backend
         env:
           PG_HOST: localhost
@@ -93,27 +99,27 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
-      - name: تحميل الكود
+      - name: Check out code
         uses: actions/checkout@v4
 
-      - name: إعداد Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: تثبيت حزم الفرونت إند
+      - name: Install frontend packages
         working-directory: frontend
         run: npm ci
 
-      - name: تشغيل اختبارات الفرونت إند
+      - name: Run frontend tests
         working-directory: frontend
         env:
           CI: true
         run: npm test -- --watchAll=false
 
-      - name: بناء الفرونت إند (يكتشف أي خطأ بالكود قبل النشر)
+      - name: Build frontend (catches code errors before deploy)
         working-directory: frontend
         env:
           CI: true

@@ -293,7 +293,14 @@ async function runBackupWithDestination(destination, cloudUrl) {
 
 // يبدأ الجدولة التلقائية — تُستدعى مرة وحدة عند إقلاع السيرفر
 function startAutoBackup() {
-  runBackup(); // نسخة فورية عند التشغيل
+  // Immediate backup on startup is opt-in (BACKUP_ON_STARTUP=true), off by
+  // default: every nodemon-triggered restart during development used to run
+  // a fresh pg_dump instantly, which itself wrote a new file into
+  // backend/backups/, which nodemon then saw as a change and restarted
+  // again -- a restart loop (see backend/nodemon.json's backups/** ignore
+  // entry, which closes the other half of this). The scheduled hourly
+  // backup below is unaffected either way.
+  if (process.env.BACKUP_ON_STARTUP === 'true') runBackup();
   setInterval(runBackup, BACKUP_INTERVAL_MS);
   const extNote = process.env.EXTERNAL_BACKUP_DIR ? ` + external (${process.env.EXTERNAL_BACKUP_DIR})` : ' (no external destination configured)';
   console.log(`💾 Auto-backup enabled (every ${BACKUP_INTERVAL_MS / 60000} min, keeping last ${MAX_BACKUPS} backups)${extNote}`);

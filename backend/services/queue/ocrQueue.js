@@ -1,22 +1,26 @@
 // backend/services/queue/ocrQueue.js
 //
-// طابور معالجة قراءة الفواتير والوصفات الطبية بالذكاء الاصطناعي (OCR + AI
-// vision) — انتقلت من مسار HTTP المباشر (routes/invoiceReaderRoutes.js
-// وroutes/prescriptionReaderRoutes.js) لمهمة خلفية عبر BullMQ، لأن استدعاء
-// AI فعلياً (Gemini/Claude) قد يأخذ عدة ثوانٍ لكل صورة (وOCR قبله ثوانٍ
-// إضافية — راجع agents/ocrAgent.js)، وإبقاء طلب HTTP معلّقاً كل هذه المدة
-// يحجز worker كامل من Express بلا فائدة حقيقية. الآن: الطلب يُرجع فوراً
-// برقم مهمة (jobId)، والفرونت إند يستعلم عن حالتها دورياً.
+// A processing queue for reading invoices and prescriptions with AI (OCR +
+// AI vision) -- moved from a direct HTTP path (routes/invoiceReaderRoutes.js
+// and routes/prescriptionReaderRoutes.js) to a background job via BullMQ,
+// because the actual AI call (Gemini/Claude) can take several seconds per
+// image (and OCR before it adds a few more seconds -- see
+// agents/ocrAgent.js), and keeping an HTTP request hanging that whole time
+// ties up a whole Express worker for no real benefit. Now: the request
+// returns immediately with a job id, and the frontend polls for its status
+// periodically.
 //
-// طابور واحد لكلا النوعين (اسم المهمة يميّز بينهما: 'read-invoice' مقابل
-// 'read-prescription' — راجع ocrWorker.js لمنطق التوزيع) بدل طابورين
-// منفصلين: نفس نمط المعالجة بالضبط (OCR + AI vision)، ولا فائدة حقيقية من
-// عزلهما بعملية Worker إضافية كاملة (PM2 app جديد، إعداد Docker إضافي)
-// لمجرد اختلاف الميزة النهائية — يكفي تمييز بسيط باسم المهمة.
+// One queue for both kinds (the job name distinguishes them:
+// 'read-invoice' vs. 'read-prescription' -- see ocrWorker.js for the
+// dispatch logic) instead of two separate queues: it's exactly the same
+// processing pattern (OCR + AI vision), and there's no real benefit to
+// isolating them into a whole extra Worker process (a new PM2 app, extra
+// Docker setup) just because the end feature differs -- a simple
+// distinction by job name is enough.
 //
-// يُستهلَك هذا الطابور بعملية منفصلة تماماً عن الخادم الرئيسي — راجع
-// ocrWorker.js وecosystem.config.js لسبب فصله عن عمليات worker الخاصة
-// بـExpress.
+// This queue is consumed by a process completely separate from the main
+// server -- see ocrWorker.js and ecosystem.config.js for why it's kept
+// apart from Express's own worker processes.
 const { Queue } = require('bullmq');
 const { createQueueConnection } = require('./queueConnection');
 
@@ -28,20 +32,20 @@ function getQueue() {
     queue = new Queue(QUEUE_NAME, {
       connection: createQueueConnection(),
       defaultJobOptions: {
-        attempts: 2, // محاولة إعادة واحدة إضافية لو فشل استدعاء AI لسبب مؤقت (انقطاع شبكة قصير)
+        attempts: 2, // one extra retry if the AI call fails for a temporary reason (a brief network outage)
         backoff: { type: 'fixed', delay: 3000 },
-        removeOnComplete: { age: 60 * 60 }, // نحتفظ بنتيجة المهمة ساعة كاملة (يكفي لاستعلام الفرونت إند)، ثم تُحذف تلقائياً بدل تراكمها بلا حدود بـRedis
-        removeOnFail: { age: 24 * 60 * 60 }, // نُبقي المهام الفاشلة يوماً كاملاً — مفيدة للتشخيص لو تكرر فشل استدعاء AI
+        removeOnComplete: { age: 60 * 60 }, // keep a completed job's result for a full hour (enough for the frontend to poll it), then it's removed automatically instead of accumulating without limit in Redis
+        removeOnFail: { age: 24 * 60 * 60 }, // keep failed jobs for a full day -- useful for diagnosing a recurring AI call failure
       },
     });
   }
   return queue;
 }
 
-// يُضيف مهمة قراءة فاتورة جديدة للطابور — يرمي استثناءً لو تعذّر الوصول
-// لـRedis. المستدعي بـinvoiceReaderRoutes.js يلتقط هذا صراحة ويرجع
-// available:false للفرونت إند، بنفس نمط "الذكاء الاصطناعي غير مُفعَّل"
-// الموجود أصلاً بكل ميزات الذكاء الاصطناعي بهذا النظام.
+// Adds a new invoice-read job to the queue -- throws if Redis is
+// unreachable. The caller in invoiceReaderRoutes.js explicitly catches
+// this and returns available:false to the frontend, matching the existing
+// "AI is not enabled" pattern used by every AI feature in this system.
 async function enqueueInvoiceReadJob(data) {
   const job = await getQueue().add('read-invoice', data);
   return job.id;
@@ -52,8 +56,9 @@ async function enqueuePrescriptionReadJob(data) {
   return job.id;
 }
 
-// حالة مهمة محدَّدة — تُستخدم بمسار الاستعلام (polling) من الفرونت إند.
-// ترجع null لو المهمة غير موجودة (رقم خاطئ، أو حُذفت بعد انتهاء removeOnComplete/removeOnFail).
+// The status of a specific job -- used by the frontend's polling route.
+// Returns null if the job doesn't exist (a wrong id, or it was removed
+// after removeOnComplete/removeOnFail expired).
 async function getJobStatus(jobId) {
   const job = await getQueue().getJob(jobId);
   if (!job) return null;

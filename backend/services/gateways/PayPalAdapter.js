@@ -1,6 +1,6 @@
 // server/services/gateways/PayPalAdapter.js
-// تكامل PayPal Checkout — بحاجة: client_id, client_secret من PayPal Developer Dashboard
-// التوثيق الرسمي: https://developer.paypal.com/docs/api/orders/v2/
+// PayPal Checkout integration -- needs: client_id, client_secret from the PayPal Developer Dashboard
+// Official documentation: https://developer.paypal.com/docs/api/orders/v2/
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const axios = require('axios');
 
@@ -27,7 +27,7 @@ class PayPalAdapter extends BaseGatewayAdapter {
   async initPayment({ amount, currency, invoiceId }) {
     try {
       const token = await this._getAccessToken();
-      // PayPal يتطلب عملة دولية (USD غالباً) — تحويل IQD إلى USD يتم قبل الاستدعاء إذا لزم
+      // PayPal requires an international currency (usually USD) -- converting IQD to USD happens before this call if needed
       const response = await axios.post(
         `${this.baseUrl}/v2/checkout/orders`,
         {

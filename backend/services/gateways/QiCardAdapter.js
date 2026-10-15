@@ -1,5 +1,5 @@
 // server/services/gateways/QiCardAdapter.js
-// تكامل Qi Card — بحاجة: api_key, terminal_id من بنك بغداد الدولي (مزود Qi Card)
+// Qi Card integration -- needs: api_key, terminal_id from International Bank of Baghdad (the Qi Card provider)
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const axios = require('axios');
 
@@ -13,7 +13,7 @@ class QiCardAdapter extends BaseGatewayAdapter {
 
   async initPayment({ amount, currency, invoiceId, metadata }) {
     try {
-      // TODO: استبدل بالـ endpoint الفعلي حسب توثيق Qi Card / بنك بغداد
+      // TODO: replace with the real endpoint per Qi Card / Bank of Baghdad's documentation
       const response = await axios.post(
         `${this.baseUrl}/transactions`,
         { amount, currency, reference: invoiceId, terminal_id: this.credentials.terminal_id },

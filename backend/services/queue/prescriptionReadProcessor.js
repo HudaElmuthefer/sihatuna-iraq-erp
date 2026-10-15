@@ -1,9 +1,10 @@
 // backend/services/queue/prescriptionReadProcessor.js
 //
-// منطق معالجة مهمة "قراءة وصفة طبية" واحدة — غلاف رفيع حول
-// agents/prescriptionAgent.js (السير الكامل: OCR → AI → فحص تضارب) يضيف
-// فقط تسجيل التدقيق (audit log). مفصول عن BullMQ نفسه بنفس سبب
-// invoiceReadProcessor.js — قابل للاختبار مباشرة بلا اتصال Redis حقيقي.
+// The logic for processing a single "read prescription" job -- a thin
+// wrapper around agents/prescriptionAgent.js (the full flow: OCR -> AI ->
+// interaction check) that only adds audit logging. Separated from BullMQ
+// itself for the same reason as invoiceReadProcessor.js -- directly
+// testable with no real Redis connection.
 const { readPrescription } = require('../../agents/prescriptionAgent');
 const { logAudit } = require('../../utils/auditLog');
 

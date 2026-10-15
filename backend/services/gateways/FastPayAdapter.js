@@ -1,5 +1,5 @@
 // server/services/gateways/FastPayAdapter.js
-// تكامل FastPay — بحاجة: api_key, merchant_id من لوحة تحكم فاست باي
+// FastPay integration -- needs: api_key, merchant_id from the FastPay dashboard
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const axios = require('axios');
 
@@ -13,7 +13,7 @@ class FastPayAdapter extends BaseGatewayAdapter {
 
   async initPayment({ amount, currency, invoiceId, metadata }) {
     try {
-      // TODO: استبدل بالـ endpoint الفعلي حسب توثيق FastPay
+      // TODO: replace with the real endpoint per FastPay's documentation
       const response = await axios.post(
         `${this.baseUrl}/payments`,
         { amount, currency, order_id: invoiceId, merchant_id: this.credentials.merchant_id },

@@ -1,15 +1,18 @@
 // backend/services/queue/queueConnection.js
 //
-// اتصال Redis منفصل تماماً عن utils/redisService.js (المستخدَم للكاش/تحديد
-// المعدل/إبطال التوكنات) — مخصَّص فقط لـBullMQ (الطابور services/queue/*).
+// A Redis connection completely separate from utils/redisService.js (used
+// for caching/rate limiting/token revocation) -- dedicated only to BullMQ
+// (the queue in services/queue/*).
 //
-// السبب إلزامي، وليس خيار تصميم: BullMQ يشترط صراحة maxRetriesPerRequest:null
-// على اتصال Redis المُمرَّر له (راجع "Production Checklist" بتوثيق BullMQ
-// الرسمي) — يعتمد داخلياً على أوامر Redis "حاجبة" (blocking، مثل
-// BRPOPLPUSH) يجب أن تنتظر بصبر لا أن تفشل بعد محاولة واحدة، بعكس اتصال
-// الكاش/تحديد المعدل المصمَّم عمداً للفشل السريع (fail-open — راجع تعليق
-// utils/redisService.js). لهذا اتصالان منفصلان تماماً، لا اتصال واحد
-// بإعدادات مختلفة حسب الاستخدام.
+// The reason is a hard requirement, not a design choice: BullMQ explicitly
+// requires maxRetriesPerRequest:null on the Redis connection passed to it
+// (see the official BullMQ documentation's "Production Checklist") -- it
+// internally relies on "blocking" Redis commands (like BRPOPLPUSH) that
+// must wait patiently rather than fail after a single attempt, unlike the
+// cache/rate-limiting connection which is deliberately designed to fail
+// fast (fail-open -- see the comment in utils/redisService.js). That's why
+// there are two completely separate connections, not one connection with
+// different settings depending on use.
 const IORedis = require('ioredis');
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';

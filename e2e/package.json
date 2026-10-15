@@ -1,0 +1,16 @@
+{
+  "name": "sihatuna-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end Playwright tests for SIHATUNA IRAQ. Runs against an isolated PostgreSQL database (sihatuna_iraq_test) -- never against real data. See README.md for how to run.",
+  "scripts": {
+    "seed": "node seed.js",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "pg": "^8.22.0",
+    "bcryptjs": "^2.4.3",
+    "xlsx": "^0.18.5"
+  }
+}

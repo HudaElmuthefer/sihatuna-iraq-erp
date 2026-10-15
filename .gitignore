@@ -16,6 +16,10 @@ frontend/node_modules/
 # Build output
 frontend/build/
 
+# Playwright e2e artifacts (regenerable per run, not source)
+e2e/test-results/
+e2e/playwright-report/
+
 # Output of scripts/lighthouse-all.js — regenerable, not source
 frontend/lighthouse-report-*.json
 

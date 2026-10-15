@@ -44,7 +44,7 @@ async function processInvoiceReadJob(jobData) {
 
   const ocrResult = await extractText(imageBase64);
   if (!ocrResult.available) {
-    devLog(`ℹ️  [ocr-worker] PaddleOCR غير متاح (${ocrResult.error}) — نكمل بالصورة وحدها`);
+    devLog(`[ocr-worker] PaddleOCR not available (${ocrResult.error}) -- continuing with the image alone`);
   }
 
   const userPrompt = buildUserPrompt(ocrResult.available ? ocrResult.text : null);
@@ -61,7 +61,7 @@ async function processInvoiceReadJob(jobData) {
     // نرجع النتيجة كما هي؛ مسار الاستعلام (GET /invoice-reader/jobs/:id)
     // يتعامل مع available:false بنفس الطريقة المعتادة أصلاً بكل ميزات
     // الذكاء الاصطناعي بهذا النظام.
-    console.error(`⚠️  [ocr-worker] فشل استدعاء ${result.provider}:`, result.error);
+    console.error(`[ocr-worker] Call to ${result.provider} failed:`, result.error);
   }
   return result;
 }

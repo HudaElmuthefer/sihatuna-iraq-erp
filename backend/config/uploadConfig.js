@@ -80,7 +80,7 @@ async function deleteUploadedFile(filePath) {
     // (async/await) لا "أطلق ولا تنتظر" — حتى تنتهي فعلياً قبل رد الطلب،
     // ويصير التحقق منها باختبار حتمياً بلا حاجة لانتظار عشوائي.
     if (err.code !== 'ENOENT') {
-      console.warn(`⚠️  [uploadConfig] تعذّر حذف الملف المرفق من القرص (${filename}):`, err.message);
+      console.warn(`[uploadConfig] Could not delete the attached file from disk (${filename}):`, err.message);
     }
   }
 }

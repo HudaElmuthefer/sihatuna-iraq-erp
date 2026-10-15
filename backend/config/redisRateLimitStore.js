@@ -62,7 +62,7 @@ class RedisRateLimitStore {
       }
       return { totalHits, resetTime: new Date(Date.now() + ttl) };
     } catch (err) {
-      console.warn('⚠️  [redis-rate-limit] تعذّر الوصول لـRedis (fail-open — لا حد مؤقتاً):', err.message);
+      console.warn('[redis-rate-limit] Could not reach Redis (fail-open -- no limit for now):', err.message);
       return { totalHits: 1, resetTime: new Date(Date.now() + this.windowMs) };
     }
   }

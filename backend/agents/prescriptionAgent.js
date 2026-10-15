@@ -47,7 +47,7 @@ function buildUserPrompt(ocrText) {
 async function readPrescription(imageBase64, mimeType, lang, mode, patientAllergies) {
   const ocrResult = await extractText(imageBase64);
   if (!ocrResult.available) {
-    devLog(`ℹ️  [prescription-agent] PaddleOCR غير متاح (${ocrResult.error}) — نكمل بالصورة وحدها`);
+    devLog(`[prescription-agent] PaddleOCR not available (${ocrResult.error}) -- continuing with the image alone`);
   }
 
   const userPrompt = buildUserPrompt(ocrResult.available ? ocrResult.text : null);

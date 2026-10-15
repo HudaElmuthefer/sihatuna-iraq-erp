@@ -37,7 +37,7 @@ function revoke(jti, exp) {
   if (exp <= now) return Promise.resolve(); // منتهي أصلاً بأي حال — لا داعي لتخزينه إطلاقاً
   return getClient()
     .set(`${KEY_PREFIX}:${jti}`, '1', 'EXAT', exp)
-    .catch((err) => console.warn('⚠️  [tokenRevocation] تعذّر تسجيل الإبطال بـ Redis (fail-open):', err.message));
+    .catch((err) => console.warn('[tokenRevocation] Could not record the revocation in Redis (fail-open):', err.message));
 }
 
 async function isRevoked(jti) {
@@ -46,7 +46,7 @@ async function isRevoked(jti) {
     const exists = await getClient().exists(`${KEY_PREFIX}:${jti}`);
     return exists === 1;
   } catch (err) {
-    console.warn('⚠️  [tokenRevocation] تعذّر التحقق من الإبطال بـ Redis (fail-open — التوكن يُعامَل كغير مُبطَل):', err.message);
+    console.warn('[tokenRevocation] Could not check revocation in Redis (fail-open -- token treated as not revoked):', err.message);
     return false;
   }
 }

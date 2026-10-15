@@ -24,7 +24,7 @@ function logAlertLocally(alert) {
     if (log.length > MAX_ALERTS) log = log.slice(log.length - MAX_ALERTS);
     fs.writeFileSync(ALERTS_LOG_PATH, JSON.stringify(log, null, 2), 'utf8');
   } catch (err) {
-    console.error('⚠️  فشل تسجيل التنبيه محلياً:', err.message);
+    console.error('Failed to log the alert locally:', err.message);
   }
 }
 
@@ -37,12 +37,12 @@ async function sendEmailAlert(subject, message) {
   // التنبيهات الحقيقية بالسيرفر المنشور فعلياً — هناك NODE_ENV تكون
   // 'production' أو غير مضبوطة، وليست 'test'، فالبريد يُرسَل هناك كالمعتاد.
   if (process.env.NODE_ENV === 'test') {
-    return { sent: false, reason: 'معطَّل أثناء بيئة الاختبار (NODE_ENV=test)' };
+    return { sent: false, reason: 'Disabled during the test environment (NODE_ENV=test)' };
   }
 
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, ALERT_EMAIL_TO } = process.env;
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !ALERT_EMAIL_TO) {
-    return { sent: false, reason: 'SMTP غير مُعدّ بملف .env (راجع SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };
+    return { sent: false, reason: 'SMTP is not configured in .env (see SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };
   }
   try {
     // nodemailer تحميل كسول (lazy require) — حتى لا يفشل تحميل الملف كله لو
@@ -55,9 +55,9 @@ async function sendEmailAlert(subject, message) {
       auth: { user: SMTP_USER, pass: SMTP_PASS },
     });
     await transporter.sendMail({
-      from: `"SIHATUNA IRAQ - مراقبة النظام" <${SMTP_USER}>`,
+      from: `"SIHATUNA IRAQ - System Monitor" <${SMTP_USER}>`,
       to: ALERT_EMAIL_TO,
-      subject: `🚨 ${subject}`,
+      subject: subject,
       text: message,
     });
     return { sent: true };
@@ -70,18 +70,16 @@ async function sendEmailAlert(subject, message) {
 // monitor.js المستقل) عند حدث حرج. تسجّل محلياً دائماً، وتحاول بريد إلكتروني
 // لو مُعدّ، وتطبع بالكونسول بوضوح شديد بكل الأحوال.
 async function sendAlert(subject, message) {
-  console.error('\n╔════════════════════════════════════════════════════════════╗');
-  console.error(`║  🚨 تنبيه: ${subject}`);
-  console.error('╚════════════════════════════════════════════════════════════╝');
+  console.error(`\nAlert: ${subject}`);
   console.error(`  ${message}\n`);
 
   logAlertLocally({ subject, message });
 
   const emailResult = await sendEmailAlert(subject, message);
   if (emailResult.sent) {
-    console.error('  ✅ أُرسِل تنبيه بريد إلكتروني.\n');
+    console.error('  Alert email sent.\n');
   } else {
-    console.error(`  ℹ️  لم يُرسَل بريد إلكتروني (${emailResult.reason}) — التنبيه مسجَّل محلياً بس.\n`);
+    console.error(`  No alert email sent (${emailResult.reason}) -- the alert is logged locally only.\n`);
   }
   return emailResult;
 }

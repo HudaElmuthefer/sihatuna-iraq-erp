@@ -96,7 +96,7 @@ async function checkInteractions(drugs, lang, mode) {
     };
   }
 
-  if (aiResult.error) console.error(`⚠️  [interaction-agent] فشل استدعاء ${aiResult.provider}:`, aiResult.error);
+  if (aiResult.error) console.error(`[interaction-agent] Call to ${aiResult.provider} failed:`, aiResult.error);
 
   // AI غير متاح أو فشل الاستدعاء — لو الجدول أعطانا نتيجة جزئية حقيقية
   // (على الأقل زوج واحد معروف)، نرجعها بدل available:false بالكامل؛ أفضل

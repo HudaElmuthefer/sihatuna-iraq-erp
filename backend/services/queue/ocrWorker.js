@@ -52,11 +52,11 @@ const worker = new Worker(
   { connection: createQueueConnection(), concurrency: CONCURRENCY }
 );
 
-worker.on('completed', (job) => devLog(`✅ [ocr-worker] مهمة ${job.id} اكتملت`));
-worker.on('failed', (job, err) => console.error(`⚠️  [ocr-worker] مهمة ${job?.id} فشلت:`, err.message));
-worker.on('error', (err) => console.error('⚠️  [ocr-worker] خطأ اتصال Redis:', err.message));
+worker.on('completed', (job) => devLog(`[ocr-worker] Job ${job.id} completed`));
+worker.on('failed', (job, err) => console.error(`[ocr-worker] Job ${job?.id} failed:`, err.message));
+worker.on('error', (err) => console.error('[ocr-worker] Redis connection error:', err.message));
 
-devLog(`🟢 [ocr-worker] جاهز، يستهلك طابور "${QUEUE_NAME}" (تزامن: ${CONCURRENCY})`);
+devLog(`[ocr-worker] Ready, consuming queue "${QUEUE_NAME}" (concurrency: ${CONCURRENCY})`);
 
 // إغلاق نظيف عند إيقاف PM2 للعملية (إعادة نشر، إعادة تشغيل...) — يترك
 // BullMQ ينهي أي مهمة جارية بأمان بدل قطعها بمنتصفها فجأة.

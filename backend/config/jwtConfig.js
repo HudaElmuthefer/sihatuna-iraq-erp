@@ -13,15 +13,13 @@ const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 // لو .env الحقيقي ما يحدّد JWT_SECRET مختلفاً، يجب تنبيه المطوّر بوضوح شديد —
 // وبمرحلة الإنتاج، نرفض تشغيل الخادم أصلاً بدل تشغيله بثغرة أمنية معروفة.
 if (JWT_SECRET === DEFAULT_JWT_SECRET) {
-  console.error('\n╔════════════════════════════════════════════════════════════╗');
-  console.error('║  ⚠️  تحذير أمان خطير: JWT_SECRET الافتراضي لا يزال مستخدماً!  ║');
-  console.error('╚════════════════════════════════════════════════════════════╝');
-  console.error('  هذا المفتاح مكتوب بالكود المصدري وغير سرّي إطلاقاً —');
-  console.error('  أي شخص يطّلع عليه يستطيع تزوير تسجيل دخول بصلاحية إدمن كاملة.');
-  console.error('  أضف JWT_SECRET بملف backend/.env بقيمة عشوائية قوية، ثم أعد التشغيل.');
-  console.error('  توليد مفتاح عشوائي: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"\n');
+  console.error('\nSECURITY WARNING: the default JWT_SECRET is still in use!');
+  console.error('This key is written directly in the source code and is not secret at all --');
+  console.error('anyone who sees it can forge a login token with full admin access.');
+  console.error('Set JWT_SECRET in backend/.env to a strong random value, then restart.');
+  console.error('Generate a random key: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"\n');
   if (process.env.NODE_ENV === 'production') {
-    console.error('❌ تم إيقاف التشغيل لأن NODE_ENV=production والمفتاح الافتراضي لا يزال مستخدماً.\n');
+    console.error('Startup aborted: NODE_ENV=production and the default key is still in use.\n');
     process.exit(1);
   }
 }

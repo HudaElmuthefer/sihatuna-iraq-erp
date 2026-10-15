@@ -34,7 +34,7 @@ function writeState(state) {
     fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
     fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2), 'utf8');
   } catch (err) {
-    console.error('⚠️  فشل حفظ حالة المراقبة:', err.message);
+    console.error('Failed to save monitor state:', err.message);
   }
 }
 
@@ -48,11 +48,11 @@ function checkHealth() {
           const json = JSON.parse(body);
           resolve({ reachable: true, healthy: res.statusCode === 200 && json.status === 'ok', details: json });
         } catch {
-          resolve({ reachable: true, healthy: false, details: { error: 'استجابة غير صالحة' } });
+          resolve({ reachable: true, healthy: false, details: { error: 'Invalid response' } });
         }
       });
     });
-    req.on('timeout', () => { req.destroy(); resolve({ reachable: false, healthy: false, details: { error: `لا استجابة خلال ${TIMEOUT_MS / 1000} ثواني` } }); });
+    req.on('timeout', () => { req.destroy(); resolve({ reachable: false, healthy: false, details: { error: `No response within ${TIMEOUT_MS / 1000} seconds` } }); });
     req.on('error', (err) => resolve({ reachable: false, healthy: false, details: { error: err.message } }));
   });
 }
@@ -63,23 +63,23 @@ async function main() {
   const currentStatus = result.healthy ? 'healthy' : 'unhealthy';
   const now = new Date().toISOString();
 
-  console.log(`[${now}] فحص: ${currentStatus}${result.details?.database ? ` | قاعدة البيانات: ${result.details.database}` : ''}`);
+  console.log(`[${now}] check: ${currentStatus}${result.details?.database ? ` | database: ${result.details.database}` : ''}`);
 
   // تنبيه فقط عند *تغيّر* الحالة — يمنع إغراقج برسائل متكررة لنفس الخلل
   if (currentStatus !== state.lastStatus) {
     if (currentStatus === 'unhealthy') {
       const reason = !result.reachable
-        ? 'السيرفر لا يستجيب إطلاقاً (متوقف أو معلَّق)'
-        : `السيرفر يستجيب لكنه بحالة غير سليمة: ${JSON.stringify(result.details)}`;
+        ? 'The server is not responding at all (stopped or hung)'
+        : `The server responds but is unhealthy: ${JSON.stringify(result.details)}`;
       await sendAlert(
-        'SIHATUNA IRAQ — السيرفر بمشكلة',
-        `${reason}\n\nالوقت: ${now}\nالرابط المفحوص: ${HEALTH_URL}\n\nالخطوة التالية: تأكد إن start-backend.bat يعمل، وشغّل check-system.bat لتشخيص أدق.`
+        'SIHATUNA IRAQ -- server problem',
+        `${reason}\n\nTime: ${now}\nChecked URL: ${HEALTH_URL}\n\nNext step: confirm start-backend.bat is running, and run check-system.bat for a more detailed diagnosis.`
       );
     } else if (state.lastStatus === 'unhealthy') {
       // كانت متعطّلة، والآن رجعت طبيعية — تنبيه "تعافي" حتى تعرف انحلّت المشكلة
       await sendAlert(
-        'SIHATUNA IRAQ — السيرفر رجع طبيعي ✅',
-        `السيرفر واستجابته سليمة الآن.\n\nالوقت: ${now}`
+        'SIHATUNA IRAQ -- server recovered',
+        `The server and its response are healthy now.\n\nTime: ${now}`
       );
     }
     // أول تشغيل إطلاقاً (lastStatus === 'unknown') وكانت النتيجة سليمة — لا تنبيه، هذا وضع طبيعي
@@ -89,6 +89,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌ خطأ غير متوقع بسكربت المراقبة:', err.message);
+  console.error('Unexpected error in the monitor script:', err.message);
   process.exit(1);
 });

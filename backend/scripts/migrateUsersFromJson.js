@@ -19,30 +19,30 @@ const DB_JSON_PATH = path.join(__dirname, '..', 'data', 'db.json');
 
 async function run() {
   if (!fs.existsSync(DB_JSON_PATH)) {
-    console.log('لا يوجد backend/data/db.json — لا شيء لترحيله (ربما رُحِّل مسبقاً وأُرشِف الملف).');
+    console.log('backend/data/db.json does not exist -- nothing to migrate (it may have already been migrated and archived).');
     return;
   }
 
   const raw = JSON.parse(fs.readFileSync(DB_JSON_PATH, 'utf8'));
   const jsonUsers = Array.isArray(raw.users) ? raw.users : [];
   if (jsonUsers.length === 0) {
-    console.log('لا يوجد مستخدمون بملف db.json.');
+    console.log('No users in db.json.');
     return;
   }
 
-  console.log(`🔧 يجري ترحيل ${jsonUsers.length} مستخدم(ين) من db.json إلى جدول users بـPostgreSQL...`);
+  console.log(`Migrating ${jsonUsers.length} user(s) from db.json to the users table in PostgreSQL...`);
   let migrated = 0;
   let skipped = 0;
 
   for (const u of jsonUsers) {
     if (!u.username) {
-      console.warn(`   ⚠️  تخطي سجل بلا username (id=${u.id}) — لا يمكن تسجيل الدخول به أصلاً.`);
+      console.warn(`   Skipping a record with no username (id=${u.id}) -- it can't be used to log in anyway.`);
       skipped++;
       continue;
     }
     const existing = await pool.query('SELECT id FROM users WHERE username = $1', [u.username]);
     if (existing.rows.length > 0) {
-      console.log(`   - تخطي "${u.username}" (موجود مسبقاً بـPostgreSQL).`);
+      console.log(`   - Skipping "${u.username}" (already exists in PostgreSQL).`);
       skipped++;
       continue;
     }
@@ -70,16 +70,16 @@ async function run() {
         u.id === 1, // الحساب الجذري الأصلي فقط
       ]
     );
-    console.log(`   ✅ رُحِّل "${u.username}" (${u.role}).`);
+    console.log(`   Migrated "${u.username}" (${u.role}).`);
     migrated++;
   }
 
-  console.log(`✅ اكتمل الترحيل: ${migrated} مُرحَّل، ${skipped} مُتخطى.`);
+  console.log(`Migration complete: ${migrated} migrated, ${skipped} skipped.`);
 }
 
 run()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error('❌ فشل ترحيل المستخدمين:', err.message);
+    console.error('User migration failed:', err.message);
     process.exit(1);
   });

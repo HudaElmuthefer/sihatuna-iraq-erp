@@ -147,7 +147,7 @@ async function checkAllergies(patientAllergies, drugs, lang, mode) {
     };
   }
 
-  if (aiResult.error) console.error(`⚠️  [allergy-agent] فشل استدعاء ${aiResult.provider}:`, aiResult.error);
+  if (aiResult.error) console.error(`[allergy-agent] Call to ${aiResult.provider} failed:`, aiResult.error);
 
   // AI غير متاح أو فشل الاستدعاء — لو الجدول أعطانا تضاربات حقيقية بالفعل
   // (لأدوية أخرى بنفس الطلب)، نرجعها بدل available:false بالكامل؛ أفضل من

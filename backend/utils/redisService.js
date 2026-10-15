@@ -32,7 +32,7 @@ function logRedisError(context, err) {
   const now = Date.now();
   if (now - lastErrorLogAt < ERROR_LOG_COOLDOWN_MS) return;
   lastErrorLogAt = now;
-  console.warn(`⚠️  [redis] ${context} — النظام يستمر بالعمل بدون Redis (fail-open):`, err.message);
+  console.warn(`[redis] ${context} -- the system continues running without Redis (fail-open):`, err.message);
 }
 
 function getClient() {
@@ -47,8 +47,8 @@ function getClient() {
     enableOfflineQueue: false,
     retryStrategy: (times) => Math.min(times * 500, 10000), // يستمر بمحاولة إعادة الاتصال بالخلفية تلقائياً
   });
-  client.on('error', (err) => logRedisError('خطأ اتصال', err));
-  client.on('connect', () => devLog('✅ [redis] الاتصال بـ Redis يعمل بنجاح.'));
+  client.on('error', (err) => logRedisError('Connection error', err));
+  client.on('connect', () => devLog('[redis] Connected to Redis successfully.'));
   return client;
 }
 

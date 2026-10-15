@@ -107,7 +107,7 @@ async function checkDosage(drugName, dose, unit, ageYears, weightKg, lang, mode)
     };
   }
 
-  if (aiResult.error) console.error(`⚠️  [dosage-agent] فشل استدعاء ${aiResult.provider}:`, aiResult.error);
+  if (aiResult.error) console.error(`[dosage-agent] Call to ${aiResult.provider} failed:`, aiResult.error);
 
   // AI غير متاح أو فشل الاستدعاء، ولا تطابق بالجدول — لا بيانات كافية
   // إطلاقاً. available:false هنا يعني صراحة "لم نُقيِّم هذا"، لا "آمن".

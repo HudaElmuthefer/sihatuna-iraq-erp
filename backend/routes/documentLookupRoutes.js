@@ -220,7 +220,7 @@ router.post('/barcode/import-excel', auth, requirePermission('hr'), barcodeUploa
       }
     }
 
-    console.log(`📥 [barcode] استيراد دفعة: ${results.imported} تولّد، ${results.duplicates} موجود مسبقاً، ${results.failed} فشل`);
+    console.log(`[barcode] Batch import: ${results.imported} generated, ${results.duplicates} already existing, ${results.failed} failed`);
     res.json(results);
   } catch (err) { next(err); }
 });

@@ -49,10 +49,12 @@ module.exports = {
     {
       name: 'sihatuna-frontend',
       cwd: './frontend',
-      script: 'node_modules/react-scripts/bin/react-scripts.js', // a real JS file, bypasses the npm.cmd issue on Windows
-      args: 'start',
+      // Serves the production build (run `npm run build` first) instead of
+      // the dev server -- a real JS file, bypassing the npm.cmd issue on
+      // Windows, same as the backend app above.
+      script: 'node_modules/serve/build/main.js',
+      args: '-s build -l 3000',
       exec_mode: 'fork',
-      env: { NODE_OPTIONS: '--openssl-legacy-provider', BROWSER: 'none' }, // BROWSER=none: stops React from opening its own extra browser tab (start.bat already opens one with proper timing)
       instances: 1,
       autorestart: true,
       max_restarts: 10,

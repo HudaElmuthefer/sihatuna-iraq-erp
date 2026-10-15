@@ -1,37 +1,44 @@
 // backend/utils/ollamaService.js
 //
-// Ollama (ذكاء اصطناعي محلي/بلا اتصال إنترنت) — بديل ثالث لـGemini/Claude
-// بجانب utils/aiProvider.js، بنفس شكل الدوال الموحَّد بالضبط (available/
-// provider/parsed) حتى يصير استبدالاً مباشراً (drop-in) لـcallAI/
-// callAIWithImage من منظور أي مسار يستدعيهما — راجع المرحلة الخامسة
-// (aiProviderRouter.js) لمنطق الاختيار الفعلي بين البوت/الإنترنت/المحلي؛
-// هذا الملف يوفّر القدرة فقط، بلا أي اختيار مضمَّن هنا.
+// Ollama (local/offline AI) -- a third alternative to Gemini/Claude
+// alongside utils/aiProvider.js, with the exact same unified function
+// shape (available/provider/parsed) so it's a direct drop-in replacement
+// for callAI/callAIWithImage from the point of view of any route that
+// calls them -- see phase five (aiProviderRouter.js) for the actual
+// bot/online/offline selection logic; this file only provides the
+// capability, with no selection logic built in here.
 //
-// ── لماذا خادم Ollama منفصل تماماً عن Gemini/Anthropic؟ ─────────────────────
-// Gemini/Claude: طلب HTTP لخادم سحابي خارجي بمفتاح API فقط — لا احتياج لأي
-// بنية تحتية محلية. Ollama: خادم حقيقي يعمل محلياً (افتراضياً منفذ 11434)
-// ويحمّل نموذج ذكاء اصطناعي كامل بذاكرة الجهاز نفسه — يحتاج تثبيت Ollama
-// وتنزيل نموذج مسبقاً (`ollama pull <model>`)، ويعمل حتى بدون إنترنت إطلاقاً
-// بعد ذلك (هذا هو معنى "غير متصل" هنا) — بعكس Gemini/Claude اللذان يتوقفان
-// فوراً بلا إنترنت.
+// ── Why is the Ollama server completely separate from Gemini/Anthropic? ───
+// Gemini/Claude: an HTTP request to an external cloud server with just an
+// API key -- no local infrastructure needed at all. Ollama: an actual
+// server running locally (port 11434 by default) that loads a full AI
+// model into the machine's own memory -- needs Ollama installed and a
+// model downloaded in advance (`ollama pull <model>`), and then works even
+// with no internet at all (this is what "offline" means here) -- unlike
+// Gemini/Claude, which stop working immediately without internet.
 //
-// ── نموذجان منفصلان: نصي وrؤية، لا نموذج واحد للاثنين ───────────────────────
-// ليس كل نموذج Ollama يدعم قراءة صور (vision) — تأكّدنا فعلياً
-// (`ollama show <model>`): qwen2.5 نصي بحت (لا "vision" بقائمة capabilities)،
-// بينما gemma3 يدعم الاثنين. النموذج النصي الافتراضي هنا أصغر بكثير (أسرع
-// وأخف على الذاكرة) لأن فحص التضارب الدوائي (استخدامه الأساسي) نصي بحت —
-// لا داعي لتحميل نموذج رؤية أثقل لمهمة لا تحتاجه.
+// ── Two separate models: text and vision, not one model for both ─────────
+// Not every Ollama model supports reading images (vision) -- actually
+// confirmed (`ollama show <model>`): qwen2.5 is purely text-based (no
+// "vision" in its capabilities list), while gemma3 supports both. The
+// default text model here is much smaller (faster and lighter on memory)
+// because drug-interaction checking (its main use) is purely text-based --
+// no need to load a heavier vision model for a task that doesn't need it.
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_TEXT_MODEL = process.env.OLLAMA_TEXT_MODEL || 'qwen2.5:0.5b';
 const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'gemma3:4b';
-// الاستدلال محلياً على المعالج (CPU) — بلا تسريع GPU مضمون بكل جهاز — قد
-// يأخذ وقتاً أطول بكثير من استدعاء سحابي، خصوصاً لنموذج الرؤية الأثقل على
-// جهاز بذاكرة محدودة. مهلة سخية عمداً (تشبه OCR_TIMEOUT_MS بـagents/ocrAgent
-// .js لنفس السبب بالضبط)، مع بقائها محدودة لمنع تعليق أبدي حقيقي.
+// Local inference on the CPU -- no GPU acceleration is guaranteed on every
+// machine -- can take much longer than a cloud call, especially for the
+// heavier vision model on a machine with limited memory. A deliberately
+// generous timeout (similar to OCR_TIMEOUT_MS in agents/ocrAgent.js for
+// exactly the same reason), while still being bounded to prevent a truly
+// infinite hang.
 const OLLAMA_TIMEOUT_MS = parseInt(process.env.OLLAMA_TIMEOUT_MS, 10) || 120_000;
 
-// فحص سريع: هل خادم Ollama يستجيب أصلاً؟ (لا يتحقق من توفر نموذج معيّن —
-// فقط إن الخادم نفسه يعمل). مهلة قصيرة عمداً (فحص توفّر، لا استدعاء حقيقي).
+// A quick check: is the Ollama server responding at all? (doesn't check
+// whether a specific model is available -- just that the server itself is
+// running). A deliberately short timeout (an availability check, not a
+// real call).
 async function ollamaAvailable() {
   try {
     const response = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
@@ -41,10 +48,11 @@ async function ollamaAvailable() {
   }
 }
 
-// نداء عام لـ/api/chat — تُستخدَم داخلياً من الدالتين الموحَّدتين أدناه.
-// format:'json' يفرض على Ollama إرجاع JSON صالح فقط (مدعوم من معظم النماذج
-// الحديثة، مطابق لـresponseMimeType الخاص بـGemini) — يمنع مشاكل التغليف
-// بـMarkdown نفس مشكلة كانت موجودة قبل هذا بـcallGemini/callAnthropic.
+// A general call to /api/chat -- used internally by the two unified
+// functions below. format:'json' forces Ollama to return only valid JSON
+// (supported by most modern models, matching Gemini's responseMimeType) --
+// prevents the same Markdown-wrapping issue that existed before this in
+// callGemini/callAnthropic.
 async function chatRequest(model, systemPrompt, userPrompt, images) {
   const message = { role: 'user', content: userPrompt };
   if (images) message.images = images;
@@ -66,15 +74,15 @@ async function chatRequest(model, systemPrompt, userPrompt, images) {
   }
   const data = await response.json();
   const rawText = data.message?.content || '';
-  if (!rawText) throw new Error(`رد فارغ من Ollama (${model}): ${JSON.stringify(data).slice(0, 300)}`);
+  if (!rawText) throw new Error(`Empty response from Ollama (${model}): ${JSON.stringify(data).slice(0, 300)}`);
   try {
     return JSON.parse(rawText);
   } catch {
-    throw new Error(`رد غير صالح من Ollama (${model}): ${rawText.slice(0, 300)}`);
+    throw new Error(`Invalid response from Ollama (${model}): ${rawText.slice(0, 300)}`);
   }
 }
 
-// نفس شكل callAI() بـutils/aiProvider.js بالضبط — استبدال مباشر لها.
+// The exact same shape as callAI() in utils/aiProvider.js -- a direct replacement for it.
 async function callOllama(systemPrompt, userPrompt) {
   try {
     const parsed = await chatRequest(OLLAMA_TEXT_MODEL, systemPrompt, userPrompt);
@@ -84,8 +92,9 @@ async function callOllama(systemPrompt, userPrompt) {
   }
 }
 
-// نفس شكل callAIWithImage() بـutils/aiProvider.js بالضبط — imageBase64 خام
-// (بلا بادئة "data:image/...;base64,")، بنفس شرط المستدعي الحالي تماماً.
+// The exact same shape as callAIWithImage() in utils/aiProvider.js --
+// imageBase64 is raw (no "data:image/...;base64," prefix), with the exact
+// same requirement on the caller side.
 async function callOllamaWithImage(systemPrompt, userPrompt, imageBase64, mimeType) {
   try {
     const parsed = await chatRequest(OLLAMA_VISION_MODEL, systemPrompt, userPrompt, [imageBase64]);

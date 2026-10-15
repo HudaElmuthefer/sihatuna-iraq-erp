@@ -1,13 +1,15 @@
 // backend/utils/alerts.js
 //
-// أداة إرسال تنبيهات لأحداث حرجة (السيرفر متوقف، قاعدة البيانات غير متصلة...).
-// النظام لا يملك خدمة بريد إلكتروني مُجهَّزة افتراضياً، فالتصميم هنا مبني على
-// طبقتين:
-//   1) سجل محلي دائماً (data/alerts-log.json) — يعمل دائماً بدون أي إعداد،
-//      تستطيع فتحه بأي وقت أو ربطه بأي أداة قراءة سجلات لاحقاً.
-//   2) بريد إلكتروني فعلي *اختياري* — يعمل فقط لو حدَّدت بيانات SMTP بملف
-//      .env (راجع .env.example). بدون هذه البيانات، التنبيه يبقى بالسجل
-//      المحلي بس، مع رسالة واضحة بالكونسول تلفت الانتباه فوراً.
+// A tool for sending alerts for critical events (the server is down, the
+// database is disconnected...). The system has no email service set up
+// by default, so this is designed around two layers:
+//   1) An always-on local log (data/alerts-log.json) -- always works with
+//      no setup at all, and can be opened at any time or hooked up to any
+//      log-reading tool later.
+//   2) An *optional* real email -- only works if SMTP details are set in
+//      .env (see .env.example). Without these details, the alert still
+//      stays in the local log, along with a clear console message that
+//      immediately draws attention.
 const fs = require('fs');
 const path = require('path');
 
@@ -29,13 +31,15 @@ function logAlertLocally(alert) {
 }
 
 async function sendEmailAlert(subject, message) {
-  // ── إصلاح: تعطيل البريد الفعلي أثناء الاختبارات الآلية (Jest) فقط ──────────
-  // أثناء npm test، أخطاء 500 كثيرة تُثار عمداً للتحقق من سلوك الكود (ليست
-  // أحداثاً حقيقية بالنظام)، وكل واحد منها كان يفتح اتصال SMTP حقيقي فعلياً
-  // (يرسل بريداً فعلياً لصندوق واردك، ويبقي الاتصال مفتوحاً بعد انتهاء
-  // الاختبارات فيمنع Jest من الخروج طبيعياً). هذا لا يؤثر إطلاقاً على
-  // التنبيهات الحقيقية بالسيرفر المنشور فعلياً — هناك NODE_ENV تكون
-  // 'production' أو غير مضبوطة، وليست 'test'، فالبريد يُرسَل هناك كالمعتاد.
+  // ── Fix: disable real email only during automated (Jest) tests ──────────
+  // During npm test, many 500 errors are deliberately triggered to check
+  // the code's behavior (they aren't real events in the system), and each
+  // one used to actually open a real SMTP connection (sending a real
+  // email to your inbox, and keeping the connection open after the tests
+  // finish, which prevents Jest from exiting normally). This has no
+  // effect at all on real alerts on an actually deployed server -- there,
+  // NODE_ENV is 'production' or unset, not 'test', so email is sent as
+  // usual.
   if (process.env.NODE_ENV === 'test') {
     return { sent: false, reason: 'Disabled during the test environment (NODE_ENV=test)' };
   }
@@ -45,8 +49,9 @@ async function sendEmailAlert(subject, message) {
     return { sent: false, reason: 'SMTP is not configured in .env (see SMTP_HOST/SMTP_USER/SMTP_PASS/ALERT_EMAIL_TO)' };
   }
   try {
-    // nodemailer تحميل كسول (lazy require) — حتى لا يفشل تحميل الملف كله لو
-    // المكتبة غير مثبَّتة بمشروع لا يستخدم هذه الميزة أصلاً
+    // nodemailer is a lazy require -- so the whole file doesn't fail to
+    // load if the library isn't installed in a project that doesn't use
+    // this feature at all
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
@@ -66,9 +71,10 @@ async function sendEmailAlert(subject, message) {
   }
 }
 
-// نقطة الدخول الرئيسية — تُستدعى من أي مكان بالنظام (السيرفر نفسه، أو
-// monitor.js المستقل) عند حدث حرج. تسجّل محلياً دائماً، وتحاول بريد إلكتروني
-// لو مُعدّ، وتطبع بالكونسول بوضوح شديد بكل الأحوال.
+// The main entry point -- called from anywhere in the system (the server
+// itself, or the standalone monitor.js) on a critical event. Always logs
+// locally, tries an email if configured, and always prints very clearly
+// to the console either way.
 async function sendAlert(subject, message) {
   console.error(`\nAlert: ${subject}`);
   console.error(`  ${message}\n`);

@@ -1,20 +1,22 @@
 // backend/utils/auditLog.js
 //
-// يسجل تلقائياً كل عملية إضافة/تعديل/حذف على أي موديول حساس: من قام بها، وماذا
-// تغيّر، ومتى. استُخرجت من server.js لتصغيره وتسهيل استخدامها من أي ملف
-// مسارات (routes/*) بدون تكرار.
+// Automatically records every add/edit/delete operation on any sensitive
+// module: who did it, what changed, and when. Extracted from server.js to
+// keep it smaller and make it easy to use from any route file (routes/*)
+// without duplicating it.
 //
-// ── إصلاح: مسار قابل للتخصيص (نفس نمط DB_PATH وREVOKED_TOKENS_PATH) ──────────
-// قبل هذا، المسار كان ثابتاً دائماً (backend/data/audit-log.json)، بعكس
-// DB_PATH وREVOKED_TOKENS_PATH اللذين صارا قابلين للتخصيص عبر متغير بيئة لعزل
-// بيانات الاختبارات الآلية عن البيانات الحقيقية. النتيجة: أي تشغيل تجريبي
-// للسيرفر (حتى اختبار يدوي بسيط عبر curl) كان يكتب مباشرة فوق سجل التدقيق
-// *الحقيقي* بالمشروع دون قصد.
+// ── Fix: a customizable path (the same pattern as DB_PATH and REVOKED_TOKENS_PATH) ──────────
+// Before this, the path was always fixed (backend/data/audit-log.json),
+// unlike DB_PATH and REVOKED_TOKENS_PATH which became customizable via an
+// environment variable to isolate automated test data from real data. The
+// result: any trial run of the server (even a simple manual curl test)
+// was writing directly over the project's *real* audit log without
+// meaning to.
 const fs = require('fs');
 const path = require('path');
 
 const AUDIT_LOG_PATH = process.env.AUDIT_LOG_PATH || path.join(__dirname, '..', 'data', 'audit-log.json');
-const MAX_AUDIT_ENTRIES = 5000; // نحافظ على حجم الملف معقول
+const MAX_AUDIT_ENTRIES = 5000; // keeps the file size reasonable
 
 const logAudit = (entry) => {
   try {

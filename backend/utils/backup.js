@@ -1,30 +1,35 @@
 // backend/utils/backup.js
 //
-// نظام نسخ احتياطي مزدوج:
-// 1) audit-log.json (يبقى كما كان — احتياطي إضافي بسيط لسجل التدقيق فقط.
-//    db.json كان هنا سابقاً أيضاً، قبل ترحيل موديول المستخدمين الأخير
-//    لـPostgreSQL بالكامل — راجع routes/usersRoutes.js وscripts/
-//    migrateUsersFromJson.js. لم يعد له أي دور، فأُزيل من هذه القائمة).
-// 2) نسخة كاملة حقيقية من قاعدة بيانات PostgreSQL عبر pg_dump — هذا الجزء
-//    أُضيف بعد اكتشاف أن كل البيانات الفعلية (المرضى، الفواتير، المدفوعات)
-//    كانت بلا أي نسخ احتياطي إطلاقاً بعد الانتقال من db.json — ثغرة حرجة
-//    كانت تعني فقدان كل شيء نهائياً عند أي عطل بالقرص أو حذف خاطئ. يشمل
-//    الآن جدول users أيضاً (نفس قاعدة البيانات، pg_dump ينسخها كاملة).
+// A dual backup system:
+// 1) audit-log.json (unchanged -- a simple extra backup for the audit log
+//    only. db.json used to be here too, before the users module's final
+//    migration fully to PostgreSQL -- see routes/usersRoutes.js and
+//    scripts/migrateUsersFromJson.js. It no longer serves any purpose, so
+//    it was removed from this list).
+// 2) A real, full copy of the PostgreSQL database via pg_dump -- this
+//    part was added after discovering that all the real data (patients,
+//    invoices, payments) had no backup at all after moving away from
+//    db.json -- a critical gap that meant losing everything permanently
+//    on any disk failure or accidental deletion. This now includes the
+//    users table too (same database, pg_dump copies it in full).
 //
-// وجهة خارجية اختيارية (EXTERNAL_BACKUP_DIR بملف .env): بدون هذا، كل النسخ
-// الاحتياطية محفوظة بنفس القرص الفيزيائي لجهازك — لو تعطّل القرص نفسه أو
-// انسرق الجهاز، تُفقد النسخ الاحتياطية مع البيانات الأصلية سوية. إعداد
-// مسار خارجي (قرص USB خارجي دائم الاتصال، أو مجلد مزامنة سحابية محلي مثل
-// Google Drive / OneDrive) يضمن وجود نسخة بمكان مختلف فعلياً.
+// An optional external destination (EXTERNAL_BACKUP_DIR in .env): without
+// this, every backup is stored on your machine's own physical disk -- if
+// that disk fails or the machine is stolen, the backups are lost along
+// with the original data together. Setting up an external path (a
+// permanently-connected external USB drive, or a locally-synced cloud
+// folder like Google Drive / OneDrive) ensures a copy genuinely exists in
+// a different location.
 //
-// كلا النوعين: نسخة تلقائية دورية (كل ساعة)، الاحتفاظ بآخر N نسخة فقط.
+// Both kinds: an automatic periodic backup (every hour), keeping only the last N copies.
 //
-// ── إضافة: نسخة يدوية بوجهة يحددها المستخدم ─────────────────────────────────
-// runBackupWithDestination() تُستخدم فقط من راوت POST /backups/run عندما يمرر
-// المستخدم destination (pgadmin / computer / cloud). لا تُستدعى إطلاقاً من
-// الجدولة التلقائية (startAutoBackup)، ولا تُغيّر بأي شكل سلوك النسخ الدوري
-// الموجود أصلاً — فقط تعيد استخدام runBackup() نفسها ثم تقرر ماذا تفعل
-// بالملف الناتج حسب الوجهة المطلوبة.
+// ── Addition: a manual backup with a user-chosen destination ─────────────────────
+// runBackupWithDestination() is only used from the POST /backups/run
+// route when the user passes a destination (pgadmin / computer / cloud).
+// It is never called from the automatic schedule (startAutoBackup), and
+// doesn't change the existing periodic backup's behavior in any way -- it
+// just reuses runBackup() itself and then decides what to do with the
+// resulting file depending on the requested destination.
 
 const fs = require('fs');
 const path = require('path');
@@ -33,14 +38,15 @@ const { execFile } = require('child_process');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const BACKUPS_DIR = path.join(__dirname, '..', 'backups');
 const FILES_TO_BACKUP = ['audit-log.json'];
-const BACKUP_INTERVAL_MS = 60 * 60 * 1000; // كل ساعة
-const MAX_BACKUPS = 48; // نحتفظ بآخر 48 نسخة (يعني تغطية يومين تقريباً بمعدل كل ساعة)
+const BACKUP_INTERVAL_MS = 60 * 60 * 1000; // every hour
+const MAX_BACKUPS = 48; // keep the last 48 backups (roughly two days of coverage at one per hour)
 
-// نمط اسم مجلد نسخة البيانات الاحتياطية (من timestamp() تحت: ISO مع استبدال
-// : و . بـ -، مثل 2026-07-28T08-11-48-690Z). يُستخدم لاستثناء backups/code/
-// (مجلد نسخ كود المصدر المنفصل تماماً — utils/codeBackup.js) من قوائم/تنظيف
-// نسخ البيانات هنا، لأنه مجلد فرعي آخر بنفس BACKUPS_DIR لكنه لا يمثّل نسخة
-// بيانات حقيقية.
+// The naming pattern of a data backup folder (from timestamp() below: ISO
+// with : and . replaced by -, e.g. 2026-07-28T08-11-48-690Z). Used to
+// exclude backups/code/ (the completely separate source-code backup
+// folder -- utils/codeBackup.js) from the listing/cleanup here, which is
+// specific to data backups only, because it's another subfolder under the
+// same BACKUPS_DIR but doesn't represent a real data backup.
 const BACKUP_FOLDER_NAME_PATTERN = /^\d{4}-\d{2}-\d{2}T/;
 
 function ensureDir(dir) {
@@ -51,10 +57,11 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-// نسخة احتياطية حقيقية وكاملة لقاعدة بيانات PostgreSQL بأمر pg_dump الرسمي
-// (نفس الأداة التي يستخدمها pgAdmin داخلياً). تُحفَظ كملف SQL نصّي عادي —
-// يمكن استعادته لاحقاً بلصقه بـ Query Tool أو بأمر psql مباشرة، بدون أي
-// تعقيد إضافي، بما يتوافق مع طريقة عملك المعتادة بـ pgAdmin.
+// A real, full backup of the PostgreSQL database using the official
+// pg_dump command (the same tool pgAdmin uses internally). Saved as a
+// plain SQL text file -- can be restored later by pasting it into the
+// Query Tool or directly via the psql command, with no extra complexity,
+// matching your usual workflow with pgAdmin.
 function runPostgresBackup(backupFolder) {
   return new Promise((resolve) => {
     const outFile = path.join(backupFolder, 'postgres_backup.sql');
@@ -68,8 +75,9 @@ function runPostgresBackup(backupFolder) {
     ];
     execFile('pg_dump', args, { env: { ...process.env, PGPASSWORD: process.env.PG_PASSWORD || '' } }, (err) => {
       if (err) {
-        // لا نوقف تشغيل السيرفر أبداً بسبب فشل النسخ الاحتياطي — فقط نُسجّل
-        // تحذيراً واضحاً بالسبب الأكثر شيوعاً (pg_dump غير موجود بمسار PATH)
+        // Never stop the server from running because a backup failed --
+        // just log a clear warning with the most common cause (pg_dump
+        // not found in PATH)
         console.warn('PostgreSQL backup failed:', err.message);
         console.warn('    Make sure the PostgreSQL\\bin folder is added to PATH (same requirement as the psql command).');
         resolve(false);
@@ -80,9 +88,10 @@ function runPostgresBackup(backupFolder) {
   });
 }
 
-// ينسخ مجلد نسخة احتياطية كامل إلى الوجهة الخارجية المُعدَّة بـ EXTERNAL_BACKUP_DIR
-// (لو موجودة بملف .env). فشل هذه الخطوة (مثلاً القرص الخارجي غير موصول وقتها)
-// لا يوقف عملية النسخ الاحتياطي المحلي أبداً — فقط يُسجَّل تحذير واضح.
+// Copies a whole backup folder to the external destination set via
+// EXTERNAL_BACKUP_DIR (if present in .env). A failure in this step (for
+// example, the external drive wasn't connected at the time) never stops
+// the local backup process -- just logs a clear warning.
 function copyToExternalDestination(backupFolder, ts) {
   const externalRoot = process.env.EXTERNAL_BACKUP_DIR;
   if (!externalRoot || !externalRoot.trim()) return { attempted: false, ok: false };
@@ -105,7 +114,7 @@ function copyToExternalDestination(backupFolder, ts) {
   }
 }
 
-// يحذف النسخ الخارجية الزائدة عن MAX_BACKUPS، بنفس سياسة المجلد المحلي
+// Deletes external backups beyond MAX_BACKUPS, following the same policy as the local folder
 function cleanupOldExternalBackups() {
   const externalRoot = process.env.EXTERNAL_BACKUP_DIR;
   if (!externalRoot || !externalRoot.trim() || !fs.existsSync(externalRoot)) return;
@@ -123,10 +132,12 @@ function cleanupOldExternalBackups() {
   }
 }
 
-// ── ملاحظة: الآن تُرجع معلومات النسخة المُنشأة (backupFolder, pgOk, backedUpAny)
-// بدل عدم إرجاع شيء — إضافة غير مؤثرة على المستدعين الحاليين (startAutoBackup،
-// restoreFromBackup) لأنهم لا يستخدمون القيمة المُرجعة أصلاً، لكنها ضرورية
-// لـ runBackupWithDestination() الجديدة كي تعرف مكان الملف الناتج.
+// ── Note: now returns information about the backup created
+// (backupFolder, pgOk, backedUpAny) instead of returning nothing -- an
+// addition that doesn't affect the current callers (startAutoBackup,
+// restoreFromBackup) since they don't use the return value at all, but
+// it's necessary for the new runBackupWithDestination() so it knows where
+// the resulting file is.
 async function runBackup() {
   ensureDir(BACKUPS_DIR);
   const ts = timestamp();
@@ -156,7 +167,7 @@ async function runBackup() {
   if (backedUpAny) {
     console.log(`New backup created: backend/backups/${ts}${pgOk ? ' (PostgreSQL: ok)' : ' (PostgreSQL: failed -- see the warning above)'}${externalNote}`);
   } else if (fs.existsSync(backupFolder)) {
-    fs.rmdirSync(backupFolder); // لا يوجد شيء تم نسخه، احذف المجلد الفارغ
+    fs.rmdirSync(backupFolder); // nothing was actually copied, delete the empty folder
   }
 
   cleanupOldBackups();
@@ -167,10 +178,11 @@ async function runBackup() {
 function cleanupOldBackups() {
   if (!fs.existsSync(BACKUPS_DIR)) return;
   const backups = fs.readdirSync(BACKUPS_DIR)
-    // BACKUP_FOLDER_NAME_PATTERN مُعرَّف تحت — يستثني backups/code/ (نسخ كود
-    // المصدر المنفصلة) من هذا التنظيف الخاص بنسخ البيانات فقط
+    // BACKUP_FOLDER_NAME_PATTERN is defined below -- excludes backups/code/
+    // (the separate source-code backups) from this cleanup, which is
+    // specific to data backups only
     .filter(name => BACKUP_FOLDER_NAME_PATTERN.test(name) && fs.statSync(path.join(BACKUPS_DIR, name)).isDirectory())
-    .sort(); // الأسماء مبنية على timestamp، فالترتيب الأبجدي = الترتيب الزمني
+    .sort(); // names are built from a timestamp, so alphabetical order = chronological order
 
   if (backups.length > MAX_BACKUPS) {
     const toDelete = backups.slice(0, backups.length - MAX_BACKUPS);
@@ -180,8 +192,9 @@ function cleanupOldBackups() {
   }
 }
 
-// يرجع قائمة بكل النسخ الاحتياطية المتوفرة (الأحدث أول)، مع الإشارة هل كل
-// واحدة منسوخة فعلياً للوجهة الخارجية أيضاً (لعرضها بالواجهة)
+// Returns a list of every available backup (newest first), noting
+// whether each one was actually also copied to the external destination
+// (to display in the UI)
 function listBackups() {
   if (!fs.existsSync(BACKUPS_DIR)) return [];
   const externalRoot = process.env.EXTERNAL_BACKUP_DIR;
@@ -195,17 +208,20 @@ function listBackups() {
     }));
 }
 
-// يستعيد نسخة احتياطية معينة من db.json (يكتب فوق db.json الحالي — استخدمه
-// بحذر). ملاحظة: استعادة نسخة PostgreSQL تتم يدوياً حالياً عبر لصق ملف
-// postgres_backup.sql بـ Query Tool، وليس تلقائياً — عملية استعادة قاعدة
-// بيانات حية تحمل مخاطر حقيقية (فقدان بيانات لاحقة) تستدعي قراراً بشرياً
-// واعياً بالتوقيت، وليس أتمتة صامتة.
+// Restores a specific backup of db.json (overwrites the current db.json
+// -- use with care). Note: restoring the PostgreSQL copy is currently
+// done manually by pasting the postgres_backup.sql file into the Query
+// Tool, not automatically -- restoring a live database carries real risk
+// (losing later data), which calls for a conscious human decision about
+// timing, not silent automation.
 function restoreFromBackup(backupName) {
-  // ── إصلاح أمني ────────────────────────────────────────────────────────────
-  // backupName يوصل مباشرة من req.params بمسار API (انظر server.js) — بدون
-  // هذا التحقق، اسم يحتوي "../" يمكن أن يجعلها تقرأ/تكتب خارج مجلد BACKUPS_DIR
-  // (Path Traversal). المسار محمي أصلاً بصلاحية admin فقط، لكن نمنع المشكلة
-  // من جذرها بدل الاعتماد فقط على طبقة الصلاحيات.
+  // ── Security fix ────────────────────────────────────────────────────────────
+  // backupName arrives directly from req.params on the API route (see
+  // server.js) -- without this check, a name containing "../" could make
+  // it read/write outside the BACKUPS_DIR folder (path traversal). The
+  // route is already protected by an admin-only permission, but the
+  // problem is prevented at its root instead of relying only on the
+  // permissions layer.
   if (typeof backupName !== 'string' || !/^[a-zA-Z0-9_.-]+$/.test(backupName)) {
     throw new Error('اسم النسخة الاحتياطية غير صالح');
   }
@@ -216,7 +232,7 @@ function restoreFromBackup(backupName) {
   if (!fs.existsSync(backupFolder)) {
     throw new Error(`النسخة الاحتياطية "${backupName}" غير موجودة`);
   }
-  // ناخذ نسخة أمان من الوضع الحالي قبل الاستعادة (احتياط إضافي)
+  // Take a safety backup of the current state before restoring (extra precaution)
   runBackup();
 
   FILES_TO_BACKUP.forEach((filename) => {
@@ -229,7 +245,7 @@ function restoreFromBackup(backupName) {
   console.log(`    backend/backups/${backupName}/postgres_backup.sql manually in pgAdmin`);
 }
 
-// يرفع ملفاً واحداً لرابط سحابي عبر PUT (webhook أو pre-signed URL)
+// Uploads a single file to a cloud URL via PUT (a webhook or a pre-signed URL)
 function uploadFileToCloud(filePath, cloudUrl) {
   return new Promise(async (resolve) => {
     try {
@@ -246,13 +262,14 @@ function uploadFileToCloud(filePath, cloudUrl) {
   });
 }
 
-// نسخة احتياطية يدوية بوجهة يحددها المستخدم — تُستدعى فقط من راوت
-// POST /backups/run عند تمرير destination بالجسم. تُنفّذ runBackup() العادية
-// أولاً (فتحصل على db.json + audit-log.json + postgres_backup.sql بنفس آلية
-// النسخ التلقائي)، ثم تقرر حسب الوجهة:
-//   - pgadmin: لا شيء إضافي، الملف أصلاً محلي وجاهز لفتحه بـ pgAdmin
-//   - computer: تُعيد مسار ملف postgres_backup.sql كي يُرسله الراوت كتحميل
-//   - cloud: ترفع نفس الملف للرابط المُعطى
+// A manual backup with a user-chosen destination -- only called from the
+// POST /backups/run route when a destination is passed in the body. Runs
+// the normal runBackup() first (which produces db.json + audit-log.json +
+// postgres_backup.sql through the same mechanism as the automatic
+// backup), then decides based on the destination:
+//   - pgadmin: nothing extra, the file is already local and ready to open in pgAdmin
+//   - computer: returns the postgres_backup.sql file's path so the route can send it as a download
+//   - cloud: uploads the same file to the given URL
 async function runBackupWithDestination(destination, cloudUrl) {
   const result = await runBackup();
   if (!result.backedUpAny) {
@@ -291,7 +308,7 @@ async function runBackupWithDestination(destination, cloudUrl) {
   throw err;
 }
 
-// يبدأ الجدولة التلقائية — تُستدعى مرة وحدة عند إقلاع السيرفر
+// Starts the automatic schedule -- called once when the server starts up
 function startAutoBackup() {
   // Immediate backup on startup is opt-in (BACKUP_ON_STARTUP=true), off by
   // default: every nodemon-triggered restart during development used to run

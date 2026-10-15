@@ -6,10 +6,10 @@
 // child_process are fully mocked here -- this never touches the real
 // backend/backups/ directory or spawns a real pg_dump process.
 //
-// Note: backend/config/backup.js is an abandoned earlier copy of this file
-// -- nothing in the app requires it (server.js and routes/backupsRoutes.js
-// both require ../utils/backup, this one) -- so it's deliberately not
-// covered here or touched by the BACKUP_ON_STARTUP change.
+// Note: backend/config/backup.js used to be an abandoned earlier copy of
+// this file. Confirmed unused anywhere in the repo (server.js and
+// routes/backupsRoutes.js both require ../utils/backup, this one) and
+// removed in a separate commit.
 jest.mock('fs', () => ({
   existsSync: jest.fn(() => false),
   mkdirSync: jest.fn(),

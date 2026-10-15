@@ -1339,7 +1339,14 @@ const registerAllModules = (router) => {
     ],
   });
 
-  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId'], dateRangeColumn: 'created_at' });
+  // 'hospitalId' here lets a global admin (no hospitalId of their own) opt
+  // into viewing one facility's records at a time from the header's
+  // "Currently viewing" dropdown (frontend/src/pages/PatientsPage.js) -- it
+  // is a plain whitelisted equality filter, same mechanism as patientId/
+  // bloodType/nationalId above, and has no effect on the hospitalScoped
+  // enforcement itself: a hospital-scoped user's own hospitalId is still
+  // forced unconditionally regardless of this or any other query param.
+  pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId', 'hospitalId'], dateRangeColumn: 'created_at' });
   // ── المرحلة الثانية: كاش Redis ─────────────────────────────────────────────
   // قائمة الأطباء تُقرأ من صفحات كثيرة جداً (قوائم منسدلة بالمواعيد، الوصفات،
   // التحويلات...) وتتغيّر نادراً (إضافة/تعديل طبيب مناسبة نادرة نسبياً) —
@@ -1418,11 +1425,15 @@ const registerAllModules = (router) => {
   ], undefined, { hospitalScoped: true, permission: 'billing' });
   // كاش Redis: بيانات الموظفين (الطاقم) تُقرأ بصفحات كثيرة (الرواتب،
   // الترفيعات، الإضابير الشخصية...) وتتغيّر نادراً — نفس منطق doctors أعلاه.
+  // extraFilterFields: ['hospitalId'] -- same opt-in single-facility view for
+  // a global admin as the patients registration above; the cache key below
+  // already includes the full query string, so this doesn't need any cache
+  // changes either.
   pgCrud(router, 'employees', collectionSchemas.employees, [
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },
     { field: 'status', column: 'status' },
-  ], undefined, { hospitalScoped: true, permission: 'hr', dateRangeField: 'hireDate', cache: { ttlSeconds: 300 } });
+  ], undefined, { hospitalScoped: true, permission: 'hr', dateRangeField: 'hireDate', cache: { ttlSeconds: 300 }, extraFilterFields: ['hospitalId'] });
   pgCrud(router, 'retired', collectionSchemas.retired, [
     { field: 'name', column: 'name' },
     { field: 'jobTitle', column: 'job_title' },

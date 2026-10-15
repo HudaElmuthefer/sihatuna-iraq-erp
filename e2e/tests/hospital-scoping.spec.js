@@ -9,7 +9,7 @@
 // patient when it logs in -- the actual security property "switching
 // hospitals" is meant to guarantee.
 const { test, expect } = require('@playwright/test');
-const { login, field } = require('./helpers');
+const { login, field, ensureMultiHospitalEnabled } = require('./helpers');
 
 test.describe('Hospital switching / data isolation', () => {
   test('a hospital-scoped admin only sees their own facility\'s patients', async ({ page, browser }) => {
@@ -26,17 +26,10 @@ test.describe('Hospital switching / data isolation', () => {
 
     await login(page);
 
-    // 1) Enable multi-hospital mode (seed.js starts it off) and create two facilities.
+    // 1) Enable multi-hospital mode (seed.js starts it off, but another spec
+    // in the same run may have already turned it on -- see ensureMultiHospitalEnabled).
     await page.goto('/settings?tab=hospitals');
-    // The toggle is a sibling of the heading's own wrapper div, not a
-    // descendant of it, and it carries no accessible name of its own (just
-    // a plain round switch) -- so this walks up from the "Multi-Hospital
-    // Mode" <h3> to the shared flex-row parent and finds the button there.
-    // (A plain `div({hasText})` would match every ancestor div containing
-    // that text too, including ones far outside this section, and `.first()`
-    // would then grab the very first button on the whole page.)
-    await page.locator('h3', { hasText: 'Multi-Hospital Mode' }).locator('xpath=../..').locator('button').first().click();
-    await page.waitForTimeout(500); // local toggle animation + system_settings PUT round-trip
+    await ensureMultiHospitalEnabled(page);
 
     for (const [nameAr, nameEn] of [[hospA, hospA], [hospB, hospB]]) {
       await page.getByRole('button', { name: /Add Facility/i }).click();

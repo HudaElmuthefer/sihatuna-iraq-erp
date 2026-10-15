@@ -11,6 +11,7 @@ let dbPath;
 let app;
 let adminToken;
 let hospitalATokenUser, hospitalBTokenUser;
+let hospitalAId, hospitalBId;
 
 beforeAll(async () => {
   dbPath = await setupTestEnv('hospital-scoping');
@@ -30,6 +31,8 @@ beforeAll(async () => {
   if (hospA.status !== 201 || hospB.status !== 201) {
     assertPgAvailable(hospA.status !== 201 ? hospA : hospB, 'عزل المنشآت', 201);
   }
+  hospitalAId = hospA.body.id;
+  hospitalBId = hospB.body.id;
 
   // إنشاء مستخدم مربوط بكل منشأة، وتسجيل دخول كل واحد للحصول على توكن خاص به
   // إصلاح: requirePermission.js يتحقق فقط من مصفوفة permissions الصريحة —
@@ -111,5 +114,65 @@ describe('عزل بيانات المرضى بين المنشآت', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(listAsAdmin.status).toBe(200);
     expect(listAsAdmin.body.some(p => p.name === 'مريض سرّي بمنشأة أ')).toBe(true);
+  });
+});
+
+// Covers the optional ?hospitalId= query filter (extraFilterFields on the
+// patients/employees pgCrud registrations in modules.js) -- a view-only
+// filter for a ministry-level admin, distinct from the mandatory
+// server-forced isolation tested above (which applies regardless of any
+// query param). Backs the header's "Currently viewing" dropdown
+// (Layout.js) on the Patients and HR Employees pages.
+describe('optional ?hospitalId= filter ("Currently viewing" dropdown)', () => {
+  test('a ministry-level admin selecting one facility sees only its records', async () => {
+    const createRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Optional hospital filter patient', phone: '07700000003', hospitalId: hospitalAId });
+    expect(createRes.status).toBe(201);
+    const patientId = createRes.body.id;
+
+    const listHospA = await request(app)
+      .get(`/api/patients?hospitalId=${hospitalAId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(listHospA.status).toBe(200);
+    expect(listHospA.body.some(p => p.id === patientId)).toBe(true);
+
+    const listHospB = await request(app)
+      .get(`/api/patients?hospitalId=${hospitalBId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(listHospB.status).toBe(200);
+    expect(listHospB.body.some(p => p.id === patientId)).toBe(false);
+
+    // Without the optional filter at all -- back to seeing every facility combined.
+    const listAll = await request(app)
+      .get('/api/patients')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(listAll.body.some(p => p.id === patientId)).toBe(true);
+  });
+
+  // A user already tied to one facility (hospitalScoped forces it
+  // unconditionally) stays restricted to it even if they try passing
+  // ?hospitalId= for a different one -- this isn't a way around the
+  // mandatory isolation, the two conditions just intersect (yielding zero
+  // results, never a leak).
+  test('a hospital-scoped user cannot use ?hospitalId= to see another facility\'s data', async () => {
+    const createRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${hospitalATokenUser}`)
+      .send({ name: 'Third hospital A patient', phone: '07700000004' });
+    const patientId = createRes.body.id;
+
+    const attempt = await request(app)
+      .get(`/api/patients?hospitalId=${hospitalBId}`)
+      .set('Authorization', `Bearer ${hospitalATokenUser}`);
+    expect(attempt.status).toBe(200);
+    expect(attempt.body.some(p => p.id === patientId)).toBe(false);
+
+    // Without that conflicting filter, they still see their own facility's patient normally.
+    const ownList = await request(app)
+      .get('/api/patients')
+      .set('Authorization', `Bearer ${hospitalATokenUser}`);
+    expect(ownList.body.some(p => p.id === patientId)).toBe(true);
   });
 });

@@ -26,7 +26,7 @@ const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const colors = ['#1a6bab', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#f97316'];
 
 export default function PatientsPage() {
-  const { lang, addToast, patients, setPatients, syncPatientToServer, hospitals, multiHospitalEnabled, filterByViewingHospital, loadModule } = useApp();
+  const { lang, addToast, patients, setPatients, syncPatientToServer, hospitals, multiHospitalEnabled, user, viewingHospitalId, loadModule } = useApp();
 
   // Loads patients once per session, the first time a page that needs them
   // mounts — a no-op if another page already triggered it.
@@ -71,8 +71,15 @@ export default function PatientsPage() {
   // المرضى الكلي، حتى لو وصل لعشرات الآلاف مستقبلاً. مصفوفة `patients` من
   // السياق العام (AppContext) تبقى محمَّلة كاملة كما هي — تحتاجها صفحات ثانية
   // (الفوترة، المواعيد) لقوائم اختيار، ولا علاقة لها بجدول هذه الصفحة تحديداً.
+  // The header's "Currently viewing" dropdown only ever renders for a
+  // global admin (no user.hospitalId -- see Layout.js), so this filter is
+  // only ever sent for that case. A hospital-scoped user's own data is
+  // already fully isolated server-side (hospitalScoped in routes/pgCrud.js,
+  // forced regardless of any query param), so there is nothing to gate here
+  // beyond not sending a pointless/stale filter value for them.
+  const viewingHospitalFilter = (!user?.hospitalId && viewingHospitalId !== 'all') ? viewingHospitalId : undefined;
   const { data: pageItems, page: currentPage, setPage: setCurrentPage, total: totalItems, totalPages, loading, error: loadError, refetch } =
-    useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { startDate: dateFrom, endDate: dateTo } });
+    useServerPagination('patients', { search: debouncedSearch, status: statusFilter, pageSize: 50, filters: { startDate: dateFrom, endDate: dateTo, hospitalId: viewingHospitalFilter } });
   useEffect(() => { if (loadError) addToast(loadError, 'error'); }, [loadError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openAdd = () => {

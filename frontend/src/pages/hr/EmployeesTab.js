@@ -14,7 +14,7 @@ import DateRangeFilter from '../../components/DateRangeFilter';
 
 export default
 function EmployeesTab({ lang }) {
-  const { showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled } = useApp();
+  const { showToast, syncToServer, confirmDialog, hospitals, multiHospitalEnabled, user, viewingHospitalId } = useApp();
   const L = (k) => I18N[k]?.[lang] || I18N[k]?.ar || k;
   const [employees, setEmployees] = useState(initEmployees);
   useBackendLoad('employees', setEmployees);
@@ -35,8 +35,15 @@ function EmployeesTab({ lang }) {
   // بقاعدة البيانات). القائمة الكاملة (employees أعلاه) تبقى محمَّلة كما هي —
   // تحتاجها AlertBanner (تنبيهات العلاوة/الترفيع/التقاعد) لكل الموظفين دفعة
   // وحدة، بغض النظر عن الصفحة المعروضة حالياً بالجدول.
+  // The header's "Currently viewing" dropdown only renders for a global
+  // admin (no user.hospitalId -- see Layout.js), so this is only ever sent
+  // for that case. A hospital-scoped user's own data is already fully
+  // isolated server-side (hospitalScoped in routes/pgCrud.js, forced
+  // regardless of any query param) -- nothing to gate here beyond not
+  // sending a pointless/stale filter value for them.
+  const viewingHospitalFilter = (!user?.hospitalId && viewingHospitalId !== 'all') ? viewingHospitalId : undefined;
   const { data: empPageItems, page: empCurrentPage, setPage: setEmpCurrentPage, total: empTotalItems, totalPages: empTotalPages, loading: empLoading, error: empLoadError, refetch: refetchEmployees } =
-    useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50, filters: { startDate: empDateFrom, endDate: empDateTo } });
+    useServerPagination('employees', { search: empDebouncedSearch, pageSize: 50, filters: { startDate: empDateFrom, endDate: empDateTo, hospitalId: viewingHospitalFilter } });
   useEffect(() => { if (empLoadError) showToast(empLoadError, 'error'); }, [empLoadError]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);

@@ -1,31 +1,39 @@
 // backend/middleware/requirePermission.js
 //
-// ── إصلاح أمني حرج ───────────────────────────────────────────────────────────
-// قبل هذا الملف، مسارات pgCrud (المرضى، الفواتير، الرواتب، الحسابات...) كانت
-// تتحقق فقط من صلاحية التوكن (auth) — لا من هوية صاحبه. أي أن أي مستخدم
-// مسجّل الدخول، أياً كان دوره (ممرّض، محاسب، طبيب)، كان بإمكانه تعديل أو
-// حذف أي سجل في أي موديول، حتى المالية منها (الرواتب، الحسابات، الفواتير).
+// ── Critical security fix ───────────────────────────────────────────────────
+// Before this file, the pgCrud routes (patients, invoices, salaries,
+// accounts...) only checked that the token was valid (auth) -- not who its
+// owner was. This meant any logged-in user, regardless of their role
+// (nurse, accountant, doctor), could edit or delete any record in any
+// module, even financial ones (salaries, accounts, invoices).
 //
-// كل مستخدم بالنظام أصلاً له مصفوفة "permissions" (مفاتيح صفحات، مثل
-// 'accounts', 'hr', 'inventory'...) معرَّفة بـ AppContext.js بالفرونت إند
-// وتُستخدم حالياً لإخفاء/إظهار عناصر القائمة الجانبية فقط — تحقق شكلي بحت
-// يمكن لأي شخص أن يتجاوزه بسهولة عبر استدعاء الـ API مباشرة (Postman مثلاً).
-// هذا الملف يفرض نفس منطق الصلاحيات، لكن فعلياً بجانب الخادم.
+// Every user in the system already has a "permissions" array (page keys,
+// like 'accounts', 'hr', 'inventory'...) defined in the frontend's
+// AppContext.js, currently used only to show/hide sidebar menu items -- a
+// purely cosmetic check that anyone can easily bypass by calling the API
+// directly (with Postman, for example). This file enforces the same
+// permissions logic, but actually on the server side.
 //
-// آلية العمل: صلاحيات المستخدم (permissions) تُضمَّن الآن داخل توكن JWT نفسه
-// عند تسجيل الدخول (انظر route /auth/login بملف server.js) — بهذا لا نحتاج
-// إلى أي استعلام إضافي لقاعدة البيانات في كل طلب للتحقق من الصلاحية.
+// How it works: the user's permissions are now embedded directly inside
+// the JWT token itself at login time (see the /auth/login route in
+// server.js) -- this way no extra database query is needed on every
+// request just to check permissions.
 //
-// ملاحظة مهمة: حساب الإدمن (role === 'admin') يتجاوز هذا الفحص دائماً ويرى
-// كل شيء، تماماً مثل سلوك الفرونت إند الحالي (انظر AppContext.js سطر ~828).
+// Important note: an admin account (role === 'admin') always bypasses
+// this check and sees everything, exactly matching the frontend's current
+// behavior (see AppContext.js around line ~828).
 //
-// ملاحظة توافقية: أي توكن قديم صادر قبل هذا التحديث (قبل إعادة تسجيل الدخول)
-// لن يحمل حقل permissions، فسيُرفض وصوله للموديولات المحمية حتى يسجّل دخول
-// من جديد. هذا متوقّع ومقصود — التوكن القديم بلا معلومات صلاحيات موثوقة.
+// Compatibility note: any old token issued before this update (before
+// logging in again) won't carry a permissions field, so it will be
+// rejected from protected modules until the user logs in again. This is
+// expected and intentional -- an old token carries no trustworthy
+// permissions information.
 const requirePermission = (pageKey) => (req, res, next) => {
-  // موديول بلا مفتاح صلاحية محدَّد (لم يُصنَّف بعد) — يمر بدون فحص إضافي،
-  // حتى لا نمنع بالخطأ موديولات لم تُراجَع بعد. لكن كل الموديولات الحالية
-  // مصنَّفة صراحة بملف server.js (انظر خيار permission بكل استدعاء pgCrud).
+  // A module with no permission key defined (not yet classified) passes
+  // through without an extra check, so modules that haven't been reviewed
+  // yet aren't blocked by mistake. But every current module is explicitly
+  // classified in server.js (see the permission option on every pgCrud
+  // call).
   if (!pageKey) return next();
 
   if (req.user?.role === 'admin') return next();

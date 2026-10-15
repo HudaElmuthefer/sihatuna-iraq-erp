@@ -1,20 +1,24 @@
 // backend/middleware/requireGlobalAdmin.js
 //
-// ── إصلاح فجوة أمنية بنظام المنشآت المتعددة ──────────────────────────────────
-// النظام يدعم نوعين من حسابات "admin": إدمن عام على مستوى الوزارة (بدون
-// hospitalId — يرى ويدير كل شيء في كل المنشآت)، وإدمن محلي مرتبط بمنشأة
-// واحدة تحديداً (hospitalId محدَّد بحسابه). كان middleware/requireAdmin.js
-// يتحقق فقط من role === 'admin' بغض النظر عن hospitalId — أي أن إدمن محلي
-// لمستشفى معيّن كان بإمكانه (عبر استدعاء API مباشر) أن يدير مستخدمين، نسخاً
-// احتياطية، أو سجلات منشآت **تخص مستشفيات أخرى غيره تماماً**، رغم أن الفرونت
-// إند لا يعرض له هذا إطلاقاً — نفس نمط الثغرة التي أصلحناها سابقاً في
-// الصلاحيات العامة (RBAC)، لكن هذه المرة على مستوى المنشأة بدل الموديول.
+// ── Fixing a security gap in the multi-hospital system ──────────────────────
+// The system supports two kinds of "admin" accounts: a ministry-level
+// global admin (no hospitalId -- sees and manages everything across every
+// facility), and a local admin tied to one specific facility
+// (hospitalId set on their account). middleware/requireAdmin.js only
+// checked role === 'admin' regardless of hospitalId -- meaning a local
+// admin for one hospital could (via a direct API call) manage users,
+// backups, or facility records **belonging to completely different
+// hospitals**, even though the frontend never exposes this to them at
+// all -- the same kind of gap fixed earlier in the general permissions
+// (RBAC), but this time at the facility level instead of the module
+// level.
 //
-// هذا الـ middleware يُستخدم للعمليات التي *يجب* أن تبقى حصراً للإدمن العام،
-// بغض النظر عن أي منشأة (إدارة قائمة المنشآت نفسها، النسخ الاحتياطي الكامل
-// للنظام، سجل التدقيق الشامل) — عمليات لا معنى لتفويضها لإدمن محلي واحد
-// لأنها تلمس بيانات كل المنشآت دفعة واحدة بطبيعتها (مثل ملف نسخة احتياطية
-// واحد يحوي بيانات كل المستشفيات معاً).
+// This middleware is used for operations that *must* stay exclusive to
+// the global admin, regardless of any facility (managing the list of
+// facilities itself, a full system backup, the full audit log) --
+// operations that make no sense to delegate to a single local admin
+// because they inherently touch every facility's data at once (like a
+// single backup file containing every hospital's data together).
 const requireGlobalAdmin = (req, res, next) => {
   if (req.user?.role !== 'admin' || req.user?.hospitalId) {
     return res.status(403).json({ message: 'هذه الصفحة للإدمن العام (مستوى الوزارة) فقط' });

@@ -1,38 +1,44 @@
 // backend/middleware/validate.js
 //
-// تحقق خفيف من صحة المدخلات بجانب الخادم (Server-side Validation)، بدون أي
-// مكتبة خارجية إضافية. قبل هذا الملف، كان التحقق من البيانات (مثل "الاسم
-// مطلوب") موجوداً فقط داخل واجهة الفرونت إند — أي استدعاء مباشر لواجهة
-// الـ API (عبر Postman مثلاً، أو كود خبيث) كان بإمكانه إرسال بيانات فارغة أو
-// من نوع خاطئ فتُقبل مباشرة وتُكتب في قاعدة البيانات.
+// Lightweight server-side input validation, with no extra external
+// library. Before this file, data validation (like "name is required")
+// only existed inside the frontend UI -- any direct call to the API
+// (through Postman, for example, or malicious code) could send empty or
+// wrongly-typed data, which would then be accepted directly and written to
+// the database.
 //
-// صيغة المخطط (schema) البسيطة:
+// Simple schema format:
 //   { fieldName: { required: true, type: 'string', minLength: 2, maxLength: 200, pattern: /^\S+@\S+\.\S+$/ } }
 //
-// أنواع مدعومة بـ type: 'string' | 'number' | 'array'
+// Supported type values: 'string' | 'number' | 'array'
 //
-// الاستخدام:
+// Usage:
 //   router.post('/patients', auth, validate(schemas.patients), (req, res) => {...})
 //
-// تمرير schema بقيمة undefined (أي موديول بدون مخطط معرَّف بعد) يجعل الدالة
-// تتجاوز التحقق بالكامل وتستدعي next() مباشرة — بهذا يمكن إضافة مخططات
-// تدريجياً لأهم الموديولات دون كسر الموديولات الأخرى التي لم تُغطَّ بعد.
+// Passing schema as undefined (any module with no schema defined yet)
+// makes the function skip validation entirely and call next() directly --
+// this lets schemas be added gradually to the most important modules
+// without breaking other modules that aren't covered yet.
 //
-// ── إصلاح: حد أقصى افتراضي لطول أي حقل نصي ────────────────────────────────────
-// قبل هذا التعديل لم يكن هناك أي حد أقصى لطول النصوص — حقل مثل "الاسم" كان
-// يقبل نظرياً ملايين الأحرف بطلب واحد (لحد الحد العام 50 ميجا لكل الطلب،
-// المضبوط بـ express.json). هذا يفتح باب إساءة استخدام (تخزين بيانات ضخمة
-// غير منطقية بحقل صغير، أو محاولة إبطاء قاعدة البيانات). الحد الافتراضي هنا
-// 5000 حرف لأي حقل نصي ليس له maxLength مخصَّص في المخطط — كافٍ جداً لأطول
-// حقل نصي منطقي بالنظام (ملاحظات، عناوين...)، ويمكن لأي حقل أن يحدد رقماً
-// أصغر أو أكبر صراحة في مخططه الخاص إذا احتاج إلى ذلك.
+// ── Fix: a default maximum length for any text field ─────────────────────────
+// Before this change there was no maximum length at all for text -- a
+// field like "name" could theoretically accept millions of characters in
+// one request (up to the overall 50MB request limit set by express.json).
+// This opens the door to abuse (storing unreasonably huge data in a small
+// field, or trying to slow down the database). The default limit here is
+// 5000 characters for any text field with no custom maxLength in its
+// schema -- more than enough for the longest reasonable text field in the
+// system (notes, addresses...), and any field can explicitly set a smaller
+// or larger number in its own schema if it needs to.
 const DEFAULT_MAX_LENGTH = 5000;
 
-// ── دالة تحقق خام قابلة لإعادة الاستخدام ─────────────────────────────────────
-// نفس منطق التحقق أعلاه بالضبط، لكن كدالة مستقلة تعمل على أي كائن (object)
-// مباشرة بدل الاعتماد على req/res — هذا يسمح باستخدام نفس قواعد التحقق
-// بسياقات غير HTTP، مثل التحقق من كل صف عند استيراد بيانات من ملف Excel
-// (انظر routes/excelImport.js)، بدل تكرار نفس المنطق بمكانين مختلفين.
+// ── A reusable, raw validation function ──────────────────────────────────────
+// The exact same validation logic as above, but as a standalone function
+// that works directly on any object instead of relying on req/res -- this
+// lets the same validation rules be used in non-HTTP contexts too, such as
+// validating each row when importing data from an Excel file (see
+// routes/excelImport.js), instead of duplicating the same logic in two
+// different places.
 const validateFields = (schema, obj) => {
   if (!schema) return [];
   const errors = [];

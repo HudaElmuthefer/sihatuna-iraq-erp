@@ -23,14 +23,16 @@ module.exports = {
       time: true,
     },
     {
-      // ── المرحلة الثانية: عملية Worker منفصلة لطابور BullMQ ─────────────────
-      // يستهلك طابور "ocr-jobs" (قراءة الفواتير بالذكاء الاصطناعي — راجع
-      // backend/services/queue/ocrWorker.js للشرح الكامل لسبب فصله عن
-      // sihatuna-backend، لا داخله). fork mode بعملية واحدة (instances:1):
-      // BullMQ نفسه يدير التزامن داخل العملية الواحدة (راجع OCR_WORKER_CONCURRENCY
-      // بـocrWorker.js) — تشغيل عدة نسخ PM2 من نفس عملية Worker ممكن لاحقاً
-      // لو زاد الحمل فعلياً (BullMQ يوزّع المهام بأمان بين عدة Workers على
-      // نفس الطابور)، لكن نسخة واحدة تكفي لحجم استخدام مستشفى واحد حالياً.
+      // ── Phase two: a separate worker process for the BullMQ queue ─────────────────
+      // Consumes the "ocr-jobs" queue (AI invoice reading — see
+      // backend/services/queue/ocrWorker.js for the full explanation of why
+      // it's kept separate from sihatuna-backend, not inside it). fork mode
+      // with a single process (instances:1): BullMQ itself manages
+      // concurrency within the one process (see OCR_WORKER_CONCURRENCY in
+      // ocrWorker.js) — running several PM2 copies of the same worker
+      // process is possible later if load actually increases (BullMQ safely
+      // distributes jobs across several workers on the same queue), but one
+      // copy is enough for a single hospital's usage size for now.
       name: 'sihatuna-worker',
       cwd: './backend',
       script: 'services/queue/ocrWorker.js',

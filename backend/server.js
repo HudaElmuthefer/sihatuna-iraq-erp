@@ -1,18 +1,20 @@
 /**
  * SIHATUNA IRAQ - Backend Server
- * م. هدى عبد العظيم عبد الكريم
+ * Eng. Huda Abduladheem Abdulkareem
  * halmuthefer@gmail.com
  *
- * ── ملاحظة بعد إعادة الهيكلة (تقسيم الملف) ──────────────────────────────────
- * كان هذا الملف يحتوي كل شيء بمكان واحد (~1000 سطر): كل المسارات، كل الإعدادات،
- * كل الدوال المساعدة. الآن هو فقط ملف "تنسيق" (orchestration) يجمع القطع من
- * أماكنها المتخصصة:
- *   - config/*         → إعدادات ثابتة (JWT، رفع الملفات، تحديد المعدل)
- *   - utils/*           → دوال مساعدة عامة (db.json، سجل التدقيق، إبطال التوكن)
- *   - middleware/*      → middleware قابل لإعادة الاستخدام (auth، صلاحيات، تحقق)
- *   - routes/*          → كل مجموعة مسارات بملفها الخاص حسب المجال
- * أي منطق فعلي (كيف يعمل تسجيل الدخول، كيف تُبنى استعلامات SQL...) موجود
- * بمكانه المتخصص، وليس هنا. هذا الملف فقط يربطهم مع بعض بالترتيب الصحيح.
+ * ── Note after the refactor (splitting the file) ──────────────────────────
+ * This file used to hold everything in one place (~1000 lines): every
+ * route, every setting, every helper function. Now it's just an
+ * "orchestration" file that pulls the pieces together from their
+ * dedicated locations:
+ *   - config/*         -> static settings (JWT, file uploads, rate limiting)
+ *   - utils/*           -> general helper functions (db.json, audit log, token revocation)
+ *   - middleware/*      -> reusable middleware (auth, permissions, validation)
+ *   - routes/*          -> each route group in its own file by domain
+ * Any actual logic (how login works, how SQL queries are built...) lives
+ * in its own dedicated place, not here. This file just wires them together
+ * in the right order.
  */
 
 require('dotenv').config();
@@ -21,7 +23,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 
-const { JWT_SECRET } = require('./config/jwtConfig'); // يطبع تحذير أمان تلقائياً لو المفتاح افتراضي
+const { JWT_SECRET } = require('./config/jwtConfig'); // automatically prints a security warning if the key is the default
 const { generalLimiter } = require('./config/rateLimiters');
 const { testConnection, pool } = require('./config/database');
 const { UPLOADS_DIR } = require('./config/uploadConfig');
@@ -33,83 +35,99 @@ const { sendAlert } = require('./utils/alerts');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// ── شبكة أمان أخيرة (Defense in Depth) ──────────────────────────────────────
-// إصلاح حرج: لقينا خطأ فعلي (مسار حذف بـ pgCrud.js) حيث استثناء غير مُعالَج
-// داخل async route handler واحد كان يُسقط **السيرفر بالكامل** — بنسخ Node.js
-// الحديثة (v15+)، أي unhandledRejection غير مُلتقَط يُنهي العملية تلقائياً
-// افتراضياً. صحّحنا الحالة المحدَّدة (ROLLBACK غير محمي)، لكن هذا يبقى كخط
-// دفاع أخير: أي خطأ مشابه بالمستقبل يُسجَّل بوضوح بدل ما يُطفي كل الخادم
-// بصمت (يعطّل جلسات كل المستخدمين لأجل طلب واحد فاشل). الحل الحقيقي دائماً
-// معالجة كل Promise بمكانها (try/catch)، هذا فقط شبكة أمان لو نسينا مكاناً.
+// ── Last-resort safety net (Defense in Depth) ─────────────────────────────
+// Critical fix: we found an actual bug (a delete route in pgCrud.js) where
+// an unhandled exception inside a single async route handler used to crash
+// **the entire server** -- in modern Node.js versions (v15+), any uncaught
+// unhandledRejection terminates the process by default. We fixed the
+// specific case (an unprotected ROLLBACK), but this stays as a last line
+// of defense: any similar bug in the future gets logged clearly instead of
+// silently taking down the whole server (which would kill every user's
+// session for one failed request). The real fix is always to handle every
+// Promise in its own place (try/catch) -- this is just a safety net for
+// anywhere we forgot to.
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection -- almost crashed the server:', reason);
 });
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
-// ── Helmet (رؤوس أمان HTTP قياسية) ──────────────────────────────────────────────
-// يضيف رؤوساً وقائية جاهزة يوصي بها OWASP بدون أي إعداد يدوي (يمنع تخمين نوع
-// المحتوى بالمتصفح، يمنع تضمين الموقع بإطار iframe خارجي لحماية من Clickjacking،
-// يخفي رأس X-Powered-By الذي يكشف أنه Express، وغيرها). نُعطّل تحديداً سياستين
-// افتراضيتين قد تكسران عمل النظام الحالي دون أي فائدة أمنية حقيقية بحالتنا:
-//   - crossOriginResourcePolicy: الفرونت إند (منفذ 3000) يعرض صوراً مرفوعة من
-//     الباك إند (منفذ 8000) عبر <img src>؛ الإعداد الافتراضي same-origin كان
-//     سيمنع تحميلها لاختلاف المنفذ. عدّلناه لـ cross-origin بدل تعطيله بالكامل.
-//   - contentSecurityPolicy: مصمَّم أساساً لصفحات HTML، ولا فائدة حقيقية منه
-//     على خادم API خالص لا يُقدّم صفحات ويب مباشرة؛ تعطيله يتجنّب تعقيداً غير
-//     ضروري دون فقدان أي حماية فعلية بحالتنا.
+// ── Helmet (standard HTTP security headers) ──────────────────────────────────────
+// Adds ready-made protective headers recommended by OWASP with no manual
+// setup (prevents the browser from guessing content types, prevents the
+// site from being embedded in an external iframe to protect against
+// Clickjacking, hides the X-Powered-By header that reveals it's Express,
+// and more). We specifically disable two default policies that could break
+// this system's current behavior with no real security benefit in our case:
+//   - crossOriginResourcePolicy: the frontend (port 3000) displays images
+//     uploaded to the backend (port 8000) via <img src>; the default
+//     same-origin setting would have blocked loading them because of the
+//     different port. We set it to cross-origin instead of disabling it entirely.
+//   - contentSecurityPolicy: designed mainly for HTML pages, with no real
+//     benefit on a pure API server that doesn't serve web pages directly;
+//     disabling it avoids unnecessary complexity with no loss of real
+//     protection in our case.
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: false,
 }));
 
 // ── CORS ───────────────────────────────────────────────────────────────────────
-// كان مفتوحاً للجميع (origin: '*') سابقاً — أي موقع بالعالم يستطيع استدعاء الـ API
-// لو حصل على توكن دخول (مثلاً عبر XSS بموقع آخر). الآن مقيّد بنطاق الفرونت إند
-// الفعلي فقط. القيمة الافتراضية تناسب التطوير المحلي (localhost:3000)؛ عند
-// النشر على خادم حقيقي، أضف FRONTEND_URL بملف .env بعنوان موقعك الفعلي
-// (مثلاً https://sihatuna-iraq.example.com) بدل الاعتماد على القيمة الافتراضية.
+// Used to be open to everyone (origin: '*') -- any site in the world could
+// call the API if it got hold of a login token (e.g. via XSS on another
+// site). Now it's restricted to the actual frontend origin only. The
+// default value fits local development (localhost:3000); when deploying to
+// a real server, add FRONTEND_URL in the .env file with your actual site
+// address (e.g. https://sihatuna-iraq.example.com) instead of relying on
+// the default.
 //
-// إصلاح: FRONTEND_URL كانت قيمة نصية واحدة فقط — تكفي لعنوان إنتاج حقيقي
-// واحد، لكنها تفشل بصمت (CORS يرفض الرد) لأي عنوان محلي إضافي مشروع (مثل
-// معاينة نسخة الإنتاج المبنية محلياً على منفذ مختلف عن خادم التطوير 3000،
-// كما حصل فعلياً هنا). ندعم الآن قائمة عناوين مفصولة بفاصلة اختيارياً —
-// القيمة الافتراضية (بلا فاصلة) تبقى تماماً كما كانت لأي نشر حقيقي موجود.
+// Fix: FRONTEND_URL used to be a single string value -- enough for one
+// real production address, but it silently fails (CORS rejects the
+// response) for any additional legitimate local address (such as previewing
+// a locally-built production bundle on a different port than the dev
+// server's 3000, which is exactly what happened here). We now support an
+// optional comma-separated list of addresses -- the default value (with no
+// comma) stays exactly as it was for any existing real deployment.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const ALLOWED_ORIGINS = FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean);
-// credentials: true مطلوب حتى يستطيع المتصفح إرسال واستقبال httpOnly cookie —
-// بدونه، المتصفح يرفض إرفاق الكوكي بطلبات fetch حتى لو الكود يمرر
-// credentials:'include' من جهة الفرونت إند. يجب أن يكون origin عنواناً محدَّداً
-// صراحة (وليس '*') حتى يسمح المتصفح بهذا أصلاً — وهو مضبوط هكذا أصلاً بالأعلى.
+// credentials: true is required so the browser can send and receive the
+// httpOnly cookie -- without it, the browser refuses to attach the cookie
+// to fetch requests even if the frontend code passes credentials:'include'.
+// origin must be an explicitly specific address (not '*') for the browser
+// to allow this at all -- which is already how it's set above.
 app.use(cors({ origin: ALLOWED_ORIGINS.length > 1 ? ALLOWED_ORIGINS : ALLOWED_ORIGINS[0], credentials: true, methods: ['GET','POST','PUT','DELETE','PATCH'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
-// ── إصلاح أمني ────────────────────────────────────────────────────────────────
-// كانت الملفات المرفوعة (وثائق طبية، ملفات موظفين متقاعدين...) تُعرض عبر
-// express.static بدون أي تحقق تسجيل دخول — أي رابط ملف (لو انسرب أو انخمّن
-// اسمه) كان يفتح مباشرة بالمتصفح من أي شخص، حتى بدون حساب بالنظام. الآن
-// يحتاج طلب عرض أي ملف توكن دخول صالح، تماماً مثل باقي مسارات الـ API.
+// ── Security fix ────────────────────────────────────────────────────────────────
+// Uploaded files (medical documents, retired employees' files...) used to
+// be served via express.static with no login check at all -- any file link
+// (if leaked or guessed) opened directly in the browser for anyone, even
+// without an account in the system. Now viewing any file requires a valid
+// login token, exactly like the rest of the API routes.
 app.use('/uploads', auth, express.static(UPLOADS_DIR));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 const router = express.Router();
 router.use(generalLimiter);
 
-// ── إصلاح: فحص صحي حقيقي بدل رد شكلي فقط ────────────────────────────────────
-// قبل هذا، /health كان يرجع "ok" دائماً بمجرد إن Express نفسه يشتغل، حتى لو
-// قاعدة البيانات متوقفة تماماً — يعطي انطباعاً خاطئاً إن النظام "سليم" بينما
-// كل الوظائف الفعلية معطّلة. الآن يفحص فعلياً اتصال PostgreSQL.
+// ── Fix: a real health check instead of just a token response ────────────────
+// Before this, /health always returned "ok" as long as Express itself was
+// running, even if the database was completely down -- giving a false
+// impression that the system was "healthy" while every actual function was
+// disabled. Now it actually checks the PostgreSQL connection.
 //
-// ── إصلاح أمني ────────────────────────────────────────────────────────────
-// هذا المسار *يجب* يبقى بدون تسجيل دخول (auth) عمداً — أدوات مراقبة خارجية
-// (monitor.js، أو أي uptime monitor سحابي مستقبلاً) تحتاج تفحصه بدون بيانات
-// اعتماد. لكن هذا يعني إن أي زائر (حتى بدون حساب) يستطيع استدعاءه — فلا يصح
-// نرجّع له تفاصيل خطأ قاعدة البيانات الداخلية (dbCheck.error.message قد
-// يكشف اسم مستخدم قاعدة البيانات، اسم الخادم الداخلي، أو تفاصيل بنيوية
-// أخرى). التفاصيل الكاملة تُسجَّل بسجل الخادم (console) للتشخيص، والعميل
-// يستلم فقط "connected"/"disconnected" — كافٍ تماماً لأي أداة مراقبة لاتخاذ
-// قرار التنبيه، بدون كشف أي تفصيل داخلي حساس.
+// ── Security fix ────────────────────────────────────────────────────────
+// This route *must* intentionally stay without a login (auth) requirement
+// -- external monitoring tools (monitor.js, or any future cloud uptime
+// monitor) need to check it without credentials. But that means any
+// visitor (even without an account) can call it -- so it must not return
+// internal database error details (dbCheck.error.message could reveal the
+// database username, the internal server name, or other structural
+// details). The full details are logged to the server log (console) for
+// diagnosis, and the client only receives "connected"/"disconnected" --
+// entirely sufficient for any monitoring tool to decide whether to alert,
+// without exposing any sensitive internal detail.
 router.get('/health', async (req, res) => {
   const dbCheck = await testConnection();
   if (!dbCheck.ok) console.error('[health] Database connection failed:', dbCheck.error.message);
@@ -149,13 +167,15 @@ router.use(require('./routes/authRoutes'));
 router.get('/queue-display', async (req, res, next) => {
   try {
     const { hospitalId } = req.query;
-    // ── إصلاح: كان الاستعلام يجيب "آخر 200 تذكرة برقم id" بدون أي فلترة
-    // بالتاريخ — يعني أي تذكرة قديمة (id أصغر) تُنادى الآن (تحديث status
-    // فقط، id ما يتغيّر) تختفي من الشاشة إذا صار عندها 200+ تذكرة أحدث id
-    // بعدها (بالضبط ما صار بعد استيراد دفعة كبيرة من التذاكر التجريبية) —
-    // رغم إن التحديث نجح فعلياً بقاعدة البيانات. الآن نفلتر بتاريخ اليوم
-    // فقط (بنفس منطق "اليوم المحلي" المُصلَح بـ QueuePage.js، لا UTC)، فلا
-    // توجد تذكرة نشطة تختفي بسبب الترتيب.
+    // ── Fix: the query used to fetch "the last 200 tickets by id" with no
+    // date filtering at all -- meaning any old ticket (a smaller id) that
+    // gets called now (only a status update, the id doesn't change)
+    // disappears from the screen once there are 200+ newer-id tickets after
+    // it (exactly what happened after importing a large batch of test
+    // tickets) -- even though the update actually succeeded in the
+    // database. We now filter by today's date only (using the same "local
+    // today" logic fixed in QueuePage.js, not UTC), so no active ticket
+    // disappears due to ordering.
     const now = new Date();
     const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const params = [todayLocal];
@@ -177,8 +197,9 @@ router.get('/queue-display', async (req, res, next) => {
 router.use(require('./routes/usersRoutes'));
 router.use(require('./routes/revenueRoutes'));
 router.use(require('./routes/profitSharingRoutes'));
-// إصلاح: مسار "الإضابير الشخصية" (رفع/عرض/حذف وثيقة موظف بملف مرفق حقيقي)
-// كان غير مسجَّل بالسيرفر إطلاقاً — راجع التعليق أعلى employeeDossierRoutes.js.
+// Fix: the "personal dossiers" route (upload/view/delete an employee
+// document with a real attached file) was not registered on the server at
+// all -- see the comment above employeeDossierRoutes.js.
 router.use(require('./routes/employeeDossierRoutes'));
 router.use(require('./routes/aiDiagnosisRoutes'));
 router.use(require('./routes/drugInteractionRoutes'));
@@ -186,22 +207,23 @@ router.use(require('./routes/dosageRoutes'));
 router.use(require('./routes/allergyRoutes'));
 router.use(require('./routes/billingAnomalyRoutes'));
 router.use(require('./routes/inventoryPredictionRoutes'));
-require('./routes/modules')(router); // يسجّل كل موديولات pgCrud + استيراد Excel (41 موديول)
+require('./routes/modules')(router); // registers every pgCrud module + Excel import (41 modules)
 router.use('/recycle-bin', require('./routes/recycleBinRoutes'));
 router.use(require('./routes/miscRoutes'));
 
-// ── Health check (يستخدمه الفرونت إند للتأكد إن السيرفر يعمل) ──────────────
+// ── Health check (used by the frontend to confirm the server is running) ──────────────
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'SIHATUNA IRAQ Backend' }));
 
 // ── Mount router ───────────────────────────────────────────────────────────────
 app.use('/api', router);
 
-// ── Payment Gateway (PostgreSQL) — احتياطي متقدم، تعمل فقط بعد إعداد .env ──
-// ملاحظة: نظام CRM القديم متعدد المستشفيات (routes/crmRoutes.js) أُزيل نهائياً
-// من هنا — كان يستعلم عن أعمدة (channel, follow_up_type, ...) لم تعد موجودة
-// بعد إعادة بناء جداول CRM بالنمط الجديد (JSONB مرن، انظر pgCrud بملف
-// routes/modules.js)، وكان سيتسبب بانهيار أي طلب يصل له صدفة. CRM الفعلي
-// يعمل الآن عبر pgCrud مباشرة.
+// ── Payment Gateway (PostgreSQL) — an advanced backup, only works once .env is configured ──
+// Note: the old multi-hospital CRM system (routes/crmRoutes.js) has been
+// permanently removed from here -- it used to query columns (channel,
+// follow_up_type, ...) that no longer exist after rebuilding the CRM tables
+// in the new pattern (flexible JSONB, see pgCrud in routes/modules.js), and
+// it would have crashed any request that happened to reach it. The actual
+// CRM now works directly through pgCrud.
 try {
   const paymentRoutes = require('./routes/paymentRoutes');
   app.use('/api', generalLimiter, paymentRoutes);
@@ -213,16 +235,20 @@ try {
 // 404
 app.use((req, res) => res.status(404).json({ message: 'المسار غير موجود' }));
 
-// ── معالج الأخطاء المركزي ────────────────────────────────────────────────────
-// نقطة واحدة لكل أخطاء الخادم (المتزامنة وغير المتزامنة عبر asyncHandler)،
-// بدل تكرار try/catch وصياغة الاستجابة في كل controller على حدة.
-// يُصنَّف الخطأ حسب نوعه لإعطاء رمز حالة (status code) ورسالة مناسبة،
-// ولا تُرسَل تفاصيل الخطأ الداخلية (err.stack) للمستخدم في بيئة الإنتاج.
-// ── تبريد التنبيهات (Cooldown) ────────────────────────────────────────────
-// لو نفس الخطأ تكرر مرات كثيرة بفترة قصيرة (مثلاً استعلام معطوب يتكرر مع كل
-// طلب لصفحة معينة)، ما نبعث تنبيه بريد إلكتروني منفصل لكل مرة — نكتفي بتنبيه
-// واحد كل 15 دقيقة لكل نوع خطأ (مسار + رسالة)، والباقي يبقى مسجَّلاً بالسجل
-// العادي فقط بدون إغراقك برسائل متكررة لنفس المشكلة.
+// ── Central error handler ────────────────────────────────────────────────────
+// A single point for every server error (synchronous and asynchronous via
+// asyncHandler), instead of repeating try/catch and building the response
+// separately in every controller.
+// The error is classified by type to produce an appropriate status code
+// and message, and internal error details (err.stack) are never sent to
+// the user in production.
+// ── Alert cooldown ────────────────────────────────────────────
+// If the same error repeats many times in a short period (e.g. a broken
+// query that repeats on every request to a particular page), we don't send
+// a separate alert email every single time -- we send at most one alert
+// every 15 minutes per error type (route + message), and the rest just
+// stays logged normally without flooding you with repeated messages about
+// the same problem.
 const alertCooldowns = new Map();
 const ALERT_COOLDOWN_MS = 15 * 60 * 1000;
 function shouldAlert(key) {
@@ -236,30 +262,32 @@ function shouldAlert(key) {
 app.use((err, req, res, next) => {
   console.error(`❌ [${req.method} ${req.originalUrl}]`, err.message);
 
-  // خطأ اتصال بقاعدة PostgreSQL (السيرفر غير متاح أو غير مُعدّ)
+  // A PostgreSQL connection error (the server is unreachable or not configured)
   if (err.code === 'ECONNREFUSED' || err.code === '3D000') {
     return res.status(503).json({ message: 'تعذّر الاتصال بقاعدة البيانات، حاول لاحقاً' });
   }
-  // خطأ توكن JWT غير صالح أو منتهي (في حال مرّره middleware المصادقة عبر next(err))
+  // An invalid or expired JWT token error (if the auth middleware passed it via next(err))
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     return res.status(401).json({ message: 'رمز الدخول غير صالح أو منتهي الصلاحية' });
   }
-  // خطأ تحقق من صحة البيانات (يمكن لأي controller رمي Error برمز statusCode = 400)
+  // A data validation error (any controller can throw an Error with statusCode = 400)
   if (err.statusCode) {
     return res.status(err.statusCode).json({ message: err.message });
   }
 
-  // ── خطأ غير متوقع (500) — ينبَّه فوراً بدل أن يبقى مدفوناً بسجل الملف فقط ──────
-  // مخصص للأخطاء الحقيقية غير المصنَّفة فقط (وليس 400/401/404 التي هي أخطاء
-  // "طلب خاطئ" عادية، حتى لا نغرق بتنبيهات لكل شخص كتب كلمة مرور خاطئة مثلاً).
-  // sendAlert تُستدعى بدون await قصداً (fire-and-forget) — ما نأخّر رد المستخدم
-  // بانتظار إرسال بريد إلكتروني قد يستغرق ثوانٍ.
+  // ── An unexpected error (500) — alerts immediately instead of staying buried in the file log only ──────
+  // Reserved for genuinely unclassified errors only (not 400/401/404, which
+  // are ordinary "bad request" errors, so we don't flood ourselves with
+  // alerts for every person who typed a wrong password, for example).
+  // sendAlert is deliberately called without await (fire-and-forget) -- we
+  // don't delay the user's response waiting for an email that might take a
+  // few seconds to send.
   const alertKey = `${req.method} ${req.originalUrl} :: ${err.message}`;
   if (shouldAlert(alertKey)) {
     sendAlert(
       `Unexpected server error -- ${req.method} ${req.originalUrl}`,
       `Message: ${err.message}\nUser: ${req.user?.username || 'not logged in'}\nTime: ${new Date().toLocaleString('ar-IQ')}`
-    ).catch(() => {}); // لو فشل التنبيه نفسه، ما نكسر الاستجابة الأصلية بسببه
+    ).catch(() => {}); // if the alert itself fails, we don't let that break the original response
   }
 
   res.status(500).json({
@@ -268,12 +296,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── بدء التشغيل الفعلي ────────────────────────────────────────────────────────
-// نُشغّل الاستماع الفعلي على المنفذ فقط عند تشغيل هذا الملف مباشرة (node server.js)،
-// وليس عند استيراده كموديول (مثلاً بواسطة ملفات الاختبار عبر require('../server')).
-// بدون هذا الشرط، أي محاولة اختبار آلي للتطبيق كانت ستُشغّل سيرفراً حقيقياً على
-// المنفذ 8000 وتكتب فوق قاعدة البيانات الحقيقية بمجرد استيراد الملف — وهذا بالضبط
-// ما يمنع كتابة اختبارات آمنة لهذا المشروع حتى الآن.
+// ── Actual startup ────────────────────────────────────────────────────────────
+// We only start actually listening on the port when this file is run
+// directly (node server.js), not when it's imported as a module (e.g. by
+// test files via require('../server')). Without this condition, any
+// automated attempt to test the app would have started a real server on
+// port 8000 and written over the real database the moment the file was
+// imported -- which is exactly what has been preventing safe tests from
+// being written for this project until now.
 if (require.main === module) {
   const server = app.listen(PORT, async () => {
     devLog(`\n╔════════════════════════════════════════╗`);
@@ -285,24 +315,27 @@ if (require.main === module) {
     devLog(`║  📎 Uploads: /uploads                  ║`);
     devLog(`╚════════════════════════════════════════╝\n`);
 
-    // ── حارس التفرّد تحت PM2 cluster mode ──────────────────────────────────
-    // بعد التحويل لـ cluster mode (عدة عمليات worker لنفس السيرفر)، أي كود هنا
-    // يشتغل داخل هذا الـ callback يتكرّر تلقائياً بعدد العمليات (مثلاً 8 مرات
-    // على جهاز بـ8أنوية) — مقبول لإعداد Express نفسه (بلا حالة مشتركة)، لكن
-    // مدمّر لأي مهمة يُفترض أنها تشتغل مرة وحدة بس: النسخ الاحتياطي التلقائي
-    // (نسخ متعددة متزامنة تتصارع على نفس الملفات) وخادم HL7 (كل عملية تحاول
-    // تفتح نفس منفذ TCP). PM2 يعطي كل عملية متغيّر NODE_APP_INSTANCE فريد
-    // ('0', '1', '2'...) — نشغّل هذه المهام بعملية '0' فقط. بالتشغيل المباشر
-    // بدون PM2 (node server.js أثناء التطوير)، هذا المتغيّر غير موجود أصلاً
-    // فتشتغل طبيعياً كالسابق.
+    // ── A uniqueness guard under PM2 cluster mode ──────────────────────────────
+    // After switching to cluster mode (several worker processes for the
+    // same server), any code that runs inside this callback is
+    // automatically repeated once per process (e.g. 8 times on an 8-core
+    // machine) -- acceptable for Express's own setup (no shared state), but
+    // destructive for any task that's supposed to run exactly once: the
+    // automatic backup (several simultaneous copies racing on the same
+    // files) and the HL7 server (every process trying to open the same TCP
+    // port). PM2 gives every process a unique NODE_APP_INSTANCE variable
+    // ('0', '1', '2'...) -- we only run these tasks in process '0'. When run
+    // directly without PM2 (node server.js during development), this
+    // variable doesn't exist at all, so it runs normally as before.
     const isPrimaryWorker = process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0';
 
     if (isPrimaryWorker) {
       startAutoBackup();
 
-      // ── خادم HL7 (نتائج المختبر) — يشتغل بمنفذ منفصل، بجانب الباك إند الرئيسي
-      // نغلّفه بـ try/catch: لو صار تعارض منفذ أو أي خطأ، يبقى النظام الأساسي
-      // يعمل بشكل طبيعي (تكامل المختبر ميزة إضافية، وليس أساس تشغيل النظام)
+      // ── The HL7 server (lab results) — runs on a separate port, alongside the main backend
+      // We wrap it in try/catch: if there's a port conflict or any error, the
+      // core system keeps working normally (lab integration is an extra
+      // feature, not something the system's operation depends on)
       try {
         const { startHL7Listener } = require('./services/hl7/hl7Listener');
         startHL7Listener();
@@ -311,10 +344,11 @@ if (require.main === module) {
       }
     }
 
-    // ── فحص اتصال PostgreSQL فوراً بعد الإقلاع ────────────────────────────────
-    // الخادم يبقى يعمل حتى لو فشل هذا الفحص (بعض الاستخدامات لا تحتاج قاعدة
-    // بيانات فوراً)، لكن نطبع تحذيراً واضحاً بالعربية بدل ترك المستخدم يكتشف
-    // المشكلة لاحقاً كخطأ 503 غامض بمنتصف استخدامه للنظام.
+    // ── Checking the PostgreSQL connection immediately after startup ────────────────────────
+    // The server keeps running even if this check fails (some uses don't
+    // need the database immediately), but we print a clear warning instead
+    // of letting the user discover the problem later as a vague 503 error
+    // in the middle of using the system.
     const dbCheck = await testConnection();
     if (dbCheck.ok) {
       devLog('Connected to the PostgreSQL database successfully.\n');
@@ -329,10 +363,13 @@ if (require.main === module) {
     }
   });
 
-  // معالجة صريحة لخطأ انشغال المنفذ (EADDRINUSE): بدون هذا المعالج، محاولة تشغيل
-  // نسخة ثانية من السيرفر بينما نسخة سابقة لا تزال عالقة بالخلفية (مثلاً بعد إغلاق
-  // نافذة CMD دون إنهاء العملية فعلياً) تنتهي بخطأ غامض يصعب تشخيصه من طرف المستخدم.
-  // هنا نطبع رسالة واضحة بالعربية وحل عملي، بدل ترك Node يطبع Stack Trace غير مفهوم.
+  // Explicit handling of a port-in-use error (EADDRINUSE): without this
+  // handler, trying to start a second copy of the server while a previous
+  // copy is still stuck running in the background (e.g. after closing a CMD
+  // window without actually ending the process) ends in a vague error that
+  // is hard for the user to diagnose.
+  // Here we print a clear message and a practical fix, instead of letting
+  // Node print an unreadable stack trace.
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.error(`\nPort ${PORT} is already in use by another process.`);

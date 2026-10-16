@@ -1,12 +1,14 @@
 // backend/routes/excelImportRoutes.js
 //
-// مصنع مسار استيراد جماعي من ملف Excel، بنفس فكرة pgCrud.js (مصنع قابل لإعادة
-// الاستخدام لأكثر من موديول) — يضيف مسار POST /api/<apiName>/import-excel.
+// A factory for a bulk Excel-file import route, on the same idea as
+// pgCrud.js (a reusable factory for more than one module) — adds a
+// POST /api/<apiName>/import-excel route.
 //
-// نتيجة الاستيراد ليست "الكل أو لا شيء": كل صف يُعالَج ويُحفَظ بشكل مستقل عن
-// باقي الصفوف عمداً (بدون معاملة/transaction واحدة تلف الجميع) — لأن الهدف
-// هو "استورد كل الصفوف الصحيحة، وأخبرني بالضبط عن الصفوف الخاطئة وسببها"،
-// وليس رفض الملف كاملاً بسبب خطأ بصف واحد وسط مئات الصفوف السليمة.
+// The import result is not "all or nothing": every row is processed and
+// saved independently of the other rows on purpose (no single
+// transaction wrapping all of them) — because the goal is "import every
+// valid row, and tell me exactly which rows are wrong and why", not
+// rejecting the whole file because of one bad row among hundreds of good ones.
 const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
@@ -17,11 +19,12 @@ const { validateFields } = require('../middleware/validate');
 const { parseExcelBuffer } = require('../utils/excelImport');
 const { moduleRegistry } = require('./pgCrud');
 
-// تخزين بالذاكرة فقط (memoryStorage) — الملف يُقرأ ويُحلَّل مباشرة ولا يُكتب
-// على القرص إطلاقاً، فلا حاجة لأي تنظيف لاحق ولا خطر تراكم ملفات مؤقتة.
+// Memory storage only (memoryStorage) — the file is read and parsed
+// directly and never written to disk at all, so there's no later cleanup
+// needed and no risk of temporary files piling up.
 const importUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 ميجا كافية جداً حتى لآلاف الصفوف كنص خام
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB is plenty even for thousands of rows as raw text
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext !== '.xlsx' && ext !== '.xls') {
@@ -33,26 +36,30 @@ const importUpload = multer({
   },
 });
 
-// apiName: اسم المسار (يظهر بالرابط: /api/<apiName>/import-excel)
-// tableName: اسم الجدول الفعلي بقاعدة البيانات إن اختلف عن apiName (مثل
-//            ambulanceVehicles -> ambulance_vehicles)، بنفس فكرة sqlTableName
-//            بملف pgCrud.js — يجب أن يطابق تماماً الاسم المستخدم هناك لنفس
-//            الموديول، وإلا يفشل الإدراج بخطأ "الجدول غير موجود"
-// schema: نفس مخطط التحقق المستخدم بـ middleware/schemas.js لهذا الموديول
-// columnMap: قاموس "عنوان العمود بملف Excel" -> "اسم الحقل الداخلي"
-// options.indexedColumns: مطلوب صراحة الآن (بلا قيمة افتراضية) — يجب أن يطابق
-//            تماماً نفس المصفوفة المُمرَّرة لـ pgCrud() لنفس الموديول
-//            بـ modules.js (حتى لو فاضية [])، وإلا يفشل الإدراج.
-//            ── إصلاح fail-fast: كان الافتراض الضمني name/phone/status، وهو
-//            خاطئ لأغلب الجداول (تخزين JSONB بحت) — بالضبط نفس خطأ pgCrud.js
-//            الذي كسر 4 موديولات فعلياً بالاستيراد (المشاريع، الأقسام،
-//            المخزون، الأصول) قبل هذا الإصلاح. نسيان تمريره الآن يوقف تسجيل
-//            المسار فوراً برسالة واضحة بدل فشل استيراد غامض لاحقاً.
+// apiName: the route name (appears in the URL: /api/<apiName>/import-excel)
+// tableName: the actual database table name if it differs from apiName
+//            (e.g. ambulanceVehicles -> ambulance_vehicles), on the same
+//            idea as sqlTableName in pgCrud.js — must exactly match the
+//            name used there for the same module, otherwise the insert
+//            fails with a "table does not exist" error
+// schema: the same validation schema used in middleware/schemas.js for this module
+// columnMap: a dictionary of "Excel file column header" -> "internal field name"
+// options.indexedColumns: now explicitly required (no default value) — must
+//            exactly match the same array passed to pgCrud() for the same
+//            module in modules.js (even if it's an empty []), otherwise the
+//            insert fails.
+//            ── fail-fast fix: the implicit default used to be
+//            name/phone/status, which is wrong for most tables (pure JSONB
+//            storage) — exactly the same bug as in pgCrud.js that actually
+//            broke 4 modules during import (projects, departments,
+//            inventory, assets) before this fix. Forgetting to pass it now
+//            stops the route from registering immediately with a clear
+//            message instead of a vague import failure later.
 const registerExcelImport = (router, apiName, schema, columnMap, options = {}) => {
   if (options.indexedColumns === undefined) {
     throw new Error(
-      `❌ registerExcelImport('${apiName}'): options.indexedColumns مطلوب صراحة ولا قيمة افتراضية له.\n` +
-      `   مرر نفس المصفوفة بالضبط المُستخدَمة بتسجيل pgCrud() لنفس الموديول (حتى لو []).`
+      `registerExcelImport('${apiName}'): options.indexedColumns is explicitly required and has no default value.\n` +
+      `   Pass the exact same array used when registering pgCrud() for the same module (even if []).`
     );
   }
   const {
@@ -60,39 +67,45 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
     hospitalScoped = false,
     permission = null,
     tableName = apiName,
-    limiter = (req, res, next) => next(), // بدون تحديد معدل إضافي إن لم يُمرَّر
-    duplicateCheck = null, // مثال: ['name', 'phone'] — راجع isDuplicate أدناه
-    // ── إصلاح: تعبئة افتراضية اختيارية بعد تحليل كل صف ────────────────────────
-    // بعض الحقول الرقمية (مثل spent/progress/milestones بموديول المشاريع)
-    // ما تكون بأعمدة Excel أصلاً، فتبقى undefined وتكسر حسابات الواجهة
-    // (تظهر "NaN%" أو "undefined/undefined"). afterParse(data) دالة اختيارية
-    // تُستدعى على كل صف بعد تحليله وقبل التحقق منه — تستطيع إرجاع نسخة معدَّلة
-    // بقيم افتراضية معقولة للحقول الناقصة.
+    limiter = (req, res, next) => next(), // no extra rate limit if none is passed
+    duplicateCheck = null, // example: ['name', 'phone'] — see isDuplicate below
+    // ── Fix: an optional default fill-in after parsing each row ────────────────────────
+    // Some numeric fields (like spent/progress/milestones in the projects
+    // module) aren't columns in the Excel file at all, so they stay
+    // undefined and break the frontend's calculations (showing "NaN%" or
+    // "undefined/undefined"). afterParse(data) is an optional function
+    // called on every row after it's parsed and before it's validated — it
+    // can return a modified copy with reasonable default values for the
+    // missing fields.
     afterParse = null,
   } = options;
 
-  // ── ميزة التصدير إلى Excel: عناوين أعمدة جميلة ─────────────────────────────
-  // columnMap يربط عدة عناوين محتملة بنفس الحقل (مثلاً 'الاسم' و'اسم المريض'
-  // و'Name' كلها -> 'name'، لمرونة الاستيراد). للتصدير نريد عنوان واحد لطيف
-  // لكل حقل — نأخذ أول عنوان نصادفه بترتيب المفاتيح (وهو غالباً التسمية
-  // العربية الأساسية بكل تعريفات الموديولات الحالية). يُخزَّن بـ moduleRegistry
-  // (نفس السجل المشترك المستخدم لسلة المحذوفات) ليقرأه export-excel بـ
-  // pgCrud.js — يعمل حتى لو استُدعيت registerExcelImport قبل pgCrud() لنفس
-  // الموديول (ترتيب الاستدعاء الفعلي بـ modules.js)، لأن pgCrud.js يدمج بدل
-  // ما يستبدل عند تسجيله لاحقاً.
+  // ── Excel export feature: nice column headers ─────────────────────────────
+  // columnMap maps several possible headers to the same field (e.g. 'الاسم'
+  // and 'اسم المريض' and 'Name' all -> 'name', for import flexibility). For
+  // export we want one nice header per field — we take the first header we
+  // encounter in key order (usually the main Arabic label in every current
+  // module definition). It's stored in moduleRegistry (the same shared
+  // registry used for the recycle bin) for export-excel in pgCrud.js to
+  // read — this works even if registerExcelImport is called before
+  // pgCrud() for the same module (the actual call order in modules.js),
+  // because pgCrud.js merges instead of replacing when it registers later.
   const exportHeaders = {};
   Object.entries(columnMap).forEach(([header, field]) => {
     if (!(field in exportHeaders)) exportHeaders[field] = header;
   });
   moduleRegistry[apiName] = { ...moduleRegistry[apiName], exportHeaders };
 
-  // ── إصلاح: كشف التكرار قبل الإدراج ────────────────────────────────────────
-  // قبل هذا، رفع نفس الملف مرتين (بالخطأ، أو بعد إضافة صفوف جديدة لملف قديم)
-  // كان يُنشئ نسخاً مكررة كاملة لكل سجل، بدون أي تحذير. الآن نتحقق قبل كل
-  // إدراج: لو فيه سجل موجود مسبقاً يطابق كل حقول duplicateCheck بالضبط (مثلاً
-  // نفس الاسم ونفس الهاتف لمريض)، نتجاوزه ونبلّغ عنه كـ"مكرر" بدل إدراجه مرة
-  // ثانية. الحقل المفهرس (indexedColumns) يُستعلَم مباشرة (أسرع)، وأي حقل غير
-  // مفهرس يُستعلَم من عمود JSONB (data->>'field') — أبطأ قليلاً لكنه دقيق.
+  // ── Fix: duplicate detection before insert ────────────────────────────────
+  // Before this, uploading the same file twice (by mistake, or after adding
+  // new rows to an old file) used to create full duplicate copies of every
+  // record, with no warning at all. Now we check before every insert: if a
+  // record already exists that exactly matches every duplicateCheck field
+  // (e.g. the same name and the same phone for a patient), we skip it and
+  // report it as a "duplicate" instead of inserting it a second time. An
+  // indexed field (indexedColumns) is queried directly (faster), and any
+  // non-indexed field is queried from the JSONB column (data->>'field') —
+  // a bit slower but accurate.
   const isDuplicate = async (data, userHospitalId) => {
     if (!duplicateCheck || duplicateCheck.length === 0) return false;
     const conditions = [];
@@ -103,8 +116,9 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
       values.push(data[field] ?? '');
       conditions.push(`${expr} = $${values.length}`);
     });
-    // نطاق التحقق يبقى ضمن نفس المنشأة فقط بالأنظمة متعددة المنشآت — نفس
-    // الاسم والهاتف بمستشفيين مختلفين حالة مشروعة (مريضين مختلفين)، وليست تكراراً
+    // The check stays scoped to the same facility only in multi-facility
+    // systems — the same name and phone at two different hospitals is a
+    // legitimate case (different patients), not a duplicate
     if (hospitalScoped && userHospitalId) {
       values.push(userHospitalId);
       conditions.push(`data->>'hospitalId' = $${values.length}`);
@@ -114,9 +128,10 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
     return result.rows.length > 0;
   };
 
-  // ── تحميل قالب فارغ ──────────────────────────────────────────────────────
-  // يبني ملف Excel بصف عناوين + صف مثال واحد، بنفس الأعمدة المتوقعة بالضبط —
-  // يريح المستخدم من تخمين أسماء الأعمدة الصحيحة أو ترتيبها.
+  // ── Downloading a blank template ──────────────────────────────────────────
+  // Builds an Excel file with a header row + one example row, with exactly
+  // the expected columns — saves the user from guessing the correct column
+  // names or their order.
   if (options.template) {
     router.get(`/${apiName}/import-template`, auth, requirePermission(permission), (req, res, next) => {
       try {
@@ -143,15 +158,17 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
       const results = { imported: 0, failed: 0, duplicates: 0, errors: [], duplicateRows: [] };
 
       for (const { rowNumber, data: rawData } of rows) {
-        // صف فاضي بالكامل (مثلاً صف أخير زايد بالملف بالخطأ) — تجاهله بصمت
+        // A completely empty row (e.g. an extra trailing row in the file by mistake) — silently skip it
         if (Object.values(rawData).every(v => v === '' || v === undefined)) continue;
 
-        // ── إصلاح: afterParse الآن يُنتظَر (await) ويستقبل hospitalId كمعامل
-        // ثانٍ — يسمح لدوال afterParse بعمل استعلام قاعدة بيانات حقيقي أثناء
-        // معالجة الصف (مثلاً تحويل اسم ردهة نصي بملف Excel إلى wardId رقمي
-        // فعلي بالبحث بجدول wards)، وليس فقط تحويلات محلية على نفس الصف كما
-        // كان الحال سابقاً. الدوال المتزامنة (non-async) تبقى تعمل بلا أي
-        // تغيير — await على قيمة عادية غير Promise يرجعها كما هي فوراً.
+        // ── Fix: afterParse is now awaited and receives hospitalId as a
+        // second argument — allows afterParse functions to make an actual
+        // database query while processing the row (e.g. converting a ward's
+        // text name in the Excel file into an actual numeric wardId by
+        // looking it up in the wards table), not just local transformations
+        // on the same row as before. Synchronous (non-async) functions keep
+        // working with no change at all — awaiting a plain value that isn't
+        // a Promise returns it immediately as is.
         const data = afterParse ? await afterParse(rawData, hospitalScoped ? req.user?.hospitalId : null) : rawData;
 
         const rowErrors = validateFields(schema, data);
@@ -161,11 +178,11 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
           continue;
         }
 
-        // فرض منشأة المستخدم تلقائياً — نفس منطق pgCrud.js بالضبط
+        // Automatically enforce the user's facility — exactly the same logic as pgCrud.js
         if (hospitalScoped && req.user?.hospitalId) {
           data.hospitalId = req.user.hospitalId;
         }
-        if (!data.status) data.status = 'active'; // قيمة افتراضية معقولة لو العمود غير موجود بالملف
+        if (!data.status) data.status = 'active'; // a reasonable default if the column isn't in the file
 
         try {
           if (await isDuplicate(data, req.user?.hospitalId)) {
@@ -174,8 +191,9 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
             continue;
           }
         } catch (dupErr) {
-          // فشل فحص التكرار نفسه (مثلاً عمود JSONB بحاجة صياغة مختلفة) — لا
-          // نوقف الاستيراد كله بسببه، نكمل للإدراج مباشرة كما لو لا يوجد تكرار
+          // The duplicate check itself failed (e.g. a JSONB column needing
+          // different syntax) — we don't stop the whole import because of
+          // it, we proceed to insert directly as if there's no duplicate
           console.warn(`[${apiName}] Duplicate check failed for row ${rowNumber}:`, dupErr.message);
         }
 
@@ -183,8 +201,9 @@ const registerExcelImport = (router, apiName, schema, columnMap, options = {}) =
         const rest = { ...data };
         indexedColumns.forEach(({ field }) => delete rest[field]);
 
-        // نفس فرع الحالتين المستخدم بـ pgCrud.js بالضبط: تخزين JSONB بحت لو
-        // لا توجد أعمدة فهرسة إضافية (مثل ambulanceVehicles)، أو أعمدة + JSONB
+        // The same two-branch pattern used in pgCrud.js exactly: pure JSONB
+        // storage if there are no extra indexed columns (like
+        // ambulanceVehicles), or columns + JSONB
         let insertSql, insertValues;
         if (indexedColumns.length === 0) {
           insertSql = `INSERT INTO ${tableName} (data) VALUES ($1)`;

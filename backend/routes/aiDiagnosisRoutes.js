@@ -1,27 +1,30 @@
 // backend/routes/aiDiagnosisRoutes.js
 //
-// ── إصلاح جذري: تشخيص بذكاء اصطناعي حقيقي بدل نظام قواعد وهمي ──────────────────
-// قبل هذا الملف، صفحة "التشخيص بالذكاء الاصطناعي" بالفرونت إند كانت تبني
-// "prompt" فعلي للذكاء الاصطناعي... لكن أبداً ما ترسله لأي مكان! التعليق
-// بالكود القديم كان يقول صراحة: "الـ API محظور بـCORS بالمتصفح" — وهذا صحيح
-// تقنياً: متصفحات الويب تمنع صفحة على localhost:3000 من مناداة API خارجي
-// (مثل Anthropic أو Google) مباشرة لأسباب أمنية (CORS)، إلا لو ذاك الـ API
-// يسمح صراحة بهذا الأصل (origin) — أغلب مزوّدي الذكاء الاصطناعي لا يسمحون.
+// ── A fundamental fix: real AI diagnosis instead of a fake rules system ──────────────────
+// Before this file, the frontend's "AI diagnosis" page used to build an
+// actual AI "prompt"... but never sent it anywhere! The old code's comment
+// explicitly said: "the API is blocked by CORS in the browser" — which is
+// technically true: web browsers block a page on localhost:3000 from
+// calling an external API (like Anthropic or Google) directly for security
+// reasons (CORS), unless that API explicitly allows this origin — most AI
+// providers don't.
 //
-// الحل الصحيح (المطبَّق هنا): الفرونت إند لا يناديه أبداً — بدل هذا يناديه
-// **الباك إند** (خادم لخادم، بلا أي قيد CORS إطلاقاً)، ويمرر النتيجة
-// للفرونت إند كأي مسار API عادي بالنظام. هذا هو النمط الصحيح والوحيد الآمن
-// لاستخدام أي API خارجي من تطبيق ويب بأي حال.
+// The correct solution (implemented here): the frontend never calls it at
+// all — instead, **the backend** calls it (server-to-server, with no CORS
+// restriction at all), and passes the result to the frontend like any
+// other normal API route in the system. This is the correct and only safe
+// pattern for using any external API from a web app, period.
 //
-// ── يمر الآن عبر aiProviderRouter.js كباقي ميزات الذكاء الاصطناعي الثلاث ────
-// كان هذا الملف يستدعي utils/aiProvider.js (Gemini/Claude) مباشرة بلا أي
-// اختيار bot/offline. الآن 'aiDiagnosis' ميزة رابعة مسجَّلة بـ
-// aiProviderRouter.js: 'online' (نفس المزوّد المُعدّ فعلياً بـ.env، لا يُذكَر
-// اسمه بالواجهة أبداً)، 'offline' (Ollama محلي)، أو 'bot' (يرجع
-// available:false فوراً — الفرونت إند يستخدم النظام المحلي الاحتياطي
-// buildFallback **مع تسمية صادقة توضح أنه نظام مساعدة أولية وليس ذكاء اصطناعي
-// حقيقياً**، بالضبط نفس سلوكه القديم لو لم يوجد أي مفتاح API مُعدّ). لا يوجد أي
-// كسر أو خطأ بأي حالة من الثلاث.
+// ── Now goes through aiProviderRouter.js like the other three AI features ────
+// This file used to call utils/aiProvider.js (Gemini/Claude) directly with
+// no bot/offline choice at all. Now 'aiDiagnosis' is a fourth feature
+// registered in aiProviderRouter.js: 'online' (whichever provider is
+// actually configured in .env, its name is never mentioned in the UI),
+// 'offline' (local Ollama), or 'bot' (returns available:false immediately
+// — the frontend uses the local backup system buildFallback **with an
+// honest label making clear it's a preliminary assistance system and not
+// real AI**, exactly the same old behavior as if no API key were
+// configured). There's no breakage or error in any of the three cases.
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -35,13 +38,15 @@ const { getFeatureStatus, routeTextCall } = require('../utils/aiProviderRouter')
 
 const router = express.Router();
 
-// ── إصلاح: قائمة الأطباء المُقترَحين صارت ملف بيانات، وليست كوداً ثابتاً ──────────────
-// قبل هذا، قائمة الأطباء (الاسم، التخصص، الهاتف، العنوان) كانت مكتوبة يدوياً
-// داخل كود React نفسه — أي تعديل بسيط (رقم هاتف تغيّر، طبيب جديد، عيادة
-// انتقلت) كان يحتاج تعديل كود وبناء (build) ونشر نسخة جديدة كاملة من الفرونت
-// إند. الآن هي ملف JSON بسيط بجانب الخادم — يُعدَّل مباشرة بأي محرر نصوص
-// (حتى بدون معرفة برمجة)، ويظهر التغيير فوراً لكل المستخدمين بمجرد تحديث
-// الصفحة، بدون أي بناء أو نشر.
+// ── Fix: the suggested-doctors list is now a data file, not hardcoded code ──────────────
+// Before this, the doctors list (name, specialization, phone, address) used
+// to be written by hand directly inside the React code — any small edit (a
+// phone number changing, a new doctor, a clinic that moved) needed a code
+// change, a build, and deploying a whole new frontend version. Now it's a
+// simple JSON file next to the server — editable directly with any text
+// editor (even with no programming knowledge), and the change shows up
+// immediately for every user just by refreshing the page, with no build or
+// deploy at all.
 const REFERRAL_DOCTORS_PATH = path.join(__dirname, '..', 'data', 'basra-referral-doctors.json');
 
 router.get('/ai-diagnosis/referral-doctors', auth, requirePermission('ai-diagnosis'), (req, res) => {
@@ -50,13 +55,13 @@ router.get('/ai-diagnosis/referral-doctors', auth, requirePermission('ai-diagnos
     res.json(doctors);
   } catch (err) {
     console.error('[ai-diagnosis] Could not read the suggested-doctors file:', err.message);
-    res.json([]); // لا نكسر تجربة المستخدم لو الملف تالف — قائمة فاضية بدل خطأ
+    res.json([]); // don't break the user's experience if the file is corrupted — an empty list instead of an error
   }
 });
 
-// حد معدل مخصّص: حتى Gemini المجاني له حد أقصى يومي/دقيقي من مزوّد الخدمة
-// نفسه، وClaude له كلفة فعلية لو استُخدم — فحدنا الداخلي أقل بكثير من الحد
-// العام بأي الحالتين.
+// A custom rate limit: even free Gemini has a daily/per-minute cap from
+// the provider itself, and Claude has an actual cost if used — so our
+// internal limit is much lower than the general limit in either case.
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -67,7 +72,7 @@ const aiLimiter = rateLimit({
   store: new RedisRateLimitStore('ai-diagnosis'),
 });
 
-// يبني نص الطلب (prompt) بصيغة موحّدة تُستخدم مع أي المزوّدين
+// Builds the prompt text in a unified format used with whichever provider is active
 function buildPrompts(lang, symptoms, age, gender, duration, filesDescription) {
   const isEn = lang === 'en';
   const systemPrompt = isEn
@@ -81,11 +86,12 @@ function buildPrompts(lang, symptoms, age, gender, duration, filesDescription) {
   return { systemPrompt, userPrompt };
 }
 
-// يخبر الفرونت إند فوراً هل الذكاء الاصطناعي الحقيقي متاح أصلاً (وبأي وضع:
-// bot/online/offline) — يُستخدم لعرض تسمية صادقة بالواجهة، وليملأ اختيار
-// المستخدم الافتراضي بقائمة AiModeSelect.js قبل أول تحليل. راجع
-// utils/aiProviderRouter.js — نفس نمط باقي ميزات الذكاء الاصطناعي الثلاث
-// بالضبط (وليس فحص Gemini/Claude مباشرة كما كان سابقاً).
+// Immediately tells the frontend whether real AI is available at all (and
+// in which mode: bot/online/offline) — used to show an honest label in the
+// UI, and to pre-fill the user's default choice in the AiModeSelect.js list
+// before the first analysis. See utils/aiProviderRouter.js — the exact same
+// pattern as the other three AI features (not a direct Gemini/Claude check
+// like before).
 router.get('/ai-diagnosis/status', auth, requirePermission('ai-diagnosis'), async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('aiDiagnosis'));
@@ -100,10 +106,11 @@ router.post('/ai-diagnosis/analyze', auth, requirePermission('ai-diagnosis'), ai
     }
 
     const { systemPrompt, userPrompt } = buildPrompts(lang, symptoms, age, gender, duration, filesDescription);
-    // routeTextCall تقرأ اختيار المستخدم المحفوظ (bot/online/offline) وتوزّع
-    // الاستدعاء تبعاً له، أو تستخدم mode (اختيار هذا الطلب تحديداً) لو وصل.
-    // وضع 'bot' يرجع {available:false} فوراً — الفرونت إند يتعامل معه تماماً
-    // كما يتعامل مع "لا مفتاح API مُعدّ" أصلاً: يستخدم buildFallback المحلي.
+    // routeTextCall reads the user's saved choice (bot/online/offline) and
+    // routes the call accordingly, or uses mode (this specific request's
+    // choice) if sent. 'bot' mode returns {available:false} immediately —
+    // the frontend handles it exactly as it handles "no API key is
+    // configured at all": it uses the local buildFallback.
     const result = await routeTextCall('aiDiagnosis', systemPrompt, userPrompt, mode);
 
     if (!result.available) {

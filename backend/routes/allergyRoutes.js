@@ -1,11 +1,13 @@
 // backend/routes/allergyRoutes.js
 //
-// فحص تضارب الحساسية الدوائية — صفحة مستقلة تماماً بالفرونت إند
-// (AllergyCheckPage.js، نفس مبدأ DosageCheckPage.js: سجل مريض واحد لا علاقة
-// له بالصيدلية أو قارئ الوصفات مباشرة). نفس نمط dosageRoutes.js/
-// drugInteractionRoutes.js بالضبط: قاعدة بيانات (bot) أولاً عبر
-// agents/allergyAgent.js، AI احتياطياً فقط للأدوية غير المغطاة بجدول
-// drug_allergy_classes — راجع migrations-sql/011_drug_allergy_classes.sql.
+// Drug allergy conflict checking — an entirely standalone frontend page
+// (AllergyCheckPage.js, the same principle as DosageCheckPage.js: a single
+// patient record with no direct connection to the pharmacy or prescription
+// reader). The exact same pattern as dosageRoutes.js/
+// drugInteractionRoutes.js: a local database (bot) first via
+// agents/allergyAgent.js, AI only as a fallback for drugs not covered by
+// the drug_allergy_classes table — see
+// migrations-sql/011_drug_allergy_classes.sql.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');

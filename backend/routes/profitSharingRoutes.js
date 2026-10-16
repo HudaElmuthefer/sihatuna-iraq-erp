@@ -1,12 +1,15 @@
 // backend/routes/profitSharingRoutes.js
 //
-// تقسيم الحصص: قائمة مستفيدين غير محدودة العدد (مستثمر/طبيب/صيدلي/أي أحد —
-// اسم ونوع وصفي حر بلا قيد، راجع migrations-sql/015) لكل منشأة، كل واحد
-// بنسبته المئوية من إجمالي الإيرادات. مجموع النسب لا يتجاوز 100% (فحص خادم
-// صارم)؛ التنبيه لو المجموع أقل من 100% مسؤولية الواجهة (raw totalPercentage
-// يُعاد بكل استدعاء). حساب المستحقات (summary) يُعاد حسابه بالكامل من
-// السجلات الحالية بكل طلب — لا تخزين/كاش — فأي إيراد جديد أو تعديل/إضافة/
-// حذف مستفيد ينعكس فوراً بأول تحميل تالٍ بلا أي كود إبطال إضافي.
+// Profit sharing: an unlimited-size list of beneficiaries (investor,
+// doctor, pharmacist, anyone — a free-form name and type with no
+// restriction, see migrations-sql/015) per hospital, each with their
+// percentage share of total revenue. The total of all percentages cannot
+// exceed 100% (strict server-side check); warning when the total is less
+// than 100% is the frontend's responsibility (the raw totalPercentage is
+// returned on every call). The payout calculation (summary) is fully
+// recomputed from the current records on every request — no storage/cache
+// — so any new revenue, or editing/adding/removing a beneficiary, is
+// reflected immediately on the next load with no extra invalidation code.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requireAdmin = require('../middleware/requireAdmin');
@@ -17,14 +20,15 @@ const { logAudit } = require('../utils/auditLog');
 
 const router = express.Router();
 
-// يحسم المنشأة الفعلية المطلوب العمل عليها: إدمن/موظف مرتبط بمنشأة معيّنة
-// يُقيَّد بها دائماً بغض النظر عمّا يُرسِله بالطلب؛ إدمن عام يحدِّدها صراحة.
+// Resolves the actual hospital to operate on: an admin/employee tied to a
+// specific hospital is always restricted to it regardless of what the
+// request sends; a global admin specifies it explicitly.
 const resolveHospitalId = (req, bodyOrQuery) => req.user.hospitalId || bodyOrQuery.hospitalId || null;
 
 router.get('/profit-sharing/beneficiaries', auth, requirePermission('accounts'), async (req, res, next) => {
   try {
     const hospitalId = resolveHospitalId(req, req.query);
-    if (!hospitalId) return res.json([]); // إدمن عام بلا تحديد منشأة — لا معنى لقائمة مستفيدين "لكل المنشآت"
+    if (!hospitalId) return res.json([]); // a global admin with no hospital specified — a beneficiaries list "for all hospitals" has no meaning
     const result = await query(
       `SELECT id, hospital_id, name, type, percentage, created_at, updated_at
        FROM profit_sharing_beneficiaries WHERE hospital_id = $1 ORDER BY created_at ASC`,
@@ -69,7 +73,7 @@ router.put('/profit-sharing/beneficiaries/:id', auth, requireAdmin, async (req, 
     const existing = await query(`SELECT * FROM profit_sharing_beneficiaries WHERE id = $1`, [req.params.id]);
     if (existing.rowCount === 0) return res.status(404).json({ message: 'غير موجود' });
     const row = existing.rows[0];
-    // إدمن محلي لا يستطيع لمس مستفيد بمنشأة ثانية (نفس نمط belongsToUserHospital بـpgCrud.js)
+    // A local admin cannot touch a beneficiary in another hospital (same pattern as belongsToUserHospital in pgCrud.js)
     if (req.user.hospitalId && row.hospital_id !== req.user.hospitalId) return res.status(404).json({ message: 'غير موجود' });
 
     const { name, type, percentage } = req.body;
@@ -111,8 +115,9 @@ router.delete('/profit-sharing/beneficiaries/:id', auth, requireAdmin, async (re
   }
 });
 
-// المستحقات المحسوبة لكل مستفيد لفترة مُعطاة — حيّة بالكامل، بلا أي تخزين
-// وسيط: يُعاد استدعاء getRevenue() (نفس دالة تبويب الإيرادات) في كل طلب.
+// The calculated payout for each beneficiary for a given period — fully
+// live, with no intermediate storage: getRevenue() (the same function used
+// by the revenue tab) is called again on every request.
 router.get('/profit-sharing/summary', auth, requirePermission('accounts'), async (req, res, next) => {
   try {
     const hospitalId = resolveHospitalId(req, req.query);

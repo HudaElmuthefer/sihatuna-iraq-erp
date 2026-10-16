@@ -47,10 +47,14 @@ function addDirToArchive(archive, absDir, archivePath) {
   });
 }
 
-async function createCodeBackup() {
-  ensureDir(CODE_BACKUPS_DIR);
+// targetDir defaults to the real backup directory for every production
+// caller. It exists only so a test can redirect the output into an
+// isolated temporary directory instead of writing into the real project's
+// backup folder, without changing production behavior in any way.
+async function createCodeBackup(targetDir = CODE_BACKUPS_DIR) {
+  ensureDir(targetDir);
   const filename = `sihatuna_code_backup_${timestampForFilename()}.zip`;
-  const outPath = path.join(CODE_BACKUPS_DIR, filename);
+  const outPath = path.join(targetDir, filename);
 
   try {
     await new Promise((resolve, reject) => {
@@ -75,7 +79,7 @@ async function createCodeBackup() {
     throw err;
   }
 
-  console.log(`Code backup created: backend/backups/code/${filename}`);
+  console.log(`Code backup created: ${outPath}`);
   return filename;
 }
 

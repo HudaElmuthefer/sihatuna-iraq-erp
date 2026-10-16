@@ -62,7 +62,7 @@ describe('callOllama (نصي)', () => {
     const { callOllama } = require('../utils/ollamaService');
     const result = await callOllama('sys', 'user');
     expect(result.available).toBe(false);
-    expect(result.error).toContain('غير صالح');
+    expect(result.code).toBe('OLLAMA_INVALID_RESPONSE');
   });
 
   test('انتهاء المهلة (خادم عالق): available:false', async () => {

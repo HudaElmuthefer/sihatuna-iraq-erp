@@ -55,4 +55,4 @@ function field(root, labelText) {
     .locator('xpath=..').locator('input, select, textarea').first();
 }
 
-module.exports = { login, field, forceEnglish, ensureMultiHospitalEnabled, ADMIN_USERNAME, ADMIN_PASSWORD };
+module.exports = { login, field, forceEnglish, ensureMultiHospitalEnabled, ADMIN_USERNAME, ADMIN_PASSWORD, API_BASE_URL };

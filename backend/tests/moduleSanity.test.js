@@ -16,10 +16,42 @@
 // آلي رغم كونها بنفس فئة الخطر (pgCrud جديد بلا تحقق). ──────────────────────
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { pool } = require('../config/database');
 
 let dbPath;
 let app;
 let token;
+
+// Tracks every record this suite creates in the real test database, so
+// afterAll can delete each one by its exact id. Every test in this file
+// writes directly to the isolated PostgreSQL test database (not a JSON
+// fixture), so without this tracking, every test run would leave
+// permanent extra rows in each table below.
+const createdRecords = [];
+function trackCreated(table, id) {
+  if (table && id !== undefined && id !== null) createdRecords.push({ table, id });
+}
+
+// Maps each API module name used in CASES below to its actual database
+// table name (snake_case), matching the sqlTableName values registered
+// with pgCrud() in backend/routes/modules.js.
+const TABLE_NAMES = {
+  departments: 'departments',
+  vaccinations: 'vaccinations',
+  medicalLeaves: 'medical_leaves',
+  radiology: 'radiology',
+  assets: 'assets',
+  documents: 'documents',
+  promotionsAllowances: 'promotions_allowances',
+  salaries: 'salaries',
+  outgoing: 'outgoing',
+  incoming: 'incoming',
+  wards: 'wards',
+  deliveries: 'deliveries',
+  ptEquipment: 'pt_equipment',
+  ptSessions: 'pt_sessions',
+  queueTickets: 'queue_tickets',
+};
 
 beforeAll(async () => {
   dbPath = await setupTestEnv('module-sanity');
@@ -33,6 +65,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Deletes every record tracked by trackCreated(), by its exact id, so
+  // this test file leaves the test database exactly as it found it.
+  for (const { table, id } of createdRecords) {
+    try {
+      await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+    } catch (err) {
+      console.warn(`Failed to clean up test record (${table}, id=${id}):`, err.message);
+    }
+  }
+
   cleanupTestEnv(dbPath);
 
   await closeDbPool();
@@ -67,6 +109,7 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
 
     expect(createRes.status).toBe(201);
     expect(createRes.body.id).toBeDefined();
+    trackCreated(TABLE_NAMES[moduleName], createRes.body.id);
 
     const getRes = await request(app)
       .get(`/api/${moduleName}/${createRes.body.id}`)
@@ -82,6 +125,7 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'متقاعد اختبار', jobTitle: 'وظيفة اختبار' });
     expect(retiredRes.status).toBe(201);
+    trackCreated('retired', retiredRes.body.id);
 
     const dossierRes = await request(app)
       .post('/api/dossiers')
@@ -89,6 +133,7 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
       .send({ title: 'وثيقة اختبار', retiredId: retiredRes.body.id });
     expect(dossierRes.status).toBe(201);
     expect(dossierRes.body.id).toBeDefined();
+    trackCreated('dossiers', dossierRes.body.id);
 
     const getRes = await request(app)
       .get(`/api/dossiers/${dossierRes.body.id}`)
@@ -105,24 +150,28 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
       .set('Authorization', `Bearer ${token}`)
       .send({ name: `ردهة سلسلة الاختبار ${Date.now()}` });
     expect(wardRes.status).toBe(201);
+    trackCreated('wards', wardRes.body.id);
 
     const admissionRes = await request(app)
       .post('/api/admissions')
       .set('Authorization', `Bearer ${token}`)
       .send({ patientName: 'مريض اختبار الردهة', wardId: wardRes.body.id, status: 'admitted' });
     expect(admissionRes.status).toBe(201);
+    trackCreated('admissions', admissionRes.body.id);
 
     const orderRes = await request(app)
       .post('/api/medicationOrders')
       .set('Authorization', `Bearer ${token}`)
       .send({ admissionId: admissionRes.body.id, drugName: 'دواء اختبار', timesPerDay: 2 });
     expect(orderRes.status).toBe(201);
+    trackCreated('medication_orders', orderRes.body.id);
 
     const adminRes = await request(app)
       .post('/api/medicationAdministrations')
       .set('Authorization', `Bearer ${token}`)
       .send({ orderId: orderRes.body.id, administeredBy: 'ممرض اختبار', administeredAt: new Date().toISOString() });
     expect(adminRes.status).toBe(201);
+    trackCreated('medication_administrations', adminRes.body.id);
 
     const getRes = await request(app)
       .get(`/api/medicationAdministrations/${adminRes.body.id}`)
@@ -142,6 +191,9 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
       .send({ name: `ردهة سلة المحذوفات ${Date.now()}` });
     expect(createRes.status).toBe(201);
     const originalId = createRes.body.id;
+    // Tracked immediately: if the test fails before the restore step
+    // below, this is the only record that still needs cleanup.
+    trackCreated('wards', originalId);
 
     const deleteRes = await request(app)
       .delete(`/api/wards/${originalId}`)
@@ -161,6 +213,7 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
     expect(binRes.status).toBe(200);
     const binItem = binRes.body.find(r => r.moduleKey === 'wards' && r.originalId === originalId);
     expect(binItem).toBeDefined();
+    trackCreated('recycle_bin', binItem.id);
 
     // استرجاع
     const restoreRes = await request(app)
@@ -168,6 +221,10 @@ describe('فحص سلامة الموديولات — حماية من تكرار 
       .set('Authorization', `Bearer ${token}`);
     expect(restoreRes.status).toBe(200);
     expect(restoreRes.body.success).toBe(true);
+    // The restore may assign a new id if the original one was reused
+    // while the record sat in the recycle bin; track the final id so the
+    // row that actually remains in "wards" is the one deleted.
+    trackCreated('wards', restoreRes.body.record.id);
 
     // اتأكد رجع فعلياً لجدوله الأصلي
     const getAfterRestore = await request(app)

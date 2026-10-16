@@ -5,6 +5,7 @@
 // المُختبَرة سابقاً) — يستاهل تغطية مستقلة للتأكد إن هذا النمط يشتغل صح.
 const request = require('supertest');
 const { setupTestEnv, cleanupTestEnv, assertPgAvailable, closeDbPool } = require('./testUtils');
+const { pool } = require('../config/database');
 
 let dbPath;
 let app;
@@ -43,6 +44,11 @@ describe('POST /api/labTests — موديول بـ indexedColumns فاضية (JS
     expect(res.status).toBe(201);
     expect(res.body.id).toBeDefined();
     expect(res.body.testType).toBe('CBC'); // يؤكد إن الحقل رجع صحيحاً من JSONB رغم عدم وجود عمود مفهرس له
+
+    // This test only verifies creation and JSONB field storage, not
+    // delete behavior, so the record is removed directly from the
+    // database rather than through the recycle-bin delete route.
+    await pool.query('DELETE FROM lab_tests WHERE id = $1', [res.body.id]);
   });
 
   test('التعديل والحذف يعملان صح رغم عدم وجود أعمدة مفهرسة', async () => {

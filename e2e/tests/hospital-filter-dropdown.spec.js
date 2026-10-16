@@ -7,7 +7,7 @@
 // This verifies the dropdown itself actually filters the Patients and HR
 // Employees tables, and that it never even appears for a hospital-scoped user.
 const { test, expect } = require('@playwright/test');
-const { login, field, ensureMultiHospitalEnabled } = require('./helpers');
+const { login, field, ensureMultiHospitalEnabled, API_BASE_URL } = require('./helpers');
 
 test.describe('Hospital filter dropdown (Patients and HR Employees)', () => {
   test('filters both pages by the selected facility, and is absent for a restricted user', async ({ page, browser }) => {
@@ -116,5 +116,82 @@ test.describe('Hospital filter dropdown (Patients and HR Employees)', () => {
     await scopedPage.goto('/patients');
     await expect(scopedPage.locator('table.table tbody tr', { hasText: patientA })).toBeVisible({ timeout: 10000 });
     await scopedContext.close();
+  });
+
+  test('switching the facility filter resets the Patients table back to page 1', async ({ page }) => {
+    test.setTimeout(60000);
+    const ts = Date.now();
+    const hospC = `E2E Pagination Hospital C ${ts}`;
+    const hospD = `E2E Pagination Hospital D ${ts}`;
+
+    await login(page);
+    await page.goto('/settings?tab=hospitals');
+    await ensureMultiHospitalEnabled(page);
+
+    // Created through the UI so a Save confirms each facility actually
+    // exists, but the id itself (needed below to tag the bulk-created
+    // patients) is read back from the API rather than parsed out of the
+    // DOM -- there is no stable selector for it on this page.
+    for (const name of [hospC, hospD]) {
+      await page.getByRole('button', { name: /Add Facility/i }).click();
+      const hospModal = page.locator('h3', { hasText: 'Add Facility' }).locator('xpath=ancestor::div[contains(@class,"card")][1]');
+      await expect(hospModal).toBeVisible();
+      await field(hospModal, 'Name (Arabic)').fill(name);
+      await field(hospModal, 'Name (English)').fill(name);
+      await hospModal.getByRole('button', { name: /Save/i }).click();
+      await expect(hospModal).toBeHidden({ timeout: 10000 });
+    }
+
+    const hospitals = await page.evaluate(async (apiBaseUrl) => {
+      const res = await fetch(`${apiBaseUrl}/hospitals`, { credentials: 'include' });
+      return res.json();
+    }, API_BASE_URL);
+    const hospCId = hospitals.find((h) => h.name_en === hospC || h.name_ar === hospC)?.id;
+    const hospDId = hospitals.find((h) => h.name_en === hospD || h.name_ar === hospD)?.id;
+    expect(hospCId).toBeTruthy();
+    expect(hospDId).toBeTruthy();
+
+    // 51 patients in facility C (one more than the table's fixed 50-per-page
+    // size, see useServerPagination's pageSize in PatientsPage.js) -- created
+    // directly through the API in the browser's own authenticated session
+    // (same pattern as ensureMultiHospitalEnabled in helpers.js), since
+    // clicking "Add Patient" 51 times would make this test far too slow.
+    // One patient in facility D to switch into afterward.
+    await page.evaluate(async ({ apiBaseUrl, hospCId, hospDId, ts }) => {
+      for (let i = 0; i < 51; i++) {
+        await fetch(`${apiBaseUrl}/patients`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name: `E2E Pagination Patient C${i} ${ts}`, phone: '07700003333', hospitalId: hospCId }),
+        });
+      }
+      await fetch(`${apiBaseUrl}/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: `E2E Pagination Patient D ${ts}`, phone: '07700004444', hospitalId: hospDId }),
+      });
+    }, { apiBaseUrl: API_BASE_URL, hospCId, hospDId, ts });
+
+    const viewingDropdown = page.locator('button[title="Currently viewing:"]');
+    const prevButton = page.getByRole('button', { name: 'Prev' });
+
+    await page.goto('/patients');
+    await viewingDropdown.click();
+    await page.getByRole('option', { name: hospC }).click();
+    // 51 > 50-per-page -- the Prev button renders disabled on page 1.
+    await expect(prevButton).toBeVisible({ timeout: 10000 });
+    await expect(prevButton).toBeDisabled();
+
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await expect(prevButton).toBeEnabled({ timeout: 10000 });
+
+    // Switching facilities while on page 2 must not leave the table stuck
+    // requesting a page 2 that facility D (only 1 patient) doesn't have.
+    await viewingDropdown.click();
+    await page.getByRole('option', { name: hospD }).click();
+    await expect(page.locator('table.table tbody tr', { hasText: `E2E Pagination Patient D ${ts}` })).toBeVisible({ timeout: 10000 });
+    await expect(prevButton).toHaveCount(0); // a single result fits on one page -- Pagination hides itself entirely
   });
 });

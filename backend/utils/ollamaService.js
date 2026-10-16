@@ -78,7 +78,9 @@ async function chatRequest(model, systemPrompt, userPrompt, images) {
   try {
     return JSON.parse(rawText);
   } catch {
-    throw new Error(`رد غير صالح من Ollama (${model}): ${rawText.slice(0, 300)}`);
+    const err = new Error(`Invalid response from Ollama (${model}): ${rawText.slice(0, 300)}`);
+    err.code = 'OLLAMA_INVALID_RESPONSE';
+    throw err;
   }
 }
 
@@ -88,7 +90,7 @@ async function callOllama(systemPrompt, userPrompt) {
     const parsed = await chatRequest(OLLAMA_TEXT_MODEL, systemPrompt, userPrompt);
     return { available: true, provider: 'ollama', parsed };
   } catch (err) {
-    return { available: false, provider: 'ollama', error: err.message };
+    return { available: false, provider: 'ollama', error: err.message, code: err.code };
   }
 }
 
@@ -100,7 +102,7 @@ async function callOllamaWithImage(systemPrompt, userPrompt, imageBase64, mimeTy
     const parsed = await chatRequest(OLLAMA_VISION_MODEL, systemPrompt, userPrompt, [imageBase64]);
     return { available: true, provider: 'ollama', parsed };
   } catch (err) {
-    return { available: false, provider: 'ollama', error: err.message };
+    return { available: false, provider: 'ollama', error: err.message, code: err.code };
   }
 }
 

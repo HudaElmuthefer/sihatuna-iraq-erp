@@ -1,19 +1,21 @@
 // backend/routes/backupsRoutes.js
 //
-// مسارات النسخ الاحتياطي وسجل التدقيق (Audit Log).
+// Backup and audit log routes.
 //
-// ── إصلاح أمني ────────────────────────────────────────────────────────────
-// كل هذه المسارات تتطلب **إدمن عام (مستوى الوزارة)** حصراً، وليس أي إدمن —
-// ملف نسخة احتياطية واحد يحوي بيانات *كل* المنشآت مع بعض (نسخة PostgreSQL
-// الكاملة عبر pg_dump)، فلا معنى لتفويض الوصول له أو لاستعادته لإدمن محلي
-// مرتبط بمنشأة واحدة (كان يستطيع نظرياً استعادة نسخة قديمة تمسح تعديلات
-// حديثة بمنشآت ثانية غيره بالكامل). نفس المنطق ينطبق على سجل التدقيق الشامل
-// — راجع middleware/requireGlobalAdmin.js.
+// ── Security fix ────────────────────────────────────────────────────────────
+// All of these routes require a **global admin (ministry level)**
+// exclusively, not just any admin -- a single backup file contains the
+// data of *every* facility together (a full PostgreSQL dump via pg_dump),
+// so it makes no sense to delegate access to it, or to restoring it, to a
+// local admin tied to a single facility (who could theoretically restore
+// an old backup, wiping out other facilities' recent changes entirely).
+// The same logic applies to the global audit log -- see
+// middleware/requireGlobalAdmin.js.
 //
-// ── إضافة: POST /backups/run يقبل الآن destination اختياري بجسم الطلب ──────
+// ── Addition: POST /backups/run now accepts an optional destination in the request body ──────
 // { destination: 'pgadmin' | 'computer' | 'cloud', cloudUrl?: string }
-// بدون destination (أو الاستدعاء القديم بلا جسم)، يعمل تماماً كما كان —
-// نسخة محلية عادية، بدون أي تغيير بالسلوك الحالي.
+// Without a destination (or the old call with no body), it works exactly
+// as before -- a normal local backup, with no change to existing behavior.
 const express = require('express');
 const fs = require('fs');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -32,7 +34,7 @@ router.get('/backups', auth, requireGlobalAdmin, (req, res) => {
 router.post('/backups/run', auth, requireGlobalAdmin, asyncHandler(async (req, res) => {
   const { destination, cloudUrl } = req.body || {};
 
-  // بدون وجهة محددة: نفس السلوك القديم تماماً (نسخة محلية عادية)
+  // No destination specified: the exact same old behavior (a normal local backup)
   if (!destination) {
     await runBackup();
     logAudit({ module: 'system', action: 'manual_backup', userId: req.user.id, userRole: req.user.role });
@@ -71,7 +73,7 @@ router.post('/backups/:name/restore', auth, requireGlobalAdmin, (req, res) => {
 });
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
-// GET /api/audit-log?module=patients&limit=100  (للإدمن العام فقط)
+// GET /api/audit-log?module=patients&limit=100  (global admin only)
 router.get('/audit-log', auth, requireGlobalAdmin, (req, res) => {
   if (!fs.existsSync(AUDIT_LOG_PATH)) return res.json([]);
   let log = JSON.parse(fs.readFileSync(AUDIT_LOG_PATH, 'utf8'));

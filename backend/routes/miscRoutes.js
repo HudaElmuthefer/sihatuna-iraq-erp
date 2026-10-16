@@ -1,7 +1,8 @@
 // backend/routes/miscRoutes.js
 //
-// مسارات متفرقة: رفع مستندات الإضابير الشخصية (موظفين نشطين ومتقاعدين معاً،
-// بجدول PostgreSQL واحد مشترك `dossiers`)، رفع ملف عام، وإحصائيات لوحة التحكم.
+// Miscellaneous routes: uploading personal dossier documents (active
+// employees and retirees together, in one shared PostgreSQL `dossiers`
+// table), a general file upload, and dashboard statistics.
 const express = require('express');
 const auth = require('../middleware/auth');
 const { upload } = require('../config/uploadConfig');
@@ -10,17 +11,20 @@ const { pool } = require('../config/database');
 const router = express.Router();
 const PORT = process.env.PORT || 8000;
 
-// ── إضابير المتقاعدين والموظفين النشطين (جدول dossiers الحقيقي بـ PostgreSQL) ──
-// إصلاح جذري: كان هذا المسار (POST/DELETE) يكتب لملف db.json المؤقت، بينما
-// صفحة المتقاعدين تقرأ الوثائق أصلاً من جدول PostgreSQL الحقيقي (GET /api/
-// dossiers عبر pgCrud) — يعني أي وثيقة تُرفَع فعلياً تُخزَّن بمكان مختلف
-// تماماً عن المكان الذي تُعرَض منه، فتختفي بعد أول تحديث للصفحة. وإضابير
-// الموظفين النشطين كانت بملف db.json بالكامل (قراءة وكتابة)، منفصلة كلياً
-// عن قاعدة البيانات وسلة المحذوفات. الآن كلاهما يُخزَّن بنفس جدول
-// PostgreSQL الحقيقي (`dossiers`، بحقل retiredId أو employeeId حسب النوع) —
-// يحلّ تعارض القراءة/الكتابة، ويمنح الحذف حماية سلة المحذوفات تلقائياً
-// (الحذف نفسه أُزيل من هنا — الفرونت إند يستخدم DELETE /api/dossiers/:id
-// العام عبر pgCrud مباشرة، الذي أصلاً مسجَّل بسلة المحذوفات).
+// ── Dossiers for retirees and active employees (the real dossiers table in PostgreSQL) ──
+// Root-cause fix: this route (POST/DELETE) used to write to the temporary
+// db.json file, while the retirees page actually read documents from the
+// real PostgreSQL table (GET /api/dossiers via pgCrud) -- meaning any
+// document actually uploaded was stored in a completely different place
+// than where it was displayed from, so it disappeared after the first page
+// refresh. And active-employee dossiers used to be entirely in the db.json
+// file (both reading and writing), completely separate from the database
+// and the recycle bin. Now both are stored in the same real PostgreSQL
+// table (`dossiers`, with a retiredId or employeeId field depending on the
+// type) -- this resolves the read/write mismatch, and automatically gives
+// deletes recycle-bin protection (the delete itself was removed from here
+// -- the frontend uses the general DELETE /api/dossiers/:id directly via
+// pgCrud, which is already registered with the recycle bin).
 router.post('/retired/:id/dossier', auth, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.body.title) return res.status(400).json({ message: 'العنوان مطلوب' });
@@ -71,11 +75,12 @@ router.post('/upload', auth, upload.single('file'), (req, res) => {
 });
 
 // ── DASHBOARD STATS ───────────────────────────────────────────────────────────
-// ── إصلاح: كان هذا المسار يقرأ من db.json (readDB) — بيانات قديمة تماماً.
-// المرضى والأطباء والمواعيد والأقسام والموظفين والمتقاعدين كلهم انتقلوا لجداول
-// PostgreSQL فعلية من زمان (عبر pgCrud)، وما عادوا يُكتَبون بملف db.json
-// إطلاقاً. يعني اللوحة كانت تعرض أرقاماً مجمَّدة منذ لحظة الانتقال، بغض النظر
-// عمّا يصير فعلياً بالنظام. الآن نستعلم مباشرة من الجداول الحقيقية.
+// ── Fix: this route used to read from db.json (readDB) -- entirely stale data.
+// Patients, doctors, appointments, departments, employees, and retirees
+// all moved to real PostgreSQL tables a long time ago (via pgCrud), and are
+// no longer written to the db.json file at all. That meant the dashboard
+// was showing numbers frozen at the moment of the migration, regardless of
+// what was actually happening in the system. Now we query the real tables directly.
 router.get('/stats', auth, async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];

@@ -1,20 +1,23 @@
 // backend/utils/aiProvider.js
 //
-// منطق موحَّد للاتصال بذكاء اصطناعي حقيقي (Gemini المجاني أولاً، Claude
-// المدفوع بديلاً) — مُستخرَج من routes/aiDiagnosisRoutes.js حتى تستطيع أي
-// ميزة ثانية بالنظام (تفاعلات دوائية، تقارير ذكية مستقبلاً...) تستخدم نفس
-// المنطق بدون تكرار الكود. راجع routes/aiDiagnosisRoutes.js للشرح الكامل
-// لماذا هذا الاستدعاء يصير من الباك إند (خادم لخادم) لا الفرونت إند مباشرة.
+// A unified layer for calling a real AI provider (free Gemini first, paid
+// Claude as a fallback) -- extracted from routes/aiDiagnosisRoutes.js so
+// that any second feature in the system (drug interactions, future smart
+// reports...) can use the same logic without duplicating code. See
+// routes/aiDiagnosisRoutes.js for the full explanation of why this call is
+// made from the backend (server-to-server) and not directly from the
+// frontend.
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// ── ملاحظة: النموذج الفعلي المتاح لحسابات جديدة يتغيّر بسرعة من طرف Google ──
-// لو صار خطأ 404 "no longer available to new users"، افتح
-// aistudio.google.com → Playground → Build → Code and Chat، شوفي أي نموذج
-// معروض هناك فعلياً، وحدّث GEMINI_MODEL بملف .env (بدون حاجة لتعديل الكود).
+// ── Note: the actual model available to new accounts changes quickly on Google's side ──
+// If you get a 404 error "no longer available to new users", open
+// aistudio.google.com -> Playground -> Build -> Code and Chat, see which
+// model is actually listed there, and update GEMINI_MODEL in the .env file
+// (no code change needed).
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929';
 
-// أي مزوّد فعّال حالياً؟ (Gemini المجاني له الأولوية دائماً)
+// Which provider is currently active? (free Gemini always has priority)
 function activeProvider() {
   if (GEMINI_API_KEY) return 'gemini';
   if (ANTHROPIC_API_KEY) return 'anthropic';
@@ -29,7 +32,7 @@ async function callGemini(systemPrompt, userPrompt) {
     body: JSON.stringify({
       contents: [{ parts: [{ text: userPrompt }] }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
-      // Gemini يدعم فرض إخراج JSON صريح — يمنع مشاكل التغليف بـ Markdown نهائياً
+      // Gemini supports forcing explicit JSON output -- this entirely prevents Markdown-wrapping issues
       generationConfig: { responseMimeType: 'application/json' },
     }),
   });
@@ -63,14 +66,16 @@ async function callAnthropic(systemPrompt, userPrompt) {
   }
   const data = await response.json();
   const rawText = data.content?.[0]?.text || '';
-  // Claude أحياناً يحيط الـ JSON بعلامات ```json — نزيلها قبل التحليل
+  // Claude sometimes wraps the JSON in ```json fences -- strip them before parsing
   const cleaned = rawText.replace(/```json\s*|\s*```/g, '').trim();
   return JSON.parse(cleaned);
 }
 
-// دالة موحّدة: تستدعي أي مزوّد فعّال حالياً، وتُرجع نتيجة موحَّدة الشكل بدل
-// رمي استثناء يكسر الطلب — أي مسار API يستخدمها يقرر بنفسه ماذا يفعل لو فشلت
-// (عادةً: يرجع للنظام المحلي الاحتياطي بدل رسالة خطأ جافة للمستخدم).
+// A unified function: calls whichever provider is currently active, and
+// returns a uniformly-shaped result instead of throwing an exception that
+// would break the request -- whatever API path uses it decides for itself
+// what to do if it fails (usually: fall back to the local backup system
+// instead of a dry error message to the user).
 async function callAI(systemPrompt, userPrompt) {
   const provider = activeProvider();
   if (!provider) return { available: false };
@@ -106,12 +111,12 @@ async function callGeminiVision(systemPrompt, userPrompt, imageBase64, mimeType)
   }
   const data = await response.json();
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!rawText) throw new Error(`رد فارغ من Gemini: ${JSON.stringify(data).slice(0, 300)}`);
+  if (!rawText) throw new Error(`Empty response from Gemini: ${JSON.stringify(data).slice(0, 300)}`);
   const cleaned = rawText.replace(/```json\s*|\s*```/g, '').trim();
   try {
     return JSON.parse(cleaned);
   } catch {
-    throw new Error(`رد غير صالح من Gemini: ${cleaned.slice(0, 300)}`);
+    throw new Error(`Invalid response from Gemini: ${cleaned.slice(0, 300)}`);
   }
 }
 

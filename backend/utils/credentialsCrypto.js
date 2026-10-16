@@ -1,23 +1,24 @@
 // server/utils/credentialsCrypto.js
-// تشفير/فك تشفير بيانات اعتماد بوابات الدفع (API keys/secrets) قبل تخزينها بالجدول
-// يستخدم AES-256-GCM. المفتاح يجب أن يكون بمتغير بيئة سري (32 بايت / 64 حرف hex)
+// Encrypts/decrypts payment gateway credentials (API keys/secrets) before storing them in the table
+// Uses AES-256-GCM. The key must come from a secret environment variable (32 bytes / 64 hex characters)
 //
-// ملاحظة أمان مهمة: لا تخزّن CREDENTIALS_ENCRYPTION_KEY داخل الكود أو المستودع.
-// أضفه بملف .env (غير مرفوع لـ GitHub) — مثال توليد مفتاح:
+// Important security note: never store CREDENTIALS_ENCRYPTION_KEY in the code or the repository.
+// Add it in the .env file (not pushed to GitHub) -- example of generating a key:
 //   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
-const DEFAULT_KEY_HEX = '0'.repeat(64); // مفتاح كله أصفار — معروف للجميع، لا يصلح كمفتاح فعلي أبداً
+const DEFAULT_KEY_HEX = '0'.repeat(64); // an all-zeros key -- known to everyone, never usable as a real key
 const KEY_HEX = process.env.CREDENTIALS_ENCRYPTION_KEY || DEFAULT_KEY_HEX;
 const KEY = Buffer.from(KEY_HEX, 'hex');
 
-// ── إصلاح أمني ────────────────────────────────────────────────────────────────
-// قبل هذا التعديل، كان المفتاح يرجع صامتاً لقيمة كلها أصفار لو .env ما يحدّده،
-// بدون أي تحذير — يعني بيانات اعتماد بوابات الدفع (مفاتيح API حساسة) كانت
-// "مشفّرة" فعلياً بمفتاح معروف مسبقاً لأي شخص يطّلع على الكود، أي بلا حماية
-// حقيقية. نفس منطق التحذير المستخدم مع JWT_SECRET بملف server.js.
+// ── Security fix ─────────────────────────────────────────────────────────────
+// Before this change, the key would silently fall back to all zeros if
+// .env didn't set it, with no warning at all -- meaning payment gateway
+// credentials (sensitive API keys) were effectively "encrypted" with a
+// key already known to anyone who looks at the code, i.e. with no real
+// protection. Same warning logic used for JWT_SECRET in server.js.
 if (KEY_HEX === DEFAULT_KEY_HEX) {
   console.error('\nSECURITY WARNING: the default payment credentials encryption key is in use!');
   console.error('CREDENTIALS_ENCRYPTION_KEY is not set in .env, so payment gateway credentials');
@@ -37,7 +38,7 @@ function encryptCredentials(credentialsObject) {
   const plaintext = Buffer.from(JSON.stringify(credentialsObject), 'utf8');
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const authTag = cipher.getAuthTag();
-  // نخزن iv + authTag + ciphertext كـ Buffer واحد
+  // store iv + authTag + ciphertext as a single Buffer
   return Buffer.concat([iv, authTag, encrypted]);
 }
 

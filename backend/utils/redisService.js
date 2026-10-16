@@ -1,24 +1,29 @@
 // backend/utils/redisService.js
 //
-// عميل Redis مشترك — يُستخدم بثلاثة أماكن: التخزين المؤقت (cache) لبيانات
-// تُقرأ كثيراً وتتغيّر نادراً (انظر خيار options.cache بـroutes/pgCrud.js)،
-// تحديد المعدل عبر عدة عمليات (config/redisRateLimitStore.js)، وإبطال
-// التوكنات عند تسجيل الخروج (utils/tokenRevocation.js). عميل واحد يكفي
-// لثلاثتهم (عمليات قراءة/كتابة خفيفة). البند الوحيد المستثنى هو BullMQ
-// (services/queue/*) — له اتصال منفصل تماماً لأنه يحتاج إعدادات مختلفة
-// جذرياً (maxRetriesPerRequest:null إلزامي من BullMQ نفسه)، راجع
-// services/queue/queueConnection.js للتفاصيل.
+// A shared Redis client -- used in three places: caching for data that's
+// read often and rarely changes (see the options.cache setting in
+// routes/pgCrud.js), rate limiting across several processes
+// (config/redisRateLimitStore.js), and token revocation on logout
+// (utils/tokenRevocation.js). One client is enough for all three
+// (lightweight read/write operations). The only exception is BullMQ
+// (services/queue/*) -- it has a completely separate connection because
+// it needs fundamentally different settings (maxRetriesPerRequest:null is
+// a hard requirement from BullMQ itself), see
+// services/queue/queueConnection.js for details.
 //
-// ── فلسفة التعامل مع فشل Redis: fail-open ────────────────────────────────
-// Redis هنا يُحسِّن الأداء (cache) ويصحّح سلوكاً كان معطوباً أصلاً بين
-// عمليات PM2 cluster mode (تحديد المعدل، إبطال التوكنات) — لكنه ليس نظاماً
-// جوهرياً لعمل التطبيق (بعكس PostgreSQL). لو صار Redis غير متاح مؤقتاً
-// (إعادة تشغيل، مشكلة شبكة...)، الأفضل أن يستمر النظام بالعمل (بأداء أبطأ
-// قليلاً، وبحماية أضعف مؤقتاً لتحديد المعدل/إبطال التوكنات) بدل توقف كل
-// تسجيلات الدخول وكل طلبات الـAPI بسبب انقطاع نظام مساعد. نفس الفلسفة
-// المتّبعة بكل مكان ثاني بهذا المشروع (خادم HL7، النسخ الاحتياطي، مزوّدي
-// الذكاء الاصطناعي، بوابة الدفع) — فشلها لا يُسقط الوظيفة الأساسية للنظام.
-// كل دالة هنا تلتقط أخطاءها بنفسها ولا ترمي أي استثناء للمستدعي أبداً.
+// ── Philosophy for handling Redis failures: fail-open ────────────────────
+// Redis here improves performance (caching) and fixes behavior that was
+// actually broken across PM2 cluster-mode processes (rate limiting, token
+// revocation) -- but it isn't a core system the app depends on to
+// function (unlike PostgreSQL). If Redis becomes temporarily unavailable
+// (a restart, a network issue...), it's better for the system to keep
+// running (slightly slower, and with temporarily weaker rate
+// limiting/token revocation protection) instead of stopping every login
+// and every API request because of an outage in a supporting system. The
+// same philosophy followed everywhere else in this project (the HL7
+// server, backups, AI providers, the payment gateway) -- their failure
+// doesn't bring down the system's core functionality. Every function here
+// catches its own errors and never throws any exception to its caller.
 const Redis = require('ioredis');
 const { devLog } = require('./logger');
 
@@ -26,7 +31,7 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 let client = null;
 let lastErrorLogAt = 0;
-const ERROR_LOG_COOLDOWN_MS = 60 * 1000; // تحذير واحد بالدقيقة كحد أقصى، لا نُغرق السجل بتحذير لكل طلب فاشل أثناء انقطاع طويل
+const ERROR_LOG_COOLDOWN_MS = 60 * 1000; // at most one warning per minute -- don't flood the log with a warning for every failed request during a long outage
 
 function logRedisError(context, err) {
   const now = Date.now();
@@ -38,35 +43,42 @@ function logRedisError(context, err) {
 function getClient() {
   if (client) return client;
   client = new Redis(REDIS_URL, {
-    // فشل سريع بدل الانتظار: أفضل لواجهة HTTP من محاولات إعادة متكررة تُطيل
-    // زمن استجابة كل طلب أثناء انقطاع Redis.
+    // Fail fast instead of waiting: better for an HTTP interface than
+    // repeated retries that extend every request's response time during a
+    // Redis outage.
     maxRetriesPerRequest: 1,
-    // لا نُكدّس أوامر بالذاكرة أثناء الانقطاع — تفشل فوراً فيلتقطها try/catch
-    // المستدعي (fail-open)، بدل تراكم أوامر معلَّقة قد تُنفَّذ كلها دفعة واحدة
-    // لاحقاً عند عودة الاتصال (سلوك غير متوقَّع لطلبات HTTP منتهية أصلاً).
+    // Don't queue up commands in memory during an outage -- they fail
+    // immediately and get caught by the caller's try/catch (fail-open),
+    // instead of accumulating pending commands that might all run at once
+    // later when the connection comes back (unexpected behavior for HTTP
+    // requests that have already ended).
     enableOfflineQueue: false,
-    retryStrategy: (times) => Math.min(times * 500, 10000), // يستمر بمحاولة إعادة الاتصال بالخلفية تلقائياً
+    retryStrategy: (times) => Math.min(times * 500, 10000), // keeps retrying the connection automatically in the background
   });
   client.on('error', (err) => logRedisError('Connection error', err));
   client.on('connect', () => devLog('[redis] Connected to Redis successfully.'));
   return client;
 }
 
-// ── التخزين المؤقت (Cache) — نمط "الأجيال" (versioned cache) ────────────────
-// بدل حذف مفاتيح الكاش واحداً واحداً عند أي تعديل (يحتاج SCAN/KEYS، بطيء وقد
-// يحجب Redis لحظياً بجداول كبيرة)، كل موديول+نطاق (hospital) له "رقم جيل"
-// واحد بـRedis. كل قراءة تُخزَّن بمفتاح يتضمّن رقم الجيل الحالي وقت القراءة.
-// أي كتابة (POST/PUT/DELETE) تزيد رقم الجيل بعملية INCR واحدة فقط (O(1)) —
-// فتصير كل مفاتيح الكاش القديمة "يتيمة" تلقائياً (رقم الجيل بمفتاحها القديم
-// لا يعود يُطابَق أبداً)، وتُحذف تلقائياً لاحقاً بانتهاء صلاحيتها (TTL) دون
-// أي عملية حذف صريحة.
+// ── Caching -- a "generation-versioned" pattern ────────────────────
+// Instead of deleting cache keys one by one on every change (needing
+// SCAN/KEYS, slow and can momentarily block Redis on large tables), every
+// module+scope (hospital) has a single "generation number" in Redis.
+// Every read is stored under a key that includes the current generation
+// number at read time. Any write (POST/PUT/DELETE) increments the
+// generation number with a single INCR operation (O(1)) -- which makes
+// every old cache key automatically "orphaned" (its old generation number
+// in the key never matches again), and it's deleted automatically later
+// when its TTL expires, with no explicit delete operation at all.
 function cacheVersionKey(namespace, scope) {
   return `cv:${namespace}:${scope}`;
 }
 
-// ترجع null فقط لو تعذّر الوصول لـRedis أصلاً — يفهمها المستدعي كـ"تجاوز
-// الكاش بالكامل لهذا الطلب" (راجع routes/pgCrud.js)، بعكس '0' وهي قيمة جيل
-// أولى صالحة تماماً (لا فرق حقيقي بينها وبين رقم جيل حقيقي آخر).
+// Returns null only if Redis is genuinely unreachable -- the caller
+// understands this as "skip the cache entirely for this request" (see
+// routes/pgCrud.js), unlike '0' which is a perfectly valid first
+// generation value (no real difference between it and any other real
+// generation number).
 async function getCacheVersion(namespace, scope) {
   try {
     const v = await getClient().get(cacheVersionKey(namespace, scope));
@@ -81,8 +93,9 @@ async function bumpCacheVersion(namespace, scope) {
   try {
     await getClient().incr(cacheVersionKey(namespace, scope));
   } catch (err) {
-    // لا مشكلة حرجة لو فشلت — أسوأ سيناريو: كاش قديم يبقى صالحاً حتى انتهاء
-    // TTL الطبيعي (بضع دقائق)، وليس خطأ يوقف عملية الكتابة نفسها.
+    // Not a critical problem if this fails -- worst case: a stale cache
+    // stays valid until its natural TTL expires (a few minutes), not an
+    // error that stops the write operation itself.
     logRedisError(`bumpCacheVersion(${namespace})`, err);
   }
 }
@@ -105,10 +118,11 @@ async function cacheSet(key, value, ttlSeconds) {
   }
 }
 
-// يُستخدم فقط لإغلاق الاتصال بأمان عند إيقاف عملية تحتاج ذلك صراحة (مثل
-// تنظيف الاختبارات الآلية — راجع tests/testUtils.js). خارج بيئة الاختبار،
-// عملية Node.js الرئيسية (server.js) لا تستدعي هذا إطلاقاً — الاتصال يبقى
-// مفتوحاً طوال عمر العملية، بنفس نمط pool الخاص بـPostgreSQL.
+// Only used to safely close the connection when a process explicitly
+// needs that (such as automated test cleanup -- see tests/testUtils.js).
+// Outside the test environment, the main Node.js process (server.js)
+// never calls this at all -- the connection stays open for the process's
+// whole lifetime, the same pattern as the PostgreSQL pool.
 async function closeClient() {
   if (!client) return;
   const c = client;

@@ -1,19 +1,22 @@
 // backend/routes/aiProviderSettingsRoutes.js
 //
-// إدارة اختيار مزوّد الذكاء الاصطناعي لكل ميزة (بوت/إنترنت/محلي) — راجع
-// utils/aiProviderRouter.js لمنطق التوزيع الفعلي. GET متاح لأي مستخدم
-// مسجّل دخول (صفحات قراءة الفواتير/التضارب الدوائي/الوصفات تحتاج معرفة
-// الاختيار الحالي لعرض تسمية صادقة، بغض النظر عن دور المستخدم).
+// Managing the AI provider choice for each feature (bot/online/offline) --
+// see utils/aiProviderRouter.js for the actual routing logic. GET is
+// available to any logged-in user (the invoice reading/drug
+// interaction/prescription pages need to know the current choice to show
+// an honest label, regardless of the user's role).
 //
-// ── إصلاح أمني ────────────────────────────────────────────────────────────
-// PUT كان يتطلب requireAdmin العام (أي مستوى إدمن، بما فيه إدمن مستشفى واحد
-// محلي) — لكن هذا الإعداد صف واحد عالمي بـsystem_settings بلا أي تصفية
-// hospitalId إطلاقاً (راجع getSettings/setSettings بـutils/
-// aiProviderRouter.js). يعني إدمن مستشفى واحد محلي كان يستطيع تغيير مزوّد
-// الذكاء الاصطناعي (حتى تعطيله بالكامل) لكل المستشفيات الأخرى بنفس النظام
-// دون علمها أو موافقتها. الآن requireGlobalAdmin (إدمن عام مستوى الوزارة)
-// حصراً — نفس المستوى المطلوب لأي إعداد يؤثر على كل المستشفيات، تماماً
-// مثل PUT /system-settings/:key بـhospitalsRoutes.js وgitUpdateRoutes.js.
+// ── Security fix ────────────────────────────────────────────────────────
+// PUT used to require the general requireAdmin (any admin level, including
+// a local admin for a single hospital) -- but this setting is a single
+// global row in system_settings with no hospitalId filtering at all (see
+// getSettings/setSettings in utils/aiProviderRouter.js). That meant a
+// local admin for one hospital could change the AI provider (even disable
+// it entirely) for every other hospital in the same system without their
+// knowledge or consent. Now it's requireGlobalAdmin (a global, ministry-level
+// admin) exclusively -- the same level required for any setting that
+// affects every hospital, exactly like PUT /system-settings/:key in
+// hospitalsRoutes.js and gitUpdateRoutes.js.
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
 const auth = require('../middleware/auth');

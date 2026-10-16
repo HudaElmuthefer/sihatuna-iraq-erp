@@ -1,14 +1,16 @@
 // backend/routes/recycleBinRoutes.js
 //
-// سلة المحذوفات: أي حذف بأي موديول (عبر pgCrud.js) ينقل السجل هنا بدل حذفه
-// نهائياً — هذا الملف يوفّر ثلاث عمليات فقط، كلها بصلاحية إدمن حصراً:
-//   GET    /api/recycle-bin           قائمة كل العناصر المحذوفة (بحدود منشأة
-//                                      المستخدم لو كان مرتبطاً بمنشأة معيّنة)
-//   POST   /api/recycle-bin/:id/restore   إرجاع العنصر لجدوله الأصلي
-//   DELETE /api/recycle-bin/:id            حذف نهائي من سلة المحذوفات (لا رجعة)
+// Recycle bin: any delete in any module (via pgCrud.js) moves the record
+// here instead of deleting it permanently — this file provides exactly
+// three operations, all restricted to admin only:
+//   GET    /api/recycle-bin           a list of every deleted item (scoped
+//                                      to the user's facility if they're tied to one)
+//   POST   /api/recycle-bin/:id/restore   returns the item to its original table
+//   DELETE /api/recycle-bin/:id            permanent delete from the recycle bin (irreversible)
 //
-// يعتمد على moduleRegistry المُصدَّر من pgCrud.js لمعرفة الجدول الفعلي وبنية
-// الأعمدة المفهرسة لكل موديول دون تكرار تلك التفاصيل هنا.
+// Relies on the moduleRegistry exported from pgCrud.js to know the actual
+// table and the indexed-column structure for each module without
+// duplicating those details here.
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
@@ -17,7 +19,7 @@ const { moduleRegistry } = require('./pgCrud');
 const { logAudit } = require('../utils/auditLog');
 const { deleteUploadedFile } = require('../config/uploadConfig');
 
-// كل عمليات سلة المحذوفات بصلاحية إدمن فقط (استرجاع أو حذف نهائي قرار حسّاس)
+// Every recycle-bin operation requires admin permission only (restore or permanent delete is a sensitive decision)
 const adminOnly = (req, res, next) => {
   if (req.user?.role !== 'admin') return res.status(403).json({ message: 'صلاحية إدمن مطلوبة' });
   next();
@@ -28,7 +30,7 @@ router.get('/', auth, adminOnly, async (req, res, next) => {
   try {
     const conditions = [];
     const params = [];
-    // إدمن مرتبط بمنشأة معيّنة يرى عناصر منشأته فقط؛ إدمن بلا منشأة (وزاري) يرى الكل
+    // An admin tied to a specific facility only sees that facility's items; an admin with no facility (ministry-level) sees everything
     if (req.user?.hospitalId) {
       params.push(req.user.hospitalId);
       conditions.push(`hospital_id = $${params.length}`);
@@ -74,9 +76,11 @@ router.post('/:id/restore', auth, adminOnly, async (req, res, next) => {
     const indexedValues = indexedColumns.map(({ field }) => rest[field] ?? null);
     indexedColumns.forEach(({ field }) => delete rest[field]);
 
-    // نحاول نحافظ على نفس المعرّف الأصلي (يهم لو سجلات ثانية تشير له، مثل
-    // dossiers.retiredId) طالما ما صار تعارض مع سجل جديد ياخذ نفس الرقم بالفترة
-    // التي كانت فيها بسلة المحذوفات؛ لو وُجد تعارض، نرجعه بمعرّف جديد بدل الفشل.
+    // We try to keep the same original id (matters if other records
+    // reference it, such as dossiers.retiredId) as long as there's no
+    // conflict with a new record that took the same number during the
+    // period it was in the recycle bin; if there's a conflict, we restore
+    // it with a new id instead of failing.
     const collision = await client.query(`SELECT id FROM ${tableName} WHERE id = $1`, [binRow.original_id]);
     const preserveId = collision.rows.length === 0;
 
@@ -112,8 +116,8 @@ router.post('/:id/restore', auth, adminOnly, async (req, res, next) => {
     logAudit({ action: 'RESTORE', table: tableName, recordId: record.id, note: preserveId ? '' : `معرّف جديد بدل ${binRow.original_id} — تعارض`, userId: req.user?.id, username: req.user?.username });
     res.json({ success: true, record, idChanged: !preserveId });
   } catch (err) {
-    // إصلاح حرج: نفس مشكلة مسار الحذف بـ pgCrud.js — ROLLBACK غير محمي يقدر
-    // يُسقط السيرفر كامل لو فشل هو نفسه.
+    // Critical fix: the same issue as the delete route in pgCrud.js — an
+    // unprotected ROLLBACK can crash the entire server if it itself fails.
     try { await client.query('ROLLBACK'); } catch (rollbackErr) {
       console.error('ROLLBACK failed after a recycle-bin restore error:', rollbackErr.message);
     }
@@ -123,7 +127,7 @@ router.post('/:id/restore', auth, adminOnly, async (req, res, next) => {
   }
 });
 
-// DELETE /api/recycle-bin/:id — حذف نهائي، لا يمكن التراجع عنه أبداً
+// DELETE /api/recycle-bin/:id — a permanent delete, can never be undone
 router.delete('/:id', auth, adminOnly, async (req, res, next) => {
   try {
     const binRes = await pool.query('SELECT * FROM recycle_bin WHERE id = $1', [req.params.id]);
@@ -132,11 +136,12 @@ router.delete('/:id', auth, adminOnly, async (req, res, next) => {
       return res.status(404).json({ message: 'غير موجود' });
     }
     await pool.query('DELETE FROM recycle_bin WHERE id = $1', [req.params.id]);
-    // إصلاح: حذف نهائي من سلة المحذوفات لوثيقة إضبارة (موظف/متقاعد) كان يحذف
-    // سطر recycle_bin فقط، ويترك الملف المرفق الفعلي يتيماً بمجلد uploads للأبد
-    // — هذا هو المسار الذي تستخدمه الواجهة فعلياً (DossiersTab.js يستدعي
-    // DELETE /api/dossiers/:id العام، الذي ينقل لسلة المحذوفات أولاً، ثم
-    // الحذف الفعلي يصير هنا لاحقاً من صفحة الإعدادات).
+    // Fix: permanently deleting a dossier document (employee/retiree) from
+    // the recycle bin used to only delete the recycle_bin row, leaving the
+    // actual attached file orphaned in the uploads folder forever -- this
+    // is the route the UI actually uses (DossiersTab.js calls the general
+    // DELETE /api/dossiers/:id, which moves it to the recycle bin first,
+    // and the actual delete then happens here later from the settings page).
     if (binRes.rows[0].module_key === 'dossiers') {
       await deleteUploadedFile(binRes.rows[0].data?.filePath);
     }

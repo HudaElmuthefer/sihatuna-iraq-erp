@@ -1,15 +1,16 @@
-// backend/utils/logger.js
+// backend/logger.js
 //
-// أداة تسجيل خفيفة لرسائل تشخيصية/معلوماتية (إقلاع السيرفر، migrations
-// يدوية، النسخ الاحتياطي...) — تُطبَع فقط لو NODE_ENV غير "production"
-// (أي أثناء التطوير المحلي، أو تشغيل سكربت migration يدوياً بدون ضبط
-// NODE_ENV). بمرحلة الإنتاج (PM2 مع NODE_ENV=production)، تُكتَم تلقائياً
-// — يشمل هذا إخفاء قائمة كلمات المرور الافتراضية عن سجلات الإنتاج، وهذا
-// تحسين أمني إضافي بجانب تقليل الضجيج.
+// A lightweight logger for diagnostic/informational messages (server
+// startup, manual migrations, backups...) -- only prints if NODE_ENV is
+// not "production" (i.e. during local development, or running a migration
+// script manually without setting NODE_ENV). In production (PM2 with
+// NODE_ENV=production), it's automatically silenced -- this also includes
+// hiding the list of default passwords from production logs, which is an
+// extra security improvement alongside reducing noise.
 //
-// لا تستخدم هذا لرسائل الأخطاء الحقيقية (استخدم console.error مباشرة،
-// أو نظام sendAlert بملف utils/alerts.js للأخطاء الحرجة) — هذا فقط
-// لرسائل "معلومة، وليست مشكلة".
+// Don't use this for real error messages (use console.error directly, or
+// the sendAlert system in utils/alerts.js for critical errors) -- this is
+// only for "informational, not a problem" messages.
 const isProd = process.env.NODE_ENV === 'production';
 
 const devLog = (...args) => {

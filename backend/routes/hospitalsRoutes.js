@@ -1,17 +1,22 @@
 // backend/routes/hospitalsRoutes.js
 //
-// مسارات المنشآت (hospitals) وإعدادات النظام العامة (system_settings) — أساس
-// دعم المنشآت المتعددة. جدول hospitals له أعمدة صريحة (لا يستخدم نمط JSONB
-// المرن كباقي الموديولات)، فله مسارات مخصصة بدل pgCrud. القراءة (GET) متاحة
-// لأي مستخدم مسجّل دخول (يحتاجها كل مستخدم لعرض قائمة المنشآت باختيار
-// المريض/الموظف مثلاً).
+// Routes for facilities (hospitals) and general system settings
+// (system_settings) -- the foundation of multi-facility support. The
+// hospitals table has explicit columns (it doesn't use the flexible JSONB
+// pattern like the rest of the modules), so it has dedicated routes
+// instead of pgCrud. Reading (GET) is available to any logged-in user (every
+// user needs it to show the list of facilities when selecting a
+// patient/employee, for example).
 //
-// ── إصلاح أمني ────────────────────────────────────────────────────────────
-// الإضافة/التعديل/الحذف تتطلب **إدمن عام (مستوى الوزارة)** حصراً — عمداً
-// وليس requireAdmin العادي. إدارة قائمة المنشآت نفسها (إضافة/حذف مستشفى، تعديل
-// بياناته) عملية تلمس النظام كله، لا معنى لتفويضها لإدمن محلي مرتبط بمنشأة
-// واحدة — إدمن محلي لمستشفى معيّن لا ينبغي أن يستطيع تعديل بيانات مستشفى ثانٍ أو
-// يحذفه، حتى لو كان "admin" بدوره. راجع middleware/requireGlobalAdmin.js.
+// ── Security fix ────────────────────────────────────────────────────────
+// Adding/editing/deleting requires a **global admin (ministry level)**
+// exclusively -- deliberately not the regular requireAdmin. Managing the
+// facility list itself (adding/deleting a hospital, editing its data) is
+// an operation that touches the entire system, so delegating it to a
+// local admin tied to one facility makes no sense -- a local admin for a
+// given hospital should not be able to edit or delete another hospital's
+// data, even if their own role is "admin". See
+// middleware/requireGlobalAdmin.js.
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
 const auth = require('../middleware/auth');
@@ -59,7 +64,7 @@ router.delete('/hospitals/:id', auth, requireGlobalAdmin, asyncHandler(async (re
   res.json({ success: true });
 }));
 
-// إعدادات النظام العامة (مفتاح/قيمة) — أول استخدام: تفعيل نظام المنشآت المتعددة
+// General system settings (key/value) — first use: enabling the multi-hospital system
 router.get('/system-settings/:key', auth, asyncHandler(async (req, res) => {
   const result = await pool.query('SELECT value FROM system_settings WHERE key=$1', [req.params.key]);
   res.json({ key: req.params.key, value: result.rows[0]?.value ?? null });

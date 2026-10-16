@@ -1,40 +1,49 @@
 // backend/utils/tokenRevocation.js
 //
-// ── إصلاح أمني: إبطال فعلي للجلسة عند تسجيل الخروج ────────────────────────────
-// قبل هذا الملف، تسجيل الخروج كان يمسح الكوكي من المتصفح فقط — التوكن (JWT)
-// نفسه يبقى صالحاً تماماً بجانب الخادم حتى تنتهي مدته الطبيعية (يوم واحد)،
-// حتى لو تم تسجيل الخروج. فلو سُرق التوكن بأي طريقة (جهاز مشترك، هجوم، إلخ)
-// قبل أن يسجّل صاحبه خروجه، فلا توجد أي وسيلة لإيقافه فوراً.
+// ── Security fix: actually revoke the session on logout ────────────────────────
+// Before this file, logging out only cleared the cookie from the browser
+// -- the token (JWT) itself stayed fully valid on the server side until
+// its natural expiry (one day), even after logging out. So if the token
+// was stolen in any way (a shared device, an attack, etc.) before its
+// owner logged out, there was no way to stop it immediately.
 //
-// ── المرحلة الثانية: الانتقال من ملف على القرص إلى Redis ─────────────────────
-// النسخة السابقة كانت Map بالذاكرة + ملف JSON على القرص، مع مزامنة دورية كل
-// 5 ثوانٍ بين عمليات PM2 cluster mode (كل عملية عندها نسخة منفصلة من
-// الذاكرة) — حل مؤقت مقبول لكن غير متّسق فورياً (نافذة تأخير تصل لخمس ثوانٍ
-// بين إبطال التوكن بعملية وقبوله بعملية أخرى لم تقرأ الملف من جديد بعد).
-// Redis (مصدر واحد فعلي مشترك بين كل العمليات، لا نسخ محلية منفصلة) يحل
-// المشكلة باتساق فوري بلا أي تأخير، وبانتهاء صلاحية تلقائي (EXAT — بنفس
-// لحظة انتهاء التوكن نفسه) بدل مهمة تنظيف دورية يدوية.
+// ── Phase 2: moving from a file on disk to Redis ─────────────────────────
+// The previous version was an in-memory Map plus a JSON file on disk,
+// with periodic sync every 5 seconds between PM2 cluster-mode processes
+// (each process has its own separate copy in memory) -- an acceptable
+// temporary solution, but not immediately consistent (a delay window of
+// up to five seconds between revoking a token in one process and another
+// process, which hasn't re-read the file yet, still accepting it). Redis
+// (a single source genuinely shared across every process, with no
+// separate local copies) solves this with immediate consistency and no
+// delay at all, with automatic expiry (EXAT -- at the exact same moment
+// the token itself expires) instead of a manual periodic cleanup job.
 //
-// ── fail-open عند تعذّر الوصول لـRedis ────────────────────────────────────
-// لو Redis غير متاح مؤقتاً، isRevoked() ترجع false (تعامل التوكن كأنه غير
-// مُبطَل) بدل رفض كل طلب مصادَق بالنظام بسبب انقطاع نظام مساعد — نفس فلسفة
-// fail-open المشروحة بأعلى utils/redisService.js. الأثر العملي: توكن أُبطِل
-// (تسجيل خروج) قد يبقى صالحاً لفترة قصيرة جداً لو تزامن ذلك بالضبط مع
-// انقطاع Redis — أضعف بكثير من فشل تسجيل دخول ومصادقة كل المستخدمين بالنظام
-// بسبب نظام مساعد غير متاح مؤقتاً.
+// ── Fail-open when Redis is unreachable ────────────────────────────────
+// If Redis is temporarily unavailable, isRevoked() returns false
+// (treating the token as not revoked) instead of rejecting every
+// authenticated request in the system because of an outage in a
+// supporting system -- the same fail-open philosophy explained at the top
+// of utils/redisService.js. The practical effect: a revoked token
+// (logged out) might stay valid for a very short time if that exactly
+// coincides with a Redis outage -- far better than failing login and
+// authentication for every user in the system because of a temporarily
+// unavailable supporting system.
 const { getClient } = require('./redisService');
 
 const KEY_PREFIX = process.env.REVOKED_TOKENS_KEY_PREFIX || 'revoked';
 
-// ترجع Promise يُفضَّل انتظاره بمسار /auth/logout (جولة Redis واحدة سريعة
-// جداً، وتضمن أنّ "نجح تسجيل الخروج" بالرد يعني فعلاً أنّ التوكن أُبطِل، لا
-// مجرد إرسال أمر Redis بالخلفية بلا تأكيد) — لكنها لا ترمي استثناءً أبداً
-// (fail-open، راجع utils/redisService.js)، فيبقى آمناً استدعاؤها بدون
-// await أيضاً لو احتجت ذلك بمكان آخر مستقبلاً.
+// Returns a Promise that's best awaited on the /auth/logout route (a
+// single, very fast round-trip to Redis, which guarantees that a
+// "logout succeeded" response actually means the token was revoked, not
+// just that a Redis command was fired in the background with no
+// confirmation) -- but it never throws (fail-open, see
+// utils/redisService.js), so it's also safe to call without await if
+// that's ever needed somewhere else in the future.
 function revoke(jti, exp) {
   if (!jti || !exp) return Promise.resolve();
   const now = Math.floor(Date.now() / 1000);
-  if (exp <= now) return Promise.resolve(); // منتهي أصلاً بأي حال — لا داعي لتخزينه إطلاقاً
+  if (exp <= now) return Promise.resolve(); // already expired anyway -- no need to store it at all
   return getClient()
     .set(`${KEY_PREFIX}:${jti}`, '1', 'EXAT', exp)
     .catch((err) => console.warn('[tokenRevocation] Could not record the revocation in Redis (fail-open):', err.message));

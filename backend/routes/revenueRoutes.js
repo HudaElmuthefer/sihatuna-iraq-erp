@@ -1,10 +1,11 @@
 // backend/routes/revenueRoutes.js
 //
-// موحِّد للإيرادات — يُطعِم تبويب "الإيرادات" بصفحة الحسابات (frontend/src/
-// pages/accounts/RevenueTab.js) بقراءة مباشرة من السجلات الحقيقية (فواتير
-// مدفوعة، صرفيات صيدلانية، ومعاملات "دخل" يدوية) بدل أي إدخال مكرَّر —
-// راجع utils/revenueAggregation.js لتفاصيل كل مصدر ولماذا invoices لا
-// payments هو مصدر إيراد المرضى.
+// A unified revenue endpoint — feeds the "Revenue" tab on the accounts
+// page (frontend/src/pages/accounts/RevenueTab.js) by reading directly
+// from the real records (paid invoices, pharmacy dispenses, and manual
+// "income" transactions) instead of any duplicated entry — see
+// utils/revenueAggregation.js for details on each source and why invoices,
+// not payments, is the source of patient revenue.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -12,9 +13,11 @@ const { getRevenue } = require('../utils/revenueAggregation');
 
 const router = express.Router();
 
-// ?hospitalId= اختياري — يُستخدَم فقط لو الطالب إدمن عام (بلا hospitalId
-// خاص به هو) ويريد فلترة عرضه بمنشأة واحدة تحديدًا؛ إدمن/موظف مرتبط بمنشأة
-// معيّنة يُقيَّد بمنشأته دائماً بغض النظر عمّا يُرسِله هنا (نفس نمط pgCrud.js).
+// ?hospitalId= is optional — only used if the requester is a global admin
+// (with no hospitalId of their own) and wants to filter their view to one
+// specific hospital; an admin/employee tied to a specific hospital is
+// always restricted to their hospital regardless of what they send here
+// (the same pattern as pgCrud.js).
 router.get('/revenue', auth, requirePermission('accounts'), async (req, res, next) => {
   try {
     const hospitalId = req.user.hospitalId || req.query.hospitalId || null;

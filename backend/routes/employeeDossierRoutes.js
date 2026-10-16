@@ -1,13 +1,16 @@
 // backend/routes/employeeDossierRoutes.js
 //
-// إصلاح حرج: تبويب "الإضابير الشخصية" بالموظفين النشطين كان بدون أي اتصال
-// بالباك إند إطلاقاً — أي وثيقة (شهادة، عقد) تُفقَد بمجرد تحديث الصفحة، وحتى
-// الملف المرفق نفسه كان معاينة محلية فقط (blob URL) لا يُرفَع لأي مكان.
-// هذا الملف يبني المسار الحقيقي الناقص (GET/POST/DELETE /api/employees/:id/dossier)
-// مربوطاً بجدول dossiers الموجود أصلاً بقاعدة البيانات (JSONB بحت — id/data/
-// created_at/updated_at فقط)، ويستخدم نفس إعداد multer المشترك (config/
-// uploadConfig.js) المستخدم ببقية مسارات الرفع بالمشروع، حتى يبقى نوع/حجم
-// الملف المسموح به موحّداً بكل النظام.
+// Critical fix: the "personal dossiers" tab under active employees had no
+// connection to the backend at all -- any document (a certificate, a
+// contract) was lost the moment the page refreshed, and even the attached
+// file itself was only a local preview (a blob URL) that was never
+// actually uploaded anywhere. This file builds the missing real route
+// (GET/POST/DELETE /api/employees/:id/dossier) wired to the dossiers table
+// that already exists in the database (purely JSONB -- just id/data/
+// created_at/updated_at), and uses the same shared multer config
+// (config/uploadConfig.js) used by the rest of the upload routes in the
+// project, so the allowed file type/size stays consistent across the
+// whole system.
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -16,7 +19,7 @@ const { upload, deleteUploadedFile } = require('../config/uploadConfig');
 
 router.use(auth);
 
-// ── جلب كل وثائق موظف معيّن ──────────────────────────────────────────────────
+// ── Fetching all documents of a given employee ──────────────────────────────────────────────────
 router.get('/employees/:id/dossier', async (req, res) => {
   try {
     const { id } = req.params;
@@ -31,13 +34,14 @@ router.get('/employees/:id/dossier', async (req, res) => {
   }
 });
 
-// ── رفع وثيقة جديدة (بملف مرفق حقيقي) ────────────────────────────────────────
+// ── Uploading a new document (with a real attached file) ────────────────────────────────────
 router.post('/employees/:id/dossier', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
     const { type, title, date, notes } = req.body;
-    // إصلاح: بدون هذا الفحص، طلب بلا ملف مرفق كان يمر بصمت ويُنشئ سجلاً بلا
-    // filePath — يكسر شرط الاختبار /^\/uploads\// لاحقاً بدل رفض واضح فوراً.
+    // Fix: without this check, a request with no attached file used to pass
+    // silently and create a record with no filePath -- breaking the
+    // /^\/uploads\// test assertion later instead of a clear rejection up front.
     if (!req.file) {
       return res.status(400).json({ message: 'الملف المرفق مطلوب' });
     }
@@ -57,20 +61,22 @@ router.post('/employees/:id/dossier', upload.single('file'), async (req, res) =>
     );
     res.status(201).json({ id: result.rows[0].id, ...result.rows[0].data });
   } catch (err) {
-    // إصلاح: خطأ multer (نوع/حجم ملف مرفوض من uploadConfig.js) يحمل statusCode
-    // خاصاً به (400) — نعرضه كما هو بدل تعميمه كـ 500 مربك.
+    // Fix: a multer error (a file type/size rejected by uploadConfig.js)
+    // carries its own statusCode (400) -- we show it as is instead of
+    // generalizing it into a confusing 500.
     if (err.statusCode) return res.status(err.statusCode).json({ message: err.message });
     console.error('❌ [POST /api/employees/:id/dossier]', err.message);
     res.status(500).json({ message: 'تعذّر رفع الوثيقة' });
   }
 });
 
-// ── حذف وثيقة ────────────────────────────────────────────────────────────────
+// ── Deleting a document ────────────────────────────────────────────────────────────────
 router.delete('/employees/:id/dossier/:docId', async (req, res) => {
   try {
     const { id, docId } = req.params;
-    // نتأكد إن الوثيقة فعلاً تخص هذا الموظف قبل الحذف — يمنع حذف وثيقة موظف
-    // آخر بمجرد تخمين رقم docId.
+    // Confirm the document actually belongs to this employee before
+    // deleting -- prevents deleting another employee's document just by
+    // guessing a docId.
     const result = await pool.query(
       `DELETE FROM dossiers WHERE id = $1 AND data->>'employeeId' = $2 RETURNING id, data`,
       [docId, String(id)]
@@ -78,8 +84,9 @@ router.delete('/employees/:id/dossier/:docId', async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'الوثيقة غير موجودة' });
     }
-    // حذف نهائي هنا (لا سلة محذوفات، بعكس DELETE /api/dossiers/:id العام) —
-    // الملف المرفق يجب أن يُحذف من القرص أيضاً، وإلا يبقى يتيماً للأبد.
+    // A permanent delete here (no recycle bin, unlike the general DELETE
+    // /api/dossiers/:id) -- the attached file must also be deleted from
+    // disk, or it stays orphaned forever.
     await deleteUploadedFile(result.rows[0].data?.filePath);
     res.status(200).json({ success: true });
   } catch (err) {

@@ -1,14 +1,17 @@
 // backend/config/defaultHospital.js
 //
-// المخطط الأصلي (postgres_schema.sql) مصمَّم لدعم أكثر من مستشفى (Multi-tenant)
-// بجدول "hospitals"، وهذا مفيد لو النظام يُباع لعدة جهات مستقبلاً. لكن حالياً
-// عندك منشأة واحدة فقط، فلا داعي لتعقيد الواجهة بطلب اختيار مستشفى في كل مرة.
+// The original schema (postgres_schema.sql) is designed to support more
+// than one hospital (multi-tenant) via the "hospitals" table, which is
+// useful if the system is ever sold to multiple organizations. Right now,
+// though, there is only one facility, so there's no need to complicate the
+// UI by asking the user to pick a hospital every time.
 //
-// هذه الدالة تضمن وجود سجل مستشفى افتراضي واحد بقاعدة البيانات (تُنشئه أول
-// مرة فقط لو ما كان موجوداً)، وتُعيد معرّفه (id) — يُستخدم هذا المعرّف داخلياً
-// بكل مسارات بوابات الدفع وCRM بدل ما نطلب من المستخدم اختيار مستشفى يدوياً.
-// النتيجة تُخزَّن بذاكرة العملية (cache) بعد أول استدعاء، فلا تتكرر القراءة
-// من قاعدة البيانات بكل طلب.
+// This function ensures a single default hospital record exists in the
+// database (creating it only the first time, if it doesn't already exist)
+// and returns its id -- used internally across all the payment-gateway and
+// CRM routes instead of asking the user to manually select a hospital. The
+// result is cached in process memory after the first call, so the database
+// isn't read again on every request.
 const { pool } = require('./database');
 
 let cachedHospitalId = null;

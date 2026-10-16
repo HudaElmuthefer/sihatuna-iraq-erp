@@ -1,25 +1,32 @@
 // backend/utils/revenueAggregation.js
 //
-// تجميع كل الإيرادات الحقيقية للمستشفى من مصادرها الفعلية بدل إدخال يدوي
-// مكرَّر — يُستخدَم من routes/revenueRoutes.js (تبويب "الإيرادات") و
-// routes/profitSharingRoutes.js (حساب مستحقات المستفيدين). أي تعديل هنا
-// ينعكس تلقائياً على الاثنين معاً.
+// Aggregates all of a hospital's real revenue from its actual sources
+// instead of duplicated manual entry -- used by routes/revenueRoutes.js
+// (the "Revenue" tab) and routes/profitSharingRoutes.js (calculating
+// beneficiaries' dues). Any change here is automatically reflected in
+// both.
 //
-// ── لماذا invoices لا payments لمصدر "مريض" ─────────────────────────────────
-// جدول payments (بوابات الدفع الإلكترونية) يُخزَّن دائماً بـhospital_id يساوي
-// getDefaultHospitalId() (راجع config/defaultHospital.js وcontrollers/
-// paymentController.js) — أول منشأة أُنشئت بقاعدة البيانات، بغض النظر تماماً
-// عن منشأة الفاتورة/المريض الفعلية. هذا اختصار متعمَّد بمرحلة تطوير سابقة
-// افترضت منشأة واحدة فقط، ولم يُحدَّث بعد لدعم تعدد المنشآت — الاعتماد عليه
-// هنا سيُسنِد كل دفعات كل المنشآت خطأً للمنشأة الأولى. جدول invoices مُقسَّم
-// فعلياً وبشكل صحيح (hospitalScoped عبر pgCrud.js)، ومسارا الدفع اليدوي
-// والإلكتروني كلاهما (AppContext.js: payInvoice/processPayment) ينتهيان
-// بتحديث نفس سجل الفاتورة لـstatus:'paid' — فهو المصدر الموثوق للاثنين معاً.
+// ── Why invoices, not payments, for the "patient" source ─────────────────────
+// The payments table (electronic payment gateways) is always stored with
+// hospital_id equal to getDefaultHospitalId() (see
+// config/defaultHospital.js and controllers/paymentController.js) -- the
+// first facility ever created in the database, completely regardless of
+// the invoice's/patient's actual facility. This is a deliberate shortcut
+// from an earlier development stage that assumed only one facility, and
+// hasn't been updated yet to support multiple facilities -- relying on it
+// here would wrongly attribute every facility's payments to the first
+// facility. The invoices table is actually and correctly scoped
+// (hospitalScoped via pgCrud.js), and both the manual and electronic
+// payment paths (AppContext.js: payInvoice/processPayment) end by
+// updating that same invoice record to status:'paid' -- so it's the
+// trustworthy source for both.
 const { query } = require('../config/database');
 
-// شرط منشأة موحَّد: لو hospitalId فارغ (إدمن عام يشاهد كل المنشآت) لا نُصفّي
-// إطلاقاً؛ وإلا نطابق data->>'hospitalId' بنفس التعبير المستخدَم حرفياً
-// بـpgCrud.js لكل الموديولات hospitalScoped الأخرى، حفاظاً على تناسق العزل.
+// A unified facility condition: if hospitalId is empty (a global admin
+// viewing every facility), no filtering is applied at all; otherwise it
+// matches data->>'hospitalId' with the exact same expression literally
+// used in pgCrud.js for every other hospitalScoped module, to keep
+// isolation consistent.
 function buildHospitalCondition(hospitalId, params) {
   if (!hospitalId) return '';
   params.push(hospitalId);
@@ -104,8 +111,9 @@ async function getOtherRevenueRows({ hospitalId, from, to }) {
   }));
 }
 
-// { hospitalId, from, to } — hospitalId فارغ = بلا تصفية منشأة (إدمن عام).
-// from/to بصيغة 'YYYY-MM-DD'، اختياريان (بلا أي منهما = كل الفترة).
+// { hospitalId, from, to } -- an empty hospitalId means no facility
+// filtering (a global admin). from/to are in 'YYYY-MM-DD' format and
+// optional (neither given = the whole time period).
 async function getRevenue({ hospitalId, from, to } = {}) {
   const [patientRows, pharmacyRows, otherRows] = await Promise.all([
     getPatientRevenueRows({ hospitalId, from, to }),

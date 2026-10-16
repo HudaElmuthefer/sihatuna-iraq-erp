@@ -1,11 +1,13 @@
 // backend/routes/billingAnomalyRoutes.js
 //
-// كشف القيم المتطرفة بالمشتريات/الفوترة — صفحة مستقلة بالفرونت إند
-// (BillingAnomalyPage.js). التحليل نفسه (POST /billing-anomaly/analyze)
-// إحصائي حتمي بحت عبر agents/billingAnomalyAgent.js — بلا أي استدعاء AI
-// وبلا حقل mode إطلاقاً؛ الشرح الاختياري بلغة بسيطة لعنصر واحد مُعلَّم
-// (POST /billing-anomaly/explain) منفصل تماماً ويحترم aiProviderRouter.js
-// (bot/online/offline) كبقية ميزات AI بالنظام.
+// Outlier detection for purchases/billing — a standalone frontend page
+// (BillingAnomalyPage.js). The analysis itself (POST
+// /billing-anomaly/analyze) is purely deterministic statistics via
+// agents/billingAnomalyAgent.js — with no AI call and no mode field at
+// all; the optional plain-language explanation for one flagged item (POST
+// /billing-anomaly/explain) is entirely separate and respects
+// aiProviderRouter.js (bot/online/offline) like the rest of the system's
+// AI features.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -18,9 +20,10 @@ const { detectAnomalies, explainAnomaly } = require('../agents/billingAnomalyAge
 
 const router = express.Router();
 
-// التحليل يمسح كامل جدول procurement بكل استدعاء — حد أعلى معقول يكفي
-// للاستخدام الفعلي (تحديث الصفحة، إعادة تحليل بعد استيراد Excel) دون فتح
-// الباب لإغراق الخادم باستعلامات متكررة بلا داعٍ.
+// The analysis scans the entire procurement table on every call — a
+// reasonable cap that's still enough for actual use (refreshing the page,
+// re-analyzing after an Excel import) without opening the door to
+// flooding the server with unnecessary repeated queries.
 const analyzeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -40,8 +43,8 @@ const explainLimiter = rateLimit({
   store: new RedisRateLimitStore('billing-anomaly-explain'),
 });
 
-// حالة ميزة الشرح الاختياري بالذكاء الاصطناعي فقط (bot/online/offline) —
-// لا علاقة لها بتوفر التحليل الإحصائي نفسه، المتاح دائماً بغض النظر عنها.
+// The status of only the optional AI explanation feature (bot/online/offline) —
+// unrelated to the availability of the statistical analysis itself, which is always available regardless of it.
 router.get('/billing-anomaly/status', auth, requirePermission('billing-anomaly'), async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('billingAnomaly'));

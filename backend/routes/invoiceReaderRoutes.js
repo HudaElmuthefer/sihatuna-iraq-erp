@@ -11,14 +11,16 @@
 // for AI diagnosis (see utils/aiProvider.js) — no new API key needed if
 // GEMINI_API_KEY is already set in .env.
 //
-// ── المرحلة الثانية: معالجة خلفية عبر BullMQ ─────────────────────────────────
-// استدعاء AI فعلياً (Gemini/Claude) لقراءة صورة قد يأخذ عدة ثوانٍ — POST
-// /invoice-reader/read كان يُبقي طلب HTTP معلَّقاً طوال هذه المدة (يحجز
-// worker من Express بلا فائدة حقيقية). الآن يُضيف مهمة لطابور
-// services/queue/ocrQueue.js ويرجع فوراً برقم مهمة (jobId، 202 Accepted)؛
-// الفرونت إند يستعلم دورياً عن حالتها عبر GET /invoice-reader/jobs/:id
-// (راجع frontend/src/pages/ProcurementPage.js). المعالجة الفعلية تتم
-// بعملية Worker منفصلة تماماً — راجع services/queue/ocrWorker.js.
+// ── Phase two: background processing via BullMQ ─────────────────────────────────
+// Actually calling AI (Gemini/Claude) to read an image can take several
+// seconds -- POST /invoice-reader/read used to keep the HTTP request
+// pending for that whole duration (holding an Express worker for no real
+// benefit). Now it adds a job to the services/queue/ocrQueue.js queue and
+// returns immediately with a job number (jobId, 202 Accepted); the
+// frontend polls its status periodically via GET
+// /invoice-reader/jobs/:id (see frontend/src/pages/ProcurementPage.js).
+// The actual processing happens in a completely separate worker process --
+// see services/queue/ocrWorker.js.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -40,19 +42,21 @@ const invoiceLimiter = rateLimit({
   store: new RedisRateLimitStore('invoice-reader'),
 });
 
-// راجع utils/aiProviderRouter.js — يعكس الوضع المُختار فعلياً (bot/online/
-// offline) بدل افتراض Gemini/Claude دائماً كما كان سابقاً.
+// See utils/aiProviderRouter.js — reflects whichever mode is actually
+// selected (bot/online/offline) instead of always assuming Gemini/Claude as before.
 router.get('/invoice-reader/status', auth, async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('invoiceReader'));
   } catch (err) { next(err); }
 });
 
-// ملاحظة: بنية استخراج البيانات (system/user prompt، مخطط JSON المتوقَّع)
-// انتقلت لـservices/queue/invoiceReadProcessor.js — الآن تشمل خطوة OCR
-// (PaddleOCR) تمهيدية قبل استدعاء AI، تعمل داخل مهمة الطابور نفسها (راجع
-// شرح كامل هناك)، فلم يعد ممكناً بناء الـprompt النهائي هنا وقت استلام
-// الطلب (يحتاج نص OCR غير متوفر إلا بعد تشغيل تلك الخطوة داخل الـWorker).
+// Note: the data-extraction structure (system/user prompt, the expected
+// JSON schema) moved to services/queue/invoiceReadProcessor.js -- it now
+// includes a preliminary OCR (PaddleOCR) step before calling AI, running
+// inside the queue job itself (see the full explanation there), so it's no
+// longer possible to build the final prompt here at request-receipt time
+// (it needs OCR text that's only available after that step runs inside the
+// worker).
 
 router.post('/invoice-reader/read', auth, requirePermission('procurement'), invoiceLimiter, async (req, res, next) => {
   try {
@@ -74,9 +78,10 @@ router.post('/invoice-reader/read', auth, requirePermission('procurement'), invo
         mode,
       });
     } catch (err) {
-      // تعذّر الوصول لطابور المعالجة (Redis غير متاح) — نفس التسمية الصادقة
-      // "غير مُفعَّل" المستخدمة أصلاً لو مزوّد الذكاء الاصطناعي نفسه غير
-      // مُعدّ، بدل خطأ 500 مربك لموظف يحاول قراءة فاتورة.
+      // Could not reach the processing queue (Redis unavailable) -- the same
+      // honest "unavailable" label already used if the AI provider itself
+      // isn't configured, instead of a confusing 500 error for a staff
+      // member trying to read an invoice.
       console.error('[invoice-reader] Could not add a job to the processing queue (Redis):', err.message);
       return res.json({ available: false });
     }
@@ -85,8 +90,9 @@ router.post('/invoice-reader/read', auth, requirePermission('procurement'), invo
   } catch (err) { next(err); }
 });
 
-// GET /api/invoice-reader/jobs/:id — يستعلم الفرونت إند دورياً عن حالة مهمة
-// قراءة فاتورة أُنشئت بـPOST /invoice-reader/read أعلاه، لحد اكتمالها.
+// GET /api/invoice-reader/jobs/:id — the frontend periodically polls the
+// status of an invoice-reading job created by POST /invoice-reader/read
+// above, until it completes.
 router.get('/invoice-reader/jobs/:id', auth, requirePermission('procurement'), async (req, res, next) => {
   try {
     const status = await getJobStatus(req.params.id);
@@ -100,7 +106,7 @@ router.get('/invoice-reader/jobs/:id', auth, requirePermission('procurement'), a
     if (status.state === 'failed') {
       return res.json({ state: 'failed', available: false, error: status.error });
     }
-    // waiting / active / delayed — الفرونت إند يستمر بالاستعلام
+    // waiting / active / delayed — the frontend keeps polling
     res.json({ state: status.state });
   } catch (err) { next(err); }
 });

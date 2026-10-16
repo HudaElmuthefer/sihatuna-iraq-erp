@@ -1,28 +1,35 @@
 // backend/routes/modules.js
 //
-// تسجيل كل موديولات pgCrud (CRUD قياسي مبني على PostgreSQL) واستيراد Excel
-// الجماعي لكل موديول يدعمه — 41 موديول بمكان واحد. استُخرج هذا القسم من
-// server.js (كان أكبر قسم فيه بمفرده، ~330 سطر) لتصغير الملف الرئيسي وتسهيل
-// إيجاد/تعديل تسجيل أي موديول محدد دون التمرير بملف ضخم يخلط كل شيء مع بعض.
+// Registers every pgCrud module (standard CRUD built on PostgreSQL) and the
+// bulk Excel import for every module that supports it — 41 modules in one
+// place. This section was extracted from server.js (it used to be the
+// biggest single section there, ~330 lines) to shrink the main file and
+// make it easier to find/edit the registration of any specific module
+// without wading through a huge file that mixes everything together.
 //
-// دالة واحدة registerAllModules(router) تستقبل الروتر الرئيسي من server.js
-// وتسجّل عليه كل المسارات — بنفس ترتيب التسجيل الأصلي بالضبط (مهم جداً: كل
-// استيراد Excel مسجَّل *قبل* pgCrud لنفس الموديول، لتفادي تعارض مسار GET
-// /module/:id مع GET /module/import-template — انظر شرح المشكلة والحل
-// بملف routes/excelImportRoutes.js لو احتجت التفاصيل الكاملة).
+// A single function registerAllModules(router) receives the main router
+// from server.js and registers every route on it — in the exact same order
+// as the original registration (very important: every Excel import is
+// registered *before* pgCrud for the same module, to avoid a conflict
+// between the GET /module/:id route and GET /module/import-template — see
+// the explanation of the problem and the fix in
+// routes/excelImportRoutes.js if you need the full details).
 const collectionSchemas = require('../middleware/schemas');
 const pgCrud = require('./pgCrud');
 const { DEFAULT_COLUMNS } = pgCrud;
-// ── أعمدة مُرقّاة من JSONB لأعمدة حقيقية (دفعة أولى) ─────────────────────────
-// راجع migration_promote_columns.sql — يجب أن يُطبَّق على قاعدة البيانات أولاً
-// قبل أن يعمل هذا الكود بشكل صحيح (وإلا الأعمدة الجديدة غير موجودة أصلاً بالجدول).
-const PATIENT_COLUMNS = DEFAULT_COLUMNS; // إصلاح: patient_code/blood_type/national_id ليست أعمدة حقيقية بجدول patients (JSONB بحت لهذه الحقول) — أُزيلت من هنا وأُضيفت كـ extraFilterFields بدلاً عنها بتسجيل pgCrud('patients', ...)
-// إصلاح: specialization عمود حقيقي فعلاً بجدول doctors (رُقِّي بـ
-// 002_promote_columns.sql، ومُعبَّأ بالكامل: 152/152 طبيب) — التعليق السابق
-// هنا كان خاطئاً (يدّعي أنه JSONB بحت)، فكان rowToRecord يُسقطه بصمت من كل
-// رد API رغم امتلاء العمود الحقيقي بالكامل، وبحث searchFields:['specialization']
-// كان يبحث فعلياً بمسار data->>'specialization' الفارغ دائماً بدل العمود
-// الحقيقي — الآن يُقرأ/يُكتب/يُبحَث فيه من العمود الحقيقي مباشرة.
+// ── Columns promoted from JSONB to real columns (first batch) ─────────────────
+// See migration_promote_columns.sql — it must be applied to the database
+// first before this code works correctly (otherwise the new columns don't
+// exist in the table at all yet).
+const PATIENT_COLUMNS = DEFAULT_COLUMNS; // Fix: patient_code/blood_type/national_id are not real columns in the patients table (purely JSONB for these fields) — removed from here and added instead as extraFilterFields in the pgCrud('patients', ...) registration
+// Fix: specialization is actually a real column in the doctors table
+// (promoted by 002_promote_columns.sql, and fully populated: 152/152
+// doctors) — the previous comment here was wrong (it claimed it was purely
+// JSONB), so rowToRecord was silently dropping it from every API response
+// even though the real column was fully populated, and the
+// searchFields:['specialization'] search was actually searching the
+// always-empty data->>'specialization' path instead of the real column —
+// now it's read/written/searched directly from the real column.
 const DOCTOR_COLUMNS = [...DEFAULT_COLUMNS, { field: 'specialization', column: 'specialization' }];
 const registerExcelImport = require('./excelImportRoutes');
 const { importLimiter } = require('../config/rateLimiters');
@@ -32,26 +39,31 @@ const requirePermission = require('../middleware/requirePermission');
 
 const registerAllModules = (router) => {
   // ── STANDARD CRUD COLLECTIONS (db.json) ───────────────────────────────────────
-  // لم يبقَ أي موديول قياسي على db.json — كل الموديولات انتقلت إلى PostgreSQL
-  // (انظر قسم "PostgreSQL-BACKED COLLECTIONS" أسفل الملف). عنوان الـ API نفسه
-  // بقي كما هو تماماً لكل موديول، فلا يحتاج الفرونت إند أي تعديل.
+  // No standard module is left on db.json — every module has moved to
+  // PostgreSQL (see the "PostgreSQL-BACKED COLLECTIONS" section further
+  // down this file). The API address itself stayed exactly the same for
+  // every module, so the frontend needs no changes at all.
 
   // ── PostgreSQL-BACKED COLLECTIONS ─────────────────────────────────────────────
-  // المرضى والأطباء أول موديولين يُنقلان إلى PostgreSQL فعلياً (باقي الموديولات
-  // أعلاه لا تزال تعمل على db.json). نفس المخططات (schemas) المستخدمة سابقاً
-  // للتحقق تُعاد استخدامها هنا بدون أي تغيير.
-  // ── خيار permission ────────────────────────────────────────────────────────────
-  // نفس مفاتيح الصفحات (page keys) المعرَّفة بـ ALL_PAGES بملف
-  // frontend/src/contexts/AppContext.js — يفرض على مستوى الخادم نفس الصلاحية
-  // المستخدمة حالياً بالفرونت إند لإخفاء/إظهار عناصر القائمة الجانبية فقط.
-  // حساب admin يتجاوز هذا الفحص دائماً (انظر requirePermission.js).
-  // ── استيراد جماعي من Excel ────────────────────────────────────────────────────
-  // يضيف POST /api/patients/import-excel و POST /api/doctors/import-excel
-  // (و GET .../import-template لتحميل قالب فارغ). يُسجَّل عمداً *قبل* pgCrud
-  // لنفس الموديول أدناه — Express يطابق المسارات بترتيب التسجيل، ولو سُجِّل
-  // بعد pgCrud (الذي يضيف GET /patients/:id)، كان طلب GET /patients/import-template
-  // يتطابق خطأً مع نمط /:id (ويعامل "import-template" كأنه معرّف سجل رقمي)،
-  // بدل مساره الصريح الأدق. هذا خطأ حقيقي وقعنا فيه واكتُشف بالاختبار الفعلي.
+  // Patients and doctors are the first two modules actually moved to
+  // PostgreSQL (the other modules above still run on db.json). The same
+  // validation schemas used before are reused here with no change.
+  // ── The permission option ────────────────────────────────────────────────────────────
+  // The same page keys defined in ALL_PAGES in
+  // frontend/src/contexts/AppContext.js — enforces, at the server level,
+  // the same permission currently used by the frontend only to show/hide
+  // sidebar menu items. An admin account always bypasses this check (see
+  // requirePermission.js).
+  // ── Bulk import from Excel ────────────────────────────────────────────────────────────
+  // Adds POST /api/patients/import-excel and POST /api/doctors/import-excel
+  // (and GET .../import-template to download a blank template). Registered
+  // deliberately *before* pgCrud for the same module below — Express
+  // matches routes in registration order, and if it were registered after
+  // pgCrud (which adds GET /patients/:id), a request for GET
+  // /patients/import-template would wrongly match the /:id pattern
+  // (treating "import-template" as if it were a numeric record id) instead
+  // of its more specific explicit route. This is a real bug we ran into
+  // and discovered through actual testing.
   registerExcelImport(router, 'patients', collectionSchemas.patients, {
     'الاسم': 'name', 'اسم المريض': 'name', 'Name': 'name',
     'رقم المريض': 'patientId', 'Patient ID': 'patientId',
@@ -94,9 +106,10 @@ const registerAllModules = (router) => {
     'الملاحظات': 'notes', 'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'doctors',
-    // يجب أن يطابق DOCTOR_COLUMNS المستخدَمة بتسجيل pgCrud('doctors', ...)
-    // بالأسفل بالضبط — وإلا يُكتب specialization بجدول Excel المستورَد فقط
-    // بعمود JSONB، ثم rowToRecord (الذي يقرأ العمود الحقيقي الآن) يُفرغه لاحقاً.
+    // Must exactly match the DOCTOR_COLUMNS used in the pgCrud('doctors', ...)
+    // registration below — otherwise an Excel import would only write
+    // specialization to the JSONB column, and rowToRecord (which now reads
+    // the real column) would later empty it back out.
     indexedColumns: DOCTOR_COLUMNS,
     limiter: importLimiter,
     duplicateCheck: ['name', 'phone'],
@@ -112,8 +125,8 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── دفعة استيراد إضافية: الأقسام، الموظفين، المتقاعدين، المخزون، الأصول،
-  //    المشاريع، مركبات الإسعاف ─────────────────────────────────────────────────
+  // ── Additional import batch: departments, employees, retirees, inventory,
+  //    assets, projects, ambulance vehicles ─────────────────────────────────────────────────
   registerExcelImport(router, 'departments', collectionSchemas.departments, {
     'الاسم': 'name', 'اسم القسم': 'name', 'Name': 'name',
     'الوصف': 'description', 'Description': 'description',
@@ -132,15 +145,18 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── ملاحظة: عمودا "تاريخ استحقاق الترفيع/العلاوة القادم" بصفحة الموظفين
-  // (hr/EmployeesTab.js) محسوبان حياً (calcPromotionDue/calcAllowanceDue من
-  // hr/promotionCalc.js اعتماداً على lastPromotion/lastAllowance/certificate)
-  // وليسا حقلين مخزَّنين بسجل الموظف — فلا يظهران هنا (لا معنى لاستيراد قيمة
-  // محسوبة)، ولا يظهران بالتصدير أيضاً (التصدير يعكس الحقول المخزَّنة فقط،
-  // راجع GET /:apiName/export-excel بـ pgCrud.js). الشهادة (certificate)
-  // وتاريخا آخر ترفيع/علاوة (lastPromotion/lastAllowance) هي المُدخلات
-  // الفعلية التي يُحسَب منها ذانك التاريخان، وهي حقول حقيقية مخزَّنة — أُضيفت
-  // هنا مع الدرجة/المرحلة بعد التعديل (nextGrade).
+  // ── Note: the "next promotion/allowance due date" columns on the
+  // employees page (hr/EmployeesTab.js) are computed live
+  // (calcPromotionDue/calcAllowanceDue from hr/promotionCalc.js, based on
+  // lastPromotion/lastAllowance/certificate) and are not fields actually
+  // stored on the employee record — so they don't appear here (there's no
+  // point importing a computed value), and they don't appear in the export
+  // either (the export only reflects stored fields, see GET
+  // /:apiName/export-excel in pgCrud.js). The certificate field and the
+  // last-promotion/last-allowance dates (lastPromotion/lastAllowance) are
+  // the actual inputs those two dates are computed from, and they are real
+  // stored fields — added here along with the grade/step after adjustment
+  // (nextGrade).
   registerExcelImport(router, 'employees', collectionSchemas.employees, {
     'الاسم': 'name', 'اسم الموظف': 'name', 'Name': 'name',
     'المسمى الوظيفي': 'jobTitle', 'Job Title': 'jobTitle',
@@ -262,12 +278,13 @@ const registerAllModules = (router) => {
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['assetNo'],
-    // ── إصلاح: "القيمة الحالية" (currentValue) كانت غائبة تماماً من هذا
-    // الاستيراد — AssetsPage.js يحسب نسبة الاستهلاك المعروضة كـ
-    // `(1 - currentValue/purchaseCost) * 100`، فأي أصل مستورَد بدون
-    // currentValue يطلع "NaN%" بصمت. الآن تُحسَب هنا تلقائياً (استهلاك خطي
-    // على مدى 10 سنوات كعمر افتراضي، بحد أدنى 10% من التكلفة كقيمة إنقاذ)
-    // إن لم تُقدَّم صراحةً بالملف.
+    // ── Fix: "current value" (currentValue) used to be completely missing
+    // from this import — AssetsPage.js computes the displayed depreciation
+    // percentage as `(1 - currentValue/purchaseCost) * 100`, so any asset
+    // imported without currentValue silently showed "NaN%". It's now
+    // computed here automatically (straight-line depreciation over a
+    // 10-year default useful life, with a 10% minimum of cost as salvage
+    // value) if not explicitly provided in the file.
     afterParse: (row) => {
       const rest = { ...row };
       const cost = Number(rest.purchaseCost) || 0;
@@ -310,10 +327,11 @@ const registerAllModules = (router) => {
     'تاريخ الانتهاء': 'endDate', 'End Date': 'endDate',
     'الحالة': 'status', 'Status': 'status',
     'الأولوية': 'priority', 'Priority': 'priority',
-    // ── إصلاح: هذه الأعمدة كانت ناقصة تماماً — أي مشروع مستورَد كانت هذه
-    // الحقول تطلع له undefined بالواجهة (يظهر "NaN%" بشريط التقدم، و
-    // "undefined/undefined" بعدد المراحل). الآن اختيارية بالاستيراد، وتُملأ
-    // بصفر تلقائياً لو تُركت فاضية (راجع afterParse بالأسفل).
+    // ── Fix: these columns used to be completely missing — any imported
+    // project would show these fields as undefined in the UI ("NaN%" in
+    // the progress bar, and "undefined/undefined" in the milestone count).
+    // Now optional in the import, and automatically filled with zero if
+    // left blank (see afterParse below).
     'المصروف': 'spent', 'Spent': 'spent',
     'نسبة الإنجاز': 'progress', 'Progress': 'progress',
     'عدد المراحل': 'milestones', 'Milestones': 'milestones',
@@ -323,8 +341,8 @@ const registerAllModules = (router) => {
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['code'],
-    // ── إصلاح: تعبئة افتراضية للحقول الرقمية غير المتوفرة بملف Excel —
-    // بدل ما تبقى undefined وتكسر عرض شريط التقدم ودوائر المراحل بالواجهة
+    // ── Fix: default fill for numeric fields not present in the Excel file —
+    // instead of staying undefined and breaking the progress bar and milestone circles in the UI
     afterParse: (row) => ({
       ...row,
       spent: row.spent || 0,
@@ -355,11 +373,12 @@ const registerAllModules = (router) => {
     limiter: importLimiter,
     duplicateCheck: ['plate'],
     tableName: 'ambulance_vehicles',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه). كان فارغاً (NULL) لكل الصفوف رغم وجود
-    // القيمة الصحيحة بـJSONB — تمت تعبئته يدوياً مرة واحدة قبل هذا الإصلاح
-    // (UPDATE ... SET status = data->>'status') ليطابق القيم الفعلية، والآن
-    // يُخزَّن بالعمود الحقيقي مباشرة.
+    // status is actually a real column in this table (promoted by
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below). It used to be empty (NULL) for every row despite the correct
+    // value being in JSONB -- it was filled in manually once before this
+    // fix (UPDATE ... SET status = data->>'status') to match the actual
+    // values, and is now stored directly in the real column.
     indexedColumns: [{ field: 'status', column: 'status' }],
     template: [
       { header: 'الرمز', example: 'AMB-01' },
@@ -372,15 +391,18 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── إضافة: استيراد Excel لطلبات المختبر (lab_tests) ───────────────────────
-  // كانت غير مسجَّلة أصلاً (فقط pgCrud بدون registerExcelImport)، فما كان
-  // زر الاستيراد يظهر لصفحة المختبر إطلاقاً. مسجَّل هنا عمداً *قبل* استدعاء
-  // pgCrud(router, 'labTests', ...) بالأسفل — نفس القاعدة المتبعة لكل موديول
-  // آخر بهذا الملف، لتفادي تعارض GET /labTests/:id مع GET /labTests/import-template.
-  // indexedColumns مطابقة تماماً لمصفوفة pgCrud(router, 'labTests', ...) بالأسفل.
-  // القيم المقبولة لحقول category/status/priority هي القيم الخام الإنجليزية
-  // المستخدمة فعلياً بكائنات CATEGORIES/STATUSES بملف LaboratoryPage.js
-  // (مثل hematology, pending, urgent)، وليست النص العربي المعروض بالواجهة.
+  // ── Added: Excel import for lab requests (lab_tests) ───────────────────────
+  // This used to not be registered at all (only pgCrud, with no
+  // registerExcelImport), so the import button never appeared on the lab
+  // page at all. Registered here deliberately *before* the
+  // pgCrud(router, 'labTests', ...) call below — the same rule followed for
+  // every other module in this file, to avoid a conflict between GET
+  // /labTests/:id and GET /labTests/import-template. indexedColumns exactly
+  // matches the array in pgCrud(router, 'labTests', ...) below. The
+  // accepted values for the category/status/priority fields are the raw
+  // English values actually used in the CATEGORIES/STATUSES objects in
+  // LaboratoryPage.js (such as hematology, pending, urgent), not the Arabic
+  // text shown in the UI.
   registerExcelImport(router, 'labTests', collectionSchemas.labTests, {
     'رقم الطلب': 'reqNo', 'Request No': 'reqNo',
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
@@ -396,22 +418,25 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'laboratory',
     tableName: 'lab_tests',
-    // status/priority أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه) — تُخزَّن الآن
-    // بالأعمدة الحقيقية مباشرة. ملاحظة: services/hl7/hl7Listener.js يكتب
-    // status مباشرة على العمود الحقيقي فعلاً (بمعزل عن هذا المسار)، فهو
-    // متوافق مع هذا الإصلاح تلقائياً بلا أي تعديل إضافي هناك.
+    // status/priority are actually real columns in this table (promoted by
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) -- now stored directly in the real columns. Note:
+    // services/hl7/hl7Listener.js already writes status directly to the
+    // real column (independently of this route), so it's automatically
+    // compatible with this fix with no further changes needed there.
     indexedColumns: [
       { field: 'status', column: 'status' },
       { field: 'priority', column: 'priority' },
     ],
     limiter: importLimiter,
     duplicateCheck: ['reqNo'],
-    // ── إصلاح: النتيجة تُخزَّن فعلياً بكائن متداخل results:{value, notes}
-    // بالواجهة (راجع LaboratoryPage.js) — لا يمكن لـ columnMap تعيين حقل
-    // متداخل مباشرة، لذا نستقبل عمود "النتيجة" مؤقتاً بحقل مسطّح resultRaw
-    // ثم نحوّله هنا لبنية results الصحيحة قبل الحفظ. بدون هذا الإصلاح، كانت
-    // قيمة النتيجة تُفقد أو تُدمَج خطأً بحقل "ملاحظات" العادي.
+    // ── Fix: the result is actually stored as a nested results:{value,
+    // notes} object in the UI (see LaboratoryPage.js) -- columnMap can't
+    // assign a nested field directly, so we temporarily accept the
+    // "Result" column into a flat resultRaw field, then convert it here
+    // into the correct results structure before saving. Without this fix,
+    // the result value used to be lost or wrongly merged into the regular
+    // "notes" field.
     afterParse: (row) => {
       const { resultRaw, ...rest } = row;
       if (resultRaw) {
@@ -434,18 +459,21 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── إضافة: رقم الطلب التالي لطلبات المختبر (reqNo) ────────────────────────
-  // LaboratoryPage.js يحتاج أعلى تسلسل reqNo مستخدَم هذا العام (نمط
-  // LAB-{year}-{seq}) لتوليد رقم طلب جديد لا يتكرر، سواء عند إضافة طلب واحد
-  // أو إنشاء دفعة من حزمة فحوصات (TEST_PANELS). كان هذا يتطلّب جلب كل
-  // سجلات labTests (20,000+ سجل، ~5.76 ميجابايت) فقط لحساب رقم واحد. هذا
-  // المسار يحسبها على الخادم ويُعيد الرقم فقط — مسجَّل عمداً *قبل* استدعاء
-  // pgCrud(router, 'labTests', ...) بالأسفل، لتفادي تعارض GET /labTests/:id
-  // مع GET /labTests/next-req-no (نفس القاعدة المتبعة لكل موديول بهذا الملف).
-  // نفس فلترة hospitalScoped المستخدمة بتسجيل pgCrud لهذا الموديول أدناه —
-  // إدمن بلا hospitalId (مستوى الوزارة) يرى تسلسل كل المنشآت مجتمعة، بالضبط
-  // كما كان الحساب القديم على الفرونت إند (كان يفحص كل السجلات بلا فلترة
-  // لهذا الحساب أيضاً).
+  // ── Added: the next request number for lab requests (reqNo) ────────────────────────
+  // LaboratoryPage.js needs the highest reqNo sequence used this year
+  // (pattern LAB-{year}-{seq}) to generate a new, non-duplicate request
+  // number, whether adding a single request or creating a batch from a
+  // test panel (TEST_PANELS). This used to require fetching every labTests
+  // record (20,000+ records, ~5.76 MB) just to compute one number. This
+  // route computes it on the server and returns only the number —
+  // deliberately registered *before* the pgCrud(router, 'labTests', ...)
+  // call below, to avoid a conflict between GET /labTests/:id and GET
+  // /labTests/next-req-no (the same rule followed for every module in this
+  // file). The same hospitalScoped filtering used in the pgCrud
+  // registration for this module below -- an admin with no hospitalId
+  // (ministry level) sees the combined sequence across every facility,
+  // exactly as the old frontend calculation did (it also used to scan
+  // every record with no filtering for this calculation).
   router.get('/labTests/next-req-no', auth, requirePermission('laboratory'), async (req, res, next) => {
     try {
       const year = parseInt(req.query.year, 10) || new Date().getFullYear();
@@ -469,15 +497,17 @@ const registerAllModules = (router) => {
     } catch (err) { next(err); }
   });
 
-  // ── إضافة: استيراد Excel لطلبات الأشعة والتصوير الطبي (radiology) ─────────
-  // كانت غير مسجَّلة أصلاً (فقط pgCrud بدون registerExcelImport)، فما كان
-  // زر الاستيراد يظهر لصفحة الأشعة إطلاقاً. مسجَّل هنا عمداً *قبل* استدعاء
-  // pgCrud(router, 'radiology', ...) — نفس القاعدة المتبعة لكل موديول آخر
-  // بهذا الملف، لتفادي تعارض GET /radiology/:id مع GET /radiology/import-template.
-  // القيم المقبولة لحقل "نوع التصوير" هي المفاتيح الخام المستخدمة فعلياً
-  // بكائن MODALITIES بملف RadiologyPage.js (xray, ultrasound, ct, mri,
-  // mammogram, other)، وليست النص العربي المعروض بالواجهة. نفس الأمر لحقل
-  // "الحالة" (pending, scheduled, examined, reported, cancelled).
+  // ── Added: Excel import for radiology and medical imaging requests (radiology) ─────────
+  // This used to not be registered at all (only pgCrud, with no
+  // registerExcelImport), so the import button never appeared on the
+  // radiology page at all. Registered here deliberately *before* the
+  // pgCrud(router, 'radiology', ...) call — the same rule followed for
+  // every other module in this file, to avoid a conflict between GET
+  // /radiology/:id and GET /radiology/import-template. The accepted values
+  // for the "Modality" field are the raw keys actually used in the
+  // MODALITIES object in RadiologyPage.js (xray, ultrasound, ct, mri,
+  // mammogram, other), not the Arabic text shown in the UI. Same for the
+  // "Status" field (pending, scheduled, examined, reported, cancelled).
   registerExcelImport(router, 'radiology', collectionSchemas.radiology, {
     'رقم الطلب': 'reqNo', 'Request No': 'reqNo',
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
@@ -494,11 +524,13 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'radiology',
     tableName: 'radiology',
-    // status/modality أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه) — تُخزَّن الآن
-    // بالأعمدة الحقيقية مباشرة. ملاحظة: services/dicom/orthancIntegration.js
-    // يكتب status/modality مباشرة على الأعمدة الحقيقية فعلاً (بمعزل عن هذا
-    // المسار)، فهو متوافق مع هذا الإصلاح تلقائياً بلا أي تعديل إضافي هناك.
+    // status/modality are actually real columns in this table (promoted by
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) -- now stored directly in the real columns. Note:
+    // services/dicom/orthancIntegration.js already writes status/modality
+    // directly to the real columns (independently of this route), so it's
+    // automatically compatible with this fix with no further changes
+    // needed there.
     indexedColumns: [
       { field: 'status', column: 'status' },
       { field: 'modality', column: 'modality' },
@@ -521,16 +553,20 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── إضافة: استيراد Excel لوصفات الصيدلية (pharmacyOrders) ─────────────────
-  // كانت غير مسجَّلة أصلاً. مسجَّلة هنا عمداً *قبل* pgCrud(router, 'pharmacyOrders', ...)
-  // — نفس القاعدة المتبعة بكل موديول آخر بهذا الملف، لتفادي تعارض GET
-  // /pharmacyOrders/:id مع GET /pharmacyOrders/import-template.
-  // ── ملاحظة بنيوية مهمة: كل وصفة (rxForm) تحمل items[] (مصفوفة أدوية)
-  // بالواجهة، وليس حقلاً مسطّحاً — لا يمكن لـ columnMap تعيين مصفوفة مباشرة.
-  // نستقبل عمود دواء واحد بكل صف Excel (drugName/qty/unit/dosage) عبر حقول
-  // مؤقتة مسطّحة، ثم نبنيها هنا كعنصر وحيد داخل items[] قبل الحفظ — يعني كل
-  // صف بملف Excel يُنشئ وصفة منفصلة بدواء واحد (نفس المنطق المستخدم فعلياً
-  // بمصدر البيانات: كل مطالبة تأمين/صرف واحدة لدواء واحد بمناسبة واحدة).
+  // ── Added: Excel import for pharmacy prescriptions (pharmacyOrders) ─────────────────
+  // This used to not be registered at all. Registered here deliberately
+  // *before* pgCrud(router, 'pharmacyOrders', ...) — the same rule
+  // followed for every other module in this file, to avoid a conflict
+  // between GET /pharmacyOrders/:id and GET /pharmacyOrders/import-template.
+  // ── Important structural note: every prescription (rxForm) carries
+  // items[] (an array of drugs) in the UI, not a flat field -- columnMap
+  // can't assign an array directly. We accept a single drug column per
+  // Excel row (drugName/qty/unit/dosage) via temporary flat fields, then
+  // build it here as a single element inside items[] before saving --
+  // meaning every row in the Excel file creates a separate prescription
+  // with a single drug (the same logic actually used by the data source:
+  // every single insurance claim/dispensing is for one drug on one
+  // occasion).
   registerExcelImport(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, {
     'رقم الوصفة': 'prescNo', 'Rx Number': 'prescNo',
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
@@ -547,8 +583,9 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'pharmacy',
     tableName: 'pharmacy_orders',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // status is actually a real column in this table (promoted by
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) -- now stored directly in the real column.
     indexedColumns: [{ field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['prescNo'],
@@ -584,15 +621,17 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── إضافة: استيراد Excel للمواعيد (appointments) ──────────────────────────
-  // مسجَّلة هنا عمداً *قبل* pgCrud(router, 'appointments', ...) — نفس القاعدة
-  // المتبعة بكل موديول آخر بهذا الملف، لتفادي تعارض GET /appointments/:id
-  // مع GET /appointments/import-template. indexedColumns مطابقة تماماً
-  // لمصفوفة pgCrud(router, 'appointments', ...) بالأسفل (patient, doctor,
-  // date, status). القيم المقبولة لحقل "الحالة" هي المفاتيح الخام الإنجليزية
-  // (confirmed, pending, completed, cancelled)، وحقل "نوع الزيارة" كذلك
-  // (checkup, followup, consult, emergency) — نفس القيم الداخلية الفعلية
-  // المستخدمة بملف AppointmentsPage.js، وليست النص العربي المعروض بالواجهة.
+  // ── Added: Excel import for appointments (appointments) ──────────────────────────
+  // Registered here deliberately *before* pgCrud(router, 'appointments', ...)
+  // — the same rule followed for every other module in this file, to
+  // avoid a conflict between GET /appointments/:id and GET
+  // /appointments/import-template. indexedColumns exactly matches the
+  // array in pgCrud(router, 'appointments', ...) below (patient, doctor,
+  // date, status). The accepted values for the "Status" field are the raw
+  // English keys (confirmed, pending, completed, cancelled), and likewise
+  // for "Visit Type" (checkup, followup, consult, emergency) — the same
+  // actual internal values used in AppointmentsPage.js, not the Arabic
+  // text shown in the UI.
   registerExcelImport(router, 'appointments', collectionSchemas.appointments, {
     'المريض': 'patient', 'اسم المريض': 'patient', 'Patient': 'patient',
     'الطبيب': 'doctor', 'Doctor': 'doctor',
@@ -625,14 +664,16 @@ const registerAllModules = (router) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ── دفعة استيراد إضافية: أسعار الخدمات، الحسابات، الجودة، الردهات، صالة
-  //    الولادة، العلاج الطبيعي، المشتريات، الوثائق، متابعات CRM، الكتب
-  //    الصادرة/الواردة، الإجازات المرضية، ومأموريات الإسعاف — كلها مسجَّلة
-  //    هنا عمداً *قبل* استدعاءات pgCrud المقابلة لها بالأسفل، لنفس السبب
-  //    المذكور أعلى الملف (تعارض GET /module/:id مع GET /module/import-template).
+  // ── Additional import batch: service prices, accounts, quality, wards,
+  //    the delivery room, physiotherapy, procurement, documents, CRM
+  //    follow-ups, outgoing/incoming letters, medical leaves, and ambulance
+  //    missions — all registered here deliberately *before* their
+  //    corresponding pgCrud calls further down, for the same reason stated
+  //    at the top of the file (a conflict between GET /module/:id and GET
+  //    /module/import-template).
   // ══════════════════════════════════════════════════════════════════════════
 
-  // ── الفوترة: قائمة الأسعار الافتراضية (servicePrices) ──────────────────────
+  // ── Billing: the default price list (servicePrices) ──────────────────────
   registerExcelImport(router, 'servicePrices', collectionSchemas.servicePrices, {
     'الفئة': 'category', 'Category': 'category',
     'الاسم بالعربي': 'nameAr', 'Name (Arabic)': 'nameAr',
@@ -652,7 +693,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الحسابات: المعاملات المالية العامة (transactions) ──────────────────────
+  // ── Accounts: general financial transactions (transactions) ──────────────────────
   registerExcelImport(router, 'transactions', collectionSchemas.transactions, {
     'التاريخ': 'date', 'Date': 'date',
     'الوصف': 'desc', 'Description': 'desc',
@@ -664,17 +705,20 @@ const registerAllModules = (router) => {
     'المرجع': 'ref', 'Reference': 'ref',
   }, {
     hospitalScoped: true, permission: 'accounts',
-    // status أصبح عموداً حقيقياً فعلاً بهذا الجدول (رُقِّي بـ
-    // 004_promote_batch2.sql ومسجَّل بتسجيل pgCrud أدناه)، لكن استيراد Excel
-    // هذا لا يقبل أصلاً حقل status بـcolumnMap أعلاه — فتبقى [] هنا صحيحة
-    // فعلياً (لا شيء لتوجيهه للعمود الحقيقي عبر هذا المسار تحديداً).
+    // status actually became a real column in this table (promoted by
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below), but this Excel import doesn't accept a status field in the
+    // columnMap above at all -- so [] here is genuinely correct (there's
+    // nothing to route to the real column through this specific route).
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['ref'],
-    // ── إصلاح: type بالواجهة قيمته الفعلية عربية (دخل/مصروف)، بينما category
-    // وmethod قيمتهما الفعلية مفاتيح إنجليزية (revenue/donation/... وcash/
-    // bank/card/check) — عكس توقّعي الأول. نطبّع أي نص عربي أو إنجليزي شائع
-    // للقيمة الصحيحة حتى لا تنكسر إحصائيات الإيراد/المصروف بصمت.
+    // ── Fix: in the UI, type's actual value is Arabic (دخل/مصروف --
+    // income/expense), while category's and method's actual values are
+    // English keys (revenue/donation/... and cash/bank/card/check) -- the
+    // opposite of my first assumption. We normalize any common Arabic or
+    // English text to the correct value so the income/expense statistics
+    // don't silently break.
     afterParse: (row) => {
       const typeMap = { 'دخل': 'دخل', income: 'دخل', 'مصروف': 'مصروف', expense: 'مصروف' };
       const catMap = {
@@ -705,15 +749,17 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الحسابات: سجل الترفيعات والعلاوات المُوحَّد (promotionsAllowances) ──────────
-  // دمج جدولي الترفيعات والعلاوات السابقين بجدول واحد — كل صف Excel قد يحمل
-  // جانب الترفيع و/أو جانب العلاوة معاً، وكل جانب له رقم/تاريخ قرار مستقلان
-  // تماماً (بدل حقل "رقم القرار" المشترك سابقاً). راجع
-  // migrations-sql/014_merge_promotions_allowances.sql.
-  // ملاحظة: tableName صريح هنا لأن الجدول الفعلي promotions_allowances
-  // (بشرطة سفلية) بينما اسم apiName بصيغة camelCase — بدونه يحاول الاستيراد
-  // الكتابة على جدول "promotionsallowances" غير الموجود (Postgres يُحوِّل أي
-  // معرِّف غير مُقتبَس تلقائياً لحروف صغيرة).
+  // ── Accounts: the unified promotions and allowances log (promotionsAllowances) ──────────
+  // Merges the previous separate promotions and allowances tables into one
+  // table — every Excel row may carry the promotion side and/or the
+  // allowance side together, and each side has an entirely independent
+  // decision number/date (instead of the shared "decision number" field
+  // used before). See migrations-sql/014_merge_promotions_allowances.sql.
+  // Note: tableName is explicit here because the actual table is
+  // promotions_allowances (with an underscore) while the apiName is in
+  // camelCase — without it, the import would try to write to the
+  // nonexistent "promotionsallowances" table (Postgres automatically
+  // lowercases any unquoted identifier).
   registerExcelImport(router, 'promotionsAllowances', collectionSchemas.promotionsAllowances, {
     'الاسم': 'name', 'Name': 'name',
     'من درجة': 'fromGrade', 'From Grade': 'fromGrade',
@@ -737,8 +783,9 @@ const registerAllModules = (router) => {
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['name', 'promotionDecisionNo', 'allowanceDecisionNo'],
-    // ── الحالة تُعبَّأ فقط لو أُدخِلت فعلاً (لا نفرض قيمة افتراضية على جانب لم
-    // يُستخدَم إطلاقاً بهذا الصف — قد يكون الصف ترفيعاً فقط أو علاوة فقط أو كليهما).
+    // ── The status is only filled in if it was actually entered (we don't
+    // force a default value on a side that was never used at all in this
+    // row -- a row could be a promotion only, an allowance only, or both).
     afterParse: (row) => {
       const promoMap = { 'منجز': 'مُنجَز', 'مُنجَز': 'مُنجَز', done: 'مُنجَز', 'مستحق': 'مستحق', due: 'مستحق', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
       const allowMap = { 'مصرف': 'مدفوع', 'مُصرَف': 'مدفوع', 'مصروف': 'مدفوع', 'مدفوع': 'مدفوع', paid: 'مدفوع', 'مستحقة': 'مستحقة', due: 'مستحقة', 'قيد المعالجة': 'قيد المعالجة', process: 'قيد المعالجة' };
@@ -772,20 +819,21 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الحسابات: الرواتب (salaries) ────────────────────────────────────────────
-  // ── ملاحظة بنيوية: additions[]/deductions[] مصفوفتان بالواجهة، وليستا
-  // حقلين مسطّحين — نفس نمط pharmacyOrders.items[] أعلاه. نستقبل بند إضافة
-  // واحد وبند خصم واحد اختياريين بكل صف Excel عبر حقول مؤقتة مسطّحة، ثم
-  // نبنيهما هنا كعنصر وحيد داخل كل مصفوفة قبل الحفظ.
+  // ── Accounts: salaries (salaries) ────────────────────────────────────────────
+  // ── Structural note: additions[]/deductions[] are arrays in the UI, not
+  // flat fields -- the same pattern as pharmacyOrders.items[] above. We
+  // accept one optional addition line and one optional deduction line per
+  // Excel row via temporary flat fields, then build them here as a single
+  // element inside each array before saving.
   registerExcelImport(router, 'salaries', collectionSchemas.salaries, {
     'الاسم': 'name', 'Name': 'name',
     'المسمى الوظيفي': 'jobTitle', 'Job Title': 'jobTitle',
     'القسم': 'dept', 'Department': 'dept',
     'الدرجة': 'grade', 'Grade': 'grade',
     'الراتب الاسمي': 'baseSalary', 'Nominal Salary': 'baseSalary',
-    // ── إصلاح: "الراتب الأساسي" أُعيد تسميته "الراتب الاسمي" بكل الواجهة —
-    // يبقى مقبولاً هنا كمرادف قديم حتى لا يُكسَر استيراد أي ملف Excel محفوظ
-    // مسبقاً بالتسمية السابقة.
+    // ── Fix: "Base Salary" was renamed to "Nominal Salary" throughout the
+    // UI -- still accepted here as an old synonym so importing any
+    // previously-saved Excel file with the old naming doesn't break.
     'الراتب الأساسي': 'baseSalary', 'Base Salary': 'baseSalary',
     'الشهر': 'month', 'Month': 'month',
     'اسم بند الإضافة': 'additionLabelRaw', 'Addition Label': 'additionLabelRaw',
@@ -803,14 +851,17 @@ const registerAllModules = (router) => {
       const { additionLabelRaw, additionAmountRaw, deductionLabelRaw, deductionAmountRaw, ...rest } = row;
       rest.additions = additionLabelRaw ? [{ label: additionLabelRaw, amount: Number(additionAmountRaw) || 0 }] : [];
       rest.deductions = deductionLabelRaw ? [{ label: deductionLabelRaw, amount: Number(deductionAmountRaw) || 0 }] : [];
-      // ── إصلاح: "amount" يمثّل صافي الراتب (نفس دلالته بـtransactions/allowances —
-      // القيمة المالية الإجمالية النهائية للسجل)، أي baseSalary + مجموع additions
-      // - مجموع deductions، مطابقاً تماماً لدالة calcNet() بالواجهة
-      // (frontend/src/pages/accounts/shared.js). كان يُعبَّى سابقاً بقيمة
-      // baseSalary وحدها فقط لتفادي فشل تحقق قديم بمخطط الاستيراد — الحقل الآن
-      // غير مطلوب أصلاً بـcollectionSchemas.salaries، لكن نحسبه صحيحاً هنا
-      // بأي حال حتى يبقى صافياً حقيقياً لأي طرف يقرأه لاحقاً (تقرير، تصدير...)
-      // بدل الاعتماد على أنه دائماً يُعاد حسابه بالواجهة فقط.
+      // ── Fix: "amount" represents the net salary (the same meaning it has
+      // in transactions/allowances -- the record's final total monetary
+      // value), i.e. baseSalary + sum of additions - sum of deductions,
+      // exactly matching the calcNet() function in the frontend
+      // (frontend/src/pages/accounts/shared.js). It used to be filled in
+      // with the baseSalary value alone, just to avoid failing an old
+      // validation in the import schema -- the field is no longer actually
+      // required in collectionSchemas.salaries, but we still calculate it
+      // correctly here anyway so it stays a genuinely net value for
+      // anything that reads it later (a report, an export...) instead of
+      // relying on it always being recalculated in the frontend alone.
       const totalAdd = rest.additions.reduce((s, a) => s + (Number(a.amount) || 0), 0);
       const totalDed = rest.deductions.reduce((s, d) => s + (Number(d.amount) || 0), 0);
       rest.amount = (Number(rest.baseSalary) || 0) + totalAdd - totalDed;
@@ -833,7 +884,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الموارد البشرية: الكتب الصادرة (outgoing) ───────────────────────────────
+  // ── Human Resources: outgoing letters (outgoing) ───────────────────────────────
   registerExcelImport(router, 'outgoing', collectionSchemas.outgoing, {
     'رقم الصادر': 'ref', 'Ref No': 'ref',
     'عنوان الكتاب': 'title', 'Letter Title': 'title',
@@ -857,7 +908,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الموارد البشرية: الكتب الواردة (incoming) ───────────────────────────────
+  // ── Human Resources: incoming letters (incoming) ───────────────────────────────
   registerExcelImport(router, 'incoming', collectionSchemas.incoming, {
     'رقم الوارد': 'ref', 'Ref No': 'ref',
     'عنوان الكتاب': 'title', 'Letter Title': 'title',
@@ -883,7 +934,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الموارد البشرية: الإجازات المرضية (medicalLeaves) ───────────────────────
+  // ── Human Resources: medical leaves (medicalLeaves) ───────────────────────
   registerExcelImport(router, 'medicalLeaves', collectionSchemas.medicalLeaves, {
     'الموظف': 'employee', 'Employee': 'employee',
     'القسم': 'dept', 'Department': 'dept',
@@ -898,17 +949,20 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'medical-leave',
     tableName: 'medical_leaves',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // status is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) — it's stored directly in the real column now.
     indexedColumns: [{ field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['employee', 'from', 'to'],
-    // ── إصلاح: الواجهة تفلتر الإحصائيات بمقارنة صارمة على مفاتيح إنجليزية
-    // فعلية (approved/review/rejected) — أي نص عربي خام بعمود "الحالة" (حتى
-    // لو مطابق تماماً لنص الشارة المعروضة بالجدول) ما يطابق أي شرط، فتطلع كل
-    // البطاقات صفراً رغم وجود بيانات فعلية بكل حالة. نطبّع القيمة هنا لأي
-    // نص عربي أو إنجليزي شائع، وأي قيمة غير معروفة تُعامَل كـ"قيد المراجعة"
-    // (الافتراضي بنموذج الإضافة اليدوي نفسه).
+    // ── Fix: the frontend filters statistics by a strict comparison
+    // against actual English keys (approved/review/rejected) -- any raw
+    // Arabic text in the "status" column (even if it exactly matches the
+    // badge text shown in the table) doesn't match any condition, so every
+    // card shows zero even though real data exists in every status. We
+    // normalize the value here for any common Arabic or English text, and
+    // any unrecognized value is treated as "under review" (the same
+    // default used by the manual add form itself).
     afterParse: (row) => {
       const raw = (row.status || '').toString().trim();
       const map = {
@@ -931,9 +985,10 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── ضبط الوثائق (documents) ──────────────────────────────────────────────────
-  // ── ملاحظة: حقل tags[] مصفوفة بالواجهة — لا يُستورَد من Excel، تبدأ فاضية
-  // دائماً عبر afterParse ويمكن إضافتها لاحقاً من الواجهة.
+  // ── Document control (documents) ──────────────────────────────────────────────────
+  // ── Note: the tags[] field is an array in the frontend -- it isn't
+  // imported from Excel, it always starts empty via afterParse and can be
+  // added later from the frontend.
   registerExcelImport(router, 'documents', collectionSchemas.documents, {
     'رقم الوثيقة': 'docNo', 'Doc No': 'docNo',
     'النوع': 'type', 'Type': 'type',
@@ -947,9 +1002,9 @@ const registerAllModules = (router) => {
     'مسؤول المعالجة': 'assignedTo', 'Assigned To': 'assignedTo',
   }, {
     hospitalScoped: true, permission: 'documents',
-    // type/status/priority أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه) — تُخزَّن الآن
-    // بالأعمدة الحقيقية مباشرة.
+    // type/status/priority are now actual real columns in this table
+    // (promoted in 004_promote_batch2.sql and registered in the pgCrud
+    // registration below) — stored directly in the real columns now.
     indexedColumns: [
       { field: 'type', column: 'type' },
       { field: 'status', column: 'status' },
@@ -970,7 +1025,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── المشتريات (procurement) ──────────────────────────────────────────────────
+  // ── Procurement (procurement) ──────────────────────────────────────────────────
   registerExcelImport(router, 'procurement', collectionSchemas.procurement, {
     'رقم أمر الشراء': 'poNo', 'PO Number': 'poNo',
     'عنوان المشتريات': 'title', 'Title': 'title',
@@ -985,8 +1040,9 @@ const registerAllModules = (router) => {
     'الحالة': 'status', 'Status': 'status',
   }, {
     hospitalScoped: true, permission: 'procurement',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // status is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) — it's stored directly in the real column now.
     indexedColumns: [{ field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['poNo'],
@@ -1001,16 +1057,19 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── CRM المرضى: المتابعات والتذكيرات (crmFollowUps) ─────────────────────────
-  // ── ملاحظة مهمة: "معرّف المريض" هنا هو الرقم الداخلي الرقمي لسجل المريض
-  // بقاعدة البيانات (عمود id بجدول patients)، وليس رمز المريض النصي
-  // (patientId code مثل PT-0001) المستخدَم بموديولات أخرى كالمختبر والأشعة.
-  // يمكن الحصول عليه من تصدير Excel لصفحة المرضى.
-  // ── ملاحظة مُحدَّثة: صار يقبل الآن "اسم المريض" مباشرة ويحوّله لـpatientId
-  // الرقمي الحقيقي بالبحث المباشر بجدول patients (نفس أسلوب wardId/
-  // admissionId) — بدل الاعتماد على معرفة رقم داخلي يدوياً، مما يصعب توفيره
-  // فعلياً بملف Excel عادي. لو الاسم ما تطابق بالضبط مع مريض حقيقي، السطر
-  // يُرفَض بخطأ واضح (patientId مطلوب) بدل حفظه بربط خاطئ صامت.
+  // ── Patient CRM: follow-ups and reminders (crmFollowUps) ─────────────────────────
+  // ── Important note: "patient id" here is the patient record's internal
+  // numeric id in the database (the id column in the patients table), not
+  // the textual patient code (patientId code like PT-0001) used by other
+  // modules such as the lab and radiology. It can be obtained from the
+  // Excel export of the patients page.
+  // ── Updated note: it now accepts "patient name" directly and resolves it
+  // to the real numeric patientId by looking it up directly in the
+  // patients table (the same approach as wardId/admissionId) -- instead of
+  // relying on manually knowing an internal number, which is hard to
+  // actually provide in a plain Excel file. If the name doesn't exactly
+  // match a real patient, the row is rejected with a clear error
+  // (patientId required) instead of being saved with a silently wrong link.
   registerExcelImport(router, 'crmFollowUps', collectionSchemas.crmFollowUps, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'معرّف المريض': 'patientId', 'Patient Numeric ID': 'patientId',
@@ -1025,9 +1084,10 @@ const registerAllModules = (router) => {
     indexedColumns: [{ field: 'patientId', column: 'patient_id' }, { field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['patientId', 'title', 'dueDate'],
-    // ── إصلاح استباقي (نفس علة medicalLeaves): الواجهة تقارن status/
-    // followUpType/reminderChannel بمفاتيح إنجليزية صارمة فقط. نطبّع أي نص
-    // عربي شائع (أو إنجليزي بأي حالة أحرف) للمفتاح الصحيح قبل الحفظ.
+    // ── A preemptive fix (the same issue as medicalLeaves): the frontend
+    // compares status/followUpType/reminderChannel against strict English
+    // keys only. We normalize any common Arabic text (or English in any
+    // letter case) to the correct key before saving.
     afterParse: async (row, hospitalId) => {
       const statusMap = {
         'قيد الانتظار': 'pending', 'مكتملة': 'completed', 'فائتة': 'missed', 'ملغاة': 'cancelled',
@@ -1051,7 +1111,7 @@ const registerAllModules = (router) => {
           if (hospitalId) { values.push(hospitalId); conditions.push(`data->>'hospitalId' = $${values.length}`); }
           const result = await pool.query(`SELECT id FROM patients WHERE ${conditions.join(' AND ')} LIMIT 1`, values);
           if (result.rows.length > 0) rest.patientId = result.rows[0].id;
-        } catch { /* فشل البحث — patientId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح بدل ربط خاطئ */ }
+        } catch { /* the lookup failed -- patientId stays empty, the row is rejected later with a clear error instead of a wrong link */ }
       }
       return {
         ...rest,
@@ -1069,7 +1129,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── إدارة الجودة (quality) ────────────────────────────────────────────────────
+  // ── Quality management (quality) ────────────────────────────────────────────────────
   registerExcelImport(router, 'qualityAudits', collectionSchemas.qualityAudits, {
     'العنوان': 'title', 'Title': 'title',
     'العنوان بالإنجليزي': 'titleEn', 'Title (English)': 'titleEn',
@@ -1143,7 +1203,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الردهات (wards / admissions) ────────────────────────────────────────────
+  // ── Wards (wards / admissions) ────────────────────────────────────────────
   registerExcelImport(router, 'wards', collectionSchemas.wards, {
     'اسم الردهة': 'name', 'Ward Name': 'name',
     'الاسم بالإنجليزي': 'nameEn', 'Name (English)': 'nameEn',
@@ -1160,16 +1220,19 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── ملاحظة: "الردهة" (wardId) مرجع رقمي داخلي (foreign key) لجدول wards —
-  // لا يمكن تعيينه تلقائياً من اسم نصي عبر الاستيراد الجماعي، فيبقى فارغاً
-  // بالسجلات المستورَدة ويُحدَّد لاحقاً يدوياً من الواجهة (زر تعديل).
-  // ── ملاحظة مُحدَّثة: بعد إصلاح excelImportRoutes.js ليدعم afterParse
-  // غير متزامن (async)، صار ممكناً تحويل اسم الردهة النصي بملف Excel إلى
-  // wardId رقمي فعلي بالبحث المباشر بجدول wards أثناء المعالجة — بدل ما يبقى
-  // فارغاً كما كان بالنسخة السابقة. الشرط الوحيد: اسم الردهة بالعمود يطابق
-  // *بالضبط* اسم ردهة موجود فعلاً بجدول wards (نفس النص المستورَد بملف
-  // wards_import.xlsx) — لو لم يوجد تطابق، wardId يبقى فارغاً وتحتاج ربطه
-  // يدوياً كما كان الحال سابقاً، بدل ما يفشل الصف كاملاً.
+  // ── Note: "ward" (wardId) is an internal numeric reference (foreign
+  // key) to the wards table -- it can't be automatically assigned from a
+  // text name via bulk import, so it stays empty in imported records and
+  // is set later manually from the frontend (an edit button).
+  // ── Updated note: after fixing excelImportRoutes.js to support an async
+  // afterParse, it became possible to convert the textual ward name in the
+  // Excel file into a real numeric wardId by looking it up directly in the
+  // wards table during processing -- instead of staying empty as in the
+  // previous version. The only condition: the ward name in the column
+  // *exactly* matches a ward name that actually exists in the wards table
+  // (the same text imported in the wards_import.xlsx file) -- if there's
+  // no match, wardId stays empty and needs to be linked manually as
+  // before, instead of failing the whole row.
   registerExcelImport(router, 'admissions', collectionSchemas.admissions, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'الردهة': 'wardName', 'Ward': 'wardName',
@@ -1210,7 +1273,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── صالة الولادة (deliveries) ────────────────────────────────────────────────
+  // ── Delivery ward (deliveries) ────────────────────────────────────────────────
   registerExcelImport(router, 'deliveries', collectionSchemas.deliveries, {
     'اسم الأم': 'motherName', 'Mother Name': 'motherName',
     'عمر الأم': 'motherAge', 'Mother Age': 'motherAge',
@@ -1232,10 +1295,11 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'delivery',
-    // stage/baby_status أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه). اسم الحقل
-    // بالواجهة babyStatus (camelCase) بينما اسم العمود baby_status —
-    // تُخزَّن الآن بالأعمدة الحقيقية مباشرة.
+    // stage/baby_status are now actual real columns in this table
+    // (promoted in 004_promote_batch2.sql and registered in the pgCrud
+    // registration below). The field name in the frontend is babyStatus
+    // (camelCase) while the actual column name is baby_status -- stored
+    // directly in the real columns now.
     indexedColumns: [
       { field: 'stage', column: 'stage' },
       { field: 'babyStatus', column: 'baby_status' },
@@ -1255,7 +1319,7 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── العلاج الطبيعي (ptEquipment / ptSessions) ────────────────────────────────
+  // ── Physical therapy (ptEquipment / ptSessions) ────────────────────────────────
   registerExcelImport(router, 'ptEquipment', collectionSchemas.ptEquipment, {
     'اسم الجهاز': 'name', 'Equipment Name': 'name',
     'الاسم بالإنجليزي': 'nameEn', 'Name (English)': 'nameEn',
@@ -1265,8 +1329,9 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'physiotherapy',
     tableName: 'pt_equipment',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // status is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) — it's stored directly in the real column now.
     indexedColumns: [{ field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['name'],
@@ -1289,10 +1354,11 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'physiotherapy',
     tableName: 'pt_sessions',
-    // status/date أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه) — تُخزَّن الآن
-    // بالأعمدة الحقيقية مباشرة. عمود date من نوع DATE فعلي (وليس نصاً)،
-    // يقبل مباشرة نص 'YYYY-MM-DD' القادم من الواجهة بلا أي تحويل إضافي.
+    // status/date are now actual real columns in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) — stored directly in the real columns now. The date column
+    // is an actual DATE type (not text), it directly accepts a
+    // 'YYYY-MM-DD' string coming from the frontend with no extra conversion.
     indexedColumns: [
       { field: 'status', column: 'status' },
       { field: 'date', column: 'date' },
@@ -1308,12 +1374,14 @@ const registerAllModules = (router) => {
     ],
   });
 
-  // ── الإسعاف: المأموريات (ambulanceMissions) ─────────────────────────────────
-  // ── ملاحظة: "المركبة" (vehicleId) مرجع رقمي داخلي (foreign key) لجدول
-  // ambulanceVehicles — يبقى فارغاً بالسجلات المستورَدة ويُحدَّد لاحقاً يدوياً
-  // من الواجهة، لنفس سبب wardId أعلاه. تحقق من أسماء الحقول هنا مقابل
-  // EMPTY_MISS الفعلي بـ AmbulancePage.js قبل أول استخدام حقيقي — أُنشئت
-  // بأفضل معرفة متوفرة عن نموذج المأمورية دون رؤية الكود الكامل للنموذج.
+  // ── Ambulance: missions (ambulanceMissions) ─────────────────────────────────
+  // ── Note: "vehicle" (vehicleId) is an internal numeric reference
+  // (foreign key) to the ambulanceVehicles table -- it stays empty in
+  // imported records and is set later manually from the frontend, for the
+  // same reason as wardId above. Check the field names here against the
+  // actual EMPTY_MISS in AmbulancePage.js before the first real use -- this
+  // was built with the best knowledge available about the mission form
+  // without seeing the form's full code.
   registerExcelImport(router, 'ambulanceMissions', collectionSchemas.ambulanceMissions, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'هاتف المتصل': 'callerPhone', 'Caller Phone': 'callerPhone',
@@ -1325,8 +1393,9 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'ambulance',
     tableName: 'ambulance_missions',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه) — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // status is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below) — it's stored directly in the real column now.
     indexedColumns: [{ field: 'status', column: 'status' }],
     limiter: importLimiter,
     duplicateCheck: ['address', 'callTime'],
@@ -1347,13 +1416,14 @@ const registerAllModules = (router) => {
   // enforcement itself: a hospital-scoped user's own hospitalId is still
   // forced unconditionally regardless of this or any other query param.
   pgCrud(router, 'patients', collectionSchemas.patients, PATIENT_COLUMNS, undefined, { hospitalScoped: true, permission: 'patients', openRead: true, searchFields: ['patientId', 'bloodType', 'nationalId'], extraFilterFields: ['patientId', 'bloodType', 'nationalId', 'hospitalId'], dateRangeColumn: 'created_at' });
-  // ── المرحلة الثانية: كاش Redis ─────────────────────────────────────────────
-  // قائمة الأطباء تُقرأ من صفحات كثيرة جداً (قوائم منسدلة بالمواعيد، الوصفات،
-  // التحويلات...) وتتغيّر نادراً (إضافة/تعديل طبيب مناسبة نادرة نسبياً) —
-  // مرشّح مثالي للتخزين المؤقت. 5 دقائق (300 ثانية) توازن بين تقليل ضغط
-  // قاعدة البيانات وبقاء البيانات حديثة بما يكفي بلا أي إبطال يدوي إضافي
-  // (وأي كتابة فعلية على الموديول تُبطِل الكاش فوراً بأي حال — راجع
-  // routes/pgCrud.js).
+  // ── Phase two: Redis caching ─────────────────────────────────────────────
+  // The doctors list is read from very many pages (dropdown lists in
+  // appointments, prescriptions, referrals...) and changes rarely (adding
+  // or editing a doctor is a relatively rare event) -- an ideal candidate
+  // for caching. 5 minutes (300 seconds) balances reducing database
+  // pressure against the data staying fresh enough, with no extra manual
+  // invalidation needed (and any actual write to the module invalidates
+  // the cache immediately anyway — see routes/pgCrud.js).
   pgCrud(router, 'doctors', collectionSchemas.doctors, DOCTOR_COLUMNS, undefined, { hospitalScoped: true, permission: 'doctors', openRead: true, searchFields: ['specialization'], extraFilterFields: ['specialization'], cache: { ttlSeconds: 300 } });
   pgCrud(router, 'appointments', collectionSchemas.appointments, [
     { field: 'patient', column: 'patient' },
@@ -1361,13 +1431,16 @@ const registerAllModules = (router) => {
     { field: 'date', column: 'date' },
     { field: 'status', column: 'status' },
   ], undefined, { hospitalScoped: true, permission: 'appointments', openRead: true, dateRangeField: 'date' });
-  // ── الفوترة: الفواتير (invoices) — سجلات فواتير مدفوعة تاريخياً ──────────────
-  // ── نفس أسلوب حل patientId المستخدم بـ crmFollowUps: تقبل "اسم المريض"
-  // مباشرة وتحوّله لمعرّف رقمي حقيقي بالبحث بجدول patients. كل صف Excel يمثّل
-  // فاتورة بخدمة واحدة (الحالة الأشيع لفواتير تاريخية بسيطة) — لفواتير بعدة
-  // خدمات بنفس الزيارة، تُضاف كصفوف منفصلة بنفس اسم المريض ونفس المرجع
-  // (referenceCode)، وتبقى فواتير منفصلة بقاعدة البيانات (الاستيراد الحالي
-  // ما يجمّعها بفاتورة واحدة تلقائياً).
+  // ── Billing: invoices (invoices) — historically paid invoice records ──────────────
+  // ── The same patientId resolution approach used in crmFollowUps: accepts
+  // "patient name" directly and resolves it to a real numeric id by
+  // looking it up in the patients table. Each Excel row represents one
+  // invoice with a single service (the most common case for simple
+  // historical invoices) -- for invoices with several services on the same
+  // visit, they're added as separate rows with the same patient name and
+  // the same reference (referenceCode), and they stay separate invoices in
+  // the database (the current import doesn't automatically merge them into
+  // one invoice).
   registerExcelImport(router, 'invoices', collectionSchemas.invoices, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'الخدمة': 'description', 'Service': 'description',
@@ -1396,7 +1469,7 @@ const registerAllModules = (router) => {
           if (hospitalId) { values.push(hospitalId); conditions.push(`data->>'hospitalId' = $${values.length}`); }
           const result = await pool.query(`SELECT id FROM patients WHERE ${conditions.join(' AND ')} LIMIT 1`, values);
           if (result.rows.length > 0) rest.patientId = result.rows[0].id;
-        } catch { /* فشل البحث — patientId يبقى فارغاً، الصف يُرفَض لاحقاً بخطأ واضح بدل ربط خاطئ */ }
+        } catch { /* the lookup failed -- patientId stays empty, the row is rejected later with a clear error instead of a wrong link */ }
       }
       const p = Number(price) || 0;
       const q = Number(qty) || 1;
@@ -1423,8 +1496,8 @@ const registerAllModules = (router) => {
     { field: 'status', column: 'status' },
     { field: 'total', column: 'total' },
   ], undefined, { hospitalScoped: true, permission: 'billing' });
-  // كاش Redis: بيانات الموظفين (الطاقم) تُقرأ بصفحات كثيرة (الرواتب،
-  // الترفيعات، الإضابير الشخصية...) وتتغيّر نادراً — نفس منطق doctors أعلاه.
+  // Redis caching: employee (staff) data is read on many pages (salaries,
+  // promotions, personal dossiers...) and changes rarely — the same logic as doctors above.
   // extraFilterFields: ['hospitalId'] -- same opt-in single-facility view for
   // a global admin as the patients registration above; the cache key below
   // already includes the full query string, so this doesn't need any cache
@@ -1439,14 +1512,16 @@ const registerAllModules = (router) => {
     { field: 'jobTitle', column: 'job_title' },
   ], undefined, { hospitalScoped: true, permission: 'hr' });
 
-  // باقي الموديولات: تخزين JSONB بحت بدون أعمدة فهرسة إضافية (انظر تعليق
-  // المخطط بملف postgres_schema.sql لشرح السبب). اسم الجدول snake_case دائماً
-  // حتى لو كان اسم الموديول camelCase بالفرونت إند (مثل medicalLeaves -> medical_leaves).
-  // كلها مفعّل عليها الفلترة حسب المنشأة الآن (المرحلة 4 من دعم المنشآت المتعددة).
+  // The remaining modules: pure JSONB storage with no extra indexed
+  // columns (see the schema comment in postgres_schema.sql for the
+  // reason). The table name is always snake_case even if the module name
+  // is camelCase in the frontend (e.g. medicalLeaves -> medical_leaves).
+  // Facility-based filtering is now enabled on all of them (phase 4 of
+  // multi-hospital support).
   pgCrud(router, 'departments', collectionSchemas.departments, [], undefined, { hospitalScoped: true, permission: 'departments', openRead: true });
   pgCrud(router, 'outgoing', collectionSchemas.outgoing, [], undefined, { hospitalScoped: true, permission: 'hr' });
   pgCrud(router, 'incoming', collectionSchemas.incoming, [], undefined, { hospitalScoped: true, permission: 'hr' });
-  // ── التطعيمات (vaccinations) ─────────────────────────────────────────────────
+  // ── Vaccinations (vaccinations) ─────────────────────────────────────────────────
   registerExcelImport(router, 'vaccinations', collectionSchemas.vaccinations, {
     'المريض': 'patient', 'اسم المريض': 'patient', 'Patient': 'patient',
     'اللقاح': 'vaccine', 'Vaccine': 'vaccine',
@@ -1458,10 +1533,12 @@ const registerAllModules = (router) => {
     'ملاحظات': 'notes', 'Notes': 'notes',
   }, {
     hospitalScoped: true, permission: 'vaccinations',
-    // status عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه)، لكن مسار استيراد Excel هذا عمداً ما زال
-    // يخزّنه ضمن JSONB فقط هنا (لا تُغيَّر ضمن هذا الإصلاح) — يعني السجلات
-    // المستوردة من Excel تبقى بعمود status الحقيقي فارغاً حتى لو أُصلح لاحقاً.
+    // status is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below), but this Excel import route deliberately still stores it in
+    // JSONB only here (not changed as part of this fix) — meaning records
+    // imported from Excel keep the real status column empty even after
+    // this later fix.
     indexedColumns: [],
     limiter: importLimiter,
     duplicateCheck: ['patient', 'vaccine', 'date'],
@@ -1496,14 +1573,16 @@ const registerAllModules = (router) => {
   ], undefined, { hospitalScoped: true, permission: 'radiology', extraFilterFields: ['status', 'modality'] });
   pgCrud(router, 'pharmacyOrders', collectionSchemas.pharmacyOrders, [{ field: 'status', column: 'status' }], 'pharmacy_orders', { hospitalScoped: true, permission: 'pharmacy', extraFilterFields: ['status'] });
   pgCrud(router, 'assets', collectionSchemas.assets, [], undefined, { hospitalScoped: true, permission: 'assets', searchFields: ['assetNo'], extraFilterFields: ['category', 'status'] });
-  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
+  // ── Fix: an actual maintenance log instead of overwriting the last maintenance date every time ──────────
   pgCrud(router, 'assetMaintenanceLog', collectionSchemas.assetMaintenanceLog, [
     { field: 'assetId', column: 'asset_id' },
   ], 'asset_maintenance_log', { hospitalScoped: true, permission: 'assets' });
-  // كاش Redis: قائمة المخزون (تتضمّن الأدوية — لا يوجد موديول "medicines"
-  // منفصل، الأدوية سجلات inventory بـcategory='medicine') تُقرأ باستمرار
-  // (الصيدلية، الوصفات، تقارير النفاد...). مدة أقصر (3 دقائق) من doctors/
-  // employees لأن الكميات (qty) قد تتغيّر بوتيرة أعلى (صرف/استلام يومي).
+  // Redis caching: the inventory list (includes medicines -- there's no
+  // separate "medicines" module, medicines are inventory records with
+  // category='medicine') is read constantly (pharmacy, prescriptions,
+  // stock-out reports...). A shorter duration (3 minutes) than doctors/
+  // employees because quantities (qty) may change at a higher frequency
+  // (daily dispensing/receiving).
   pgCrud(router, 'inventory', collectionSchemas.inventory, [], undefined, { hospitalScoped: true, permission: 'inventory', searchFields: ['code'], extraFilterFields: ['category', 'status'], dateRangeField: 'expiry', cache: { ttlSeconds: 180 } });
   pgCrud(router, 'procurement', collectionSchemas.procurement, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'procurement', extraFilterFields: ['status'] });
   pgCrud(router, 'projects', collectionSchemas.projects, [], undefined, { hospitalScoped: true, permission: 'projects', searchFields: ['code', 'manager', 'name'], extraFilterFields: ['status'] });
@@ -1514,18 +1593,18 @@ const registerAllModules = (router) => {
   ], undefined, { hospitalScoped: true, permission: 'documents', extraFilterFields: ['type', 'status', 'priority'] });
   pgCrud(router, 'servicePrices', collectionSchemas.servicePrices, [{ field: 'category', column: 'category' }], 'service_prices', { hospitalScoped: true, permission: 'billing', extraFilterFields: ['category'] });
   pgCrud(router, 'transactions', collectionSchemas.transactions, [{ field: 'status', column: 'status' }], undefined, { hospitalScoped: true, permission: 'accounts' });
-  // ── سجل الترفيعات والعلاوات المُوحَّد (دمج promotions/allowances السابقين،
-  // راجع migrations-sql/014_merge_promotions_allowances.sql) ─────────────────
+  // ── The unified promotions and allowances log (merging the former
+  // promotions/allowances, see migrations-sql/014_merge_promotions_allowances.sql) ─────────────────
   pgCrud(router, 'promotionsAllowances', collectionSchemas.promotionsAllowances, [], 'promotions_allowances', { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'salaries', collectionSchemas.salaries, [], undefined, { hospitalScoped: true, permission: 'accounts' });
   pgCrud(router, 'ambulanceVehicles', collectionSchemas.ambulanceVehicles, [{ field: 'status', column: 'status' }], 'ambulance_vehicles', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
-  // ── إصلاح: سجل صيانة حقيقي بدل الكتابة فوق تاريخ آخر صيانة كل مرة ──────────
+  // ── Fix: an actual maintenance log instead of overwriting the last maintenance date every time ──────────
   pgCrud(router, 'ambulanceMaintenanceLog', collectionSchemas.ambulanceMaintenanceLog, [
     { field: 'vehicleId', column: 'vehicle_id' },
   ], 'ambulance_maintenance_log', { hospitalScoped: true, permission: 'ambulance' });
   pgCrud(router, 'ambulanceMissions', collectionSchemas.ambulanceMissions, [{ field: 'status', column: 'status' }], 'ambulance_missions', { hospitalScoped: true, permission: 'ambulance', extraFilterFields: ['status'] });
 
-  // CRM المرضى — indexedColumns تختلف عن الاسم الافتراضي (name/phone/status)
+  // Patient CRM — indexedColumns differ from the default name (name/phone/status)
   pgCrud(router, 'crmInteractions', collectionSchemas.crmInteractions, [
     { field: 'patientId', column: 'patient_id' },
   ], 'crm_interactions', { hospitalScoped: true, permission: 'crm' });
@@ -1545,32 +1624,38 @@ const registerAllModules = (router) => {
     { field: 'patientId', column: 'patient_id' },
   ], 'crm_campaign_targets', { hospitalScoped: true, permission: 'crm' });
 
-  // ── إصلاح: إدارة الجودة (ISO) — كانت بدون أي اتصال بقاعدة بيانات ────────────
-  // راجع middleware/schemas.js وdatabase/postgres_schema.sql لتفاصيل
-  // الإصلاح الكامل. indexedColumns فاضية عمداً (JSONB بحت) — الحقول
-  // (auditNo, ncNo, status...) لا تحتاج بحثاً سريعاً بحجم بيانات هذا الموديول
-  // الطبيعي (عشرات-مئات السجلات كحد أقصى واقعي بمستشفى واحد).
+  // ── Fix: quality management (ISO) — used to have no database connection at all ────────────
+  // See middleware/schemas.js and database/postgres_schema.sql for the
+  // full details of the fix. indexedColumns is deliberately empty (pure
+  // JSONB) — the fields (auditNo, ncNo, status...) don't need fast search
+  // at this module's natural data size (tens to hundreds of records as a
+  // realistic maximum for a single hospital).
   pgCrud(router, 'qualityAudits', collectionSchemas.qualityAudits, [], 'quality_audits', { hospitalScoped: true, permission: 'quality' });
   pgCrud(router, 'qualityNCs', collectionSchemas.qualityNCs, [], 'quality_ncs', { hospitalScoped: true, permission: 'quality' });
   pgCrud(router, 'qualityKPIs', collectionSchemas.qualityKPIs, [], 'quality_kpis', { hospitalScoped: true, permission: 'quality' });
 
-  // ── الردهات (إدارة المرضى الداخليين) ──────────────────────────────────────
+  // ── Wards (inpatient management) ──────────────────────────────────────
   pgCrud(router, 'wards', collectionSchemas.wards, [], undefined, { hospitalScoped: true, permission: 'wards' });
   pgCrud(router, 'admissions', collectionSchemas.admissions, [], undefined, { hospitalScoped: true, permission: 'wards' });
-  // ── الردهات: جدول الأدوية اليومي (medicationOrders) ─────────────────────────
-  // ── ملاحظة: "معرّف حالة الإدخال" (admissionId) مرجع رقمي داخلي (foreign key)
-  // لجدول admissions — نفس قيد wardId/vehicleId أعلاه، لا يمكن حله من اسم
-  // مريض نصي عبر استيراد جماعي. يبقى فارغاً إن تُرك عمود الاستيراد فارغاً،
-  // ويجب ربط الوصفة بحالة الإدخال يدوياً من الواجهة (زر 💊 بجانب المريض)
-  // ليظهر الدواء بجدول الأدوية اليومي وتُحسَب مواعيد جرعاته. مواعيد الجرعات
-  // (scheduledTimes) تُحتسَب هنا تلقائياً من "عدد المرات باليوم" بنفس خوارزمية
-  // computeScheduleTimes المستخدمة بالواجهة (WardsPage.js) — توزيع متساوٍ على
-  // 24 ساعة، أول جرعة الساعة 08:00.
-  // ── نفس أسلوب حل wardId أعلاه: admissionId (مرجع رقمي لحالة إدخال) يُحَل
-  // الآن فعلياً من "اسم المريض" + "تاريخ الإدخال" بالبحث المباشر بجدول
-  // admissions — بدل ما يبقى فارغاً ويحتاج ربطاً يدوياً لكل سجل. الشرط: اسم
-  // المريض وتاريخ الإدخال يطابقان *بالضبط* سجل إدخال موجود فعلاً (نفس القيم
-  // المستوردة بملف admissions_import.xlsx).
+  // ── Wards: the daily medication log (medicationOrders) ─────────────────────────
+  // ── Note: "admission id" (admissionId) is an internal numeric reference
+  // (foreign key) to the admissions table -- the same constraint as
+  // wardId/vehicleId above, it can't be resolved from a text patient name
+  // via bulk import. It stays empty if the import column is left empty,
+  // and the prescription must be linked to the admission manually from
+  // the frontend (the 💊 button next to the patient) for the medication to
+  // show up in the daily medication log and have its dose times
+  // calculated. Dose times (scheduledTimes) are calculated here
+  // automatically from "times per day" using the same computeScheduleTimes
+  // algorithm used in the frontend (WardsPage.js) — an equal distribution
+  // over 24 hours, first dose at 08:00.
+  // ── The same wardId resolution approach as above: admissionId (a
+  // numeric reference to an admission) is now actually resolved from
+  // "patient name" + "admission date" by looking it up directly in the
+  // admissions table — instead of staying empty and needing a manual link
+  // for every record. The condition: the patient name and admission date
+  // *exactly* match a real existing admission record (the same values
+  // imported in the admissions_import.xlsx file).
   registerExcelImport(router, 'medicationOrders', collectionSchemas.medicationOrders, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'تاريخ الإدخال': 'admissionDate', 'Admission Date': 'admissionDate',
@@ -1585,10 +1670,12 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'wards',
     tableName: 'medication_orders',
-    // admission_id عمود حقيقي فعلاً بهذا الجدول (رُقِّي بـ 004_promote_batch2.sql
-    // ومسجَّل بتسجيل pgCrud أدناه). اسم الحقل بالواجهة/afterParse هو admissionId
-    // (camelCase، يُحلّ فعلياً أعلاه بالبحث بجدول admissions) بينما اسم العمود
-    // الفعلي snake_case — يُخزَّن الآن بالعمود الحقيقي مباشرة.
+    // admission_id is now an actual real column in this table (promoted in
+    // 004_promote_batch2.sql and registered in the pgCrud registration
+    // below). The field name in the frontend/afterParse is admissionId
+    // (camelCase, actually resolved above by looking it up in the
+    // admissions table) while the actual column name is snake_case —
+    // stored directly in the real column now.
     indexedColumns: [{ field: 'admissionId', column: 'admission_id' }],
     limiter: importLimiter,
     duplicateCheck: ['admissionId', 'drugName', 'startDate'],
@@ -1637,27 +1724,29 @@ const registerAllModules = (router) => {
   pgCrud(router, 'medicationOrders', collectionSchemas.medicationOrders, [{ field: 'admissionId', column: 'admission_id' }], 'medication_orders', { hospitalScoped: true, permission: 'wards', extraFilterFields: ['admissionId'] });
   pgCrud(router, 'medicationAdministrations', collectionSchemas.medicationAdministrations, [], 'medication_administrations', { hospitalScoped: true, permission: 'wards', extraFilterFields: ['orderId'] });
 
-  // ── صالة الولادة ──────────────────────────────────────────────────────────
+  // ── Delivery ward ──────────────────────────────────────────────────────────
   pgCrud(router, 'deliveries', collectionSchemas.deliveries, [
     { field: 'stage', column: 'stage' },
     { field: 'babyStatus', column: 'baby_status' },
   ], undefined, { hospitalScoped: true, permission: 'delivery', extraFilterFields: ['stage', 'babyStatus'] });
 
-  // ── العلاج الطبيعي ────────────────────────────────────────────────────────
+  // ── Physical therapy ────────────────────────────────────────────────────────
   pgCrud(router, 'ptEquipment', collectionSchemas.ptEquipment, [{ field: 'status', column: 'status' }], 'pt_equipment', { hospitalScoped: true, permission: 'physiotherapy', extraFilterFields: ['status'] });
   pgCrud(router, 'ptSessions', collectionSchemas.ptSessions, [
     { field: 'status', column: 'status' },
     { field: 'date', column: 'date' },
   ], 'pt_sessions', { hospitalScoped: true, permission: 'physiotherapy', extraFilterFields: ['status', 'date'] });
 
-  // ── إدارة الطابور ─────────────────────────────────────────────────────────
-  // ── إدارة الطابور (queueTickets) ─────────────────────────────────────────────
-  // ── ملاحظة: رقم التذكرة (ticketNo) بالاستخدام الطبيعي تسلسلي يومي لكل قسم
-  // (يُحسَب بالواجهة عند إصدار تذكرة جديدة). لا نملك نفس السياق هنا (كم تذكرة
-  // صدرت فعلاً اليوم لهذا القسم)، فنقبله اختيارياً من عمود Excel، وإن تُرك
-  // فارغاً نولّد رقماً تقريبياً غير مضمون التسلسل — هذا الموديول بطبيعته يومي/
-  // مؤقت، فالاستيراد الجماعي مناسب لبيانات اختبار أو تذاكر تاريخية وليس
-  // للاستخدام التشغيلي اليومي المعتاد.
+  // ── Queue management ─────────────────────────────────────────────────────────
+  // ── Queue management (queueTickets) ─────────────────────────────────────────────
+  // ── Note: in normal use, the ticket number (ticketNo) is a daily
+  // sequence per department (calculated in the frontend when a new ticket
+  // is issued). We don't have the same context here (how many tickets
+  // have actually been issued today for this department), so we accept it
+  // optionally from an Excel column, and if left empty we generate an
+  // approximate number with no guaranteed sequence — this module is
+  // inherently daily/temporary by nature, so bulk import is suited to
+  // test data or historical tickets, not the usual daily operational use.
   registerExcelImport(router, 'queueTickets', collectionSchemas.queueTickets, {
     'اسم المريض': 'patientName', 'Patient Name': 'patientName',
     'القسم': 'department', 'Department': 'department',
@@ -1670,22 +1759,26 @@ const registerAllModules = (router) => {
   }, {
     hospitalScoped: true, permission: 'queue',
     tableName: 'queue_tickets',
-    // department/status أعمدة حقيقية فعلاً بهذا الجدول (رُقِّيت بـ
-    // 004_promote_batch2.sql ومسجَّلة بتسجيل pgCrud أدناه) — تُخزَّن الآن
-    // بالأعمدة الحقيقية مباشرة. ملاحظة: مسار /queue-display العام بـ
-    // server.js يقرأ هذين العمودين الحقيقيين مباشرة أصلاً (وليس JSONB)،
-    // فكان يعرض قيماً قديمة لأي تذكرة تُحدَّث (تُنادى/تُخدَم) بعد إنشائها —
-    // هذا الإصلاح يجعل تحديثات الحالة تصل فعلياً لذلك العمود من الآن فصاعداً.
+    // department/status are now actual real columns in this table
+    // (promoted in 004_promote_batch2.sql and registered in the pgCrud
+    // registration below) — stored directly in the real columns now.
+    // Note: the public /queue-display route in server.js already reads
+    // these two real columns directly (not JSONB), so it used to show
+    // stale values for any ticket updated (called/served) after it was
+    // created — this fix makes status updates actually reach that column
+    // from now on.
     indexedColumns: [
       { field: 'department', column: 'department' },
       { field: 'status', column: 'status' },
     ],
     limiter: importLimiter,
     duplicateCheck: ['patientName', 'department', 'createdAt'],
-    // ── إصلاح: كانت calledAt/servedAt تُصفَّر دائماً بغض النظر عن الحالة —
-    // تذكرة مستورَدة بحالة "served" كانت تُحفَظ بدون وقت استلام فعلي، وهو
-    // تناقض منطقي (خدمة "منجَزة" بدون وقت إنجاز). الآن تُحتسَب زمنياً بعد
-    // وقت الإصدار بفارق معقول حسب الحالة.
+    // ── Fix: calledAt/servedAt used to always be zeroed out regardless of
+    // status -- an imported ticket with "served" status used to be saved
+    // with no actual receipt time, which is a logical contradiction (a
+    // "completed" service with no completion time). Now they're
+    // calculated chronologically after the issue time, with a reasonable
+    // offset depending on the status.
     afterParse: (row) => {
       const created = row.createdAt ? new Date(row.createdAt) : new Date();
       const status = row.status || 'waiting';

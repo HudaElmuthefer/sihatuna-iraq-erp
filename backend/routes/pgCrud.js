@@ -1,53 +1,63 @@
 // backend/routes/pgCrud.js
 //
-// مصنع مسارات CRUD موحّد يعمل على PostgreSQL، بنفس فكرة crud() الأصلية
-// (المستخدمة لملف db.json) لكن بتخزين فعلي بقاعدة بيانات علائقية.
+// A unified CRUD route factory that runs on PostgreSQL, built on the same
+// idea as the original crud() (used for db.json) but with actual storage
+// in a relational database.
 //
-// استراتيجية التخزين: عمود "data" من نوع JSONB يحمل كامل بيانات السجل كما
-// ترسلها الواجهة تماماً، بينما أعمدة صريحة محدَّدة (indexedColumns) للفهرسة
-// والبحث السريع فقط. هذا يتجنّب مشكلة واجهناها سابقاً: أي افتراض خاطئ بأسماء
-// الأعمدة (مثل ما حصل مع مخطط تحقق المواعيد) يرفض عمليات الحفظ بصمت. بهذا
-// النمط، أي حقل جديد تضيفه الواجهة مستقبلاً يُخزَّن ويُسترجَع تلقائياً دون أي
-// حاجة لتعديل بنية الجدول.
+// Storage strategy: a "data" column of type JSONB holds the record's full
+// data exactly as the frontend sends it, while specific explicit columns
+// (indexedColumns) exist only for indexing and fast search. This avoids a
+// problem we ran into before: any wrong assumption about column names
+// (like what happened with the appointment validation schema) silently
+// rejects save operations. With this pattern, any new field the frontend
+// adds in the future is automatically stored and retrieved with no need to
+// change the table structure at all.
 //
-// المعامل الرابع (indexedColumns) مصفوفة عناصر بالشكل { field, column }:
-//   field  = اسم الحقل كما ترسله الواجهة بالضبط (مثل "patientId")
-//   column = اسم العمود الفعلي بقاعدة البيانات (مثل "patient_id")
-// هذا يسمح باختلاف التسمية بين الواجهة (camelCase عادة) وقاعدة البيانات
-// (snake_case حسب الاتفاقية المتّبعة ببقية الجداول)، بدل افتراض تطابق الاسمين.
+// The fourth parameter (indexedColumns) is an array of items shaped like
+// { field, column }:
+//   field  = the field name exactly as the frontend sends it (e.g. "patientId")
+//   column = the actual database column name (e.g. "patient_id")
+// This allows the naming to differ between the frontend (usually
+// camelCase) and the database (snake_case, following the convention used
+// across the rest of the tables), instead of assuming the two names match.
 //
-// المعامل السادس (options.hospitalScoped) — دعم المنشآت المتعددة (مرحلة 4):
-// لو true، يُطبَّق فرض تلقائي لمنشأة المستخدم على كل عملية:
-//   - GET all: يُفلتر النتائج لمنشأة المستخدم فقط (data->>'hospitalId')
-//   - GET one / PUT / DELETE: يرفض الوصول (404) لسجل يخص منشأة أخرى
-//   - POST: يفرض hospitalId المستخدم على السجل الجديد، متجاهلاً أي قيمة
-//     أرسلها العميل (حماية من انتحال منشأة أخرى عبر تعديل الطلب يدوياً)
-// الفلترة تُطبَّق فقط لو المستخدم نفسه له hospitalId مُعيَّن (بحساباته —
-// انظر عمود hospitalId بملف db.json لجدول users). المستخدم بلا hospitalId
-// (مثل حساب إدمن على مستوى الوزارة) يرى كل شيء بلا فلترة — هذا سلوك مقصود.
+// The sixth parameter (options.hospitalScoped) — multi-facility support (phase 4):
+// If true, the user's facility is automatically enforced on every operation:
+//   - GET all: results are filtered to the user's facility only (data->>'hospitalId')
+//   - GET one / PUT / DELETE: access is denied (404) for a record belonging to another facility
+//   - POST: the user's hospitalId is forced onto the new record, ignoring
+//     any value sent by the client (protection against impersonating
+//     another facility by manually tampering with the request)
+// Filtering is only applied if the user themselves has a hospitalId set
+// (on their account — see the hospitalId column in db.json for the users
+// table). A user with no hospitalId (such as a ministry-level admin
+// account) sees everything with no filtering — this is intentional behavior.
 //
-// تحقق دائماً من الحقول الفعلية بصفحة الفرونت إند قبل التحديد — هذا بالضبط
-// الدرس المستفاد من خطأ سابق بمخطط تحقق المواعيد.
+// Always check the actual fields on the frontend page before deciding —
+// this is exactly the lesson learned from the earlier bug with the
+// appointment validation schema.
 //
-// العقد (Contract) الخارجي مطابق تماماً لمسارات db.json الأصلية:
-//   GET    /api/<table>        -> قائمة كاملة (أو مفلترة حسب المنشأة)
-//   GET    /api/<table>/:id    -> سجل واحد
-//   POST   /api/<table>        -> إنشاء (يُعيد السجل الكامل مع id)
-//   PUT    /api/<table>/:id    -> تعديل
-//   DELETE /api/<table>/:id    -> حذف
-// بهذا لا يحتاج الفرونت إند أي تعديل عند التحويل من db.json إلى PostgreSQL.
+// The external contract matches the original db.json routes exactly:
+//   GET    /api/<table>        -> the full list (or filtered by facility)
+//   GET    /api/<table>/:id    -> a single record
+//   POST   /api/<table>        -> create (returns the full record with an id)
+//   PUT    /api/<table>/:id    -> edit
+//   DELETE /api/<table>/:id    -> delete
+// This way the frontend needs no changes at all when moving from db.json to PostgreSQL.
 const { pool } = require('../config/database');
 const auth = require('../middleware/auth');
 const { logAudit } = require('../utils/auditLog');
 const validate = require('../middleware/validate');
 const requirePermission = require('../middleware/requirePermission');
 const XLSX = require('xlsx');
-// ── المرحلة الثانية: تخزين مؤقت اختياري (Redis) ─────────────────────────────
-// راجع شرح نمط "الأجيال" (versioned cache) بأعلى utils/redisService.js.
-// مفعَّل فقط للموديولات التي تمرر options.cache صراحة (حالياً: doctors،
-// inventory، employees — راجع routes/modules.js) — بيانات تُقرأ كثيراً
-// بصفحات متعددة (قوائم منسدلة...) وتتغيّر نادراً نسبياً. صفر تأثير على أي
-// موديول آخر لم يفعّله (فحص `if (cache)` واحد فقط، بلا أي استدعاء Redis).
+// ── Phase two: optional caching (Redis) ─────────────────────────────
+// See the explanation of the "generations" (versioned cache) pattern at
+// the top of utils/redisService.js. Only enabled for modules that
+// explicitly pass options.cache (currently: doctors, inventory, employees
+// — see routes/modules.js) — data read often across several pages
+// (dropdown lists...) that changes relatively rarely. Zero effect on any
+// other module that hasn't enabled it (just one `if (cache)` check, with
+// no Redis call at all).
 const { getCacheVersion, bumpCacheVersion, cacheGet, cacheSet } = require('../utils/redisService');
 
 const DEFAULT_COLUMNS = [
@@ -56,65 +66,77 @@ const DEFAULT_COLUMNS = [
   { field: 'status', column: 'status' },
 ];
 
-// قيمة خاصة تُفهَم بمعالجة extraFilterFields أدناه كـ"الحقل غائب أو فارغ"،
-// بدل تطابق تام حرفي — راجع التعليق عند استخدامها بالأسفل.
+// A special value understood by the extraFilterFields handling below as
+// "the field is missing or empty", instead of a literal exact match —
+// see the comment where it's used further down.
 const UNSET_FILTER_VALUE = '__unset__';
 
-// ── سجل الموديولات (Module Registry) ────────────────────────────────────────
-// كل استدعاء لـ pgCrud() يسجّل نفسه هنا (apiName -> { tableName, indexedColumns,
-// hospitalScoped }). سلة المحذوفات (recycleBinRoutes.js) تستخدم هذا السجل
-// لمعرفة كيف تُعيد إدراج سجل مسترجَع بجدوله الأصلي الصحيح، دون أي معرفة
-// مسبقة بتفاصيل كل موديول على حدة — تفادياً لتكرار نفس التفاصيل بمكانين.
+// ── Module Registry ────────────────────────────────────────────────────
+// Every call to pgCrud() registers itself here (apiName -> { tableName,
+// indexedColumns, hospitalScoped }). The recycle bin (recycleBinRoutes.js)
+// uses this registry to know how to reinsert a restored record into its
+// correct original table, with no prior knowledge of each module's
+// details individually — avoiding duplicating the same details in two places.
 const moduleRegistry = {};
 
-// المعامل الخامس (sqlTableName) اختياري: يحدد اسم الجدول الفعلي بقاعدة البيانات
-// إذا كان مختلفاً عن اسم المسار بالـ API (apiName). مطلوب فقط للموديولات التي
-// اسمها camelCase بالواجهة (مثل "medicalLeaves") بينما اسم الجدول snake_case
-// حسب اتفاقية PostgreSQL القياسية (medical_leaves) — مسار الـ API يبقى دائماً
-// كما يتوقعه الفرونت إند، بينما الاستعلامات الداخلية تستخدم اسم الجدول الصحيح.
+// The fifth parameter (sqlTableName) is optional: it sets the actual table
+// name in the database if it differs from the API route name (apiName).
+// Only needed for modules whose frontend name is camelCase (like
+// "medicalLeaves") while the table name is snake_case per the standard
+// PostgreSQL convention (medical_leaves) — the API route always stays
+// what the frontend expects, while the internal queries use the correct
+// table name.
 //
-// ── إصلاح أمان-من-الانكسار (fail-fast) ──────────────────────────────────────
-// المعامل الرابع (indexedColumns) لم يعد له قيمة افتراضية إطلاقاً. سابقاً كان
-// الافتراض DEFAULT_COLUMNS (أعمدة name/phone/status) — فأي تسجيل موديول جديد
-// نسي تمريره صراحة كان يفترض ضمنياً أن الجدول يملك هذه الأعمدة، وإذا لم يملكها
-// فعلاً (وهي الغالبية العظمى من الجداول، المبنية بتخزين JSONB بحت)، تفشل كل
-// عملية POST/PUT بصمت برسالة SQL غامضة ("column X does not exist") لا تظهر
-// إلا لحظة أول محاولة حفظ فعلية من مستخدم حقيقي — بالضبط ما حصل بـ 15 موديول
-// مختلفة قبل هذا الإصلاح. الآن: نسيان تمريره يوقف تشغيل الخادم فوراً برسالة
-// واضحة، وليس خطأ SQL غامضاً لاحقاً. الموديولات التي تملك فعلاً أعمدة name/phone/
-// status الحقيقية (مثل patients و doctors) تمرر DEFAULT_COLUMNS صراحة.
+// ── Fail-fast safety fix ──────────────────────────────────────────────────
+// The fourth parameter (indexedColumns) no longer has any default value at
+// all. It used to default to DEFAULT_COLUMNS (the name/phone/status
+// columns) — so any new module registration that forgot to pass it
+// explicitly implicitly assumed the table had these columns, and if it
+// actually didn't (the vast majority of tables, built with pure JSONB
+// storage), every POST/PUT operation would silently fail with a vague SQL
+// message ("column X does not exist") that only showed up the moment a
+// real user made their first actual save attempt — exactly what happened
+// in 15 different modules before this fix. Now: forgetting to pass it
+// stops the server from starting immediately with a clear message,
+// instead of a vague SQL error later. Modules that actually have real
+// name/phone/status columns (such as patients and doctors) pass
+// DEFAULT_COLUMNS explicitly.
 const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName, options = {}) => {
   if (indexedColumns === undefined) {
     throw new Error(
-      `❌ pgCrud('${apiName}'): المعامل الرابع (indexedColumns) مطلوب صراحة ولا قيمة افتراضية له.\n` +
-      `   مرر [] لو الجدول تخزين JSONB بحت (الحالة الأكثر شيوعاً — راجع postgres_schema.sql)، ` +
-      `أو مصفوفة { field, column } لو فيه أعمدة مفهرسة حقيقية، ` +
-      `أو DEFAULT_COLUMNS المُصدَّرة من هذا الملف لو الجدول يطابق أعمدة name/phone/status القياسية.`
+      `❌ pgCrud('${apiName}'): the fourth parameter (indexedColumns) is explicitly required and has no default value.\n` +
+      `   Pass [] if the table is pure JSONB storage (the most common case — see postgres_schema.sql), ` +
+      `or an array of { field, column } if it has real indexed columns, ` +
+      `or the DEFAULT_COLUMNS exported from this file if the table matches the standard name/phone/status columns.`
     );
   }
-  const tableName = sqlTableName; // اسم الجدول الفعلي بكل استعلامات SQL أدناه
+  const tableName = sqlTableName; // the actual table name used in every SQL query below
   const { hospitalScoped = false, permission = null, openRead = false, searchFields = [], extraFilterFields = [], dateRangeField = null, dateRangeColumn = null, cache = null } = options;
   moduleRegistry[apiName] = { ...moduleRegistry[apiName], tableName, indexedColumns, hospitalScoped, permission };
-  // ── فحص صلاحيات (RBAC) على القراءة والكتابة ──────────────────────────────────
-  // الكتابة (POST/PUT/DELETE): مقيّدة دائماً بصلاحية الموديول لو كانت محدَّدة.
-  // القراءة (GET): مقيّدة بنفس الصلاحية أيضاً، إلا لو openRead=true — استثناء
-  // مقصود فقط لبيانات مرجعية (مرضى/أطباء/أقسام/مواعيد) تحتاجها صفحات أخرى
-  // كثيرة لعرض أسماء بقوائم منسدلة أو بجانب سجلات ثانية (مثلاً صفحة الفوترة
-  // تعرض اسم المريض من موديول patients رغم إن المحاسب ما عنده صلاحية "patients"
-  // نفسها). تأكدت من هذا بمراجعة كل صفحات الفرونت إند فعلياً قبل التطبيق —
-  // راجع ملاحظة "لماذا القراءة المفتوحة" بالمحادثة لو احتجت تضيّق هذا لاحقاً.
+  // ── Permission checks (RBAC) on read and write ──────────────────────────────────
+  // Writes (POST/PUT/DELETE): always restricted by the module's permission, if one is set.
+  // Reads (GET): restricted by the same permission too, unless openRead=true
+  // — an exception intentionally reserved only for reference data
+  // (patients/doctors/departments/appointments) needed by many other pages
+  // to display names in dropdown lists or alongside other records (for
+  // example, the billing page shows the patient's name from the patients
+  // module even though the accountant doesn't have the "patients"
+  // permission itself). This was confirmed by actually reviewing every
+  // frontend page before applying it — see the "why open read" note in the
+  // conversation if you need to narrow this down later.
   const writePermission = requirePermission(permission);
   const readPermission = openRead ? (req, res, next) => next() : requirePermission(permission);
 
-  // يحوّل صف قاعدة البيانات (row) إلى الشكل الذي تتوقعه الواجهة: كائن واحد
-  // مسطّح يدمج الأعمدة الصريحة (بأسماء حقول الواجهة) مع محتوى JSONB.
+  // Converts a database row into the shape the frontend expects: one flat
+  // object that merges the explicit columns (under the frontend's field
+  // names) with the JSONB content.
   const rowToRecord = (row) => {
     const record = { ...row.data, id: row.id };
     indexedColumns.forEach(({ field, column }) => { record[field] = row[column]; });
     return record;
   };
 
-  // يفصل الحقول المفهرسة عن بقية بيانات السجل (التي تُخزَّن بعمود data)
+  // Separates the indexed fields from the rest of the record's data (which is stored in the data column)
   const splitBody = (body) => {
     const indexedValues = indexedColumns.map(({ field }) => body[field] ?? null);
     const rest = { ...body };
@@ -122,26 +144,32 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     return { indexedValues, rest };
   };
 
-  // يتحقق هل السجل (بعد قراءته) يخص منشأة المستخدم الحالي — يُستخدم بمسارات
-  // GET one / PUT / DELETE لمنع الوصول لسجلات منشأة أخرى عبر تخمين المعرّف
+  // Checks whether a record (once read) belongs to the current user's
+  // facility — used by the GET one / PUT / DELETE routes to prevent access
+  // to another facility's records by guessing the id
   const belongsToUserHospital = (row, req) => {
-    if (!hospitalScoped || !req.user?.hospitalId) return true; // بلا فلترة
+    if (!hospitalScoped || !req.user?.hospitalId) return true; // no filtering
     return row.data?.hospitalId === req.user.hospitalId;
   };
 
-  // ── نطاق الكاش (cache scope) ──────────────────────────────────────────────
-  // لموديول موزَّع بين منشآت (hospitalScoped)، القائمة الكاملة تختلف فعلياً
-  // حسب هوية القارئ: موظف بمنشأة مُحدَّدة يرى سجلات منشأته فقط، بينما إدمن
-  // (بلا hospitalId) يرى كل السجلات بلا فلترة — يجب مفتاح كاش منفصل لكل
-  // حالة، وإلا موظف منشأة يرى كاش إدمن (كل المنشآت) أو العكس بالخطأ.
+  // ── Cache scope ──────────────────────────────────────────────────────
+  // For a module distributed across facilities (hospitalScoped), the full
+  // list actually differs depending on who's reading it: an employee at a
+  // specific facility only sees their facility's records, while an admin
+  // (with no hospitalId) sees every record with no filtering — each case
+  // needs a separate cache key, or else a facility's employee would
+  // mistakenly see the admin's cache (every facility) or the reverse.
   const cacheScopeFor = (hospitalId) => hospitalId || 'ALL';
   const cacheScopeForReq = (req) => cacheScopeFor(hospitalScoped ? req.user?.hospitalId : null);
 
-  // يُستدعى بعد أي كتابة ناجحة (POST/PUT/DELETE) — يزيد "رقم الجيل" لنطاق
-  // السجل المتأثر (منشأته تحديداً) *و* نطاق 'ALL' دائماً (لأن كاش الإدمن غير
-  // المفلتَر يتضمّن سجلات كل المنشآت، فأي تعديل بأي منشأة يُبطِله أيضاً).
-  // fire-and-forget (بدون await من المستدعي) — لا يجب أن يبطّئ رد الكتابة
-  // بانتظار Redis، تماماً مثل نمط sendAlert/logAudit الحاليين بهذا المشروع.
+  // Called after any successful write (POST/PUT/DELETE) — increases the
+  // "generation number" for the affected record's scope (specifically its
+  // facility) *and* the 'ALL' scope always (because the admin's
+  // unfiltered cache includes records from every facility, so any edit at
+  // any facility invalidates it too).
+  // Fire-and-forget (no await from the caller) — must not slow down the
+  // write response waiting on Redis, exactly like the existing
+  // sendAlert/logAudit patterns in this project.
   const invalidateCache = async (recordHospitalId) => {
     if (!cache) return;
     const scopes = new Set([cacheScopeFor(hospitalScoped ? recordHospitalId : null), 'ALL']);
@@ -149,21 +177,26 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   };
 
   // GET all
-  // دعم تصفح اختياري بالصفحات (page/limit) + بحث/فلترة، لتفادي بطء الجداول
-  // الكبيرة مستقبلاً (خصوصاً المرضى والأطباء، أكثر موديولين مرشّحين للنمو
-  // لآلاف السجلات). البحث والفلترة يعملان على الأعمدة المفهرسة (indexedColumns)
-  // مباشرة — أسرع بكثير من فحص عمود JSONB الكامل، لكنه يعني إن البحث يشتغل
-  // فقط لو كان الحقل المطلوب أصلاً من ضمن indexedColumns لهذا الموديول تحديداً.
-  // ملاحظة أمان مهمة: لو طلب "page" غير مقروء كرقم صحيح، نتجاهله ونرجع لكل
-  // السجلات بدل تمرير قيمة غير موثوقة مباشرة لجملة SQL (LIMIT/OFFSET).
-  // الافتراضي (بدون معامل page): يرجع مصفوفة كاملة كما كان دائماً — صفر خطر
-  // على أي صفحة موجودة حالياً لا ترسل هذه المعاملات.
+  // Optional pagination support (page/limit) + search/filtering, to avoid
+  // slowness on large tables in the future (especially patients and
+  // doctors, the two modules most likely to grow to thousands of records).
+  // Search and filtering work directly on the indexed columns
+  // (indexedColumns) — much faster than scanning the full JSONB column,
+  // but it means search only works if the requested field is actually
+  // part of this specific module's indexedColumns.
+  // Important security note: if the "page" request can't be read as a
+  // valid integer, we ignore it and fall back to returning all records
+  // instead of passing an untrusted value directly into the SQL statement
+  // (LIMIT/OFFSET).
+  // The default (with no page parameter): returns the full array as
+  // always — zero risk to any existing page that doesn't send these parameters.
   router.get(`/${apiName}`, auth, readPermission, async (req, res, next) => {
     try {
-      // ── قراءة الكاش (لو مفعَّل لهذا الموديول) ──────────────────────────────
-      // مفتاح الكاش يتضمّن كل معاملات الاستعلام (بحث/فلترة/صفحة...) — كل
-      // تركيبة فلاتر مختلفة تُخزَّن بمفتاح منفصل. لو تعذّر الوصول لـRedis،
-      // getCacheVersion ترجع null فنتجاوز الكاش بالكامل لهذا الطلب (fail-open).
+      // ── Reading the cache (if enabled for this module) ──────────────────────────────
+      // The cache key includes every query parameter (search/filter/page...)
+      // — every different filter combination is stored under a separate
+      // key. If Redis is unreachable, getCacheVersion returns null and we
+      // skip the cache entirely for this request (fail-open).
       let cacheKey = null;
       if (cache) {
         const scope = cacheScopeForReq(req);
@@ -183,22 +216,25 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
         conditions.push(`data->>'hospitalId' = $${params.length}`);
       }
 
-      // بحث نصي اختياري (?search=) — يطابق عمود "name" و"phone" لو كانا
-      // مفهرسين بهذا الموديول، بالإضافة لأي حقول JSONB إضافية حُدِّدت صراحة
-      // بـ options.searchFields (مثل "specialization" للأطباء — حقل غير
-      // مفهرس، فالبحث فيه أبطأ قليلاً من عمود مفهرس لكنه يحافظ على نفس تجربة
-      // البحث الموجودة سابقاً بالفرونت إند قبل التحويل لترقيم من السيرفر).
+      // Optional text search (?search=) — matches the "name" and "phone"
+      // columns if they're indexed in this module, plus any additional
+      // JSONB fields explicitly listed in options.searchFields (such as
+      // "specialization" for doctors — a non-indexed field, so searching
+      // it is a bit slower than an indexed column, but it keeps the same
+      // search experience that already existed on the frontend before the
+      // move to server-side pagination).
       const nameCol = indexedColumns.find(c => c.field === 'name')?.column;
       const phoneCol = indexedColumns.find(c => c.field === 'phone')?.column;
       if (req.query.search && (nameCol || phoneCol || searchFields.length > 0)) {
         params.push(`%${req.query.search}%`);
         const idx = params.length;
         const parts = [nameCol, phoneCol].filter(Boolean).map(c => `${c} ILIKE $${idx}`);
-        // ── تحسين أداء ──────────────────────────────────────────────────────
-        // لو الحقل صار عمود حقيقي مفهرس (indexedColumns) بعد ترقيته من
-        // JSONB، نستخدم العمود مباشرة (سريع، مفهرس) بدل data->>'field'
-        // (بطيء، فحص كامل للجدول). الحقول التي لا تزال JSONB فقط تبقى تعمل
-        // بنفس الطريقة القديمة — صفر كسر لأي موديول لم يُرقَّ بعد.
+        // ── Performance improvement ──────────────────────────────────────────────────
+        // If a field has become a real indexed column (indexedColumns)
+        // after being promoted from JSONB, we use the column directly
+        // (fast, indexed) instead of data->>'field' (slow, a full table
+        // scan). Fields that are still JSONB-only keep working the same
+        // old way — zero breakage for any module not yet promoted.
         searchFields.forEach(f => {
           const promotedCol = indexedColumns.find(c => c.field === f)?.column;
           parts.push(promotedCol ? `${promotedCol} ILIKE $${idx}` : `data->>'${f}' ILIKE $${idx}`);
@@ -206,24 +242,30 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
         conditions.push(`(${parts.join(' OR ')})`);
       }
 
-      // فلترة اختيارية بالحالة (?status=) — فقط لو "status" مفهرس بهذا الموديول
+      // Optional status filter (?status=) — only if "status" is indexed in this module
       const statusCol = indexedColumns.find(c => c.field === 'status')?.column;
       if (req.query.status && req.query.status !== 'all' && statusCol) {
         params.push(req.query.status);
         conditions.push(`${statusCol} = $${params.length}`);
       }
 
-      // فلترة تطابق تام اختيارية على حقول JSONB إضافية (مثل ?category=medicine
-      // بالمخزون) — تعمل فقط للحقول المُصرَّح بها صراحة بـ options.extraFilterFields
-      // (قائمة بيضاء، حماية من فلترة عشوائية على أي اسم حقل يُرسَل بالطلب)
-      // نفس تحسين الأداء أعلاه: نستخدم العمود الحقيقي لو الحقل مُرقّى.
+      // Optional exact-match filtering on additional JSONB fields (such as
+      // ?category=medicine for inventory) — only works for fields
+      // explicitly declared in options.extraFilterFields (a whitelist,
+      // protecting against arbitrary filtering on any field name sent in
+      // the request). Same performance improvement as above: we use the
+      // real column if the field has been promoted.
       //
-      // قيمة خاصة UNSET_FILTER_VALUE ('__unset__'): تطابق السجلات الناقصة
-      // (الحقل غائب أو فارغ) بدل تطابق تام حرفي — تُستخدَم مثلاً بصفحة
-      // الأصول (AssetsPage.js) لإيجاد سجلات مستوردة بحقل status/category فارغ،
-      // بدل أن تبقى مخفية بصمت (كانت تُعرَض بشارة "نشط" افتراضية رغم عدم
-      // تطابقها فعلياً مع فلتر "نشط" الحقيقي — تعارض عرض/فلترة). القيمة نفسها
-      // لا تُعرَض أو تُخزَّن أبداً كحقل حقيقي بأي سجل — راجع frontend/src/pages/AssetsPage.js.
+      // The special value UNSET_FILTER_VALUE ('__unset__'): matches
+      // incomplete records (the field is missing or empty) instead of a
+      // literal exact match — used, for example, on the Assets page
+      // (AssetsPage.js) to find imported records with an empty
+      // status/category field, instead of them staying silently hidden
+      // (they used to be shown with a default "active" badge even though
+      // they didn't actually match the real "active" filter — a
+      // display/filter mismatch). This value itself is never shown or
+      // stored as a real field on any record — see
+      // frontend/src/pages/AssetsPage.js.
       extraFilterFields.forEach((field) => {
         const value = req.query[field];
         if (value === UNSET_FILTER_VALUE) {
@@ -276,7 +318,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
 
       const page = parseInt(req.query.page, 10);
       if (Number.isInteger(page) && page > 0) {
-        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200); // حد أقصى 200 بالصفحة الواحدة
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200); // a maximum of 200 per page
         const offset = (page - 1) * limit;
 
         const countSql = `SELECT COUNT(*) FROM ${tableName}` + (conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '');
@@ -303,16 +345,21 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     } catch (err) { next(err); }
   });
 
-  // ── تصدير إلى Excel ──────────────────────────────────────────────────────
-  // إصلاح/ميزة جديدة: كان النظام يدعم الاستيراد من Excel فقط (رفع بيانات
-  // للنظام) بدون أي طريقة لتصدير البيانات الحالية لملف Excel. هذا المسار عام
-  // ويعمل تلقائياً لكل موديول مسجَّل عبر pgCrud (وليس فقط الموديولات التي عندها
-  // registerExcelImport مُفعَّل) — يجلب كل السجلات (بحدود منشأة المستخدم لو
-  // النظام متعدد المنشآت) ويحوّلها لملف .xlsx للتنزيل المباشر.
-  // العناوين: تُستخدم عناوين عربية جميلة لو كان هذا الموديول عنده أيضاً
-  // registerExcelImport مُسجَّل (يملأ moduleRegistry[apiName].exportHeaders
-  // تلقائياً من columnMap الخاص فيه) — وإلا تُستخدم أسماء الحقول الخام كعناوين.
-  // مسجَّل قبل GET /:id عمداً، وإلا Express يطابق "export-excel" كقيمة :id.
+  // ── Export to Excel ──────────────────────────────────────────────────────
+  // Fix/new feature: the system used to only support importing from Excel
+  // (uploading data into the system) with no way at all to export the
+  // current data to an Excel file. This route is generic and works
+  // automatically for every module registered through pgCrud (not only
+  // modules with registerExcelImport enabled) — it fetches every record
+  // (within the user's facility boundaries if the system is
+  // multi-facility) and converts them into an .xlsx file for direct
+  // download.
+  // Headers: nice Arabic headers are used if this module also has
+  // registerExcelImport registered (it automatically fills
+  // moduleRegistry[apiName].exportHeaders from its own columnMap) —
+  // otherwise the raw field names are used as headers.
+  // Registered before GET /:id on purpose, otherwise Express would match
+  // "export-excel" as the :id value.
   router.get(`/${apiName}/export-excel`, auth, readPermission, async (req, res, next) => {
     try {
       const conditions = [];
@@ -326,8 +373,9 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       const records = result.rows.map(rowToRecord);
 
       const exportHeaders = moduleRegistry[apiName]?.exportHeaders || {};
-      // نجمع كل مفاتيح موجودة فعلياً بأي سجل (وليس فقط أول سجل) — لتفادي فقدان
-      // أعمدة نادرة موجودة ببعض السجلات فقط
+      // We collect every key that actually exists in any record (not just
+      // the first record) — to avoid losing rare columns that only exist
+      // on some records
       const allFields = new Set();
       records.forEach(r => Object.keys(r).forEach(k => allFields.add(k)));
       allFields.delete('id');
@@ -337,13 +385,13 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       const rows = records.map(r => fields.map(f => {
         const v = r[f];
         if (v === null || v === undefined) return '';
-        if (typeof v === 'object') return JSON.stringify(v); // مصفوفة/كائن متداخل — نص JSON بدل [object Object]
+        if (typeof v === 'object') return JSON.stringify(v); // an array/nested object — a JSON string instead of [object Object]
         return v;
       }));
 
       const ws = XLSX.utils.aoa_to_sheet([headerLabels, ...rows]);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, apiName.slice(0, 31)); // اسم الورقة محدود بـ31 حرف بمواصفات Excel
+      XLSX.utils.book_append_sheet(wb, ws, apiName.slice(0, 31)); // the sheet name is limited to 31 characters per the Excel spec
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
       logAudit({ action: 'EXPORT', table: tableName, count: records.length, userId: req.user?.id, username: req.user?.username });
@@ -367,14 +415,15 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
   router.post(`/${apiName}`, auth, writePermission, validate(schema), async (req, res, next) => {
     try {
       const { indexedValues, rest } = splitBody(req.body);
-      // فرض منشأة المستخدم تلقائياً (يتجاهل أي hospitalId أرسله العميل) —
-      // حماية من انتحال منشأة أخرى عبر تعديل الطلب يدوياً
+      // Automatically force the user's facility (ignoring any hospitalId
+      // sent by the client) — protection against impersonating another
+      // facility by manually tampering with the request
       if (hospitalScoped && req.user?.hospitalId) {
         rest.hospitalId = req.user.hospitalId;
       }
       let sql, values;
       if (indexedColumns.length === 0) {
-        // لا توجد أعمدة فهرسة إضافية — تخزين JSONB بحت (id + data فقط)
+        // No extra indexed columns — pure JSONB storage (just id + data)
         sql = `INSERT INTO ${tableName} (data) VALUES ($1) RETURNING *`;
         values = [JSON.stringify(rest)];
       } else {
@@ -401,7 +450,7 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
 
       const { indexedValues, rest } = splitBody(req.body);
       if (hospitalScoped && req.user?.hospitalId) {
-        rest.hospitalId = req.user.hospitalId; // يمنع تغيير منشأة السجل لمنشأة أخرى بالتعديل
+        rest.hospitalId = req.user.hospitalId; // prevents moving a record to another facility via an edit
       }
       const setSql = indexedColumns.map((c, i) => `${c.column} = $${i + 1}`).join(', ');
       const dataPlaceholder = `$${indexedColumns.length + 1}`;
@@ -413,8 +462,9 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       );
       const record = rowToRecord(result.rows[0]);
       if (cache) {
-        // نُبطِل كاش المنشأة القديمة *و* الجديدة — عادة نفس الشيء، لكن يحمي
-        // بلا كلفة تُذكَر من الحالة النادرة (تعديل إدمن يغيّر hospitalId السجل)
+        // Invalidate the cache for both the old *and* the new facility —
+        // usually the same thing, but at negligible cost it protects
+        // against the rare case (an admin edit changes the record's hospitalId)
         invalidateCache(existing.rows[0].data?.hospitalId).catch(() => {});
         invalidateCache(record.hospitalId).catch(() => {});
       }
@@ -423,10 +473,12 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
     } catch (err) { next(err); }
   });
 
-  // DELETE — إصلاح: كان يحذف نهائياً وفوراً بلا أي إمكانية تراجع. الآن "الحذف"
-  // ينقل السجل كاملاً لسلة المحذوفات (recycle_bin) قبل حذفه من جدوله الأصلي —
-  // يختفي من القوائم فوراً (نفس السلوك الظاهري بالضبط من منظور المستخدم)، لكن
-  // يبقى قابلاً للاسترجاع أو الحذف النهائي من صفحة الإعدادات (إدمن فقط).
+  // DELETE — fix: this used to delete permanently and immediately with no
+  // way to undo. Now "deleting" moves the full record to the recycle bin
+  // (recycle_bin) before removing it from its original table — it
+  // disappears from lists immediately (the exact same visible behavior
+  // from the user's point of view), but it stays recoverable or
+  // permanently deletable from the settings page (admin only).
   router.delete(`/${apiName}/:id`, auth, writePermission, async (req, res, next) => {
     const client = await pool.connect();
     try {
@@ -449,12 +501,15 @@ const pgCrud = (router, apiName, schema, indexedColumns, sqlTableName = apiName,
       logAudit({ action: 'DELETE', table: tableName, recordId: req.params.id, note: 'نُقل لسلة المحذوفات', userId: req.user?.id, username: req.user?.username });
       res.json({ success: true });
     } catch (err) {
-      // إصلاح حرج: ROLLBACK كان بدون حماية — لو فشل هو نفسه (مثلاً لأن الاتصال
-      // انكسر أصلاً بسبب الخطأ الأول)، يصير استثناء غير مُعالَج داخل async
-      // route handler لا يمسكه Express، وبـ Node.js الحديث هذا **يُسقط العملية
-      // كاملة** (يطفي السيرفر بالكامل!) — تفسير مباشر لماذا ظهرت "تعذّر
-      // الاتصال بالخادم" حتى بطلبات ثانية غير متعلقة، وتبقى حتى إعادة تشغيل
-      // يدوية. الآن أي فشل بـ ROLLBACK يُسجَّل فقط ولا يُسقط السيرفر أبداً.
+      // Critical fix: ROLLBACK used to have no protection — if it itself
+      // failed (for example because the connection was already broken by
+      // the first error), it became an unhandled exception inside an async
+      // route handler that Express doesn't catch, and on modern Node.js
+      // this **crashes the entire process** (takes down the whole server!)
+      // — a direct explanation for why "could not connect to the server"
+      // used to appear even on unrelated subsequent requests, and stayed
+      // that way until a manual restart. Now any failure in ROLLBACK is
+      // only logged and never crashes the server.
       try { await client.query('ROLLBACK'); } catch (rollbackErr) {
         console.error(`ROLLBACK failed after a delete error [${tableName}]:`, rollbackErr.message);
       }

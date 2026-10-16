@@ -1,12 +1,14 @@
 // server/config/database.js
-// اتصال PostgreSQL عبر مكتبة pg (خفيفة، بدون ORM ثقيل، متوافقة مع النمط الحالي للمشروع)
-// ثبّت المكتبة أولاً: npm install pg
+// PostgreSQL connection via the pg library (lightweight, no heavy ORM, consistent with this project's current style)
+// Install the library first: npm install pg
 
-// يجب أن نحمّل .env هنا مباشرة (وليس الاعتماد على أن server.js حمّله قبلنا) — بملفات
-// الاختبار (tests/testUtils.js)، هذا الملف يُستورَد قبل require('../server')،
-// فلو انتظرنا dotenv.config() من server.js، الـ Pool تحته يتبنى فعلياً بكلمة
-// مرور فارغة (القيمة الافتراضية) بدل القيمة الحقيقية من .env — لأن إعدادات
-// pg.Pool تُلتقط لحظة الإنشاء، وليس بشكل كسول لاحق.
+// .env must be loaded directly here (not relying on server.js having already
+// loaded it) -- in the test files (tests/testUtils.js), this file is
+// imported before require('../server'), so if we waited for dotenv.config()
+// from server.js, the Pool underneath it would actually be built with an
+// empty password (the default value) instead of the real value from .env --
+// because pg.Pool's settings are captured at construction time, not lazily
+// later.
 require('dotenv').config();
 const { Pool, types } = require('pg');
 
@@ -38,12 +40,15 @@ pool.on('error', (err) => {
   console.error('[PostgreSQL] Unexpected connection error:', err);
 });
 
-// ── تحسين تشغيل: فحص اتصال مبكر وواضح ────────────────────────────────────────
-// قبل هذا، لو PostgreSQL لا يعمل أو بيانات الاتصال بـ.env خاطئة، الخادم كان
-// يقلع بصمت وكأن كل شيء تمام — والمشكلة تظهر فقط لاحقاً كخطأ 503 غامض بأول
-// طلب فعلي من المستخدم (بالضبط الالتباس الذي واجهناه فعلياً أثناء تشخيص
-// مشاكل سابقة). هذه الدالة تختبر الاتصال فوراً عند الإقلاع وتطبع رسالة عربية
-// واضحة بالمشكلة والحل، بدل ترك المستخدم يكتشفها صدفة بمنتصف استخدامه للنظام.
+// ── Startup improvement: early, explicit connection check ───────────────────
+// Before this, if PostgreSQL wasn't running or the .env connection details
+// were wrong, the server would start up silently as if everything were
+// fine -- and the problem would only surface later as a confusing 503 error
+// on the first real user request (exactly the confusion we actually ran
+// into while diagnosing earlier issues). This function tests the connection
+// immediately at startup and prints a clear message describing the problem
+// and the fix, instead of letting the user stumble onto it midway through
+// using the system.
 async function testConnection() {
   try {
     await pool.query('SELECT 1');
@@ -53,7 +58,7 @@ async function testConnection() {
   }
 }
 
-// دالة مساعدة موحّدة للاستعلامات (يمكن استخدامها بكل الملفات بدل تكرار pool.query)
+// Shared helper for queries (can be used across files instead of repeating pool.query)
 async function query(text, params) {
   const start = Date.now();
   const res = await pool.query(text, params);

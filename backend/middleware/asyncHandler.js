@@ -1,16 +1,19 @@
 // backend/middleware/asyncHandler.js
 //
-// غلاف موحّد لأي دالة مسار (route handler) غير متزامنة (async).
-// بدون هذا الغلاف، أي استثناء يُرمى داخل دالة async (مثل خطأ اتصال بقاعدة PostgreSQL)
-// لا يُلتقط تلقائياً بواسطة Express 4، ويتحول إلى Unhandled Promise Rejection
-// بدل أن يصل إلى معالج الأخطاء المركزي — وهذا قد يُسقط الطلب دون رد واضح للمستخدم،
-// أو في أسوأ الحالات يُسقط عملية الخادم بالكامل.
+// A shared wrapper for any async route handler function.
+// Without this wrapper, any exception thrown inside an async function
+// (such as a PostgreSQL connection error) is not automatically caught by
+// Express 4, and turns into an Unhandled Promise Rejection instead of
+// reaching the central error handler -- this can drop the request with no
+// clear response to the user, or in the worst case crash the whole server
+// process.
 //
-// الاستخدام:
+// Usage:
 //   router.post('/payments', asyncHandler(paymentController.createPayment));
 //
-// بهذا يُصبح أي خطأ داخل createPayment مُمرَّراً تلقائياً إلى next(err)،
-// فيلتقطه معالج الأخطاء المركزي في server.js ويُعيد استجابة موحّدة للمستخدم.
+// This way, any error inside createPayment is automatically passed to
+// next(err), which the central error handler in server.js catches and
+// turns into a consistent response for the user.
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };

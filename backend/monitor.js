@@ -1,15 +1,19 @@
 // backend/monitor.js
 //
-// سكربت مراقبة مستقل — يفحص صحة السيرفر (وقاعدة البيانات خلفه) بفحص واحد
-// لكل تشغيل، ويُصمَّم ليُجدوَل بـ Windows Task Scheduler (كل 5 دقائق مثلاً)
-// بدل أن يبقى عملية تعمل بالخلفية بلا توقف — هذا أبسط وأوثق على ويندوز.
+// A standalone monitoring script -- checks the server's health (and the
+// database behind it) with a single check per run, designed to be
+// scheduled with Windows Task Scheduler (every 5 minutes, for example)
+// instead of staying a process that runs in the background without
+// stopping -- this is simpler and more reliable on Windows.
 //
-// المنطق الأهم: **تنبيه واحد فقط عند تغيّر الحالة**، وليس رسالة كل فحص لو
-// الخلل مستمر لساعات — غير هذا كان راح تغرق برسائل متكررة لنفس المشكلة.
-// يُبلَّغ أيضاً عند "التعافي" (رجوع النظام لطبيعته) حتى تعرف متى انحلّت
-// المشكلة بدون ما تراقب يدوياً.
+// The most important logic: **only one alert when the status changes**,
+// not a message on every check if the problem continues for hours --
+// otherwise this would flood you with repeated messages about the same
+// problem. It also reports on "recovery" (the system returning to normal)
+// so you know when the problem was resolved without having to watch it
+// manually.
 //
-// الاستخدام: node monitor.js   (أو عبر monitor.bat)
+// Usage: node monitor.js   (or via monitor.bat)
 require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
@@ -65,7 +69,7 @@ async function main() {
 
   console.log(`[${now}] check: ${currentStatus}${result.details?.database ? ` | database: ${result.details.database}` : ''}`);
 
-  // تنبيه فقط عند *تغيّر* الحالة — يمنع إغراقج برسائل متكررة لنفس الخلل
+  // Only alert when the status *changes* -- prevents flooding you with repeated messages about the same problem
   if (currentStatus !== state.lastStatus) {
     if (currentStatus === 'unhealthy') {
       const reason = !result.reachable
@@ -76,13 +80,13 @@ async function main() {
         `${reason}\n\nTime: ${now}\nChecked URL: ${HEALTH_URL}\n\nNext step: confirm start-backend.bat is running, and run check-system.bat for a more detailed diagnosis.`
       );
     } else if (state.lastStatus === 'unhealthy') {
-      // كانت متعطّلة، والآن رجعت طبيعية — تنبيه "تعافي" حتى تعرف انحلّت المشكلة
+      // It was down, and now it's back to normal — a "recovery" alert so you know the problem was resolved
       await sendAlert(
         'SIHATUNA IRAQ -- server recovered',
         `The server and its response are healthy now.\n\nTime: ${now}`
       );
     }
-    // أول تشغيل إطلاقاً (lastStatus === 'unknown') وكانت النتيجة سليمة — لا تنبيه، هذا وضع طبيعي
+    // The very first run ever (lastStatus === 'unknown') and the result was healthy — no alert, this is the normal case
   }
 
   writeState({ lastStatus: currentStatus, lastCheckedAt: now, lastDetails: result.details });

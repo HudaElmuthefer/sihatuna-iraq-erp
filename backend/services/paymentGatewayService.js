@@ -1,7 +1,8 @@
 // server/services/paymentGatewayService.js
-// النقطة المركزية: تقرأ إعدادات البوابة المفعّلة من جدول hospital_payment_gateways
-// (الذي يحدده الإدمن)، تفك تشفير الـ credentials، وتنادي الـ Adapter المناسب.
-// إضافة بوابة جديدة مستقبلاً = سطر واحد بـ ADAPTER_REGISTRY + ملف Adapter جديد.
+// The central point: reads the active gateway settings from the
+// hospital_payment_gateways table (set by the admin), decrypts the
+// credentials, and calls the right Adapter.
+// Adding a new gateway in the future = one line in ADAPTER_REGISTRY plus a new Adapter file.
 
 const { query } = require('../config/database');
 const { decryptCredentials } = require('../utils/credentialsCrypto');
@@ -24,8 +25,9 @@ const ADAPTER_REGISTRY = {
   western_union: WesternUnionAdapter,
 };
 
-// يقرأ بيانات اعتماد كل بوابة من ملف .env (المكان البسيط الموصى به)
-// راجع التعليق "💳 اكتب بيانات بوابة الدفع هنا" في ملف backend/.env
+// Reads each gateway's credentials from the .env file (the simple,
+// recommended place) -- see the "Write your payment gateway details here"
+// comment in backend/.env
 function _credentialsFromEnv(providerCode) {
   const map = {
     zaincash:  { merchant_id: process.env.ZAINCASH_MERCHANT_ID, secret_key: process.env.ZAINCASH_SECRET_KEY },
@@ -39,16 +41,16 @@ function _credentialsFromEnv(providerCode) {
   return map[providerCode] || {};
 }
 
-// يتحقق هل تم تعبئة بيانات بوابة معينة فعلياً في ملف .env (وليست فارغة)
+// Checks whether a given gateway's credentials are actually filled in in .env (and not empty)
 function isProviderConfigured(providerCode) {
   const creds = _credentialsFromEnv(providerCode);
   const values = Object.values(creds);
-  if (values.length === 0) return true; // بوابات مثل cash/western_union لا تحتاج مفاتيح
+  if (values.length === 0) return true; // gateways like cash/western_union need no keys
   return values.every(v => v && v.trim() !== '');
 }
 
 /**
- * يرجع كل بوابات الدفع المفعّلة لمستشفى معين (لعرضها بشاشة الدفع للمريض/الكاشير)
+ * Returns every active payment gateway for a given hospital (to display on the patient's/cashier's payment screen)
  */
 async function getActiveGatewaysForHospital(hospitalId) {
   const result = await query(
@@ -63,7 +65,7 @@ async function getActiveGatewaysForHospital(hospitalId) {
 }
 
 /**
- * يبني Adapter جاهز للاستخدام لبوابة معينة بمستشفى معين
+ * Builds a ready-to-use Adapter for a given gateway at a given hospital
  */
 async function _buildAdapter(hospitalId, providerCode) {
   const AdapterClass = ADAPTER_REGISTRY[providerCode];
@@ -71,7 +73,7 @@ async function _buildAdapter(hospitalId, providerCode) {
     throw new Error(`لا يوجد Adapter مسجّل لبوابة "${providerCode}"`);
   }
 
-  // المصدر الأساسي والبسيط: ملف .env (راجع "💳 اكتب بيانات بوابة الدفع هنا")
+  // The primary, simple source: the .env file (see "Write your payment gateway details here")
   const envCredentials = _credentialsFromEnv(providerCode);
   const hasEnvCredentials = Object.keys(envCredentials).length === 0 || Object.values(envCredentials).some(v => v && v.trim() !== '');
 
@@ -79,7 +81,7 @@ async function _buildAdapter(hospitalId, providerCode) {
     return new AdapterClass(envCredentials, { isSandbox: process.env.NODE_ENV !== 'production' });
   }
 
-  // مصدر متقدم اختياري: قاعدة بيانات PostgreSQL مشفّرة (إن كانت مفعّلة)
+  // An optional, advanced source: an encrypted PostgreSQL table (if enabled)
   const result = await query(
     `SELECT * FROM hospital_payment_gateways
      WHERE hospital_id = $1 AND provider_code = $2 AND is_active = TRUE`,
@@ -94,7 +96,7 @@ async function _buildAdapter(hospitalId, providerCode) {
 }
 
 /**
- * يبدأ عملية دفع جديدة ويسجلها بجدول payments بحالة pending
+ * Starts a new payment and records it in the payments table with pending status
  */
 async function initiatePayment({ hospitalId, invoiceId, patientId, providerCode, amount, currency, metadata, userId }) {
   const adapter = await _buildAdapter(hospitalId, providerCode);
@@ -116,7 +118,7 @@ async function initiatePayment({ hospitalId, invoiceId, patientId, providerCode,
 }
 
 /**
- * يتحقق من حالة دفعة معينة عبر البوابة، ويحدّث السجل محلياً
+ * Checks a given payment's status through the gateway, and updates the record locally
  */
 async function verifyAndUpdatePayment(paymentId) {
   const paymentRes = await query('SELECT * FROM payments WHERE id = $1', [paymentId]);
@@ -131,7 +133,7 @@ async function verifyAndUpdatePayment(paymentId) {
     [verification.status, paymentId]
   );
 
-  // إذا اكتمل الدفع بالكامل، حدّث حالة الفاتورة تلقائياً
+  // If the payment is fully completed, automatically update the invoice's status
   if (verification.status === 'completed') {
     await query(
       `UPDATE invoices SET status = 'paid', updated_at = now()
@@ -146,7 +148,7 @@ async function verifyAndUpdatePayment(paymentId) {
 }
 
 /**
- * تأكيد يدوي (يُستخدم لبوابات مثل Western Union أو الحوالات البنكية)
+ * Manual confirmation (used for gateways like Western Union or bank transfers)
  */
 async function manuallyConfirmPayment(paymentId, referenceNote, userId) {
   const result = await query(

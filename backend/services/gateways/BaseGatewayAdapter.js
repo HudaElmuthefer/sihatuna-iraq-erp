@@ -1,15 +1,15 @@
 // server/services/gateways/BaseGatewayAdapter.js
-// كل بوابة دفع (Zain Cash, FastPay, Qi Card, PayPal...) يجب أن تطبّق نفس الواجهة
-// هذا يجعل إضافة بوابة جديدة مستقبلاً = ملف جديد فقط، بدون تعديل الكود الأساسي
+// Every payment gateway (Zain Cash, FastPay, Qi Card, PayPal...) must implement the same interface
+// This makes adding a new gateway in the future = just a new file, with no changes to the core code
 
 class BaseGatewayAdapter {
   constructor(credentials = {}, config = {}) {
-    this.credentials = credentials; // {api_key, api_secret, merchant_id, ...} مفكوكة التشفير
-    this.config = config;           // إعدادات غير حساسة (sandbox mode, webhook url...)
+    this.credentials = credentials; // {api_key, api_secret, merchant_id, ...} decrypted
+    this.config = config;           // non-sensitive settings (sandbox mode, webhook url...)
   }
 
   /**
-   * يبدأ عملية دفع جديدة
+   * Starts a new payment
    * @returns {Promise<{success: boolean, gatewayTransactionId: string, redirectUrl?: string, raw?: object}>}
    */
   async initPayment({ amount, currency, invoiceId, patientId, metadata }) {
@@ -17,7 +17,7 @@ class BaseGatewayAdapter {
   }
 
   /**
-   * يتحقق من حالة عملية دفع (بعد رجوع المستخدم من البوابة أو webhook)
+   * Checks a payment's status (after the user returns from the gateway, or via webhook)
    * @returns {Promise<{status: 'completed'|'pending'|'failed', raw?: object}>}
    */
   async verifyPayment(gatewayTransactionId) {
@@ -25,7 +25,7 @@ class BaseGatewayAdapter {
   }
 
   /**
-   * استرجاع مبلغ (اختياري، ليست كل البوابات تدعمه)
+   * Refunding an amount (optional, not every gateway supports it)
    */
   async refund(gatewayTransactionId, amount) {
     throw new Error(`refund() غير مدعوم بهذه البوابة`);

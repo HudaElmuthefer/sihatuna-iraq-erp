@@ -1,14 +1,16 @@
 // backend/routes/prescriptionReaderRoutes.js
 //
-// قراءة وصفة طبية بالذكاء الاصطناعي — تصوّر/ارفع وصفة ورقية من الطبيب،
-// والنظام يستخرج الأدوية تلقائياً (بدل كتابتها يدوياً بشاشة "وصفة جديدة"
-// بـPharmacyPage.js) *ويفحص التضارب الدوائي بينها فوراً* — سير عمل متعدد
-// الوكلاء كامل (OCR → AI → فحص تضارب)، راجع شرح تفصيلي بـ
-// agents/prescriptionAgent.js.
+// AI prescription reading — photograph/upload a paper prescription from
+// the doctor, and the system extracts the medications automatically
+// (instead of typing them manually on the "new prescription" screen in
+// PharmacyPage.js) *and checks for drug interactions between them
+// immediately* — a full multi-agent workflow (OCR -> AI -> interaction
+// check), see the detailed explanation in agents/prescriptionAgent.js.
 //
-// نفس نمط invoiceReaderRoutes.js تماماً (مهمة خلفية BullMQ، لا استدعاء AI/
-// OCR مباشر داخل خيط طلب HTTP — قد يأخذ العمل الكامل هنا وقتاً أطول من
-// قراءة فاتورة عادية: OCR + AI + فحص تضارب لكل زوج أدوية).
+// The exact same pattern as invoiceReaderRoutes.js (a BullMQ background
+// job, no direct AI/OCR call inside the HTTP request thread — the full
+// work here can take longer than reading a regular invoice: OCR + AI +
+// an interaction check for every drug pair).
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -44,11 +46,12 @@ router.post('/prescription-reader/read', auth, requirePermission('pharmacy'), pr
     const base64 = image.includes(',') ? image.split(',')[1] : image;
     const detectedMimeType = mimeType || (image.match(/^data:(.+?);base64,/) || [])[1] || 'image/jpeg';
 
-    // patientAllergies: قائمة حساسيات مريض مربوط صراحةً بهذه الوصفة من
-    // الفرونت إند (اختياري تماماً — راجع شرح كامل بـagents/prescriptionAgent
-    // .js). نتحقق فقط من الشكل العام هنا (مصفوفة أو غير موجودة) — أي عنصر
-    // بلا name صالح يُتجاهَل لاحقاً بـallergyAgent.js نفسه، لا حاجة لتكرار
-    // ذلك هنا.
+    // patientAllergies: a patient's allergy list explicitly tied to this
+    // prescription from the frontend (entirely optional — see the full
+    // explanation in agents/prescriptionAgent.js). We only check the
+    // general shape here (an array or not present) — any item without a
+    // valid name is filtered out later by allergyAgent.js itself, no need
+    // to repeat that here.
     const validPatientAllergies = Array.isArray(patientAllergies) ? patientAllergies : undefined;
 
     let jobId;

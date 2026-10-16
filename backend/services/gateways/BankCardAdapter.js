@@ -1,13 +1,13 @@
 // server/services/gateways/BankCardAdapter.js
-// أدابتر عام لأي بوابة بطاقات مصرفية محلية أخرى غير المدرجة (بنك الرشيد، الرافدين، إلخ)
-// نفس نمط الـ Adapters السابقة — عدّل الـ endpoints حسب البنك المطلوب فعلياً
+// A generic adapter for any other local bank card gateway not already listed (Al-Rasheed Bank, Al-Rafidain Bank, etc.)
+// Same pattern as the previous Adapters -- adjust the endpoints per the actual bank needed
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const axios = require('axios');
 
 class BankCardAdapter extends BaseGatewayAdapter {
   constructor(credentials, config) {
     super(credentials, config);
-    this.baseUrl = credentials.gateway_url; // يُدخله الإدمن حسب البنك المتعاقد معه
+    this.baseUrl = credentials.gateway_url; // entered by the admin according to the bank they've contracted with
   }
 
   async initPayment({ amount, currency, invoiceId, metadata }) {

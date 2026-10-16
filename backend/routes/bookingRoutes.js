@@ -1,15 +1,18 @@
 // backend/routes/bookingRoutes.js
 //
-// مسار حجز مخصَّص لصفحة "الخدمات الشخصية" (PersonalServicesPage.js) —
-// منفصل عمداً عن مسار appointments العام (POST /api/appointments عبر
-// pgCrud القياسي)، لأنه يحتاج فحص تعارض وقت حقيقي على مستوى قاعدة
-// البيانات قبل الإدراج: مريضين ما يصير يحجزون نفس الطبيب بنفس التاريخ
-// والوقت بالضبط. فحص كهذا لا يمكن أن يتم بالفرونت إند وحده بشكل موثوق —
-// لو مستخدمين مختلفين ضغطوا "تأكيد الحجز" بنفس اللحظة تقريباً، كل واحد
-// عنده نسخته المحلية القديمة من appointments ولا يرى حجز الثاني إلا بعد
-// ما يوصل فعلياً، فيصير تعارض حقيقي رغم إن الفحص المحلي بالواجهة ما كان
-// يرفضه وقتها. الفحص هنا يصير داخل نفس طلب الإدراج على قاعدة البيانات
-// الحقيقية مباشرة، فيمسك التعارض حتى لو صار بنفس اللحظة تقريباً.
+// A dedicated booking route for the "Personal Services" page
+// (PersonalServicesPage.js) -- deliberately kept separate from the general
+// appointments route (POST /api/appointments via the standard pgCrud),
+// because it needs a real time-conflict check at the database level before
+// inserting: two patients must not end up booking the exact same doctor,
+// date, and time. A check like this can't be done reliably on the
+// frontend alone -- if different users press "confirm booking" at almost
+// the exact same moment, each one has their own stale local copy of
+// appointments and doesn't see the other's booking until it actually
+// arrives, so a real conflict happens even though the local check in the
+// UI didn't reject it at the time. The check here happens inside the same
+// insert request directly against the real database, so it catches the
+// conflict even if it happens at almost the exact same moment.
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
@@ -24,10 +27,11 @@ router.post('/booking/book-appointment', auth, async (req, res, next) => {
       return res.status(400).json({ message: 'المريض والطبيب والتاريخ والوقت كلها مطلوبة' });
     }
 
-    // ── فحص التعارض الحقيقي: نفس الطبيب + نفس التاريخ + نفس الوقت، ولحالة
-    // غير ملغاة. patient/doctor/date/status أعمدة حقيقية مفهرسة أصلاً
-    // (نفس مصفوفة pgCrud لموديول appointments بـ modules.js)، أما "time"
-    // فمخزَّن فقط داخل عمود data (JSONB) — نستعلمه من هناك.
+    // ── The real conflict check: same doctor + same date + same time, and
+    // a non-cancelled status. patient/doctor/date/status are real, already
+    // indexed columns (the same pgCrud mapping for the appointments module
+    // in modules.js), while "time" is only stored inside the data column
+    // (JSONB) -- we query it from there.
     const conflict = await pool.query(
       `SELECT id FROM appointments
        WHERE doctor = $1 AND date = $2 AND data->>'time' = $3 AND status != 'cancelled'

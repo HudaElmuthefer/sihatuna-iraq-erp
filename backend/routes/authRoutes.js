@@ -1,6 +1,6 @@
 // backend/routes/authRoutes.js
 //
-// مسارات تسجيل الدخول/الخروج والتحقق من الجلسة الحالية.
+// Login/logout routes and checking the current session.
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -28,14 +28,14 @@ router.post('/auth/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
     }
 
-    // حساب معطَّل (تعطيل جماعي لمستخدمي منشأة، راجع usersRoutes.js bulk-deactivate)
+    // A deactivated account (bulk deactivation of a facility's users, see usersRoutes.js bulk-deactivate)
     if (user.is_active === false) {
       logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'account_deactivated' } });
       return res.status(401).json({ message: 'هذا الحساب معطّل، يرجى التواصل مع الإدارة' });
     }
 
-    // كل الحسابات تُنشَأ بكلمة مرور مشفّرة بـbcrypt دائماً (routes/usersRoutes.js،
-    // scripts/migrateUsersFromJson.js) — لا مسار مقارنة نصّية صريحة إطلاقاً.
+    // Every account is always created with a bcrypt-hashed password
+    // (routes/usersRoutes.js, scripts/migrateUsersFromJson.js) — there is no plain-text comparison path at all.
     const valid = user.password && bcrypt.compareSync(password, user.password);
     if (!valid) {
       logAudit({ module: 'auth', action: 'login_failed', userId: user.id, userRole: user.role, after: { attemptedUsername: username, reason: 'wrong_password' } });
@@ -43,36 +43,44 @@ router.post('/auth/login', loginLimiter, async (req, res, next) => {
     }
 
     const safeUser = mapUserRow(user);
-    // permissions تُضمَّن الآن بالتوكن نفسه ليستطيع requirePermission (middleware
-    // الصلاحيات بموديولات pgCrud) يتحقق منها بدون أي استعلام إضافي لقاعدة
-    // البيانات بكل طلب. حساب admin يتجاوز هذا الفحص دائماً بغض النظر عن القيمة هنا.
-    // jti (JWT ID) معرّف فريد لهذا التوكن تحديداً — يسمح لتسجيل الخروج بإبطاله
-    // فعلياً لاحقاً (انظر utils/tokenRevocation.js) بدل انتظار انتهاء صلاحيته الطبيعية.
+    // permissions is now embedded in the token itself so requirePermission
+    // (the permissions middleware in pgCrud modules) can check it with no
+    // extra database query on every request. An admin account always
+    // bypasses this check regardless of the value here.
+    // jti (JWT ID) is a unique identifier for this specific token — it
+    // allows logout to actually revoke it later (see
+    // utils/tokenRevocation.js) instead of waiting for its natural expiry.
     const jti = uuidv4();
     const token = jwt.sign({ id: safeUser.id, role: safeUser.role, hospitalId: safeUser.hospitalId || null, permissions: safeUser.permissions || [], jti }, JWT_SECRET, { expiresIn: '1d' });
     logAudit({ module: 'auth', action: 'login_success', userId: safeUser.id, userRole: safeUser.role });
-    // ── إصلاح أمني ──────────────────────────────────────────────────────────
-    // التوكن الآن يُرسَل أيضاً بـ httpOnly cookie — هذا ما يعتمد عليه الفرونت
-    // إند فعلياً (كود الجافاسكربت لا يستطيع قراءة هذه الكوكي إطلاقاً، حتى لو صار
-    // XSS بأي مكان بالتطبيق). يبقى موجوداً بجسم الاستجابة (body) أيضاً فقط من
-    // أجل التوافق مع أدوات API مباشرة واختبارات jest الآلية — الفرونت إند لا
-    // يخزّنه ولا يقرأه من الجسم بعد اليوم.
-    // ── إصلاح أمني ──────────────────────────────────────────────────────────
-    // sameSite: 'strict' (بدل 'lax' سابقاً) يمنع المتصفح من إرسال الكوكي إطلاقاً
-    // مع أي طلب مصدره موقع آخر (حتى طلبات GET من رابط بموقع خارجي) — يقفل ثغرة
-    // CSRF بشكل شبه كامل بدون حاجة لآلية توكن CSRF منفصلة. هذا مناسب تماماً
-    // لنظام داخلي مثل هذا (لا توجد حالة استخدام مشروعة لفتح رابط من موقع خارجي
-    // يدخل جلسة المستخدم). ملاحظة: هذا يفترض إن الفرونت إند والباك إند يعملان
-    // على نفس "الموقع" (Same Site) — نفس الدومين الأساسي، حتى لو بمنافذ مختلفة
-    // (localhost:3000 و localhost:8000 يُعتبَران نفس الموقع). لو نُشر المشروع
-    // مستقبلاً بحيث الفرونت إند والباك إند على نطاقين فرعيين مختلفين تماماً
-    // (مثل app.sihatuna.iq و api.sihatuna.iq)، هذا الإعداد يمنع إرسال الكوكي
-    // بينهما تماماً ويكسر تسجيل الدخول — يجب إرجاعه لـ'lax' بهذه الحالة تحديداً.
+    // ── Security fix ──────────────────────────────────────────────────────────
+    // The token is now also sent via an httpOnly cookie — this is what the
+    // frontend actually relies on (JavaScript code can never read this
+    // cookie at all, even if XSS happens anywhere in the app). It's still
+    // included in the response body too, only for compatibility with
+    // direct API tools and automated jest tests — the frontend no longer
+    // stores it or reads it from the body.
+    // ── Security fix ──────────────────────────────────────────────────────────
+    // sameSite: 'strict' (instead of 'lax' before) prevents the browser
+    // from ever sending the cookie with any request originating from
+    // another site (even GET requests from a link on an external site) --
+    // this closes a CSRF vulnerability almost completely with no need for
+    // a separate CSRF token mechanism. This fits an internal system like
+    // this one perfectly (there's no legitimate use case for opening a link
+    // from an external site that enters the user's session). Note: this
+    // assumes the frontend and backend run on the same "site" (Same Site)
+    // -- the same base domain, even on different ports (localhost:3000 and
+    // localhost:8000 are considered the same site). If the project is
+    // deployed in the future so the frontend and backend are on two
+    // completely different subdomains (like app.sihatuna.iq and
+    // api.sihatuna.iq), this setting would prevent the cookie from being
+    // sent between them entirely and break login -- it must be reverted to
+    // 'lax' specifically in that case.
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: process.env.USE_HTTPS === 'true', // مرتبط بـ HTTPS الفعلي (متغيّر مستقل)، وليس بوضع production بشكل عام — نظامك يشتغل حالياً عبر HTTP على شبكة محلية، فيبقى false افتراضياً حتى لو NODE_ENV=production. فعّله فقط لو نصّبت شهادة SSL حقيقية.
+      secure: process.env.USE_HTTPS === 'true', // tied to actual HTTPS (an independent variable), not to production mode generally -- your system currently runs over HTTP on a local network, so it stays false by default even if NODE_ENV=production. Only enable it if you've installed a real SSL certificate.
       sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // يوم واحد، نفس مدة صلاحية التوكن نفسه
+      maxAge: 24 * 60 * 60 * 1000, // one day, the same as the token's own expiry
       path: '/',
     });
     res.json({ token, user: safeUser });
@@ -80,13 +88,15 @@ router.post('/auth/login', loginLimiter, async (req, res, next) => {
 });
 
 router.post('/auth/logout', async (req, res) => {
-  // ── إصلاح أمني: إبطال فعلي بدل مجرد مسح الكوكي ────────────────────────────
-  // نحاول استخراج jti من التوكن الحالي (كوكي أو header) ونضيفه لقائمة
-  // الإبطال — بهذا حتى لو احتفظ أحد بنسخة من التوكن الخام قبل تسجيل الخروج
-  // (مثلاً بسجلات شبكة قديمة)، يصير مرفوضاً فوراً وليس فقط بعد يوم واحد.
-  // ننتظر (await) اكتمال الإبطال بـRedis قبل الرد — جولة واحدة سريعة جداً،
-  // تضمن إن "نجح تسجيل الخروج" بالرد يعني فعلاً إن التوكن أُبطِل (راجع
-  // utils/tokenRevocation.js — لا ترمي استثناءً أبداً حتى لو Redis غير متاح).
+  // ── Security fix: actual revocation instead of just clearing the cookie ────────────────────────
+  // We try to extract the jti from the current token (cookie or header) and
+  // add it to the revocation list -- this way, even if someone kept a copy
+  // of the raw token before logging out (e.g. in old network logs), it's
+  // rejected immediately, not only after a full day. We await the
+  // revocation completing in Redis before responding -- a single very
+  // fast round-trip, guaranteeing that "logout succeeded" in the response
+  // actually means the token was revoked (see utils/tokenRevocation.js --
+  // it never throws an exception even if Redis is unavailable).
   const cookieToken = req.cookies?.auth_token;
   const header = req.headers.authorization;
   const headerToken = header ? header.split(' ')[1] : null;
@@ -95,7 +105,7 @@ router.post('/auth/logout', async (req, res) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       if (decoded.jti && decoded.exp) await revokeToken(decoded.jti, decoded.exp);
-    } catch { /* توكن غير صالح أصلاً — لا داعي لإبطاله، سيُرفَض بأي حال */ }
+    } catch { /* the token was never valid to begin with -- no need to revoke it, it will be rejected anyway */ }
   }
   res.clearCookie('auth_token', { httpOnly: true, secure: process.env.USE_HTTPS === 'true', sameSite: 'strict', path: '/' });
   res.json({ success: true });

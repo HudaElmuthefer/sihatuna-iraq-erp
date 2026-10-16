@@ -15,16 +15,19 @@ const { pool } = require('../config/database');
 
 const router = express.Router();
 
-// ── إصلاح: الفحص كان صلاحية واحدة ('dashboard') لكل الأرقام الخمسة، رغم أن
-// المصادر الأصلية (GET /patients، /doctors، /appointments، /wards،
-// /admissions، /labTests) كانت تفرض صلاحيات مختلفة فعلياً — patients/doctors/
-// appointments مسجَّلة openRead (مفتوحة لأي مستخدم مسجّل دخول)، بينما wards/
-// admissions تتطلّبان 'wards' وlabTests تتطلّب 'laboratory' تحديداً. أي حساب
-// غير إدمن له 'dashboard' فقط بلا 'wards'/'laboratory' (الحالة الفعلية لكل
-// حسابات nurse/doctor/accountant الحالية) كان يرى إشغال الأسرّة وعدد
-// التحاليل الحقيقيَين هنا، رغم عدم امتلاكه صلاحية رؤية هذه البيانات أصلاً من
-// مصدرها المباشر — توسيع صلاحيات حقيقي غير مقصود. الإصلاح: نفس فحص الصلاحية
-// لكل رقم بمصدره الأصلي بالضبط، بدل فحص واحد موحَّد على المسار كله.
+// ── Fix: the permission check used to be a single permission ('dashboard')
+// for all five numbers, even though the original data sources (GET
+// /patients, /doctors, /appointments, /wards, /admissions, /labTests)
+// actually enforce different permissions — patients/doctors/appointments
+// are registered as openRead (open to any logged-in user), while
+// wards/admissions specifically require 'wards' and labTests specifically
+// requires 'laboratory'. Any non-admin account that has 'dashboard' only,
+// without 'wards'/'laboratory' (the actual situation for every current
+// nurse/doctor/accountant account), used to see the real bed occupancy and
+// real lab test count here, despite not actually having permission to see
+// this data from its direct source — an unintended real permission
+// escalation. The fix: the exact same permission check per number, from
+// its original source, instead of one unified check on the whole route.
 router.get('/dashboard/summary', auth, asyncHandler(async (req, res) => {
   // Same hospital-scoping convention as every pgCrud module: filtered to
   // the caller's hospital when they have one, unfiltered (all-hospitals

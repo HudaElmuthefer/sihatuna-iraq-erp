@@ -1,7 +1,7 @@
 // server/services/gateways/ZainCashAdapter.js
-// تكامل زين كاش — بحاجة: merchant_id, secret_key, msisdn (رقم التاجر) من لوحة تحكم زين كاش
-// التوثيق الرسمي: يوفره زين كاش عند فتح حساب تاجر (Merchant Account)
-// هذا Scaffold جاهز للربط الفعلي؛ استبدل الروابط والحقول حسب التوثيق المستلم من زين كاش
+// Zain Cash integration -- needs: merchant_id, secret_key, msisdn (merchant number) from the Zain Cash dashboard
+// Official documentation: provided by Zain Cash when opening a Merchant Account
+// This is a scaffold ready for the real integration; replace the URLs and fields per the documentation received from Zain Cash
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const axios = require('axios'); // npm install axios
 
@@ -18,7 +18,7 @@ class ZainCashAdapter extends BaseGatewayAdapter {
       throw new Error('زين كاش يدعم الدينار العراقي فقط');
     }
     try {
-      // TODO: استبدل هذا بالـ endpoint الفعلي حسب توثيق زين كاش (JWT token creation)
+      // TODO: replace this with the real endpoint per Zain Cash's documentation (JWT token creation)
       const response = await axios.post(`${this.baseUrl}/transaction/init`, {
         amount,
         merchantId: this.credentials.merchant_id,

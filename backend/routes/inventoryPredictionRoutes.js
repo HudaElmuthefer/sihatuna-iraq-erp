@@ -1,12 +1,13 @@
 // backend/routes/inventoryPredictionRoutes.js
 //
-// توقّع استهلاك المخزون — صفحة مستقلة بالفرونت إند (InventoryPredictionPage
-// .js). التحليل نفسه (POST /inventory-prediction/analyze) إحصائي حتمي بحت
-// عبر agents/inventoryPredictionAgent.js — بلا أي استدعاء AI وبلا حقل mode
-// إطلاقاً؛ الملاحظة الاختيارية بلغة بسيطة عن اتجاه صنف واحد (POST
-// /inventory-prediction/explain) منفصلة تماماً وتحترم aiProviderRouter.js
-// (bot/online/offline) كبقية ميزات AI بالنظام. نفس نمط
-// billingAnomalyRoutes.js بالضبط.
+// Inventory consumption prediction — a standalone frontend page
+// (InventoryPredictionPage.js). The analysis itself (POST
+// /inventory-prediction/analyze) is purely deterministic statistics via
+// agents/inventoryPredictionAgent.js — with no AI call and no mode field
+// at all; the optional plain-language note about one item's trend (POST
+// /inventory-prediction/explain) is entirely separate and respects
+// aiProviderRouter.js (bot/online/offline) like the rest of the system's
+// AI features. The exact same pattern as billingAnomalyRoutes.js.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -38,8 +39,8 @@ const explainLimiter = rateLimit({
   store: new RedisRateLimitStore('inventory-prediction-explain'),
 });
 
-// حالة ميزة الملاحظة الاختيارية بالذكاء الاصطناعي فقط (bot/online/offline)
-// — لا علاقة لها بتوفر التحليل الإحصائي نفسه، المتاح دائماً بغض النظر عنها.
+// The status of only the optional AI note feature (bot/online/offline) —
+// unrelated to the availability of the statistical analysis itself, which is always available regardless of it.
 router.get('/inventory-prediction/status', auth, requirePermission('inventory-prediction'), async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('inventoryPrediction'));

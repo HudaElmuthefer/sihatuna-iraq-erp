@@ -1,14 +1,19 @@
 // server/services/gateways/WesternUnionAdapter.js
 //
-// ملاحظة مهمة: لا يوفر ويسترن يونيون واجهة برمجية مباشرة لبوابة "دفع فوري" بالطريقة
-// التي تعمل بها PayPal أو زين كاش. آلية WU الفعلية: يرسل المريض حوالة باسم المستشفى
-// أو المستلم المعتمد من مكتب WU، ويحصل على رقم مرجعي (MTCN - Money Transfer Control Number)،
-// ثم يتحقق موظف الاستقبال أو المحاسب من الحوالة (يدوياً عبر منصة WU الخاصة
-// بالتاجر إن وجدت، أو بمراجعة مكتب الصرافة) ويسجلها في النظام.
+// Important note: Western Union does not provide a direct API for an
+// "instant payment" gateway the way PayPal or Zain Cash work. WU's actual
+// mechanism: the patient sends a transfer in the hospital's name or a
+// receiver approved by the WU office, and gets a reference number (MTCN --
+// Money Transfer Control Number); the receptionist or accountant then
+// verifies the transfer (manually, through the merchant's own WU platform
+// if available, or by checking with the exchange office) and records it
+// in the system.
 //
-// لذلك يُعد هذا الأدابتر "شبه يدوي": تسجل initPayment طلب دفع بحالة pending
-// وتنتظر إدخال رقم MTCN من طرف المحاسب، وتتحول verifyPayment إلى completed
-// فقط بعد تأكيد يدوي صريح من المستخدم المخوّل (وليس تلقائياً).
+// This adapter is therefore "semi-manual": initPayment records a payment
+// request with pending status and waits for the MTCN to be entered by the
+// accountant, and verifyPayment only turns into completed after an
+// explicit manual confirmation from an authorized user (not
+// automatically).
 
 const BaseGatewayAdapter = require('./BaseGatewayAdapter');
 const crypto = require('crypto');
@@ -26,7 +31,7 @@ class WesternUnionAdapter extends BaseGatewayAdapter {
     };
   }
 
-  // يُستدعى فقط عند إدخال المحاسب لرقم MTCN يدوياً بواجهة الإدمن
+  // Only called when the accountant manually enters the MTCN in the admin UI
   async confirmManually(gatewayTransactionId, mtcnReference, confirmedByUserId) {
     return {
       status: 'completed',
@@ -35,7 +40,7 @@ class WesternUnionAdapter extends BaseGatewayAdapter {
   }
 
   async verifyPayment(gatewayTransactionId) {
-    // بدون تأكيد يدوي، تبقى الحالة pending دائماً
+    // Without manual confirmation, the status always stays pending
     return { status: 'pending', raw: { note: 'بحاجة تأكيد يدوي عبر confirmManually()' } };
   }
 }

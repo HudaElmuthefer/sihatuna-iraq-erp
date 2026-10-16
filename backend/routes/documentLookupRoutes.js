@@ -17,12 +17,14 @@ const barcodeUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// ── نفس جدول Code 39 المستخدَم بالضبط بـ hr/BarcodeTab.js — منقول هنا حرفياً
-// لتوليد الباركود على الخادم أثناء الاستيراد الجماعي (بدون الحاجة لفتح
-// الصفحة لكل كتاب على حدة). QR غير مدعوم هنا عمداً — يحتاج مكتبة خارجية
-// بالمتصفح (qrcode-generator) غير متوفرة بالخادم؛ كتب الأرقام العربية
-// (التي تحتاج QR حصراً) تبقى بحاجة فتح الصفحة يدوياً مرة واحدة لكل كتاب،
-// نفس ما هو موثّق بالتعليق أعلى الحفظ التلقائي بـBarcodeTab.js.
+// ── The exact same Code 39 table used in hr/BarcodeTab.js — copied here verbatim
+// to generate the barcode on the server during bulk import (without needing
+// to open the page for every letter individually). QR is deliberately not
+// supported here — it needs a browser-side external library
+// (qrcode-generator) that isn't available on the server; letters with
+// Arabic numbers/characters (which need QR exclusively) still need the
+// page opened manually once per letter, the same thing documented in the
+// comment above the auto-save in BarcodeTab.js.
 const CODE39 = {
   '0':'NNNWWNWNN','1':'WNNWNNNNW','2':'NNWWNNNNW','3':'WNWWNNNNN',
   '4':'NNNWWNNNW','5':'WNNWWNNNN','6':'NNWWWNNNN','7':'NNNWNNWNW',
@@ -70,13 +72,15 @@ router.get('/document-lookup/search', auth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── حفظ صورة الباركود المولَّدة على سجل الكتاب نفسه ──────────────────────────
-// إصلاح: كانت صورة الباركود تُولَّد لحظياً بالمتصفح كل مرة (توليد نصي بحت،
-// بدون حفظ)، فأي قراءة لاحقة بالمسح تعتمد على نفس خوارزمية التوليد وقت
-// القراءة — لو تغيّرت الخوارزمية مستقبلاً، الباركود المطبوع على الورق فعلياً
-// ما يعود يطابق الصورة المُعاد توليدها. الآن تُحفَظ الصورة (SVG كنص) مباشرة
-// بحقل إضافي `barcodeSvg` ضمن نفس سجل الكتاب (outgoing/incoming) — بدون جدول
-// منفصل، لأنها بيانات تخص الكتاب نفسه بالضبط (نفس علاقة 1-إلى-1).
+// ── Saving the generated barcode image onto the letter's own record ──────────────────────────
+// Fix: the barcode image used to be generated on the fly in the browser
+// every time (pure text generation, nothing saved), so any later scan
+// read relied on the same generation algorithm at read time — if the
+// algorithm ever changed, the barcode actually printed on paper would no
+// longer match the regenerated image. Now the image (SVG as text) is
+// saved directly in an extra `barcodeSvg` field on the same letter record
+// (outgoing/incoming) — no separate table, because it's data that belongs
+// exactly to that letter (the same 1-to-1 relationship).
 router.post('/document-lookup/save-barcode', auth, async (req, res, next) => {
   try {
     const { type, id, barcodeSvg, barcodeType } = req.body || {};
@@ -135,7 +139,7 @@ router.get('/barcode/import-template', auth, requirePermission('hr'), (req, res,
   } catch (err) { next(err); }
 });
 
-// ── تصدير: قائمة كل الكتب (صادرة ووارد) مع حالة الباركود لكل واحد ────────────
+// ── Export: a list of all letters (outgoing and incoming) with the barcode status of each ────────────
 router.get('/barcode/export-excel', auth, requirePermission('hr'), async (req, res, next) => {
   try {
     const cols = `data->>'ref' AS ref, data->>'title' AS title, data->>'barcodeSvg' IS NOT NULL AS "hasBarcode", data->>'barcodeType' AS "barcodeType"`;
@@ -163,11 +167,14 @@ router.get('/barcode/export-excel', auth, requirePermission('hr'), async (req, r
   } catch (err) { next(err); }
 });
 
-// ── استيراد: توليد وحفظ باركود Code 39 دفعة واحدة لقائمة أرقام كتب ───────────
-// كل صف = رقم كتاب واحد (عمود "رقم الكتاب" أو "Ref"). يبحث عن الرقم بجدولي
-// outgoing وincoming، ولو وجده ومحتوٍ أرقام/حروف إنجليزية فقط (Code 39 يدعمها)،
-// يولّد الباركود ويحفظه مباشرة. أرقام الكتب التي فيها حرف عربي تحتاج QR حصراً
-// (غير مدعوم هنا)، فتُرجَع بقائمة "تحتاج فتح الصفحة يدوياً" بدل تجاهلها بصمت.
+// ── Import: generate and save Code 39 barcodes in bulk for a list of letter numbers ───────────
+// Each row = one letter number (column "رقم الكتاب" or "Ref"). It looks up
+// the number in the outgoing and incoming tables, and if found and it
+// contains only numbers/English letters (which Code 39 supports), it
+// generates and saves the barcode directly. Letter numbers containing an
+// Arabic character need QR exclusively (not supported here), so they're
+// returned in a "needs the page opened manually" list instead of being
+// silently ignored.
 router.post('/barcode/import-excel', auth, requirePermission('hr'), barcodeUpload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'لم يُرفَع أي ملف' });

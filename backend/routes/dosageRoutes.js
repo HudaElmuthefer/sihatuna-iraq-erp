@@ -1,10 +1,12 @@
 // backend/routes/dosageRoutes.js
 //
-// فحص الجرعة الآمنة — صفحة مستقلة تماماً بالفرونت إند (DosageCheckPage.js،
-// لا علاقة بصفحة الصيدلية أو قارئ الوصفات إطلاقاً — قرار صريح بمحادثة
-// التخطيط). نفس نمط drugInteractionRoutes.js بالضبط: قاعدة بيانات (bot)
-// أولاً عبر agents/dosageAgent.js، AI احتياطياً فقط لو الدواء/النطاق غير
-// موجود بجدول dosage_limits — راجع migrations-sql/009_dosage_limits.sql.
+// Safe dosage checking — a completely standalone frontend page
+// (DosageCheckPage.js, with no relation at all to the pharmacy page or the
+// prescription reader — an explicit decision made during planning).
+// The exact same pattern as drugInteractionRoutes.js: a local database
+// (bot) first via agents/dosageAgent.js, AI only as a fallback if the
+// drug/range isn't found in the dosage_limits table — see
+// migrations-sql/009_dosage_limits.sql.
 const express = require('express');
 const auth = require('../middleware/auth');
 const requirePermission = require('../middleware/requirePermission');
@@ -27,9 +29,10 @@ const dosageLimiter = rateLimit({
   store: new RedisRateLimitStore('dosage-check'),
 });
 
-// نفس نمط /drug-interactions/status — يخبر الفرونت إند فوراً هل الذكاء
-// الاصطناعي الحقيقي متاح، لعرض تسمية صادقة من أول لحظة (وضع 'bot' يبقى
-// "متاح" دائماً — طبقة قاعدة البيانات تعمل بمعزل تام عن توفّر AI).
+// The exact same pattern as /drug-interactions/status — tells the frontend
+// immediately whether real AI is available, to show an honest label from
+// the first moment ('bot' mode always stays "available" — the database
+// layer works completely independently of AI availability).
 router.get('/dosage-check/status', auth, requirePermission('dosage-check'), async (req, res, next) => {
   try {
     res.json(await getFeatureStatus('dosageValidation'));
@@ -55,10 +58,12 @@ router.post('/dosage-check/check', auth, requirePermission('dosage-check'), dosa
     if (weightNum != null && !Number.isFinite(weightNum)) {
       return res.status(400).json({ message: 'الوزن يجب أن يكون رقماً صالحاً' });
     }
-    // ── يجب توفر عمر أو وزن واحد على الأقل ────────────────────────────────────
-    // بدون أي منهما، لا معنى لمطابقة أي نطاق بجدول dosage_limits (كل صف
-    // كان سيبدو "متطابقاً" بالخطأ — راجع شرح findDbMatch بـdosageAgent.js)،
-    // وحتى فحص AI الاحتياطي يحتاج معلومة مريض أساسية ليعطي رأياً ذا معنى.
+    // ── At least one of age or weight must be provided ────────────────────────────────────
+    // Without either one, matching any range in the dosage_limits table is
+    // meaningless (every row would incorrectly look like a "match" — see
+    // the explanation of findDbMatch in dosageAgent.js), and even the
+    // fallback AI check needs basic patient information to give a
+    // meaningful opinion.
     if (ageNum == null && weightNum == null) {
       return res.status(400).json({ message: 'العمر أو الوزن مطلوب (واحد منهما على الأقل) لفحص الجرعة' });
     }

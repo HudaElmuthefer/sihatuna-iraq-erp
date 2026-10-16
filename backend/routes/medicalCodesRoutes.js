@@ -27,7 +27,7 @@ const importUpload = multer({
   },
 });
 
-// GET /api/medical-codes-icd/import-template ، /api/medical-codes-snomed/import-template
+// GET /api/medical-codes-icd/import-template , /api/medical-codes-snomed/import-template
 function registerTemplateRoute(system) {
   router.get(`/medical-codes-${system}/import-template`, auth, (req, res) => {
     const headers = system === 'snomed'
@@ -45,10 +45,11 @@ function registerTemplateRoute(system) {
 registerTemplateRoute('icd');
 registerTemplateRoute('snomed');
 
-// GET /api/medical-codes-icd/export-excel ، /api/medical-codes-snomed/export-excel
-// كانت غائبة تماماً — الاستيراد فقط كان موجوداً بلا أي طريقة لتصدير الرموز
-// الحالية. مسجَّلة بنفس نمط مسار الاستيراد بالضبط (نفس apiName) حتى يعمل
-// مكوّن ExcelExportButton الجاهز مباشرة بدون أي تعديل إضافي بالواجهة.
+// GET /api/medical-codes-icd/export-excel , /api/medical-codes-snomed/export-excel
+// This was completely missing — only import existed, with no way to export
+// the current codes. Registered with exactly the same route pattern as the
+// import route (same apiName) so the existing ExcelExportButton component
+// works directly with no extra changes needed in the UI.
 function registerExportRoute(system) {
   router.get(`/medical-codes-${system}/export-excel`, auth, async (req, res, next) => {
     try {
@@ -71,13 +72,14 @@ function registerExportRoute(system) {
 registerExportRoute('icd');
 registerExportRoute('snomed');
 
-// ── ربط تشخيصات ICD-10/SNOMED CT بمرضى حقيقيين دفعة واحدة ────────────────────
-// مختلف عن كل استيرادات Excel الثانية بالنظام: هذا لا يُنشئ سجلات جديدة، بل
-// يُحدِّث سجلات patients الموجودة فعلاً (يضيف عنصراً لمصفوفة diagnoses[]
-// المخزَّنة بسجل كل مريض) — لهذا السبب لا يستطيع استخدام مصنع registerExcelImport
-// العام (مصمَّم للإدراج فقط INSERT). يطابق نفس شكل عنصر diagnoses[] المستخدَم
-// فعلياً بـ PatientsPage.js بالضبط: {id, icdCode, icdNameAr, icdNameEn,
-// snomedCode, snomedNameAr, snomedNameEn, isPrimary, dateAdded}.
+// ── Linking ICD-10/SNOMED CT diagnoses to real patients in bulk ────────────────────
+// Different from every other Excel import in the system: this doesn't
+// create new records, it updates existing patients records (adds an item
+// to the diagnoses[] array stored in each patient's record) — that's why
+// it can't use the general registerExcelImport factory (designed for
+// INSERT only). Matches exactly the same diagnoses[] item shape actually
+// used in PatientsPage.js: {id, icdCode, icdNameAr, icdNameEn, snomedCode,
+// snomedNameAr, snomedNameEn, isPrimary, dateAdded}.
 router.get('/patient-diagnoses/import-template', auth, (req, res) => {
   const ws = XLSX.utils.aoa_to_sheet([
     ['اسم المريض', 'رمز ICD-10', 'الاسم بالعربي', 'الاسم بالإنجليزي', 'رمز SNOMED CT', 'تاريخ الإضافة'],
@@ -155,7 +157,7 @@ router.post('/patient-diagnoses/import-excel', auth, importUpload.single('file')
   } catch (err) { next(err); }
 });
 
-// POST /api/medical-codes-icd/import-excel ، /api/medical-codes-snomed/import-excel
+// POST /api/medical-codes-icd/import-excel , /api/medical-codes-snomed/import-excel
 // Bulk import — each row is processed independently (one bad row doesn't
 // block the rest), matching the pattern used elsewhere in this app.
 function registerImportRoute(system) {

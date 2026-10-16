@@ -1,9 +1,10 @@
 // backend/services/queue/invoiceReadProcessor.js
 //
-// منطق معالجة مهمة "قراءة فاتورة" واحدة — مُستخرَج من ocrWorker.js لملف
-// منفصل بلا أي اعتماد على BullMQ نفسه، حتى تستطيع tests/invoiceReadProcessor
-// .test.js تختبره مباشرة (استدعاء دالة عادية) بدل الاضطرار لتشغيل BullMQ
-// Worker حقيقي (يفتح اتصال Redis فوراً عند التحميل — راجع ocrWorker.js).
+// The logic for processing a single "read invoice" job -- extracted from
+// ocrWorker.js into a separate file with no dependency on BullMQ itself,
+// so that tests/invoiceReadProcessor.test.js can test it directly (calling
+// a plain function) instead of having to run a real BullMQ Worker (which
+// opens a Redis connection immediately on load -- see ocrWorker.js).
 const { routeImageCall } = require('../../utils/aiProviderRouter');
 const { extractText } = require('../../agents/ocrAgent');
 const { logAudit } = require('../../utils/auditLog');
@@ -24,14 +25,18 @@ const RESULT_SCHEMA_AR = `{
   "confidence": "high|medium|low"
 }`;
 
-// ── OCR (PaddleOCR) كخطوة تمهيدية، وليس بديلاً عن الصورة ──────────────────────
-// نص PaddleOCR يُرفق كسياق إضافي مساعد فقط، والصورة الأصلية تبقى تُرسَل
-// كاملة لـGemini (رؤية) كمصدر أساسي دقيق — قرار مقصود بعد نقاش صريح لأن جودة
-// PaddleOCR بالعربية أضعف بكثير من قراءة Gemini المباشرة للصورة (خط يد،
-// فواتير مموّهة، جودة تصوير متفاوتة...)، فالاعتماد على نص OCR وحده كان
-// سيُضعف الدقة الحالية لا يحسّنها (راجع agents/ocrAgent.js للشرح الكامل).
-// لو تعذّر تشغيل PaddleOCR أصلاً، نكمل بلا نص OCR إطلاقاً (fail-open) —
-// الصورة وحدها تكفي تماماً، بما يطابق سلوك النظام قبل هذه الإضافة حرفياً.
+// ── OCR (PaddleOCR) as a preliminary step, not a replacement for the image ───
+// The PaddleOCR text is attached only as extra supporting context, while
+// the original image is still sent in full to Gemini (vision) as the main,
+// accurate source -- a deliberate decision made after explicit discussion,
+// because PaddleOCR's Arabic quality is much weaker than Gemini reading
+// the image directly (handwriting, blurred invoices, inconsistent photo
+// quality...), so relying on the OCR text alone would have weakened
+// current accuracy rather than improving it (see agents/ocrAgent.js for
+// the full explanation). If PaddleOCR can't run at all, processing
+// continues with no OCR text whatsoever (fail-open) -- the image alone is
+// entirely sufficient, matching the system's behavior exactly as it was
+// before this addition.
 function buildUserPrompt(ocrText) {
   const ocrSection = ocrText
     ? `نص استخراج ضوئي (OCR) أولي للفاتورة (مرجع مساعد فقط، قد يحتوي أخطاء — اعتمد على الصورة نفسها للدقة):\n"""\n${ocrText}\n"""\n\n`
@@ -48,19 +53,20 @@ async function processInvoiceReadJob(jobData) {
   }
 
   const userPrompt = buildUserPrompt(ocrResult.available ? ocrResult.text : null);
-  // routeImageCall تقرأ اختيار المستخدم المحفوظ (bot/online/offline) وتوزّع
-  // الاستدعاء تبعاً له، أو تستخدم mode (اختيار هذا الطلب تحديداً من واجهة
-  // الصفحة) لو وصل — راجع utils/aiProviderRouter.js.
+  // routeImageCall reads the user's saved choice (bot/online/offline) and
+  // routes the call accordingly, or uses mode (this specific request's
+  // choice from the page UI) if provided -- see utils/aiProviderRouter.js.
   const result = await routeImageCall('invoiceReader', SYSTEM_PROMPT_AR, userPrompt, imageBase64, mimeType, mode);
 
   if (result.available) {
     logAudit({ module: 'invoice-reader', action: 'read', userId, userRole, after: { provider: result.provider, itemsCount: result.parsed?.items?.length || 0, ocrUsed: ocrResult.available } });
   } else if (result.error) {
-    // فشل استدعاء AI نفسه (لا مزوّد مُعدّ، أو خطأ بالاستدعاء) — لا نرمي
-    // استثناء يُعيد المحاولة عبثاً (سيفشل بنفس السبب مرة أخرى غالباً)، بل
-    // نرجع النتيجة كما هي؛ مسار الاستعلام (GET /invoice-reader/jobs/:id)
-    // يتعامل مع available:false بنفس الطريقة المعتادة أصلاً بكل ميزات
-    // الذكاء الاصطناعي بهذا النظام.
+    // The AI call itself failed (no provider configured, or a call error)
+    // -- an exception that would just trigger a pointless retry is not
+    // thrown (it would likely fail again for the same reason); instead the
+    // result is returned as-is. The query route (GET
+    // /invoice-reader/jobs/:id) handles available:false the same way it
+    // already does for every AI feature in this system.
     console.error(`[ocr-worker] Call to ${result.provider} failed:`, result.error);
   }
   return result;

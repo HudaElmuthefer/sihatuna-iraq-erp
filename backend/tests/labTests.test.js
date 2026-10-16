@@ -64,6 +64,14 @@ describe('POST /api/labTests — موديول بـ indexedColumns فاضية (JS
       .set('Authorization', `Bearer ${adminToken}`);
     expect(deleted.status).toBe(200);
 
+    // The delete above moves the record into the recycle bin rather than
+    // removing it permanently; purge it here so this test does not leave
+    // a permanent row behind in the recycle bin table.
+    const bin = await request(app).get('/api/recycle-bin').set('Authorization', `Bearer ${adminToken}`);
+    const binEntry = bin.body.find(r => r.moduleKey === 'labTests' && r.originalId === id);
+    expect(binEntry).toBeDefined();
+    await request(app).delete(`/api/recycle-bin/${binEntry.id}`).set('Authorization', `Bearer ${adminToken}`);
+
     const getAfterDelete = await request(app)
       .get(`/api/labTests/${id}`)
       .set('Authorization', `Bearer ${adminToken}`);

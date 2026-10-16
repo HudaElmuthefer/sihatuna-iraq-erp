@@ -78,7 +78,7 @@ async function chatRequest(model, systemPrompt, userPrompt, images) {
   try {
     return JSON.parse(rawText);
   } catch {
-    throw new Error(`Invalid response from Ollama (${model}): ${rawText.slice(0, 300)}`);
+    throw new Error(`رد غير صالح من Ollama (${model}): ${rawText.slice(0, 300)}`);
   }
 }
 

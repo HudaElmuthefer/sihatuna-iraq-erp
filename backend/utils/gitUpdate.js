@@ -239,8 +239,12 @@ async function installUpdate(projectRoot = DEFAULT_PROJECT_ROOT) {
     return { alreadyUpToDate: true, beforeCommit, afterCommit: beforeCommit, filesChanged: [], backupFilename: null, npmInstallRan: { backend: false, frontend: false } };
   }
 
-  // Backup BEFORE touching any files — this is the rollback point.
-  const backupFilename = await createCodeBackup();
+  // Backup BEFORE touching any files — this is the rollback point. The
+  // backup directory is derived from projectRoot (not hardcoded) so a test
+  // calling installUpdate() with an isolated temp clone never writes into
+  // the real project's backup folder; in production projectRoot is the
+  // real project root, so this resolves to the exact same path as before.
+  const backupFilename = await createCodeBackup(path.join(projectRoot, 'backend', 'backups', 'code'));
 
   const { stdout: filesChangedStr } = await runGit(['diff', '--name-only', beforeCommit, remoteCommit], projectRoot);
   const filesChanged = filesChangedStr ? filesChangedStr.split('\n') : [];

@@ -19,14 +19,14 @@
 // called directly (the same functions the actual HTTP routes call) — the
 // only thing different from production is the `projectRoot` argument.
 //
-// One real, intentional side effect: installUpdate() calls the real,
-// unmodified codeBackup.js, which always operates on the actual project
-// directory regardless of the projectRoot passed to installUpdate() itself
-// (it was never parametrized, and this test doesn't change that). This is
-// correct — it proves the Stage 3 Code Backup feature is genuinely reused,
-// not re-implemented — so a real zip does land in the real
-// backend/backups/code/ folder when this test runs. afterAll() deletes that
-// specific zip so repeated test runs don't accumulate cruft there.
+// installUpdate() calls the real, unmodified codeBackup.js, proving the
+// Stage 3 Code Backup feature is genuinely reused here, not re-implemented
+// — but the backup directory createCodeBackup() writes into is derived
+// from the projectRoot passed to installUpdate(), which this test always
+// sets to the isolated server-clone. So the zip this test creates lands
+// inside that temporary clone, not in the real project's
+// backend/backups/code/ folder, and is deleted along with everything else
+// under `root` by afterAll() below — no separate cleanup step is needed.
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -63,7 +63,6 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
   // right after cloning guarantees a real local branch regardless of
   // whatever state the source repo's own HEAD happens to be in.
   const branch = 'update-test-branch';
-  let backupFilenamesCreated = [];
   let realProjectHeadBefore;
   let realProjectStatusBefore;
 
@@ -119,14 +118,9 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
   }, 30000);
 
   afterAll(() => {
+    // Deletes everything this test created, including the code backup zip
+    // (now written inside server-clone, see the module comment above).
     fs.rmSync(root, { recursive: true, force: true });
-    // Clean up the real (not test-isolated) code backup zip(s) this test's
-    // installUpdate() call(s) actually created in the real project — see
-    // the module comment above for why this happens at all.
-    backupFilenamesCreated.forEach((name) => {
-      const p = path.join(CODE_BACKUPS_DIR, name);
-      if (fs.existsSync(p)) fs.rmSync(p);
-    });
   });
 
   test('no source configured yet: checkForUpdates throws NO_SOURCE', async () => {
@@ -217,11 +211,18 @@ describe('gitUpdate — Stage 4 differential update (isolated clones, real git)'
     const markerContent = fs.readFileSync(path.join(serverClone, 'UPDATE_TEST_MARKER.txt'), 'utf8').replace(/\r\n/g, '\n');
     expect(markerContent).toBe('test release commit\n');
 
-    // Confirm the real Stage 3 zip really exists on disk right now, then
-    // queue it for cleanup in afterAll (see module comment above).
-    expect(fs.existsSync(path.join(CODE_BACKUPS_DIR, result.backupFilename))).toBe(true);
-    backupFilenamesCreated.push(result.backupFilename);
-  }, 20000);
+    // The backup lands inside the isolated server-clone (see the module
+    // comment above), not the real project's backup folder — confirm both
+    // sides of that: the zip exists where it's actually supposed to be,
+    // and the real backend/backups/code/ was never written to.
+    const redirectedBackupPath = path.join(serverClone, 'backend', 'backups', 'code', result.backupFilename);
+    expect(fs.existsSync(redirectedBackupPath)).toBe(true);
+    expect(fs.existsSync(path.join(CODE_BACKUPS_DIR, result.backupFilename))).toBe(false);
+  }, 60000); // The backup step zips the real project's source tree (frontend + backend,
+  // minus node_modules/.git/backups/uploads), which routinely takes longer
+  // than the default 5s/previous 20s budget under real disk I/O, especially
+  // on a loaded or near-full disk. 60s leaves comfortable headroom without
+  // masking a genuine hang.
 
   test('installUpdate is a no-op when already up to date', async () => {
     const result = await installUpdate(serverClone);

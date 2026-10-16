@@ -156,22 +156,31 @@ test.describe('Hospital filter dropdown (Patients and HR Employees)', () => {
     // directly through the API in the browser's own authenticated session
     // (same pattern as ensureMultiHospitalEnabled in helpers.js), since
     // clicking "Add Patient" 51 times would make this test far too slow.
-    // One patient in facility D to switch into afterward.
-    await page.evaluate(async ({ apiBaseUrl, hospCId, hospDId, ts }) => {
+    // One patient in facility D to switch into afterward. Every created id
+    // is collected and deleted again at the end of this test (see below) --
+    // the unfiltered admin Patients view other specs rely on is paginated
+    // at the same fixed 50-per-page size, so leaving 52 extra rows behind
+    // would push those specs' own newly created patients onto page 2,
+    // which they never navigate to.
+    const createdPatientIds = await page.evaluate(async ({ apiBaseUrl, hospCId, hospDId, ts }) => {
+      const ids = [];
       for (let i = 0; i < 51; i++) {
-        await fetch(`${apiBaseUrl}/patients`, {
+        const res = await fetch(`${apiBaseUrl}/patients`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ name: `E2E Pagination Patient C${i} ${ts}`, phone: '07700003333', hospitalId: hospCId }),
         });
+        ids.push((await res.json()).id);
       }
-      await fetch(`${apiBaseUrl}/patients`, {
+      const resD = await fetch(`${apiBaseUrl}/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ name: `E2E Pagination Patient D ${ts}`, phone: '07700004444', hospitalId: hospDId }),
       });
+      ids.push((await resD.json()).id);
+      return ids;
     }, { apiBaseUrl: API_BASE_URL, hospCId, hospDId, ts });
 
     const viewingDropdown = page.locator('button[title="Currently viewing:"]');
@@ -193,5 +202,13 @@ test.describe('Hospital filter dropdown (Patients and HR Employees)', () => {
     await page.getByRole('option', { name: hospD }).click();
     await expect(page.locator('table.table tbody tr', { hasText: `E2E Pagination Patient D ${ts}` })).toBeVisible({ timeout: 10000 });
     await expect(prevButton).toHaveCount(0); // a single result fits on one page -- Pagination hides itself entirely
+
+    // Clean up the 52 patients created above -- see the comment where
+    // createdPatientIds is built for why this matters for later specs.
+    await page.evaluate(async ({ apiBaseUrl, ids }) => {
+      for (const id of ids) {
+        await fetch(`${apiBaseUrl}/patients/${id}`, { method: 'DELETE', credentials: 'include' });
+      }
+    }, { apiBaseUrl: API_BASE_URL, ids: createdPatientIds });
   });
 });
